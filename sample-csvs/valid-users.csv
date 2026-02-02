@@ -1,0 +1,5 @@
+FirstName,LastName,Email,DepartmentName,AssignedToEmail
+John,Smith,john.smith@company.com,Engineering,jane.doe@company.com
+Jane,Doe,jane.doe@company.com,Engineering,
+Michael,Johnson,michael.johnson@company.com,Marketing,jane.doe@company.com
+Sarah,Williams,sarah.williams@company.com,HR,john.smith@company.com

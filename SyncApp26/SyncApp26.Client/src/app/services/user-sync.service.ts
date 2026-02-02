@@ -178,7 +178,7 @@ export class UserSyncService {
       catchError(error => {
         console.error('Error uploading CSV:', error);
         this.currentComparisonSubject.next(null);
-        return of([]);
+        throw error; // Re-throw to let component handle it
       })
     );
   }

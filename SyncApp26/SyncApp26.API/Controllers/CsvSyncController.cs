@@ -5,6 +5,7 @@ using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration;
 using SyncApp26.Application.IServices;
+using SyncApp26.Application.Services;
 
 namespace SyncApp26.API.Controllers;
 
@@ -13,11 +14,16 @@ namespace SyncApp26.API.Controllers;
 public class CsvSyncController : ControllerBase
 {
     private readonly ICsvSyncService _csvSyncService;
+    private readonly ICsvValidationService _csvValidationService;
     private readonly ILogger<CsvSyncController> _logger;
 
-    public CsvSyncController(ICsvSyncService csvSyncService, ILogger<CsvSyncController> logger)
+    public CsvSyncController(
+        ICsvSyncService csvSyncService,
+        ICsvValidationService csvValidationService,
+        ILogger<CsvSyncController> logger)
     {
         _csvSyncService = csvSyncService;
+        _csvValidationService = csvValidationService;
         _logger = logger;
     }
 
@@ -39,6 +45,31 @@ public class CsvSyncController : ControllerBase
 
         try
         {
+            // Validate CSV file first
+            using (var validationStream = file.OpenReadStream())
+            {
+                var validationResult = await _csvValidationService.ValidateCsvFile(validationStream, file.FileName);
+
+                if (!validationResult.IsValid)
+                {
+                    _logger.LogWarning($"CSV validation failed: {validationResult.Errors.Count} errors");
+                    return BadRequest(new
+                    {
+                        error = "CSV validation failed",
+                        errors = validationResult.Errors,
+                        warnings = validationResult.Warnings,
+                        totalRows = validationResult.TotalRows,
+                        validRows = validationResult.ValidRows,
+                        invalidRows = validationResult.InvalidRows
+                    });
+                }
+
+                if (validationResult.Warnings.Count > 0)
+                {
+                    _logger.LogInformation($"CSV validation passed with {validationResult.Warnings.Count} warnings");
+                }
+            }
+
             var csvUsers = new List<CsvUserDTO>();
 
             using (var stream = file.OpenReadStream())

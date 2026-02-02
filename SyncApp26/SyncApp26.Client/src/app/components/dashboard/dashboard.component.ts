@@ -47,6 +47,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isUploading = false;
   isSyncing = false;
   showComparison = false;
+  showErrorModal = false;
+  errorModalTitle = '';
+  errorModalErrors: string[] = [];
+  errorModalWarnings: string[] = [];
+  errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
   
   currentComparisons: UserComparison[] = [];
   
@@ -128,8 +133,80 @@ export class DashboardComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Upload failed:', error);
           this.isUploading = false;
+          
+          // Show validation errors in custom modal
+          if (error.status === 400 && error.error) {
+            const errorData = error.error;
+            
+            if (errorData.errors && errorData.errors.length > 0) {
+              this.errorModalTitle = 'CSV Validation Failed';
+              this.errorModalErrors = [];
+              this.errorModalWarnings = [];
+              
+              // Format errors
+              const maxErrors = 20;
+              const errorsToShow = errorData.errors.slice(0, maxErrors);
+              
+              errorsToShow.forEach((err: any) => {
+                // Handle both string errors and object errors
+                if (typeof err === 'string') {
+                  this.errorModalErrors.push(err);
+                } else if (err.row === 0 || !err.row) {
+                  this.errorModalErrors.push(err.message || err);
+                } else {
+                  this.errorModalErrors.push(`Row ${err.row}: ${err.field} - ${err.message}`);
+                }
+              });
+              
+              if (errorData.errors.length > maxErrors) {
+                this.errorModalErrors.push(`...and ${errorData.errors.length - maxErrors} more errors`);
+              }
+              
+              // Format warnings
+              if (errorData.warnings && errorData.warnings.length > 0) {
+                errorData.warnings.slice(0, 10).forEach((warn: any) => {
+                  if (typeof warn === 'string') {
+                    this.errorModalWarnings.push(warn);
+                  } else {
+                    this.errorModalWarnings.push(`Row ${warn.row}: ${warn.field} - ${warn.message}`);
+                  }
+                });
+              }
+              
+              // Stats
+              if (errorData.totalRows !== undefined) {
+                this.errorModalStats = {
+                  totalRows: errorData.totalRows,
+                  validRows: errorData.validRows,
+                  invalidRows: errorData.invalidRows
+                };
+              }
+              
+              this.showErrorModal = true;
+            } else if (errorData.error) {
+              this.errorModalTitle = 'Upload Error';
+              this.errorModalErrors = [errorData.error];
+              this.errorModalWarnings = [];
+              this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
+              this.showErrorModal = true;
+            }
+          } else {
+            this.errorModalTitle = 'Upload Failed';
+            this.errorModalErrors = [error.message || 'Unknown error occurred'];
+            this.errorModalWarnings = [];
+            this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
+            this.showErrorModal = true;
+          }
         }
       });
+  }
+
+  closeErrorModal(): void {
+    this.showErrorModal = false;
+    this.errorModalTitle = '';
+    this.errorModalErrors = [];
+    this.errorModalWarnings = [];
+    this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
   }
 
   syncSelectedUsers(): void {

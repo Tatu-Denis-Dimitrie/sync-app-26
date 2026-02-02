@@ -460,3 +460,146 @@
     </div>
   </div>
 </div>
+
+<!-- Error Modal -->
+<div
+  *ngIf="showErrorModal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+>
+  <div
+    class="bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col"
+  >
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-6 border-b border-border">
+      <div class="flex items-center space-x-3">
+        <div
+          class="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center"
+        >
+          <svg
+            class="w-6 h-6 text-destructive"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-foreground">
+          {{ errorModalTitle }}
+        </h3>
+      </div>
+      <button
+        (click)="closeErrorModal()"
+        class="text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          ></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-6 overflow-y-auto flex-1">
+      <!-- Errors -->
+      <div *ngIf="errorModalErrors.length > 0" class="space-y-2">
+        <h4 class="font-medium text-foreground mb-3">Errors:</h4>
+        <div
+          *ngFor="let error of errorModalErrors"
+          class="flex items-start space-x-2 p-3 bg-destructive/5 border border-destructive/20 rounded-md"
+        >
+          <svg
+            class="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+          <span class="text-sm text-foreground">{{ error }}</span>
+        </div>
+      </div>
+
+      <!-- Warnings -->
+      <div *ngIf="errorModalWarnings.length > 0" class="mt-6 space-y-2">
+        <h4 class="font-medium text-foreground mb-3">Warnings:</h4>
+        <div
+          *ngFor="let warning of errorModalWarnings"
+          class="flex items-start space-x-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-md"
+        >
+          <svg
+            class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            ></path>
+          </svg>
+          <span class="text-sm text-foreground">{{ warning }}</span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div
+        *ngIf="errorModalStats.totalRows > 0"
+        class="mt-6 p-4 bg-muted/50 rounded-md border border-border"
+      >
+        <h4 class="font-medium text-foreground mb-3">Statistics:</h4>
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div class="text-2xl font-bold text-foreground">
+              {{ errorModalStats.totalRows }}
+            </div>
+            <div class="text-xs text-muted-foreground">Total Rows</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-green-600">
+              {{ errorModalStats.validRows }}
+            </div>
+            <div class="text-xs text-muted-foreground">Valid Rows</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-destructive">
+              {{ errorModalStats.invalidRows }}
+            </div>
+            <div class="text-xs text-muted-foreground">Invalid Rows</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="p-6 border-t border-border flex justify-end">
+      <button
+        (click)="closeErrorModal()"
+        class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+      >
+        OK
+      </button>
+    </div>
+  </div>
+</div>
