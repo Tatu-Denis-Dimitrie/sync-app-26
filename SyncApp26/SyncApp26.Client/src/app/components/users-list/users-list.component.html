@@ -25,12 +25,8 @@
             </svg>
           </button>
           <div>
-            <h1 class="text-xl font-semibold text-foreground">
-              Listă Utilizatori
-            </h1>
-            <p class="text-sm text-muted-foreground">
-              Vizualizare rapidă utilizatori
-            </p>
+            <h1 class="text-xl font-semibold text-foreground">Users</h1>
+            <p class="text-sm text-muted-foreground">Quick view of users</p>
           </div>
         </div>
         <div class="flex gap-2">
@@ -38,13 +34,18 @@
             (click)="navigateToDepartments()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
-            Departamente
+            Departments
+          </button>
+          <button
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-gray-500"
+          >
+            Users
           </button>
           <button
             (click)="navigateToEmployees()"
-            class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
-            Detalii Angajați
+            Employees
           </button>
         </div>
       </div>
@@ -60,7 +61,7 @@
             type="text"
             [(ngModel)]="searchQuery"
             (ngModelChange)="onSearchChange()"
-            placeholder="Caută utilizatori..."
+            placeholder="Search users..."
             class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
           />
           <svg
@@ -83,7 +84,7 @@
           (ngModelChange)="onFilterChange()"
           class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         >
-          <option value="all">Toate Departamentele</option>
+          <option value="all">All Departments</option>
           <option *ngFor="let dept of departments$ | async" [value]="dept.name">
             {{ dept.name }}
           </option>
@@ -94,9 +95,9 @@
           (ngModelChange)="onFilterChange()"
           class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         >
-          <option value="all">Toate Rolurile</option>
+          <option value="all">All Roles</option>
           <option [value]="UserRole.LineManager">Line Managers</option>
-          <option [value]="UserRole.Employee">Angajați</option>
+          <option [value]="UserRole.Employee">Employees</option>
         </select>
       </div>
     </div>
@@ -161,14 +162,14 @@
 
         <div class="space-y-2">
           <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">Departament:</span>
+            <span class="text-muted-foreground">Department:</span>
             <span class="font-medium text-foreground">{{
               user.departmentName
             }}</span>
           </div>
 
           <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">Rol:</span>
+            <span class="text-muted-foreground">Role:</span>
             <span
               [class]="
                 'px-2 py-1 rounded border text-xs font-medium ' +
@@ -176,7 +177,7 @@
               "
             >
               {{
-                user.role === UserRole.LineManager ? "Line Manager" : "Angajat"
+                user.role === UserRole.LineManager ? "Line Manager" : "Employee"
               }}
             </span>
           </div>
@@ -215,11 +216,9 @@
             ></path>
           </svg>
         </div>
-        <h3 class="text-lg font-medium text-foreground mb-2">
-          Niciun utilizator găsit
-        </h3>
+        <h3 class="text-lg font-medium text-foreground mb-2">No users found</h3>
         <p class="text-muted-foreground">
-          Nu există utilizatori care să corespundă criteriilor de filtrare.
+          There are no users matching the filter criteria.
         </p>
       </div>
     </div>

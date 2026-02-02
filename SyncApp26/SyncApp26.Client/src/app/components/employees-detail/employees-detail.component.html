@@ -26,10 +26,10 @@
           </button>
           <div>
             <h1 class="text-xl font-semibold text-foreground">
-              Detalii Angajați
+              Employee Details
             </h1>
             <p class="text-sm text-muted-foreground">
-              Informații complete despre fiecare angajat
+              Complete information about each employee
             </p>
           </div>
         </div>
@@ -38,13 +38,19 @@
             (click)="navigateToDepartments()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
-            Departamente
+            Departments
           </button>
           <button
             (click)="navigateToUsers()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
-            Listă Utilizatori
+            Users
+          </button>
+          <button
+            (click)="navigateToEmployees()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-gray-500"
+          >
+            Employees
           </button>
         </div>
       </div>
@@ -53,7 +59,7 @@
 
   <div class="container mx-auto px-4 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left Side: Users List -->
+      <!-- Left Side: Employees List -->
       <div class="lg:col-span-1">
         <!-- Filters -->
         <div class="bg-card border border-border rounded-lg p-4 mb-4">
@@ -63,7 +69,7 @@
                 type="text"
                 [(ngModel)]="searchQuery"
                 (ngModelChange)="onSearchChange()"
-                placeholder="Caută..."
+                placeholder="Search..."
                 class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               />
               <svg
@@ -86,7 +92,7 @@
               (ngModelChange)="onFilterChange()"
               class="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             >
-              <option value="all">Toate Departamentele</option>
+              <option value="all">All Departments</option>
               <option
                 *ngFor="let dept of departments$ | async"
                 [value]="dept.name"
@@ -97,7 +103,7 @@
           </div>
         </div>
 
-        <!-- Users List -->
+        <!-- Employees List -->
         <div class="bg-card border border-border rounded-lg overflow-hidden">
           <div class="max-h-[calc(100vh-300px)] overflow-y-auto">
             <div
@@ -164,7 +170,7 @@
               *ngIf="(paginatedUsers$ | async)?.length === 0"
               class="p-8 text-center"
             >
-              <p class="text-muted-foreground">Niciun angajat găsit</p>
+              <p class="text-muted-foreground">No employees found</p>
             </div>
           </div>
         </div>
@@ -259,12 +265,12 @@
               <h3
                 class="text-lg font-semibold text-foreground border-b border-border pb-2"
               >
-                Informații Personale
+                Personal Information
               </h3>
 
               <div>
                 <label class="text-sm font-medium text-muted-foreground"
-                  >ID Angajat</label
+                  >Employee ID</label
                 >
                 <p class="text-foreground font-medium mt-1">
                   {{ selectedUser.id }}
@@ -273,7 +279,7 @@
 
               <div>
                 <label class="text-sm font-medium text-muted-foreground"
-                  >Nume Complet</label
+                  >Full Name</label
                 >
                 <p class="text-foreground font-medium mt-1">
                   {{ selectedUser.firstName }} {{ selectedUser.lastName }}
@@ -291,7 +297,7 @@
 
               <div>
                 <label class="text-sm font-medium text-muted-foreground"
-                  >Rol</label
+                  >Role</label
                 >
                 <div class="mt-1">
                   <span
@@ -303,7 +309,7 @@
                     {{
                       selectedUser.role === UserRole.LineManager
                         ? "Line Manager"
-                        : "Angajat"
+                        : "Employee"
                     }}
                   </span>
                 </div>
@@ -315,12 +321,12 @@
               <h3
                 class="text-lg font-semibold text-foreground border-b border-border pb-2"
               >
-                Informații Profesionale
+                Work Information
               </h3>
 
               <div>
                 <label class="text-sm font-medium text-muted-foreground"
-                  >Departament</label
+                  >Department</label
                 >
                 <p class="text-foreground font-medium mt-1">
                   {{ selectedUser.departmentName }}
@@ -329,7 +335,7 @@
 
               <div *ngIf="selectedUser.assignedToId">
                 <label class="text-sm font-medium text-muted-foreground"
-                  >ID Manager</label
+                  >Manager ID</label
                 >
                 <p class="text-foreground font-medium mt-1">
                   {{ selectedUser.assignedToId }}
@@ -357,7 +363,7 @@
                 <p class="text-foreground font-medium mt-1">
                   <span class="inline-flex items-center gap-2">
                     <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
-                    Manager de Departament
+                    Department Manager
                   </span>
                 </p>
               </div>
@@ -366,27 +372,27 @@
 
           <!-- Additional Info Card -->
           <div class="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
-            <h4 class="text-sm font-semibold text-foreground mb-3">Rezumat</h4>
+            <h4 class="text-sm font-semibold text-foreground mb-3">Summary</h4>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p class="text-xs text-muted-foreground">Tip Utilizator</p>
+                <p class="text-xs text-muted-foreground">User Type</p>
                 <p class="text-sm font-medium text-foreground mt-1">
                   {{
                     selectedUser.role === UserRole.LineManager
                       ? "Manager"
-                      : "Angajat"
+                      : "Employee"
                   }}
                 </p>
               </div>
               <div>
-                <p class="text-xs text-muted-foreground">Departament</p>
+                <p class="text-xs text-muted-foreground">Department</p>
                 <p class="text-sm font-medium text-foreground mt-1">
                   {{ selectedUser.departmentName }}
                 </p>
               </div>
               <div>
                 <p class="text-xs text-muted-foreground">Status</p>
-                <p class="text-sm font-medium text-green-600 mt-1">Activ</p>
+                <p class="text-sm font-medium text-green-600 mt-1">Active</p>
               </div>
             </div>
           </div>
@@ -415,11 +421,10 @@
             </svg>
           </div>
           <h3 class="text-xl font-semibold text-foreground mb-2">
-            Selectați un angajat
+            Select an employee
           </h3>
           <p class="text-muted-foreground">
-            Alegeți un utilizator din lista din stânga pentru a vedea detaliile
-            complete
+            Choose a user from the list on the left to see full details
           </p>
         </div>
       </div>

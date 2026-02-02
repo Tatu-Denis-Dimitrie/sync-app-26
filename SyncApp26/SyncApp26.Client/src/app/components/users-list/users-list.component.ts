@@ -119,6 +119,10 @@ export class UsersListComponent implements OnInit {
     this.router.navigate(['/departments']);
   }
 
+  navigateToUsers(): void {
+    this.router.navigate(['/users']);
+  }
+
   navigateToEmployees(): void {
     this.router.navigate(['/employees']);
   }

@@ -30,8 +30,16 @@ export class DepartmentsComponent implements OnInit {
     this.router.navigate(['/users'], { queryParams: { department: departmentName } });
   }
 
+  navigateToDepartments(): void {
+    this.router.navigate(['/departments']);
+  }
+
   navigateToUsers(): void {
     this.router.navigate(['/users']);
+  }
+
+  navigateToEmployees(): void {
+    this.router.navigate(['/employees']);
   }
 
   navigateToDashboard(): void {

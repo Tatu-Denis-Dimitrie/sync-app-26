@@ -1,63 +1,163 @@
 <div class="min-h-screen bg-background">
   <!-- Header -->
-  <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+  <header
+    class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40"
+  >
     <div class="container mx-auto px-4 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-3">
-          <button (click)="navigateToDashboard()" class="w-8 h-8 bg-primary rounded-md flex items-center justify-center hover:bg-primary/90 transition-colors">
-            <svg class="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          <button
+            (click)="navigateToDashboard()"
+            class="w-8 h-8 bg-primary rounded-md flex items-center justify-center hover:bg-primary/90 transition-colors"
+          >
+            <svg
+              class="w-5 h-5 text-primary-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              ></path>
             </svg>
           </button>
           <div>
-            <h1 class="text-xl font-semibold text-foreground">Departamente</h1>
-            <p class="text-sm text-muted-foreground">Vizualizare organizare pe departamente</p>
+            <h1 class="text-xl font-semibold text-foreground">Departments</h1>
+            <p class="text-sm text-muted-foreground">
+              View organization by departments
+            </p>
           </div>
         </div>
-        <button (click)="navigateToUsers()" class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
-          Vezi Toți Utilizatorii
-        </button>
+        <div class="flex gap-2">
+          <button
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-gray-500"
+          >
+            Departments
+          </button>
+          <button
+            (click)="navigateToUsers()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Users
+          </button>
+          <button
+            (click)="navigateToEmployees()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Employees
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
   <div class="container mx-auto px-4 py-8">
     <!-- Stats Overview -->
-    <div *ngIf="stats$ | async as stats" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      <div class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
+    <div
+      *ngIf="stats$ | async as stats"
+      class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+    >
+      <div
+        class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
+      >
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-muted-foreground">Total Departamente</p>
-            <p class="text-3xl font-bold text-foreground mt-2">{{ stats.departments }}</p>
+            <p class="text-sm font-medium text-muted-foreground">
+              Total Departments
+            </p>
+            <p class="text-3xl font-bold text-foreground mt-2">
+              {{ stats.departments }}
+            </p>
           </div>
-          <div class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          <div
+            class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center"
+          >
+            <svg
+              class="w-6 h-6 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              ></path>
             </svg>
           </div>
         </div>
       </div>
 
-      <div class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
+      <div
+        class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
+      >
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-muted-foreground">Total Manageri</p>
-            <p class="text-3xl font-bold text-purple-600 mt-2">{{ stats.lineManagers }}</p>
+            <p class="text-sm font-medium text-muted-foreground">
+              Total Managers
+            </p>
+            <p class="text-3xl font-bold text-purple-600 mt-2">
+              {{ stats.lineManagers }}
+            </p>
           </div>
-          <div class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div
+            class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="text-purple-600"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
           </div>
         </div>
       </div>
 
-      <div class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
+      <div
+        class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
+      >
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-muted-foreground">Total Angajați</p>
-            <p class="text-3xl font-bold text-blue-600 mt-2">{{ stats.employees }}</p>
+            <p class="text-sm font-medium text-muted-foreground">
+              Total Employees
+            </p>
+            <p class="text-3xl font-bold text-blue-600 mt-2">
+              {{ stats.employees }}
+            </p>
           </div>
-          <div class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div
+            class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="text-blue-600"
+            >
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </div>
         </div>
       </div>
@@ -65,53 +165,129 @@
 
     <!-- Departments Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div *ngFor="let dept of (departments$ | async)" 
-           class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
-           (click)="viewDepartmentUsers(dept.name)">
+      <div
+        *ngFor="let dept of departments$ | async"
+        class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
+        (click)="viewDepartmentUsers(dept.name)"
+      >
         <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          <div
+            class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+          >
+            <svg
+              class="w-6 h-6 text-primary"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              ></path>
             </svg>
           </div>
-          <svg class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          <svg
+            class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            ></path>
           </svg>
         </div>
 
-        <h3 class="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">{{ dept.name }}</h3>
-        
+        <h3
+          class="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors"
+        >
+          {{ dept.name }}
+        </h3>
+
         <div class="space-y-2">
-          <div class="flex items-center justify-between py-2 border-t border-border">
+          <div
+            class="flex items-center justify-between py-2 border-t border-border"
+          >
             <span class="text-sm text-muted-foreground flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Line Managers
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="inline-block"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Line Managers
             </span>
-            <span class="text-lg font-semibold text-purple-600">{{ dept.lineManagerCount }}</span>
-          </div>
-          
-          <div class="flex items-center justify-between py-2 border-t border-border">
-            <span class="text-sm text-muted-foreground flex items-center gap-2">
-              <span>👤</span> Angajați
-            </span>
-            <span class="text-lg font-semibold text-blue-600">{{ dept.employeeCount }}</span>
+            <span class="text-lg font-semibold text-purple-600">{{
+              dept.lineManagerCount
+            }}</span>
           </div>
 
-          <div class="flex items-center justify-between py-2 border-t border-border">
-            <span class="text-sm font-medium text-foreground">Total Personal</span>
-            <span class="text-lg font-bold text-foreground">{{ dept.lineManagerCount + dept.employeeCount }}</span>
+          <div
+            class="flex items-center justify-between py-2 border-t border-border"
+          >
+            <span class="text-sm text-muted-foreground flex items-center gap-2">
+              <span>👤</span> Employees
+            </span>
+            <span class="text-lg font-semibold text-blue-600">{{
+              dept.employeeCount
+            }}</span>
+          </div>
+
+          <div
+            class="flex items-center justify-between py-2 border-t border-border"
+          >
+            <span class="text-sm font-medium text-foreground"
+              >Total Personnel</span
+            >
+            <span class="text-lg font-bold text-foreground">{{
+              dept.lineManagerCount + dept.employeeCount
+            }}</span>
           </div>
         </div>
       </div>
 
       <!-- Empty State -->
-      <div *ngIf="(departments$ | async)?.length === 0" class="col-span-full text-center py-12">
-        <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+      <div
+        *ngIf="(departments$ | async)?.length === 0"
+        class="col-span-full text-center py-12"
+      >
+        <div
+          class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <svg
+            class="w-8 h-8 text-muted-foreground"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+            ></path>
           </svg>
         </div>
-        <h3 class="text-lg font-medium text-foreground mb-2">Niciun departament</h3>
-        <p class="text-muted-foreground">Nu există departamente în sistem momentan.</p>
+        <h3 class="text-lg font-medium text-foreground mb-2">No departments</h3>
+        <p class="text-muted-foreground">
+          There are no departments in the system at the moment.
+        </p>
       </div>
     </div>
   </div>

@@ -122,11 +122,15 @@ export class EmployeesDetailComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
+  navigateToDepartments(): void {
+    this.router.navigate(['/departments']);
+  }
+
   navigateToUsers(): void {
     this.router.navigate(['/users']);
   }
 
-  navigateToDepartments(): void {
-    this.router.navigate(['/departments']);
+  navigateToEmployees(): void {
+    this.router.navigate(['/employees']);
   }
 }

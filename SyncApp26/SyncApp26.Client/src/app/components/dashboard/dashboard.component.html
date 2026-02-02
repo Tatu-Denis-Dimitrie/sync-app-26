@@ -26,7 +26,7 @@
           <div>
             <h1 class="text-xl font-semibold text-foreground">SyncApp 26</h1>
             <p class="text-sm text-muted-foreground">
-              Sincronizează datele angajaților cu import CSV
+              Synchronize employee data with CSV import
             </p>
           </div>
         </div>
@@ -35,19 +35,19 @@
             (click)="navigateToDepartments()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
-            Departamente
+            Departments
           </button>
           <button
             (click)="navigateToUsers()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
-            Utilizatori
+            Users
           </button>
           <button
             (click)="navigateToEmployees()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
-            Angajați
+            Employees
           </button>
         </div>
       </div>
@@ -59,13 +59,13 @@
     <div *ngIf="showComparison">
       <div class="mb-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-2xl font-bold text-foreground">Comparație CSV</h2>
+          <h2 class="text-2xl font-bold text-foreground">CSV Comparison</h2>
           <div class="flex gap-3">
             <button
               (click)="cancelComparison()"
               class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
             >
-              Anulează
+              Cancel
             </button>
             <button
               (click)="syncSelectedUsers()"
@@ -102,7 +102,7 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-muted-foreground">
-                Total Utilizatori
+                Total Users
               </p>
               <p class="text-2xl font-bold text-foreground mt-1">
                 {{ stats.total }}
@@ -169,7 +169,7 @@
         >
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-muted-foreground">Angajați</p>
+              <p class="text-sm font-medium text-muted-foreground">Employees</p>
               <p class="text-2xl font-bold text-blue-600 mt-1">
                 {{ stats.employees }}
               </p>
@@ -202,7 +202,7 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-muted-foreground">
-                Departamente
+                Departments
               </p>
               <p class="text-2xl font-bold text-green-600 mt-1">
                 {{ stats.departments }}
@@ -240,7 +240,7 @@
                 type="text"
                 [(ngModel)]="searchQuery"
                 (ngModelChange)="onSearchChange()"
-                placeholder="Caută utilizatori..."
+                placeholder="Search users..."
                 class="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all w-full sm:w-64"
               />
               <svg
@@ -263,7 +263,7 @@
               (ngModelChange)="onDepartmentFilterChange()"
               class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             >
-              <option value="all">Toate Departamentele</option>
+              <option value="all">All Departments</option>
               <option
                 *ngFor="let dept of departments$ | async"
                 [value]="dept.name"
@@ -279,9 +279,9 @@
               (ngModelChange)="onRoleFilterChange()"
               class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             >
-              <option value="all">Toate Rolurile</option>
+              <option value="all">All Roles</option>
               <option [value]="UserRole.LineManager">Line Managers</option>
-              <option [value]="UserRole.Employee">Angajați</option>
+              <option [value]="UserRole.Employee">Employees</option>
             </select>
           </div>
 
@@ -324,17 +324,17 @@
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
-                  Utilizator
+                  User
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
-                  Rol
+                  Role
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
-                  Departament
+                  Department
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
@@ -436,10 +436,10 @@
                       ></path>
                     </svg>
                     <p class="text-muted-foreground text-sm">
-                      Nu s-au găsit utilizatori
+                      Users not found.
                     </p>
                     <p class="text-muted-foreground text-xs mt-1">
-                      Încearcă să ajustezi filtrele
+                      Try adjusting the filters or search query.
                     </p>
                   </div>
                 </td>
