@@ -3,6 +3,8 @@ using SyncApp26.Domain.IRepositories;
 using SyncApp26.Shared.DTOs;
 using SyncApp26.Shared.DTOs.Response.User;
 using SyncApp26.Application.IServices;
+using SyncApp26.Shared.DTOs.CSV.Department;
+using SyncApp26.Shared.DTOs.Response.Department;
 
 namespace SyncApp26.Application.Services;
 
@@ -433,5 +435,145 @@ public class CsvSyncService : ICsvSyncService
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
+    }
+
+    public async Task<List<CSVDepartmentComparisionDTO>> CompareDepartmentsWithDatabase(List<CSVDepartmentDTO> csvDepartments)
+    {
+        var comparisons = new List<CSVDepartmentComparisionDTO>();
+        var dbDepartments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
+
+        var dbDepartmentMap = dbDepartments.ToDictionary(d => d.Name.ToLower(), d => d);
+
+        foreach (var csvDept in csvDepartments)
+        {
+            var deptName = csvDept.Name.ToLower();
+
+            if (dbDepartmentMap.TryGetValue(deptName, out var dbDept))
+            {
+                var status = dbDept.Name != csvDept.Name ? "modified" : "deleted";
+
+                comparisons.Add(new CSVDepartmentComparisionDTO
+                {
+                    CsvDepartment = csvDept,
+                    DbDepartment = new DepartmentGETResponseDTO
+                    {
+                        Id = dbDept.Id,
+                        Name = dbDept.Name
+                    },
+                    Status = status
+                });
+            }
+            else
+            {
+                comparisons.Add(new CSVDepartmentComparisionDTO
+                {
+                    CsvDepartment = csvDept,
+                    DbDepartment = null,
+                    Status = "new"
+                });
+            }
+        }
+
+        var csvDepartmentNames = csvDepartments.Select(d => d.Name.ToLower()).ToHashSet();
+        foreach (var dbDept in dbDepartments)
+        {
+            if (!csvDepartmentNames.Contains(dbDept.Name.ToLower()))
+            {
+                comparisons.Add(new CSVDepartmentComparisionDTO
+                {
+                    CsvDepartment = null,
+                    DbDepartment = new DepartmentGETResponseDTO
+                    {
+                        Id = dbDept.Id,
+                        Name = dbDept.Name
+                    },
+                    Status = "deleted"
+                });
+            }
+        }
+
+        return comparisons;
+    }
+
+    public async Task<SyncResultDTO> SyncDepartments(List<CSVDepartmentComparisionDTO> departmentSyncList)
+    {
+        var result = new SyncResultDTO { Success = true };
+        var dbDepartments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
+
+        foreach (var item in departmentSyncList)
+        {
+            try
+            {
+                if (item.Status == "new" && item.CsvDepartment != null)
+                {
+                    var newDepartment = new Department
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = item.CsvDepartment.Name,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _departmentRepository.AddDepartmentAsync(newDepartment);
+                    result.RecordsProcessed++;
+                }
+                else if (item.Status == "modified" && item.CsvDepartment != null && item.DbDepartment != null)
+                {
+                    var existingDepartment = await _departmentRepository.GetDepartmentByIdAsync(item.DbDepartment.Id);
+                    
+                    if (existingDepartment != null && existingDepartment.Name != item.CsvDepartment.Name)
+                    {
+                        existingDepartment.Name = item.CsvDepartment.Name;
+                        existingDepartment.UpdatedAt = DateTime.UtcNow;
+                        await _departmentRepository.UpdateDepartmentAsync(existingDepartment);
+                        result.RecordsProcessed++;
+                    }
+                    else
+                    {
+                        result.RecordsSkipped++;
+                    }
+                }
+                else if (item.Status == "deleted" && item.DbDepartment != null)
+                {
+                    var usersInDepartment = await _userRepository.GetUsersByDepartmentIdAsync(item.DbDepartment.Id);
+                    
+                    if (!usersInDepartment.Any())
+                    {
+                        var departmentToDelete = await _departmentRepository.GetDepartmentByIdAsync(item.DbDepartment.Id);
+                        if(departmentToDelete != null)
+                        {
+                            if (departmentToDelete.UpdatedAt != null && departmentToDelete.UpdatedAt > DateTime.UtcNow.AddDays(-90))
+                            {
+                                result.RecordsSkipped++;
+                                continue;
+                            }
+                            departmentToDelete.DeletedAt = DateTime.UtcNow;
+                            await _departmentRepository.UpdateDepartmentAsync(departmentToDelete);
+                            result.RecordsProcessed++;
+                        }
+                    }
+                    else
+                    {
+                        result.RecordsSkipped++;
+                        result.Errors.Add($"Department '{item.DbDepartment.Name}' cannot be deleted because it has assigned users.");
+                    }
+                }
+                else
+                {
+                    result.RecordsSkipped++;
+                }
+            }
+            catch (Exception ex)
+            {
+                result.RecordsFailed++;
+                result.Errors.Add($"Failed to process department {item.CsvDepartment?.Name ?? item.DbDepartment?.Name ?? "Unknown"}: {ex.Message}");
+            }
+        }
+
+        result.Success = result.RecordsFailed == 0;
+        result.Message = result.Success
+            ? $"Successfully synced {result.RecordsProcessed} departments"
+            : $"Synced with errors: {result.RecordsFailed} failed";
+
+        return result;
     }
 }
