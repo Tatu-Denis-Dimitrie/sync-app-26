@@ -38,44 +38,44 @@ jobs:
         CURRENT_VERSION=$(cat ${{ env.VERSION_FILE }})
         echo "Current version: $CURRENT_VERSION"
         
-        # Check if we need to tag (Version in file > Last Tag)
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        # Get the last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
         echo "Last tag: $LAST_TAG"
         
-        if [ "v$CURRENT_VERSION" != "$LAST_TAG" ] && [ "$LAST_TAG" != "v0.0.0" ]; then
-           # Check if v$CURRENT_VERSION is technically newer or just different? 
-           # Simplest: If they differ and we are on main, assume we just merged a release.
-           echo "Version $CURRENT_VERSION differs from $LAST_TAG. Assuming merge complete. Tagging needed."
+        # Check if version file was updated but not yet tagged (version bump PR was merged)
+        if [ -n "$LAST_TAG" ] && [ "v$CURRENT_VERSION" != "$LAST_TAG" ]; then
+           echo "Version in file ($CURRENT_VERSION) differs from last tag ($LAST_TAG)"
+           echo "Version bump PR was merged - creating tag now"
            echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
            echo "version_updated=false" >> $GITHUB_OUTPUT
            echo "tag_needed=true" >> $GITHUB_OUTPUT
            exit 0
         fi
         
-        # If no last tag exists at all (first run), we might want to tag current or analyze history.
-        # Assuming if v0.0.0 (fallback), and we have commits, we proceed to bump.
-        echo "Current version: $CURRENT_VERSION"
+        echo "Analyzing new commits for version bump"
         
-        # Parse version components
+        # Parse current version components
         IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
         
-        # Get commit messages since last tag (or all if no tags)
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        # Get commit messages since last tag
         if [ -z "$LAST_TAG" ]; then
           COMMITS=$(git log --format=%s)
         else
           COMMITS=$(git log ${LAST_TAG}..HEAD --format=%s)
         fi
         
-        echo "Analyzing commits:"
+        echo "Raw commits:"
         echo "$COMMITS"
         
-        # Filter out automated version bump commits to prevent loops
-        COMMITS=$(echo "$COMMITS" | grep -v "chore: bump version to" || true)
+        # Filter out automated version bump commits and their merges to prevent loops
+        FILTERED_COMMITS=$(echo "$COMMITS" | grep -v "chore: bump version to\|chore: Release v\|Merge pull request.*release/v" || true)
         
-        # If no commits left after filtering, skip version bump
-        if [ -z "$COMMITS" ]; then
-          echo "No commits to analyze (only automated version bumps found)"
+        echo "Filtered commits (excluding version bumps):"
+        echo "$FILTERED_COMMITS"
+        
+        # If no real commits left after filtering, skip version bump
+        if [ -z "$FILTERED_COMMITS" ] || [ -z "$(echo "$FILTERED_COMMITS" | tr -d '[:space:]')" ]; then
+          echo "No actionable commits found (only automated version bumps or merges)"
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "version_updated=false" >> $GITHUB_OUTPUT
           echo "tag_needed=false" >> $GITHUB_OUTPUT
@@ -86,19 +86,19 @@ jobs:
         BUMP_TYPE="none"
         
         # Check for BREAKING CHANGE or ! in commit type (major version)
-        if echo "$COMMITS" | grep -qE "^(feat|fix|chore|docs|style|refactor|perf|test)(\(.+\))?!:|BREAKING CHANGE:"; then
+        if echo "$FILTERED_COMMITS" | grep -qE "^(feat|fix|chore|docs|style|refactor|perf|test)(\(.+\))?!:|BREAKING CHANGE:"; then
           BUMP_TYPE="major"
           echo "Found breaking change - will bump MAJOR version"
         # Check for feat: (minor version)
-        elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+        elif echo "$FILTERED_COMMITS" | grep -qE "^feat(\(.+\))?:"; then
           BUMP_TYPE="minor"
           echo "Found feature - will bump MINOR version"
         # Check for fix: (patch version)
-        elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:"; then
+        elif echo "$FILTERED_COMMITS" | grep -qE "^fix(\(.+\))?:"; then
           BUMP_TYPE="patch"
           echo "Found fix - will bump PATCH version"
         # Check for other conventional commits (patch version)
-        elif echo "$COMMITS" | grep -qE "^(chore|docs|style|refactor|perf|test)(\(.+\))?:"; then
+        elif echo "$FILTERED_COMMITS" | grep -qE "^(chore|docs|style|refactor|perf|test)(\(.+\))?:"; then
           BUMP_TYPE="patch"
           echo "Found other conventional commit - will bump PATCH version"
         fi
@@ -155,14 +155,14 @@ jobs:
         git checkout -b $BRANCH_NAME
         
         git add ${{ env.VERSION_FILE }}
-        git commit -m "chore: bump version to $NEW_VERSION"
+        git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
         
         git push origin $BRANCH_NAME
         
         echo "Creating Pull Request..."
         gh pr create \
           --title "chore: Release v$NEW_VERSION" \
-          --body "Automated version bump to $NEW_VERSION. Please review and squash/merge." \
+          --body "Automated version bump to $NEW_VERSION. Merge this PR to create the release tag." \
           --base main \
           --head $BRANCH_NAME
       
