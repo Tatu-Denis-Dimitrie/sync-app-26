@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
 
 @Component({
   selector: 'app-comparison-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './comparison-view.component.html',
   styleUrls: ['./comparison-view.component.css']
 })
@@ -13,6 +14,11 @@ export class ComparisonViewComponent {
   @Input() comparisons: UserComparison[] = [];
   @Output() selectionChange = new EventEmitter<UserComparison[]>();
   @Output() fieldConflictResolved = new EventEmitter<{ comparisonId: string, field: string, value: 'db' | 'csv' }>();
+
+  filterNew = true;
+  filterModified = true;
+  filterDeleted = true;
+  searchQuery = '';
 
   selectAll(): void {
     this.comparisons.forEach(c => c.selected = true);
@@ -113,6 +119,44 @@ export class ComparisonViewComponent {
 
   hasFieldConflict(comparison: UserComparison, field: string): boolean {
     return comparison.conflicts.some(c => c.field === field);
+  }
+
+  getFilteredComparisons(): UserComparison[] {
+    return this.comparisons.filter(comparison => {
+      // Filter by status
+      const statusMatch = 
+        (this.filterNew && comparison.status === 'new') ||
+        (this.filterModified && comparison.status === 'modified') ||
+        (this.filterDeleted && comparison.status === 'deleted');
+      
+      if (!statusMatch) return false;
+
+      // Filter by search query
+      if (this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase();
+        
+        // Get the user data (prefer csvUser if available, otherwise dbUser)
+        const user = comparison.csvUser || comparison.dbUser;
+        const firstName = user?.firstName?.toLowerCase() || '';
+        const lastName = user?.lastName?.toLowerCase() || '';
+        const department = user?.departmentName?.toLowerCase() || '';
+        const assignedToName = user?.assignedToName?.toLowerCase() || '';
+        const fullName = `${firstName} ${lastName}`;
+        
+        // Match by full name or department
+        const directMatch = fullName.includes(query) || department.includes(query);
+        
+        // Also match if this user is assigned to a line manager whose name matches the query
+        const assignedToMatch = assignedToName.includes(query);
+        
+        return directMatch || assignedToMatch;
+      }
+
+      return true;
+    });
+  }
+
+  onFilterChange(): void {
   }
 
 }

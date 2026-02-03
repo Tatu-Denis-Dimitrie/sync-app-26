@@ -1,1 +1,91 @@
 /* Comparison view specific styles */
+/* Filter Styles */
+.filters-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: transparent;
+}
+
+/* New Filter */
+.filter-new {
+  color: rgb(29, 78, 216);
+  border-color: rgba(29, 78, 216, 0.3);
+  background-color: rgba(29, 78, 216, 0.1);
+}
+
+.filter-new:hover {
+  background-color: rgba(29, 78, 216, 0.2);
+  border-color: rgba(29, 78, 216, 0.5);
+}
+
+.filter-new.inactive {
+  color: var(--muted-foreground, #6b7280);
+  border-color: var(--border-color, #e5e7eb);
+  background-color: rgba(107, 114, 128, 0.1);
+}
+
+.filter-new.inactive:hover {
+  background-color: rgba(107, 114, 128, 0.2);
+}
+
+/* Modified Filter */
+.filter-modified {
+  color: rgb(202, 138, 4);
+  border-color: rgba(202, 138, 4, 0.3);
+  background-color: rgba(202, 138, 4, 0.1);
+}
+
+.filter-modified:hover {
+  background-color: rgba(202, 138, 4, 0.2);
+  border-color: rgba(202, 138, 4, 0.5);
+}
+
+.filter-modified.inactive {
+  color: var(--muted-foreground, #6b7280);
+  border-color: var(--border-color, #e5e7eb);
+  background-color: rgba(107, 114, 128, 0.1);
+}
+
+.filter-modified.inactive:hover {
+  background-color: rgba(107, 114, 128, 0.2);
+}
+
+/* Deleted Filter */
+.filter-deleted {
+  color: rgb(220, 38, 38);
+  border-color: rgba(220, 38, 38, 0.3);
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.filter-deleted:hover {
+  background-color: rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.5);
+}
+
+.filter-deleted.inactive {
+  color: var(--muted-foreground, #6b7280);
+  border-color: var(--border-color, #e5e7eb);
+  background-color: rgba(107, 114, 128, 0.1);
+}
+
+.filter-deleted.inactive:hover {
+  background-color: rgba(107, 114, 128, 0.2);
+}
