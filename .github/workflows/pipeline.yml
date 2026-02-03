@@ -70,6 +70,18 @@ jobs:
         echo "Analyzing commits:"
         echo "$COMMITS"
         
+        # Filter out automated version bump commits to prevent loops
+        COMMITS=$(echo "$COMMITS" | grep -v "chore: bump version to" || true)
+        
+        # If no commits left after filtering, skip version bump
+        if [ -z "$COMMITS" ]; then
+          echo "No commits to analyze (only automated version bumps found)"
+          echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "version_updated=false" >> $GITHUB_OUTPUT
+          echo "tag_needed=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
         # Determine version bump type based on conventional commits
         BUMP_TYPE="none"
         
