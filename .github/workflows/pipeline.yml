@@ -140,31 +140,20 @@ jobs:
         
         echo "tag_needed=false" >> $GITHUB_OUTPUT
       
-    - name: Create Pull Request for Version Bump
+    - name: Commit and Push Version Bump
       if: steps.bump_version.outputs.version_updated == 'true'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         
         NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
-        BRANCH_NAME="release/v$NEW_VERSION"
-        
-        echo "Creating release branch: $BRANCH_NAME"
-        git checkout -b $BRANCH_NAME
         
         git add ${{ env.VERSION_FILE }}
         git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
         
-        git push origin $BRANCH_NAME
+        git push origin main
         
-        echo "Creating Pull Request..."
-        gh pr create \
-          --title "chore: Release v$NEW_VERSION" \
-          --body "Automated version bump to $NEW_VERSION. Merge this PR to create the release tag." \
-          --base main \
-          --head $BRANCH_NAME
+        echo "Version bumped and pushed to main"
       
     - name: Create Git Tag
       if: steps.bump_version.outputs.tag_needed == 'true'
