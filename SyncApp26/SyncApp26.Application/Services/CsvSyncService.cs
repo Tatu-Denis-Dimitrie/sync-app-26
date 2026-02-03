@@ -38,6 +38,17 @@ public class CsvSyncService : ICsvSyncService
                     ? dbUsers.FirstOrDefault(u => u.Email.ToLower() == csvUser.AssignedToEmail.ToLower())
                     : null;
 
+                // Validate that the assigned manager is actually a line manager
+                if (csvManager != null)
+                {
+                    var isLineManager = await _userRepository.IsUserLineManagerAsync(csvManager.Id);
+                    if (!isLineManager)
+                    {
+                        // Skip this user or log a warning - the assigned user is not a line manager
+                        csvManager = null; // Ignore invalid manager assignment
+                    }
+                }
+
                 var csvUserData = new CsvUserDataDTO
                 {
                     FirstName = csvUser.FirstName,
@@ -118,6 +129,17 @@ public class CsvSyncService : ICsvSyncService
                     ? dbUsers.FirstOrDefault(u => u.Email.ToLower() == csvUser.AssignedToEmail.ToLower())
                     : null;
 
+                // Validate that the assigned manager is actually a line manager
+                if (newCsvManager != null)
+                {
+                    var isLineManager = await _userRepository.IsUserLineManagerAsync(newCsvManager.Id);
+                    if (!isLineManager)
+                    {
+                        // Skip this user or log a warning - the assigned user is not a line manager
+                        newCsvManager = null; // Ignore invalid manager assignment
+                    }
+                }
+
                 var comparison = new UserComparisonDTO
                 {
                     Id = Guid.NewGuid().ToString(), // For new users, generate new ID
@@ -187,6 +209,17 @@ public class CsvSyncService : ICsvSyncService
                     var assignedToId = item.CsvData.AssignedToEmail != null
                         ? dbUsers.FirstOrDefault(u => u.Email.Equals(item.CsvData.AssignedToEmail, StringComparison.OrdinalIgnoreCase))?.Id
                         : null;
+
+                    // Validate that the assigned manager is actually a line manager
+                    if (assignedToId.HasValue)
+                    {
+                        var isLineManager = await _userRepository.IsUserLineManagerAsync(assignedToId.Value);
+                        if (!isLineManager)
+                        {
+                            // Don't assign invalid line manager
+                            assignedToId = null;
+                        }
+                    }
 
                     var newUser = new User
                     {
@@ -262,6 +295,17 @@ public class CsvSyncService : ICsvSyncService
                                             var newAssignedToId = item.CsvData.AssignedToEmail != null
                                                 ? dbUsers.FirstOrDefault(u => u.Email.Equals(item.CsvData.AssignedToEmail, StringComparison.OrdinalIgnoreCase))?.Id
                                                 : null;
+                                            
+                                            // Validate that the assigned manager is actually a line manager
+                                            if (newAssignedToId.HasValue)
+                                            {
+                                                var isLineManager = await _userRepository.IsUserLineManagerAsync(newAssignedToId.Value);
+                                                if (!isLineManager)
+                                                {
+                                                    newAssignedToId = null;
+                                                }
+                                            }
+                                            
                                             if (existingUser.AssignedToId != newAssignedToId)
                                             {
                                                 existingUser.AssignedToId = newAssignedToId;
@@ -307,6 +351,17 @@ public class CsvSyncService : ICsvSyncService
                             var assignedToId = item.CsvData.AssignedToEmail != null
                                 ? dbUsers.FirstOrDefault(u => u.Email.Equals(item.CsvData.AssignedToEmail, StringComparison.OrdinalIgnoreCase))?.Id
                                 : null;
+                            
+                            // Validate that the assigned manager is actually a line manager
+                            if (assignedToId.HasValue)
+                            {
+                                var isLineManager = await _userRepository.IsUserLineManagerAsync(assignedToId.Value);
+                                if (!isLineManager)
+                                {
+                                    assignedToId = null;
+                                }
+                            }
+                            
                             if (existingUser.AssignedToId != assignedToId)
                             {
                                 existingUser.AssignedToId = assignedToId;
