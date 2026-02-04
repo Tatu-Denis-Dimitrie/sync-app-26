@@ -121,31 +121,42 @@ export class UserSyncService {
   }
 
   /**
-   * Get departments summary
+   * Get departments from backend with user counts
    */
   getDepartments(): Observable<Department[]> {
-    return this.users$.pipe(
-      map(users => {
-        const deptMap = new Map<string, { lineManagers: Set<string>, employees: Set<string> }>();
+    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+      map((departments: any[]) => {
+        const deptMap = new Map<string, { lineManagers: number, employees: number }>();
         
-        users.forEach(user => {
+        // Initialize all departments from backend
+        departments.forEach(dept => {
+          deptMap.set(dept.name, { lineManagers: 0, employees: 0 });
+        });
+
+        // Get current users and count them
+        const currentUsers = this.usersSubject.getValue();
+        currentUsers.forEach(user => {
           if (!deptMap.has(user.departmentName)) {
-            deptMap.set(user.departmentName, { lineManagers: new Set(), employees: new Set() });
+            deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
           }
           const dept = deptMap.get(user.departmentName)!;
           if (user.role === UserRole.LineManager) {
-            dept.lineManagers.add(user.id);
+            dept.lineManagers++;
           } else {
-            dept.employees.add(user.id);
+            dept.employees++;
           }
         });
 
         return Array.from(deptMap.entries()).map(([name, data]) => ({
           id: name.toLowerCase().replace(/\s+/g, '-'),
           name,
-          lineManagerCount: data.lineManagers.size,
-          employeeCount: data.employees.size
+          lineManagerCount: data.lineManagers,
+          employeeCount: data.employees
         }));
+      }),
+      catchError(error => {
+        console.error('Error fetching departments:', error);
+        return of([]);
       })
     );
   }
@@ -154,13 +165,26 @@ export class UserSyncService {
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
-    return this.users$.pipe(
-      map(users => ({
-        total: users.length,
-        lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-        employees: users.filter(u => u.role === UserRole.Employee).length,
-        departments: new Set(users.map(u => u.departmentName)).size
-      }))
+    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+      map(departments => {
+        const users = this.usersSubject.getValue();
+        return {
+          total: users.length,
+          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+          employees: users.filter(u => u.role === UserRole.Employee).length,
+          departments: departments.length
+        };
+      }),
+      catchError(error => {
+        console.error('Error fetching stats:', error);
+        const users = this.usersSubject.getValue();
+        return of({
+          total: users.length,
+          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+          employees: users.filter(u => u.role === UserRole.Employee).length,
+          departments: new Set(users.map(u => u.departmentName)).size
+        });
+      })
     );
   }
 

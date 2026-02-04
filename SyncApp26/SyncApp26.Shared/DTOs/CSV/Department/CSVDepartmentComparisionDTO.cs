@@ -6,6 +6,6 @@ namespace SyncApp26.Shared.DTOs.CSV.Department
     {
         public CSVDepartmentDTO? CsvDepartment { get; set; }
         public DepartmentGETResponseDTO? DbDepartment { get; set; }
-        public string Status { get; set; } // "New", "Updated", "Unchanged", "Deleted"
+        public required string Status { get; set; } // "new" or "unchanged"
     }
 }

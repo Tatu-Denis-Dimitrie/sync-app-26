@@ -442,16 +442,15 @@ public class CsvSyncService : ICsvSyncService
         var comparisons = new List<CSVDepartmentComparisionDTO>();
         var dbDepartments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
 
-        var dbDepartmentMap = dbDepartments.ToDictionary(d => d.Name.ToLower(), d => d);
+        var dbDepartmentMap = dbDepartments.ToDictionary(d => d.Name.Trim().ToLower(), d => d);
 
         foreach (var csvDept in csvDepartments)
         {
-            var deptName = csvDept.Name.ToLower();
+            var deptName = csvDept.Name.Trim().ToLower();
 
             if (dbDepartmentMap.TryGetValue(deptName, out var dbDept))
             {
-                var status = dbDept.Name != csvDept.Name ? "modified" : "deleted";
-
+                // Department already exists - mark as unchanged
                 comparisons.Add(new CSVDepartmentComparisionDTO
                 {
                     CsvDepartment = csvDept,
@@ -460,34 +459,17 @@ public class CsvSyncService : ICsvSyncService
                         Id = dbDept.Id,
                         Name = dbDept.Name
                     },
-                    Status = status
+                    Status = "unchanged"
                 });
             }
             else
             {
+                // New department from CSV
                 comparisons.Add(new CSVDepartmentComparisionDTO
                 {
                     CsvDepartment = csvDept,
                     DbDepartment = null,
                     Status = "new"
-                });
-            }
-        }
-
-        var csvDepartmentNames = csvDepartments.Select(d => d.Name.ToLower()).ToHashSet();
-        foreach (var dbDept in dbDepartments)
-        {
-            if (!csvDepartmentNames.Contains(dbDept.Name.ToLower()))
-            {
-                comparisons.Add(new CSVDepartmentComparisionDTO
-                {
-                    CsvDepartment = null,
-                    DbDepartment = new DepartmentGETResponseDTO
-                    {
-                        Id = dbDept.Id,
-                        Name = dbDept.Name
-                    },
-                    Status = "deleted"
                 });
             }
         }
@@ -498,7 +480,6 @@ public class CsvSyncService : ICsvSyncService
     public async Task<SyncResultDTO> SyncDepartments(List<CSVDepartmentComparisionDTO> departmentSyncList)
     {
         var result = new SyncResultDTO { Success = true };
-        var dbDepartments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
 
         foreach (var item in departmentSyncList)
         {
@@ -516,49 +497,9 @@ public class CsvSyncService : ICsvSyncService
                     await _departmentRepository.AddDepartmentAsync(newDepartment);
                     result.RecordsProcessed++;
                 }
-                else if (item.Status == "modified" && item.CsvDepartment != null && item.DbDepartment != null)
-                {
-                    var existingDepartment = await _departmentRepository.GetDepartmentByIdAsync(item.DbDepartment.Id);
-                    
-                    if (existingDepartment != null && existingDepartment.Name != item.CsvDepartment.Name)
-                    {
-                        existingDepartment.Name = item.CsvDepartment.Name;
-                        existingDepartment.UpdatedAt = DateTime.UtcNow;
-                        await _departmentRepository.UpdateDepartmentAsync(existingDepartment);
-                        result.RecordsProcessed++;
-                    }
-                    else
-                    {
-                        result.RecordsSkipped++;
-                    }
-                }
-                else if (item.Status == "deleted" && item.DbDepartment != null)
-                {
-                    var usersInDepartment = await _userRepository.GetUsersByDepartmentIdAsync(item.DbDepartment.Id);
-                    
-                    if (!usersInDepartment.Any())
-                    {
-                        var departmentToDelete = await _departmentRepository.GetDepartmentByIdAsync(item.DbDepartment.Id);
-                        if(departmentToDelete != null)
-                        {
-                            if (departmentToDelete.UpdatedAt != null && departmentToDelete.UpdatedAt > DateTime.UtcNow.AddDays(-90))
-                            {
-                                result.RecordsSkipped++;
-                                continue;
-                            }
-                            departmentToDelete.DeletedAt = DateTime.UtcNow;
-                            await _departmentRepository.UpdateDepartmentAsync(departmentToDelete);
-                            result.RecordsProcessed++;
-                        }
-                    }
-                    else
-                    {
-                        result.RecordsSkipped++;
-                        result.Errors.Add($"Department '{item.DbDepartment.Name}' cannot be deleted because it has assigned users.");
-                    }
-                }
                 else
                 {
+                    // Skip unchanged departments
                     result.RecordsSkipped++;
                 }
             }
