@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department } from '../models/csv-sync.model';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department, ImportConflictHistory } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 
 interface BackendUser {
@@ -116,6 +116,18 @@ export class UserSyncService {
       catchError(error => {
         console.error('Error fetching user:', error);
         return of(null);
+      })
+    );
+  }
+
+  /**
+   * Get import conflict history for a user
+   */
+  getImportConflictsByUserId(userId: string): Observable<ImportConflictHistory[]> {
+    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byUser/${userId}`).pipe(
+      catchError(error => {
+        console.error('Error fetching import conflicts:', error);
+        return of([]);
       })
     );
   }

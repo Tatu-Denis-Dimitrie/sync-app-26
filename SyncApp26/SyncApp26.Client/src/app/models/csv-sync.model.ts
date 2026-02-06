@@ -85,3 +85,13 @@ export interface SyncProgress {
   totalRecords: number;
   status: SyncStatus;
 }
+
+export interface ImportConflictHistory {
+  id: string;
+  importHistoryId: string;
+  userId: string;
+  fieldName: string;
+  oldValue: string;
+  newValue: string;
+  status: 'accepted' | 'rejected';
+}

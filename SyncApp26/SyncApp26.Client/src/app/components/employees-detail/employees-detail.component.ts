@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
-import { User, UserRole, Department } from '../../models/csv-sync.model';
+import { User, UserRole, Department, ImportConflictHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 
 @Component({
@@ -20,6 +20,9 @@ export class EmployeesDetailComponent implements OnInit {
   paginatedUsers$!: Observable<User[]>;
   departments$!: Observable<Department[]>;
   selectedUser: User | null = null;
+  importConflicts: ImportConflictHistory[] = [];
+  conflictsLoading = false;
+  conflictsError = '';
   
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 10;
@@ -54,6 +57,9 @@ export class EmployeesDetailComponent implements OnInit {
       if (params['id']) {
         this.users$.subscribe(users => {
           this.selectedUser = users.find(u => u.id === params['id']) || null;
+          if (this.selectedUser) {
+            this.loadUserConflicts(this.selectedUser.id);
+          }
         });
       }
     });
@@ -88,10 +94,13 @@ export class EmployeesDetailComponent implements OnInit {
 
   selectUser(user: User): void {
     this.selectedUser = user;
+    this.loadUserConflicts(user.id);
   }
 
   closeDetails(): void {
     this.selectedUser = null;
+    this.importConflicts = [];
+    this.conflictsError = '';
     this.router.navigate(['/employees']);
   }
 
@@ -110,6 +119,45 @@ export class EmployeesDetailComponent implements OnInit {
   formatDate(date: Date | string | undefined): string {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('ro-RO');
+  }
+
+  loadUserConflicts(userId: string): void {
+    this.conflictsLoading = true;
+    this.conflictsError = '';
+    this.userSyncService.getImportConflictsByUserId(userId).subscribe({
+      next: conflicts => {
+        this.importConflicts = conflicts;
+        this.conflictsLoading = false;
+      },
+      error: () => {
+        this.conflictsLoading = false;
+        this.conflictsError = 'Failed to load conflict history.';
+        this.importConflicts = [];
+      }
+    });
+  }
+
+  getConflictStatusColor(status: string): string {
+    return status === 'accepted'
+      ? 'bg-green-500/10 text-green-700 border-green-500/20'
+      : 'bg-red-500/10 text-red-700 border-red-500/20';
+  }
+
+  formatConflictField(field: string): string {
+    if (!field) return 'Unknown Field';
+    const normalizedField = field.trim().toLowerCase();
+    switch (normalizedField) {
+      case 'firstname':
+        return 'First Name';
+      case 'lastname':
+        return 'Last Name';
+      case 'departmentname':
+        return 'Department';
+      case 'assignedtoname':
+        return 'Line Manager';
+      default:
+        return field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    }
   }
 
   getRoleBadgeColor(role: UserRole): string {

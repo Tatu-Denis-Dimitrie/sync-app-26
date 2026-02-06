@@ -5,6 +5,7 @@ using SyncApp26.Shared.DTOs.Response.User;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.CSV.Department;
 using SyncApp26.Shared.DTOs.Response.Department;
+using SyncApp26.Shared.DTOs.CSV.History;
 
 namespace SyncApp26.Application.Services;
 
@@ -12,11 +13,15 @@ public class CsvSyncService : ICsvSyncService
 {
     private readonly IUserRepository _userRepository;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly IImportHistoryRepository _importHistoryRepository;
+    private readonly IImportConflictRepository _importConflictRepository;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IImportHistoryRepository importHistoryRepository, IImportConflictRepository importConflictRepository)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
+        _importHistoryRepository = importHistoryRepository;
+        _importConflictRepository = importConflictRepository;
     }
 
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(List<CsvUserDTO> csvUsers)
@@ -187,6 +192,15 @@ public class CsvSyncService : ICsvSyncService
         var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
         var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
 
+        var importHistory = new ImportHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportDate = DateTime.UtcNow,
+            FileName = $"Import_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv"
+        };
+
+        bool importHistoryCreated = false;
+
         foreach (var item in syncRequest.Items)
         {
             try
@@ -240,11 +254,49 @@ public class CsvSyncService : ICsvSyncService
                 }
                 else if (item.Status == "modified" && item.CsvData != null)
                 {
+                    if (!importHistoryCreated)
+                    {
+                        await _importHistoryRepository.AddAsync(importHistory);
+                        importHistoryCreated = true;
+                    }
+
                     // Update existing user - reload from database to ensure fresh instance
                     var existingUser = await _userRepository.GetUserByIdAsync(Guid.Parse(item.Id));
                     
                     if (existingUser != null)
                     {
+                        if (item.Conflicts.Any())
+                        {
+                            foreach (var conflict in item.Conflicts)
+                            {
+                                var selectedValue = conflict.SelectedValue ?? (conflict.Selected ? "csv" : "db");
+                                if (!selectedValue.Equals("db", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    continue;
+                                }
+
+                                var normalizedField = conflict.Field.Trim().ToLower();
+                                var historyField = normalizedField == "assignedtoname" ? "linemanager" : normalizedField;
+
+                                var rejectedConflict = new ImportConflict
+                                {
+                                    Id = Guid.NewGuid(),
+                                    ImportHistoryId = importHistory.Id,
+                                    UserId = existingUser.Id,
+                                    FieldName = historyField,
+                                    OldValue = conflict.DbValue?.ToString() ?? string.Empty,
+                                    NewValue = conflict.CsvValue?.ToString() ?? string.Empty
+                                };
+
+                                if(historyField == "firstname" || historyField == "lastname")
+                                {
+                                    rejectedConflict.Status = "accepted";
+                                }
+
+                                await _importConflictRepository.AddAsync(rejectedConflict);
+                            }
+                        }
+
                         bool hasChanges = false;
         
                         // If there are selected conflicts, apply only those resolutions
@@ -263,15 +315,38 @@ public class CsvSyncService : ICsvSyncService
                                         case "firstname":
                                             if (existingUser.FirstName != item.CsvData.FirstName)
                                             {
+                                                var importConflict = new ImportConflict
+                                                {
+                                                    Id = Guid.NewGuid(),
+                                                    ImportHistoryId = importHistory.Id,
+                                                    UserId = existingUser.Id,
+                                                    FieldName = "firstname",
+                                                    OldValue = existingUser.FirstName,
+                                                    NewValue = item.CsvData.FirstName,
+                                                    Status = "accepted"
+                                                };
+
                                                 existingUser.FirstName = item.CsvData.FirstName;
                                                 hasChanges = true;
+                                                await _importConflictRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "lastname":
                                             if (existingUser.LastName != item.CsvData.LastName)
                                             {
+                                                var importConflict = new ImportConflict
+                                                {
+                                                    Id = Guid.NewGuid(),
+                                                    ImportHistoryId = importHistory.Id,
+                                                    UserId = existingUser.Id,
+                                                    FieldName = "lastname",
+                                                    OldValue = existingUser.LastName,
+                                                    NewValue = item.CsvData.LastName,
+                                                    Status = "accepted"
+                                                };
                                                 existingUser.LastName = item.CsvData.LastName;
                                                 hasChanges = true;
+                                                await _importConflictRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "departmentname":
@@ -289,8 +364,19 @@ public class CsvSyncService : ICsvSyncService
                                             }
                                             if (existingUser.DepartmentId != department.Id)
                                             {
+                                                var importConflict = new ImportConflict
+                                                {
+                                                    Id = Guid.NewGuid(),
+                                                    ImportHistoryId = importHistory.Id,
+                                                    UserId = existingUser.Id,
+                                                    FieldName = "departmentname",
+                                                    OldValue = existingUser.Department.Name,
+                                                    NewValue = department.Name,
+                                                    Status = "accepted"
+                                                }; 
                                                 existingUser.DepartmentId = department.Id;
                                                 hasChanges = true;
+                                                await _importConflictRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "assignedtoname":
@@ -307,11 +393,45 @@ public class CsvSyncService : ICsvSyncService
                                                     newAssignedToId = null;
                                                 }
                                             }
+
+                                            if (!newAssignedToId.HasValue)
+                                            {
+                                                var csvManagerName = conflict.CsvValue?.ToString();
+                                                if (!string.IsNullOrWhiteSpace(csvManagerName))
+                                                {
+                                                    var matchedManager = dbUsers.FirstOrDefault(u =>
+                                                        string.Equals($"{u.FirstName} {u.LastName}", csvManagerName, StringComparison.OrdinalIgnoreCase));
+                                                    if (matchedManager != null)
+                                                    {
+                                                        newAssignedToId = matchedManager.Id;
+                                                    }
+                                                }
+                                            }
+
+                                            if (newAssignedToId.HasValue)
+                                            {
+                                                var isLineManager = await _userRepository.IsUserLineManagerAsync(newAssignedToId.Value);
+                                                if (!isLineManager)
+                                                {
+                                                    newAssignedToId = null;
+                                                }
+                                            }
                                             
                                             if (existingUser.AssignedToId != newAssignedToId)
                                             {
+                                                var importConflict = new ImportConflict
+                                                {
+                                                    Id = Guid.NewGuid(),
+                                                    ImportHistoryId = importHistory.Id,
+                                                    UserId = existingUser.Id,
+                                                    FieldName = "assignedtoname",
+                                                    OldValue = existingUser.AssignedTo != null ? $"{existingUser.AssignedTo.FirstName} {existingUser.AssignedTo.LastName}" : null,
+                                                    NewValue = item.CsvData.AssignedToEmail,
+                                                    Status = "accepted"
+                                                };
                                                 existingUser.AssignedToId = newAssignedToId;
                                                 hasChanges = true;
+                                                await _importConflictRepository.AddAsync(importConflict);
                                             }
                                             break;
                                     }
