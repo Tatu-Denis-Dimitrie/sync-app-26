@@ -26,11 +26,11 @@ public class CsvSyncController : ControllerBase
         _csvValidationService = csvValidationService;
         _logger = logger;
     }
-
     /// <summary>
     /// Upload CSV file and compare with database
     /// </summary>
     [HttpPost("upload")]
+    [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit for large CSVs
     public async Task<ActionResult<List<UserComparisonDTO>>> UploadAndCompare(IFormFile file)
     {
         if (file == null || file.Length == 0)
@@ -43,8 +43,13 @@ public class CsvSyncController : ControllerBase
             return BadRequest(new { error = "File must be a CSV file" });
         }
 
+        // Get connection ID for SignalR progress updates
+        string? connectionId = Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
+
         try
         {
+            int totalRows = 0;
+
             // Validate CSV file first
             using (var validationStream = file.OpenReadStream())
             {
@@ -64,14 +69,15 @@ public class CsvSyncController : ControllerBase
                     });
                 }
 
+                totalRows = validationResult.TotalRows;
+
                 if (validationResult.Warnings.Count > 0)
                 {
                     _logger.LogInformation($"CSV validation passed with {validationResult.Warnings.Count} warnings");
                 }
             }
 
-            var csvUsers = new List<CsvUserDTO>();
-
+            // Re-open stream for processing
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -82,18 +88,17 @@ public class CsvSyncController : ControllerBase
             }))
             {
                 csv.Context.RegisterClassMap<CsvUserMap>();
-                csvUsers = csv.GetRecords<CsvUserDTO>().ToList();
+                
+                // Use Enumerable to stream records instead of loading all into memory
+                var csvUsers = csv.GetRecords<CsvUserDTO>();
+                
+                // Pass connectionId and totalRows for progress tracking
+                var comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, totalRows, connectionId);
+                
+                _logger.LogInformation($"Compared CSV with {totalRows} rows, found {comparisons.Count} comparisons");
+
+                return Ok(comparisons);
             }
-
-            if (csvUsers.Count == 0)
-            {
-                return BadRequest(new { error = "CSV file is empty or invalid" });
-            }
-
-            var comparisons = await _csvSyncService.CompareWithDatabase(csvUsers);
-            _logger.LogInformation($"Compared CSV with {csvUsers.Count} users, found {comparisons.Count} comparisons");
-
-            return Ok(comparisons);
         }
         catch (Exception ex)
         {
@@ -113,9 +118,12 @@ public class CsvSyncController : ControllerBase
             return BadRequest(new { error = "No sync items provided" });
         }
 
+        // Get connection ID for SignalR progress updates
+        string? connectionId = Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
+
         try
         {
-            var result = await _csvSyncService.SyncUsers(syncRequest);
+            var result = await _csvSyncService.SyncUsers(syncRequest, connectionId);
             _logger.LogInformation($"Sync completed: {result.RecordsProcessed} processed, {result.RecordsFailed} failed");
 
             if (!result.Success)

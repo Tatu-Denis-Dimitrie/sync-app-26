@@ -85,3 +85,10 @@ export interface SyncProgress {
   totalRecords: number;
   status: SyncStatus;
 }
+
+export interface SyncProgressUpdate {
+  processed: number;
+  failed: number;
+  skipped: number;
+  message?: string;
+}

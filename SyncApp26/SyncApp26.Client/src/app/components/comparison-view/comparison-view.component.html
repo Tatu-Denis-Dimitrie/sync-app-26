@@ -39,9 +39,10 @@
   </div>
 
   <div class="space-y-6">
+    <cdk-virtual-scroll-viewport itemSize="350" minBufferPx="800" maxBufferPx="2000" class="h-[calc(100vh-250px)] w-full">
     <div
-      *ngFor="let comparison of comparisons"
-      class="bg-card border border-border rounded-lg overflow-hidden"
+      *cdkVirtualFor="let comparison of comparisons"
+      class="bg-card border border-border rounded-lg overflow-hidden mb-6 mx-1"
     >
       <div class="px-6 py-4 bg-muted/30 border-b border-border">
         <div class="flex items-center justify-between">
@@ -87,6 +88,13 @@
       </div>
 
       <div class="divide-y divide-border">
+        <!-- Fields -->
+        <ng-container *ngFor="let field of ['departmentName', 'assignedToName', 'role']">
+             <!-- Using a loop for fields would be cleaner but structure varies slightly. 
+                  Keeping existing structure for now but inside virtual scroll item. -->
+        </ng-container>
+
+        <!-- Department -->
         <div
           *ngIf="comparison.dbUser || comparison.csvUser"
           class="grid grid-cols-[1fr,auto,1fr]"
@@ -171,6 +179,7 @@
           </div>
         </div>
 
+        <!-- Line Manager -->
         <div
           *ngIf="comparison.dbUser || comparison.csvUser"
           class="grid grid-cols-[1fr,auto,1fr]"
@@ -255,6 +264,7 @@
           </div>
         </div>
 
+        <!-- Role -->
         <div
           *ngIf="comparison.dbUser || comparison.csvUser"
           class="grid grid-cols-[1fr,auto,1fr]"
@@ -344,6 +354,7 @@
         </p>
       </div>
     </div>
+    </cdk-virtual-scroll-viewport>
 
     <div
       *ngIf="comparisons.length === 0"

@@ -8,16 +8,18 @@ namespace SyncApp26.Application.Services;
 
 public class CsvSyncService : ICsvSyncService
 {
+    private readonly ISyncNotificationService _notificationService;
     private readonly IUserRepository _userRepository;
     private readonly IDepartmentRepository _departmentRepository;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, ISyncNotificationService notificationService)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
+        _notificationService = notificationService;
     }
 
-    public async Task<List<UserComparisonDTO>> CompareWithDatabase(List<CsvUserDTO> csvUsers)
+    public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
     {
         var comparisons = new List<UserComparisonDTO>();
         var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
@@ -26,10 +28,27 @@ public class CsvSyncService : ICsvSyncService
         // Create a map of email to DB user for quick lookup
         var dbUserMap = dbUsers.ToDictionary(u => u.Email.ToLower(), u => u);
 
+        int processedCount = 0;
+        int lastPercent = 0;
+        var csvEmails = new HashSet<string>();
+
         // Process CSV users
         foreach (var csvUser in csvUsers)
         {
+            processedCount++;
             var email = csvUser.Email.ToLower();
+            csvEmails.Add(email);
+            
+            // Send progress update every 1% or every 100 records
+            if (connectionId != null && totalRows > 0)
+            {
+                int currentPercent = (int)((double)processedCount / totalRows * 100);
+                if (currentPercent > lastPercent || processedCount % 100 == 0)
+                {
+                    lastPercent = currentPercent;
+                    await _notificationService.SendProgress(connectionId, $"Analyzing record {processedCount}/{totalRows}...", currentPercent);
+                }
+            }
 
             if (dbUserMap.TryGetValue(email, out var dbUser))
             {
@@ -110,6 +129,12 @@ public class CsvSyncService : ICsvSyncService
                 };
 
                 comparisons.Add(comparison);
+                
+                // Stream result to frontend
+                if (connectionId != null)
+                {
+                    await _notificationService.SendComparison(connectionId, comparison);
+                }
             }
             else
             {
@@ -135,11 +160,16 @@ public class CsvSyncService : ICsvSyncService
                 };
 
                 comparisons.Add(comparison);
+                
+                // Stream result to frontend
+                if (connectionId != null)
+                {
+                    await _notificationService.SendComparison(connectionId, comparison);
+                }
             }
         }
 
         // Find deleted users (in DB but not in CSV)
-        var csvEmails = csvUsers.Select(u => u.Email.ToLower()).ToHashSet();
         foreach (var dbUser in dbUsers)
         {
             if (!csvEmails.Contains(dbUser.Email.ToLower()))
@@ -157,14 +187,25 @@ public class CsvSyncService : ICsvSyncService
         return comparisons;
     }
 
-    public async Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest)
+    public async Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest, string? connectionId = null)
     {
         var result = new SyncResultDTO { Success = true };
         var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
         var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
 
+        int totalItems = syncRequest.Items.Count;
+        int processedItems = 0;
+
         foreach (var item in syncRequest.Items)
         {
+            processedItems++;
+            
+            // Send progress update
+            if (connectionId != null && processedItems % 10 == 0) // Update every 10 items to avoid spamming
+            {
+                 await _notificationService.SendSyncProgress(connectionId, result.RecordsProcessed, result.RecordsFailed, result.RecordsSkipped);
+            }
+
             try
             {
                 if (item.Status == "new" && item.CsvData != null)
@@ -354,12 +395,18 @@ public class CsvSyncService : ICsvSyncService
                 result.Errors.Add($"Failed to process user {item.CsvData?.Email ?? item.Id}: {ex.Message}");
             }
         }
+        
+        // Final status update
+        if (connectionId != null)
+        {
+             await _notificationService.SendSyncProgress(connectionId, result.RecordsProcessed, result.RecordsFailed, result.RecordsSkipped);
+        }
 
         result.Success = result.RecordsFailed == 0;
         result.Message = result.Success
             ? $"Successfully synced {result.RecordsProcessed} records"
             : $"Synced with errors: {result.RecordsFailed} failed";
-
+            
         return result;
     }
 

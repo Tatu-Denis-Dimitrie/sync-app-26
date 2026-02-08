@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
-import { map, delay, tap, catchError } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department } from '../models/csv-sync.model';
+import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
+import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
+import { from } from 'rxjs';
 
 interface BackendUser {
   id: string;
@@ -24,16 +26,26 @@ interface BackendUser {
 export class UserSyncService {
   private apiUrl = environment.apiUrl + environment.endpoints.users;
   private departmentUrl = environment.apiUrl + environment.endpoints.departments;
-  private syncProgressSubject = new BehaviorSubject<SyncProgress | null>(null);
+  private syncProgressSubject = new BehaviorSubject<SyncProgressUpdate | null>(null);
   private currentComparisonSubject = new BehaviorSubject<UserComparison[] | null>(null);
   private usersSubject = new BehaviorSubject<User[]>([]);
 
   syncProgress$ = this.syncProgressSubject.asObservable();
   currentComparison$ = this.currentComparisonSubject.asObservable();
   users$ = this.usersSubject.asObservable();
+  uploadProgress$!: Observable<UploadProgress>;
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private signalrService: UserSyncSignalrService
+  ) {
+    this.uploadProgress$ = this.signalrService.uploadProgress$;
     this.loadUsers();
+
+    // Subscribe to SignalR sync progress and update local subject
+    this.signalrService.syncProgress$.subscribe(progress => {
+      this.syncProgressSubject.next(progress);
+    });
   }
 
   /**
@@ -57,7 +69,7 @@ export class UserSyncService {
   private mapBackendUser(backendUser: BackendUser, allUsers: BackendUser[]): User {
     // Determine role: if user has anyone assigned to them, they're a line manager
     const hasDirectReports = allUsers.some(u => u.assignedToId === backendUser.id);
-    
+
     return {
       id: backendUser.id,
       firstName: backendUser.firstName,
@@ -98,7 +110,7 @@ export class UserSyncService {
         // We need all users to calculate role, so we'll use the cached users
         const allUsers = this.usersSubject.value;
         const hasDirectReports = allUsers.some(u => u.assignedToId === backendUser.id);
-        
+
         return {
           id: backendUser.id,
           firstName: backendUser.firstName,
@@ -127,7 +139,7 @@ export class UserSyncService {
     return this.users$.pipe(
       map(users => {
         const deptMap = new Map<string, { lineManagers: Set<string>, employees: Set<string> }>();
-        
+
         users.forEach(user => {
           if (!deptMap.has(user.departmentName)) {
             deptMap.set(user.departmentName, { lineManagers: new Set(), employees: new Set() });
@@ -164,22 +176,46 @@ export class UserSyncService {
     );
   }
 
+  // ... other methods
+
   /**
    * Upload CSV file and compare with database
    */
   uploadAndCompare(file: File): Observable<UserComparison[]> {
-    const formData = new FormData();
-    formData.append('file', file);
+    // Reset comparisons
+    this.currentComparisonSubject.next([]);
 
-    return this.http.post<UserComparison[]>(`${environment.apiUrl}/CsvSync/upload`, formData).pipe(
+    // Subscribe to SignalR results and accumulate
+    const subscription = this.signalrService.comparisonResult$.subscribe(comparison => {
+      const current = this.currentComparisonSubject.value || [];
+      this.currentComparisonSubject.next([...current, comparison]);
+    });
+
+    return from(this.signalrService.startConnection()).pipe(
+      switchMap(() => {
+        const connectionId = this.signalrService.getConnectionId();
+        const headers: any = {};
+        if (connectionId) {
+          headers['X-Connection-Id'] = connectionId;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        return this.http.post<UserComparison[]>(`${environment.apiUrl}/CsvSync/upload`, formData, { headers });
+      }),
       tap((comparisons) => {
+        // Use the final list from server to ensure completeness and correct order if needed
+        // But for visual continuity, we might just keep the accumulated one if it matches.
+        // Let's overwrite to be safe.
         this.currentComparisonSubject.next(comparisons);
       }),
       catchError(error => {
         console.error('Error uploading CSV:', error);
         this.currentComparisonSubject.next(null);
-        throw error; // Re-throw to let component handle it
-      })
+        throw error;
+      }),
+      finalize(() => subscription.unsubscribe())
     );
   }
 
@@ -212,7 +248,15 @@ export class UserSyncService {
 
     const syncRequest = { items: selectedItems };
 
-    return this.http.post<SyncResult>(`${environment.apiUrl}/CsvSync/sync`, syncRequest).pipe(
+    return from(this.signalrService.startConnection()).pipe(
+      switchMap(() => {
+        const connectionId = this.signalrService.getConnectionId();
+        const headers: any = {};
+        if (connectionId) {
+          headers['X-Connection-Id'] = connectionId;
+        }
+        return this.http.post<SyncResult>(`${environment.apiUrl}/CsvSync/sync`, syncRequest, { headers });
+      }),
       tap((result) => {
         if (result.success) {
           // Refresh users list after successful sync
@@ -229,7 +273,7 @@ export class UserSyncService {
           recordsSkipped: 0,
           message: error.error?.error || 'Sync failed',
           errors: [error.message]
-        });
+        } as SyncResult);
       })
     );
   }
