@@ -137,6 +137,36 @@ export class EmployeesDetailComponent implements OnInit {
     });
   }
 
+  getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: ImportConflictHistory[] }> {
+    const groups = new Map<string, { importHistoryId: string; importDate?: string; importFileName?: string; conflicts: ImportConflictHistory[] }>();
+    const sorted = this.importConflicts
+      .slice()
+      .sort((a, b) => {
+        const aTime = a.importDate ? new Date(a.importDate).getTime() : 0;
+        const bTime = b.importDate ? new Date(b.importDate).getTime() : 0;
+        return bTime - aTime;
+      });
+
+    sorted.forEach(conflict => {
+      const key = conflict.importHistoryId;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          importHistoryId: conflict.importHistoryId,
+          importDate: conflict.importDate,
+          importFileName: conflict.importFileName,
+          conflicts: []
+        });
+      }
+      groups.get(key)?.conflicts.push(conflict);
+    });
+
+    return Array.from(groups.values()).sort((a, b) => {
+      const aTime = a.importDate ? new Date(a.importDate).getTime() : 0;
+      const bTime = b.importDate ? new Date(b.importDate).getTime() : 0;
+      return bTime - aTime;
+    });
+  }
+
   getConflictStatusColor(status: string): string {
     return status === 'accepted'
       ? 'bg-green-500/10 text-green-700 border-green-500/20'
@@ -180,5 +210,9 @@ export class EmployeesDetailComponent implements OnInit {
 
   navigateToEmployees(): void {
     this.router.navigate(['/employees']);
+  }
+
+  navigateToImportHistory(): void {
+    this.router.navigate(['/import-history']);
   }
 }

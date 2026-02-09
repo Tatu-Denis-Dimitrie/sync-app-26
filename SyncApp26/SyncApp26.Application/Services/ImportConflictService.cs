@@ -27,6 +27,8 @@ namespace SyncApp26.Application.Services
             {
                 Id = c.Id,
                 ImportHistoryId = c.ImportHistoryId,
+                ImportDate = c.ImportHistory?.ImportDate,
+                ImportFileName = c.ImportHistory?.FileName,
                 UserId = c.UserId,
                 FieldName = c.FieldName,
                 OldValue = c.OldValue,
@@ -48,6 +50,8 @@ namespace SyncApp26.Application.Services
             {
                 Id = conflict.Id,
                 ImportHistoryId = conflict.ImportHistoryId,
+                ImportDate = conflict.ImportHistory?.ImportDate,
+                ImportFileName = conflict.ImportHistory?.FileName,
                 UserId = conflict.UserId,
                 FieldName = conflict.FieldName,
                 OldValue = conflict.OldValue,
@@ -69,6 +73,8 @@ namespace SyncApp26.Application.Services
             {
                 Id = c.Id,
                 ImportHistoryId = c.ImportHistoryId,
+                ImportDate = c.ImportHistory?.ImportDate,
+                ImportFileName = c.ImportHistory?.FileName,
                 UserId = c.UserId,
                 FieldName = c.FieldName,
                 OldValue = c.OldValue,
@@ -90,6 +96,8 @@ namespace SyncApp26.Application.Services
             {
                 Id = c.Id,
                 ImportHistoryId = c.ImportHistoryId,
+                ImportDate = c.ImportHistory?.ImportDate,
+                ImportFileName = c.ImportHistory?.FileName,
                 UserId = c.UserId,
                 FieldName = c.FieldName,
                 OldValue = c.OldValue,

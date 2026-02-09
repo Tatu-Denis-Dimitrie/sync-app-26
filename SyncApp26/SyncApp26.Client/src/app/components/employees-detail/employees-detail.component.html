@@ -41,6 +41,12 @@
             Departments
           </button>
           <button
+            (click)="navigateToImportHistory()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Import History
+          </button>
+          <button
             (click)="navigateToUsers()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
@@ -422,57 +428,69 @@
             </div>
 
             <div
-              *ngFor="let conflict of importConflicts"
+              *ngFor="let group of getConflictGroupsByImport()"
               class="border border-border rounded-lg overflow-hidden mb-4 last:mb-0"
             >
-              <div class="px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-semibold text-foreground">
-                    {{ formatConflictField(conflict.fieldName) }}
-                  </p>
-                  <p class="text-xs text-muted-foreground">
-                    Import: {{ conflict.importHistoryId }}
-                  </p>
-                </div>
-                <span
-                  [ngClass]="getConflictStatusColor(conflict.status)"
-                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
-                >
-                  {{ conflict.status }}
-                </span>
+              <div class="px-4 py-3 bg-muted/30 border-b border-border">
+                <p class="text-xs text-muted-foreground">Import</p>
+                <p class="text-sm font-semibold text-foreground">
+                  {{ formatDate(group.importDate) }}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  File: {{ group.importFileName || "N/A" }}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  ID: {{ group.importHistoryId }}
+                </p>
               </div>
 
-              <div class="grid grid-cols-[1fr,auto,1fr]">
-                <div class="p-4 bg-red-50/30">
-                  <div class="text-xs font-medium text-muted-foreground uppercase mb-2">
-                    Database
+              <div *ngFor="let conflict of group.conflicts" class="border-t border-border">
+                <div class="px-4 py-3 bg-muted/10 border-b border-border flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-foreground">
+                      {{ formatConflictField(conflict.fieldName) }}
+                    </p>
                   </div>
-                  <p class="font-mono text-sm text-foreground">
-                    {{ conflict.oldValue || "N/A" }}
-                  </p>
-                </div>
-                <div class="flex items-center justify-center bg-muted/20 px-2">
-                  <svg
-                    class="w-4 h-4 text-muted-foreground"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                  <span
+                    [ngClass]="getConflictStatusColor(conflict.status)"
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5l7 7-7 7"
-                    ></path>
-                  </svg>
+                    {{ conflict.status }}
+                  </span>
                 </div>
-                <div class="p-4 bg-green-50/30">
-                  <div class="text-xs font-medium text-muted-foreground uppercase mb-2">
-                    CSV
+
+                <div class="grid grid-cols-[1fr,auto,1fr]">
+                  <div class="p-4 bg-red-50/30">
+                    <div class="text-xs font-medium text-muted-foreground uppercase mb-2">
+                      Database
+                    </div>
+                    <p class="font-mono text-sm text-foreground">
+                      {{ conflict.oldValue || "N/A" }}
+                    </p>
                   </div>
-                  <p class="font-mono text-sm text-foreground">
-                    {{ conflict.newValue || "N/A" }}
-                  </p>
+                  <div class="flex items-center justify-center bg-muted/20 px-2">
+                    <svg
+                      class="w-4 h-4 text-muted-foreground"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5l7 7-7 7"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div class="p-4 bg-green-50/30">
+                    <div class="text-xs font-medium text-muted-foreground uppercase mb-2">
+                      CSV
+                    </div>
+                    <p class="font-mono text-sm text-foreground">
+                      {{ conflict.newValue || "N/A" }}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

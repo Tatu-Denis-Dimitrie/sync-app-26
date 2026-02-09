@@ -6,6 +6,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.CSV.Department;
 using SyncApp26.Shared.DTOs.Response.Department;
 using SyncApp26.Shared.DTOs.CSV.History;
+using System.IO;
 
 namespace SyncApp26.Application.Services;
 
@@ -196,7 +197,9 @@ public class CsvSyncService : ICsvSyncService
         {
             Id = Guid.NewGuid(),
             ImportDate = DateTime.UtcNow,
-            FileName = $"Import_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv"
+            FileName = string.IsNullOrWhiteSpace(syncRequest.FileName)
+                ? $"Import_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv"
+                : Path.GetFileName(syncRequest.FileName)
         };
 
         bool importHistoryCreated = false;
@@ -254,12 +257,6 @@ public class CsvSyncService : ICsvSyncService
                 }
                 else if (item.Status == "modified" && item.CsvData != null)
                 {
-                    if (!importHistoryCreated)
-                    {
-                        await _importHistoryRepository.AddAsync(importHistory);
-                        importHistoryCreated = true;
-                    }
-
                     // Update existing user - reload from database to ensure fresh instance
                     var existingUser = await _userRepository.GetUserByIdAsync(Guid.Parse(item.Id));
                     
@@ -267,6 +264,12 @@ public class CsvSyncService : ICsvSyncService
                     {
                         if (item.Conflicts.Any())
                         {
+                            if (!importHistoryCreated)
+                            {
+                                await _importHistoryRepository.AddAsync(importHistory);
+                                importHistoryCreated = true;
+                            }
+
                             foreach (var conflict in item.Conflicts)
                             {
                                 var selectedValue = conflict.SelectedValue ?? (conflict.Selected ? "csv" : "db");
@@ -285,7 +288,8 @@ public class CsvSyncService : ICsvSyncService
                                     UserId = existingUser.Id,
                                     FieldName = historyField,
                                     OldValue = conflict.DbValue?.ToString() ?? string.Empty,
-                                    NewValue = conflict.CsvValue?.ToString() ?? string.Empty
+                                    NewValue = conflict.CsvValue?.ToString() ?? string.Empty,
+                                    Status = "rejected"
                                 };
 
                                 if(historyField == "firstname" || historyField == "lastname")
@@ -299,10 +303,9 @@ public class CsvSyncService : ICsvSyncService
 
                         bool hasChanges = false;
         
-                        // If there are selected conflicts, apply only those resolutions
-                        if (item.Conflicts.Any(c => c.Selected))
+                        // If conflicts exist, apply only selected resolutions
+                        if (item.Conflicts.Any())
                         {
-                            // Apply only selected conflict resolutions
                             foreach (var conflict in item.Conflicts.Where(c => c.Selected))
                             {
                                 // If no SelectedValue is specified, default to "csv"
@@ -440,7 +443,7 @@ public class CsvSyncService : ICsvSyncService
                         }
                         else
                         {
-                            // If no conflicts are selected, update all fields that differ from database
+                            // If no conflicts exist, update all fields that differ from database
                             if (existingUser.FirstName != item.CsvData.FirstName)
                             {
                                 existingUser.FirstName = item.CsvData.FirstName;

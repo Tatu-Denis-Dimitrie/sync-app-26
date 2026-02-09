@@ -16,17 +16,22 @@ namespace SyncApp26.Infrastructure.Repositories
 
         public async Task<IEnumerable<ImportConflict>> GetAllAsync()
         {
-            return await _context.ImportConflicts.ToListAsync();
+            return await _context.ImportConflicts
+                .Include(c => c.ImportHistory)
+                .ToListAsync();
         }
 
         public async Task<ImportConflict?> GetByIdAsync(Guid id)
         {
-            return await _context.ImportConflicts.FindAsync(id);
+            return await _context.ImportConflicts
+                .Include(c => c.ImportHistory)
+                .FirstOrDefaultAsync(c => c.Id == id);
         }
 
         public async Task<IEnumerable<ImportConflict>> GetByImportHistoryIdAsync(Guid importHistoryId)
         {
             return await _context.ImportConflicts
+                .Include(c => c.ImportHistory)
                 .Where(c => c.ImportHistoryId == importHistoryId)
                 .ToListAsync();
         }
@@ -34,6 +39,7 @@ namespace SyncApp26.Infrastructure.Repositories
         public async Task<IEnumerable<ImportConflict>> GetByUserIdAsync(Guid userId)
         {
             return await _context.ImportConflicts
+                .Include(c => c.ImportHistory)
                 .Where(c => c.UserId == userId)
                 .ToListAsync();
         }

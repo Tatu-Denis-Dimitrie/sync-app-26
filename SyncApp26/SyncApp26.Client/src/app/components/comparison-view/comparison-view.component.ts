@@ -123,7 +123,6 @@ export class ComparisonViewComponent {
 
   getFilteredComparisons(): UserComparison[] {
     return this.comparisons.filter(comparison => {
-      // Filter by status
       const statusMatch = 
         (this.filterNew && comparison.status === 'new') ||
         (this.filterModified && comparison.status === 'modified') ||
@@ -131,11 +130,9 @@ export class ComparisonViewComponent {
       
       if (!statusMatch) return false;
 
-      // Filter by search query
       if (this.searchQuery.trim()) {
         const query = this.searchQuery.toLowerCase();
         
-        // Get the user data (prefer csvUser if available, otherwise dbUser)
         const user = comparison.csvUser || comparison.dbUser;
         const firstName = user?.firstName?.toLowerCase() || '';
         const lastName = user?.lastName?.toLowerCase() || '';
@@ -143,10 +140,8 @@ export class ComparisonViewComponent {
         const assignedToName = user?.assignedToName?.toLowerCase() || '';
         const fullName = `${firstName} ${lastName}`;
         
-        // Match by full name or department
         const directMatch = fullName.includes(query) || department.includes(query);
-        
-        // Also match if this user is assigned to a line manager whose name matches the query
+
         const assignedToMatch = assignedToName.includes(query);
         
         return directMatch || assignedToMatch;

@@ -126,4 +126,8 @@ export class UsersListComponent implements OnInit {
   navigateToEmployees(): void {
     this.router.navigate(['/employees']);
   }
+
+  navigateToImportHistory(): void {
+    this.router.navigate(['/import-history']);
+  }
 }

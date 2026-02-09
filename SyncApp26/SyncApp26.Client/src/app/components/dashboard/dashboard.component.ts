@@ -63,6 +63,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   departmentSearchQuery = '';
   
   UserRole = UserRole;
+  fileName = '';
 
   constructor(
     private userSyncService: UserSyncService,
@@ -140,6 +141,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
+      this.fileName = file.name;
       this.uploadFile(file);
     }
   }
@@ -281,13 +283,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   syncSelectedUsers(): void {
     this.isSyncing = true;
-    this.userSyncService.syncUsers(this.currentComparisons)
+    this.userSyncService.syncUsers(this.currentComparisons, this.fileName)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
           console.log('Sync successful:', result);
           this.isSyncing = false;
           this.showComparison = false;
+          this.fileName = '';
         },
         error: (error) => {
           console.error('Sync failed:', error);
@@ -407,6 +410,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   navigateToEmployees(): void {
     this.router.navigate(['/employees']);
+  }
+
+  navigateToImportHistory(): void {
+    this.router.navigate(['/import-history']);
   }
 
   getFilteredDepartmentComparisons(): CSVDepartmentComparisonDTO[] {

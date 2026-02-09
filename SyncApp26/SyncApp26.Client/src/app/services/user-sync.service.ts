@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department, ImportConflictHistory } from '../models/csv-sync.model';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 
 interface BackendUser {
@@ -133,6 +133,30 @@ export class UserSyncService {
   }
 
   /**
+   * Get import history list
+   */
+  getImportHistories(): Observable<ImportHistoryItem[]> {
+    return this.http.get<ImportHistoryItem[]>(`${environment.apiUrl}/ImportHistory`).pipe(
+      catchError(error => {
+        console.error('Error fetching import history:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get import conflicts by import history id
+   */
+  getImportConflictsByImportHistoryId(importHistoryId: string): Observable<ImportConflictHistory[]> {
+    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byImportHistory/${importHistoryId}`).pipe(
+      catchError(error => {
+        console.error('Error fetching import conflicts by history:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
    * Get departments from backend with user counts
    */
   getDepartments(): Observable<Department[]> {
@@ -222,7 +246,7 @@ export class UserSyncService {
   /**
    * Sync selected users with resolved conflicts
    */
-  syncUsers(comparisons: UserComparison[]): Observable<SyncResult> {
+  syncUsers(comparisons: UserComparison[], fileName?: string): Observable<SyncResult> {
     // Filter only selected items and map to sync request format
     const selectedItems = comparisons
       .filter(c => c.selected)
@@ -246,7 +270,7 @@ export class UserSyncService {
         }))
       }));
 
-    const syncRequest = { items: selectedItems };
+    const syncRequest = { items: selectedItems, fileName: fileName || null };
 
     return this.http.post<SyncResult>(`${environment.apiUrl}/CsvSync/sync`, syncRequest).pipe(
       tap((result) => {
