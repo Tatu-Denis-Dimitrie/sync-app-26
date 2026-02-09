@@ -169,10 +169,49 @@
       </div>
     </div>
 
+    <!-- Search and Filters -->
+    <div class="bg-card border border-border rounded-lg p-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="relative">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search departments..."
+            class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+          <svg
+            class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            ></path>
+          </svg>
+        </div>
+
+        <select
+          [(ngModel)]="sizeFilter"
+          (ngModelChange)="onFilterChange()"
+          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        >
+          <option value="all">All Sizes</option>
+          <option value="small">Small (≤10 people)</option>
+          <option value="medium">Medium (11-50 people)</option>
+          <option value="large">Large (>50 people)</option>
+        </select>
+      </div>
+    </div>
+
     <!-- Departments Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
       <div
-        *ngFor="let dept of departments$ | async"
+        *ngFor="let dept of paginatedDepartments$ | async"
         class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
         (click)="viewDepartmentUsers(dept.name)"
       >
@@ -270,7 +309,7 @@
 
       <!-- Empty State -->
       <div
-        *ngIf="(departments$ | async)?.length === 0"
+        *ngIf="(paginatedDepartments$ | async)?.length === 0"
         class="col-span-full text-center py-12"
       >
         <div
@@ -290,11 +329,27 @@
             ></path>
           </svg>
         </div>
-        <h3 class="text-lg font-medium text-foreground mb-2">No departments</h3>
+        <h3 class="text-lg font-medium text-foreground mb-2">
+          No departments found
+        </h3>
         <p class="text-muted-foreground">
-          There are no departments in the system at the moment.
+          {{
+            searchQuery
+              ? "Try adjusting your search or filters."
+              : "There are no departments in the system at the moment."
+          }}
         </p>
       </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="totalItems > pageSize" class="mt-6">
+      <app-pagination
+        [currentPage]="currentPage"
+        [totalItems]="totalItems"
+        [pageSize]="pageSize"
+        (pageChange)="onPageChange($event)"
+      ></app-pagination>
     </div>
   </div>
 </div>
