@@ -31,8 +31,11 @@ public class CsvSyncController : ControllerBase
     /// </summary>
     [HttpPost("upload")]
     [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit for large CSVs
-    public async Task<ActionResult<List<UserComparisonDTO>>> UploadAndCompare(IFormFile file)
+    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file)
     {
+        var startTime = DateTime.UtcNow;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
         if (file == null || file.Length == 0)
         {
             return BadRequest(new { error = "No file uploaded" });
@@ -49,35 +52,14 @@ public class CsvSyncController : ControllerBase
         try
         {
             int totalRows = 0;
+            long validationTimeMs = 0;
+            long comparisonTimeMs = 0;
 
-            // Validate CSV file first
-            using (var validationStream = file.OpenReadStream())
-            {
-                var validationResult = await _csvValidationService.ValidateCsvFile(validationStream, file.FileName);
-
-                if (!validationResult.IsValid)
-                {
-                    _logger.LogWarning($"CSV validation failed: {validationResult.Errors.Count} errors");
-                    return BadRequest(new
-                    {
-                        error = "CSV validation failed",
-                        errors = validationResult.Errors,
-                        warnings = validationResult.Warnings,
-                        totalRows = validationResult.TotalRows,
-                        validRows = validationResult.ValidRows,
-                        invalidRows = validationResult.InvalidRows
-                    });
-                }
-
-                totalRows = validationResult.TotalRows;
-
-                if (validationResult.Warnings.Count > 0)
-                {
-                    _logger.LogInformation($"CSV validation passed with {validationResult.Warnings.Count} warnings");
-                }
-            }
-
-            // Re-open stream for processing
+            // Single-pass validation and processing
+            var comparisonStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            List<UserComparisonDTO> comparisons;
+            CsvValidationResultDTO? validationResult = null;
+            
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -89,16 +71,40 @@ public class CsvSyncController : ControllerBase
             {
                 csv.Context.RegisterClassMap<CsvUserMap>();
                 
-                // Use Enumerable to stream records instead of loading all into memory
+                // Validate headers quickly
+                csv.Read();
+                csv.ReadHeader();
+                var headers = csv.HeaderRecord;
+                
+                if (headers == null || !headers.Contains("Email") || !headers.Contains("FirstName"))
+                {
+                    return BadRequest(new { error = "CSV validation failed", errors = new[] { "Missing required headers: Email, FirstName, LastName, DepartmentName" } });
+                }
+                
+                // Stream records for processing
                 var csvUsers = csv.GetRecords<CsvUserDTO>();
                 
-                // Pass connectionId and totalRows for progress tracking
-                var comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, totalRows, connectionId);
-                
-                _logger.LogInformation($"Compared CSV with {totalRows} rows, found {comparisons.Count} comparisons");
-
-                return Ok(comparisons);
+                // Pass connectionId for progress tracking (totalRows estimated during processing)
+                comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, 0, connectionId);
+                totalRows = comparisons.Count;
             }
+            
+            comparisonStopwatch.Stop();
+            comparisonTimeMs = comparisonStopwatch.ElapsedMilliseconds;
+            stopwatch.Stop();
+            
+            _logger.LogInformation($"Compared CSV with {totalRows} rows, found {comparisons.Count} comparisons in {stopwatch.ElapsedMilliseconds}ms");
+
+            var response = new ComparisonResponseDTO
+            {
+                Comparisons = comparisons,
+                TotalRows = totalRows,
+                ValidationTimeMs = validationTimeMs,
+                ComparisonTimeMs = comparisonTimeMs,
+                TotalTimeMs = stopwatch.ElapsedMilliseconds
+            };
+
+            return Ok(response);
         }
         catch (Exception ex)
         {

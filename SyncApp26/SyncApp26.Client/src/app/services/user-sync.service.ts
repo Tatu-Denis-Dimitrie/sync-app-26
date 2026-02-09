@@ -29,11 +29,13 @@ export class UserSyncService {
   private syncProgressSubject = new BehaviorSubject<SyncProgressUpdate | null>(null);
   private currentComparisonSubject = new BehaviorSubject<UserComparison[] | null>(null);
   private usersSubject = new BehaviorSubject<User[]>([]);
+  private timingInfoSubject = new BehaviorSubject<{ validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null>(null);
 
   syncProgress$ = this.syncProgressSubject.asObservable();
   currentComparison$ = this.currentComparisonSubject.asObservable();
   users$ = this.usersSubject.asObservable();
   uploadProgress$!: Observable<UploadProgress>;
+  timingInfo$ = this.timingInfoSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -202,14 +204,31 @@ export class UserSyncService {
         const formData = new FormData();
         formData.append('file', file);
 
-        return this.http.post<UserComparison[]>(`${environment.apiUrl}/CsvSync/upload`, formData, { headers });
+        return this.http.post<any>(`${environment.apiUrl}/CsvSync/upload`, formData, { headers });
       }),
-      tap((comparisons) => {
-        // Use the final list from server to ensure completeness and correct order if needed
-        // But for visual continuity, we might just keep the accumulated one if it matches.
-        // Let's overwrite to be safe.
-        this.currentComparisonSubject.next(comparisons);
+      map((response: any) => {
+        // Handle both old format (array) and new format (object with comparisons)
+        if (Array.isArray(response)) {
+          return { comparisons: response, totalRows: response.length, validationTimeMs: 0, comparisonTimeMs: 0, totalTimeMs: 0 };
+        }
+        return response;
       }),
+      tap((response) => {
+        // Use the final list from server to ensure completeness and correct order
+        this.currentComparisonSubject.next(response.comparisons);
+        
+        // Store timing information for display
+        this.timingInfoSubject.next({
+          validationTimeMs: response.validationTimeMs,
+          comparisonTimeMs: response.comparisonTimeMs,
+          totalTimeMs: response.totalTimeMs
+        });
+        
+        if (response.totalTimeMs) {
+          console.log(`Server processing time: ${response.totalTimeMs}ms (Validation: ${response.validationTimeMs}ms, Comparison: ${response.comparisonTimeMs}ms)`);
+        }
+      }),
+      map(response => response.comparisons),
       catchError(error => {
         console.error('Error uploading CSV:', error);
         this.currentComparisonSubject.next(null);

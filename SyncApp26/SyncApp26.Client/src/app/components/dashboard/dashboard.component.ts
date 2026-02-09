@@ -63,6 +63,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   uploadStartTime: number = 0;
   syncStartTime: number = 0;
   successMessage: string = '';
+  serverTimingInfo: { validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null = null;
 
   UserRole = UserRole;
 
@@ -134,7 +135,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private formatDuration(ms: number): string {
+  formatDuration(ms: number): string {
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -156,6 +157,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isUploading = true;
     this.successMessage = '';
     this.uploadStartTime = Date.now();
+    this.serverTimingInfo = null;
 
     this.userSyncService.uploadAndCompare(file)
       .pipe(takeUntil(this.destroy$))
@@ -165,8 +167,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('CSV uploaded and compared:', comparisons);
           this.isUploading = false;
           this.showComparison = true;
-          this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
-          setTimeout(() => this.successMessage = '', 5000);
+          
+          // Get server timing info
+          this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
+            this.serverTimingInfo = timing;
+            if (timing) {
+              this.successMessage = `Analysis completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(timing.totalTimeMs)}, Network: ${this.formatDuration(duration - timing.totalTimeMs)})`;
+            } else {
+              this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
+            }
+          });
+          
+          setTimeout(() => this.successMessage = '', 10000);
         },
         error: (error) => {
           console.error('Upload failed:', error);
@@ -252,6 +264,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isSyncing = true;
     this.successMessage = '';
     this.syncStartTime = Date.now();
+    this.serverTimingInfo = null;
 
     this.userSyncService.syncUsers(this.currentComparisons)
       .pipe(takeUntil(this.destroy$))
@@ -261,8 +274,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('Sync successful:', result);
           this.isSyncing = false;
           this.showComparison = false;
-          this.successMessage = `Sync completed in ${this.formatDuration(duration)}`;
-          setTimeout(() => this.successMessage = '', 5000);
+          
+          if (result.processingTimeMs) {
+            this.successMessage = `Sync completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(result.processingTimeMs)}, Network: ${this.formatDuration(duration - result.processingTimeMs)})`;
+          } else {
+            this.successMessage = `Sync completed in ${this.formatDuration(duration)}`;
+          }
+          
+          setTimeout(() => this.successMessage = '', 10000);
 
           this.userSyncService.refreshUsers();
         },

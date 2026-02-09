@@ -22,15 +22,20 @@ public class CsvSyncService : ICsvSyncService
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
     {
         var comparisons = new List<UserComparisonDTO>();
-        var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
+        
+        // Use optimized no-tracking query for read-only comparison
+        var dbUsers = await _userRepository.GetAllUsersForComparisonAsync();
         var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
 
-        // Create a map of email to DB user for quick lookup
+        // Create a map of email to DB user for O(1) lookup
         var dbUserMap = dbUsers.ToDictionary(u => u.Email.ToLower(), u => u);
 
         int processedCount = 0;
         int lastPercent = 0;
         var csvEmails = new HashSet<string>();
+        
+        // For SignalR progress - don't await to avoid blocking the processing loop
+        Task? progressTask = null;
 
         // Process CSV users
         foreach (var csvUser in csvUsers)
@@ -39,14 +44,15 @@ public class CsvSyncService : ICsvSyncService
             var email = csvUser.Email.ToLower();
             csvEmails.Add(email);
             
-            // Send progress update every 1% or every 100 records
-            if (connectionId != null && totalRows > 0)
+            // Send progress update every 5% or every 500 records (less frequent to reduce overhead)
+            if (connectionId != null && processedCount % 500 == 0)
             {
-                int currentPercent = (int)((double)processedCount / totalRows * 100);
-                if (currentPercent > lastPercent || processedCount % 100 == 0)
+                int currentPercent = totalRows > 0 ? (int)((double)processedCount / totalRows * 100) : 0;
+                if (currentPercent > lastPercent || totalRows == 0)
                 {
                     lastPercent = currentPercent;
-                    await _notificationService.SendProgress(connectionId, $"Analyzing record {processedCount}/{totalRows}...", currentPercent);
+                    // Fire and forget - don't await to avoid blocking
+                    progressTask = _notificationService.SendProgress(connectionId, $"Analyzing record {processedCount}...", currentPercent);
                 }
             }
 
@@ -161,12 +167,18 @@ public class CsvSyncService : ICsvSyncService
 
                 comparisons.Add(comparison);
                 
-                // Stream result to frontend
+                // Stream result to frontend - fire and forget
                 if (connectionId != null)
                 {
-                    await _notificationService.SendComparison(connectionId, comparison);
+                    _ = _notificationService.SendComparison(connectionId, comparison);
                 }
             }
+        }
+        
+        // Await final progress task if any
+        if (progressTask != null)
+        {
+            await progressTask;
         }
 
         // Find deleted users (in DB but not in CSV)
@@ -189,40 +201,54 @@ public class CsvSyncService : ICsvSyncService
 
     public async Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest, string? connectionId = null)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var result = new SyncResultDTO { Success = true };
+        
+        // Load all data once
         var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
         var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
+        var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
+
+        // Batch collections for bulk operations
+        var usersToAdd = new List<User>();
+        var usersToUpdate = new List<User>();
+        var usersToDelete = new List<User>();
+        var departmentsToAdd = new Dictionary<string, Department>();
 
         int totalItems = syncRequest.Items.Count;
         int processedItems = 0;
+        Task? progressTask = null;
 
+        // First pass: Prepare all operations (no DB calls)
         foreach (var item in syncRequest.Items)
         {
             processedItems++;
             
-            // Send progress update
-            if (connectionId != null && processedItems % 10 == 0) // Update every 10 items to avoid spamming
+            // Send progress update every 100 items - fire and forget
+            if (connectionId != null && processedItems % 100 == 0)
             {
-                 await _notificationService.SendSyncProgress(connectionId, result.RecordsProcessed, result.RecordsFailed, result.RecordsSkipped);
+                progressTask = _notificationService.SendSyncProgress(connectionId, result.RecordsProcessed, result.RecordsFailed, result.RecordsSkipped);
             }
 
             try
             {
                 if (item.Status == "new" && item.CsvData != null)
                 {
-                    // Create new user
-                    var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
+                    // Prepare new user
+                    var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
+                        ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
+                    
                     if (department == null)
                     {
-                        // Create department if it doesn't exist
+                        // Queue department creation
                         department = new Department
                         {
                             Id = Guid.NewGuid(),
                             Name = item.CsvData.DepartmentName,
                             CreatedAt = DateTime.UtcNow
                         };
-                        await _departmentRepository.AddDepartmentAsync(department);
-                        departments.Add(department); // Add to cache
+                        departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = department;
+                        departments.Add(department);
                     }
 
                     var assignedToId = item.CsvData.AssignedToEmail != null
@@ -240,14 +266,19 @@ public class CsvSyncService : ICsvSyncService
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    await _userRepository.AddUserAsync(newUser);
-                    dbUsers.Add(newUser); // Add to cache for subsequent operations
+                    usersToAdd.Add(newUser);
+                    dbUsers.Add(newUser); // Add to cache for subsequent lookups
                     result.RecordsProcessed++;
                 }
                 else if (item.Status == "modified" && item.CsvData != null)
                 {
-                    // Update existing user - reload from database to ensure fresh instance
-                    var existingUser = await _userRepository.GetUserByIdAsync(Guid.Parse(item.Id));
+                    // Get existing user from cache (already loaded)
+                    if (!dbUserMap.TryGetValue(item.Id, out var existingUser))
+                    {
+                        result.RecordsFailed++;
+                        result.Errors.Add($"User {item.CsvData.Email} not found");
+                        continue;
+                    }
                     
                     if (existingUser != null)
                     {
@@ -281,7 +312,8 @@ public class CsvSyncService : ICsvSyncService
                                             }
                                             break;
                                         case "departmentname":
-                                            var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
+                                            var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
+                                                ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
                                             if (department == null)
                                             {
                                                 department = new Department
@@ -290,7 +322,7 @@ public class CsvSyncService : ICsvSyncService
                                                     Name = item.CsvData.DepartmentName,
                                                     CreatedAt = DateTime.UtcNow
                                                 };
-                                                await _departmentRepository.AddDepartmentAsync(department);
+                                                departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = department;
                                                 departments.Add(department);
                                             }
                                             if (existingUser.DepartmentId != department.Id)
@@ -327,7 +359,8 @@ public class CsvSyncService : ICsvSyncService
                                 hasChanges = true;
                             }
             
-                            var dept = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
+                            var dept = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
+                                ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
                             if (dept == null)
                             {
                                 dept = new Department
@@ -336,7 +369,7 @@ public class CsvSyncService : ICsvSyncService
                                     Name = item.CsvData.DepartmentName,
                                     CreatedAt = DateTime.UtcNow
                                 };
-                                await _departmentRepository.AddDepartmentAsync(dept);
+                                departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = dept;
                                 departments.Add(dept);
                             }
                             if (existingUser.DepartmentId != dept.Id)
@@ -358,7 +391,7 @@ public class CsvSyncService : ICsvSyncService
                         if (hasChanges)
                         {
                             existingUser.UpdatedAt = DateTime.UtcNow;
-                            await _userRepository.UpdateUserAsync(existingUser);
+                            usersToUpdate.Add(existingUser);
                             result.RecordsProcessed++;
                         }
                         else
@@ -369,9 +402,8 @@ public class CsvSyncService : ICsvSyncService
                 }
                 else if (item.Status == "deleted")
                 {
-                    // Soft delete user if he hasn't been updated in 90 days
-                    var userToDelete = await _userRepository.GetUserByIdAsync(Guid.Parse(item.Id));
-                    if (userToDelete != null)
+                    // Soft delete user if hasn't been updated in 90 days
+                    if (dbUserMap.TryGetValue(item.Id, out var userToDelete))
                     {
                         if(userToDelete.UpdatedAt != null && userToDelete.UpdatedAt > DateTime.UtcNow.AddDays(-90))
                         {
@@ -380,7 +412,7 @@ public class CsvSyncService : ICsvSyncService
                         }
 
                         userToDelete.DeletedAt = DateTime.UtcNow;
-                        await _userRepository.UpdateUserAsync(userToDelete);
+                        usersToDelete.Add(userToDelete);
                         result.RecordsProcessed++;
                     }
                 }
@@ -396,15 +428,59 @@ public class CsvSyncService : ICsvSyncService
             }
         }
         
+        // Await final progress task if any
+        if (progressTask != null)
+        {
+            await progressTask;
+        }
+        
+        // Execute all batched operations
+        try
+        {
+            // Add new departments first (referenced by users)
+            if (departmentsToAdd.Any())
+            {
+                foreach (var dept in departmentsToAdd.Values)
+                {
+                    await _departmentRepository.AddDepartmentAsync(dept);
+                }
+            }
+            
+            // Bulk add new users
+            if (usersToAdd.Any())
+            {
+                await _userRepository.AddUsersAsync(usersToAdd);
+            }
+            
+            // Bulk update modified users
+            if (usersToUpdate.Any())
+            {
+                await _userRepository.UpdateUsersAsync(usersToUpdate);
+            }
+            
+            // Bulk update deleted users (soft delete)
+            if (usersToDelete.Any())
+            {
+                await _userRepository.UpdateUsersAsync(usersToDelete);
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.Errors.Add($"Failed to execute batch operations: {ex.Message}");
+        }
+        
         // Final status update
         if (connectionId != null)
         {
              await _notificationService.SendSyncProgress(connectionId, result.RecordsProcessed, result.RecordsFailed, result.RecordsSkipped);
         }
 
+        stopwatch.Stop();
+        result.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
         result.Success = result.RecordsFailed == 0;
         result.Message = result.Success
-            ? $"Successfully synced {result.RecordsProcessed} records"
+            ? $"Successfully synced {result.RecordsProcessed} records in {result.ProcessingTimeMs}ms"
             : $"Synced with errors: {result.RecordsFailed} failed";
             
         return result;

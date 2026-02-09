@@ -69,6 +69,15 @@ export interface SyncResult {
   recordsSkipped: number;
   message?: string;
   errors?: string[];
+  processingTimeMs?: number;
+}
+
+export interface ComparisonResponse {
+  comparisons: UserComparison[];
+  totalRows: number;
+  validationTimeMs: number;
+  comparisonTimeMs: number;
+  totalTimeMs: number;
 }
 
 export interface PaginationParams {
