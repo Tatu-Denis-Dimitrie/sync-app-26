@@ -544,6 +544,11 @@
                 >
                   Line Manager
                 </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  Updated
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
@@ -621,9 +626,27 @@
                 >
                   {{ user.assignedToName || "—" }}
                 </td>
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground"
+                  [title]="
+                    user.updatedAt
+                      ? 'Updated: ' + formatDate(user.updatedAt)
+                      : 'Never updated'
+                  "
+                >
+                  <div *ngIf="user.updatedAt" class="flex flex-col">
+                    <span>{{ formatDate(user.updatedAt) }}</span>
+                    <span class="text-xs opacity-60">{{
+                      getRelativeTime(user.updatedAt)
+                    }}</span>
+                  </div>
+                  <span *ngIf="!user.updatedAt" class="text-muted-foreground"
+                    >—</span
+                  >
+                </td>
               </tr>
               <tr *ngIf="totalItems === 0">
-                <td colspan="4" class="px-6 py-12 text-center">
+                <td colspan="5" class="px-6 py-12 text-center">
                   <div class="flex flex-col items-center justify-center">
                     <svg
                       class="w-12 h-12 text-muted-foreground mb-3"
