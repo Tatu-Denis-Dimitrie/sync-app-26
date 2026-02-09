@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department } from '../models/csv-sync.model';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 
 interface BackendUser {
@@ -121,31 +121,78 @@ export class UserSyncService {
   }
 
   /**
-   * Get departments summary
+   * Get import conflict history for a user
+   */
+  getImportConflictsByUserId(userId: string): Observable<ImportConflictHistory[]> {
+    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byUser/${userId}`).pipe(
+      catchError(error => {
+        console.error('Error fetching import conflicts:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get import history list
+   */
+  getImportHistories(): Observable<ImportHistoryItem[]> {
+    return this.http.get<ImportHistoryItem[]>(`${environment.apiUrl}/ImportHistory`).pipe(
+      catchError(error => {
+        console.error('Error fetching import history:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get import conflicts by import history id
+   */
+  getImportConflictsByImportHistoryId(importHistoryId: string): Observable<ImportConflictHistory[]> {
+    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byImportHistory/${importHistoryId}`).pipe(
+      catchError(error => {
+        console.error('Error fetching import conflicts by history:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get departments from backend with user counts
    */
   getDepartments(): Observable<Department[]> {
-    return this.users$.pipe(
-      map(users => {
-        const deptMap = new Map<string, { lineManagers: Set<string>, employees: Set<string> }>();
+    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+      map((departments: any[]) => {
+        const deptMap = new Map<string, { lineManagers: number, employees: number }>();
         
-        users.forEach(user => {
+        // Initialize all departments from backend
+        departments.forEach(dept => {
+          deptMap.set(dept.name, { lineManagers: 0, employees: 0 });
+        });
+
+        // Get current users and count them
+        const currentUsers = this.usersSubject.getValue();
+        currentUsers.forEach(user => {
           if (!deptMap.has(user.departmentName)) {
-            deptMap.set(user.departmentName, { lineManagers: new Set(), employees: new Set() });
+            deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
           }
           const dept = deptMap.get(user.departmentName)!;
           if (user.role === UserRole.LineManager) {
-            dept.lineManagers.add(user.id);
+            dept.lineManagers++;
           } else {
-            dept.employees.add(user.id);
+            dept.employees++;
           }
         });
 
         return Array.from(deptMap.entries()).map(([name, data]) => ({
           id: name.toLowerCase().replace(/\s+/g, '-'),
           name,
-          lineManagerCount: data.lineManagers.size,
-          employeeCount: data.employees.size
+          lineManagerCount: data.lineManagers,
+          employeeCount: data.employees
         }));
+      }),
+      catchError(error => {
+        console.error('Error fetching departments:', error);
+        return of([]);
       })
     );
   }
@@ -154,13 +201,26 @@ export class UserSyncService {
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
-    return this.users$.pipe(
-      map(users => ({
-        total: users.length,
-        lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-        employees: users.filter(u => u.role === UserRole.Employee).length,
-        departments: new Set(users.map(u => u.departmentName)).size
-      }))
+    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+      map(departments => {
+        const users = this.usersSubject.getValue();
+        return {
+          total: users.length,
+          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+          employees: users.filter(u => u.role === UserRole.Employee).length,
+          departments: departments.length
+        };
+      }),
+      catchError(error => {
+        console.error('Error fetching stats:', error);
+        const users = this.usersSubject.getValue();
+        return of({
+          total: users.length,
+          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+          employees: users.filter(u => u.role === UserRole.Employee).length,
+          departments: new Set(users.map(u => u.departmentName)).size
+        });
+      })
     );
   }
 
@@ -186,7 +246,7 @@ export class UserSyncService {
   /**
    * Sync selected users with resolved conflicts
    */
-  syncUsers(comparisons: UserComparison[]): Observable<SyncResult> {
+  syncUsers(comparisons: UserComparison[], fileName?: string): Observable<SyncResult> {
     // Filter only selected items and map to sync request format
     const selectedItems = comparisons
       .filter(c => c.selected)
@@ -210,7 +270,7 @@ export class UserSyncService {
         }))
       }));
 
-    const syncRequest = { items: selectedItems };
+    const syncRequest = { items: selectedItems, fileName: fileName || null };
 
     return this.http.post<SyncResult>(`${environment.apiUrl}/CsvSync/sync`, syncRequest).pipe(
       tap((result) => {

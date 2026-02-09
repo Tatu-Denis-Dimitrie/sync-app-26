@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
 })
 export class LoadingScreenComponent implements OnInit {
   loadingProgress = 0;
-  loadingText = 'Inițializare...';
+  loadingText = 'Initialization...';
   isCollapsing = false;
   ngOnInit(): void {
     this.simulateLoading();
@@ -18,11 +18,11 @@ export class LoadingScreenComponent implements OnInit {
 
   private simulateLoading(): void {
     const steps = [
-      { progress: 20, text: 'Se încarcă resursele...' },
-      { progress: 40, text: 'Se conectează la server...' },
-      { progress: 60, text: 'Se sincronizează datele...' },
-      { progress: 80, text: 'Se pregătește interfața...' },
-      { progress: 100, text: 'Gata!' }
+      { progress: 20, text: 'Resources loading...' },
+      { progress: 40, text: 'Connecting to server...' },
+      { progress: 60, text: 'Synchronizing data...' },
+      { progress: 80, text: 'Preparing interface...' },
+      { progress: 100, text: 'Done!' }
     ];
 
     let currentStep = 0;

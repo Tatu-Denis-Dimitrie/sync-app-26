@@ -38,6 +38,12 @@
             Departments
           </button>
           <button
+            (click)="navigateToImportHistory()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Import History
+          </button>
+          <button
             (click)="navigateToUsers()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
@@ -74,8 +80,8 @@
             >
               {{
                 isSyncing
-                  ? "Se sincronizează..."
-                  : `Sincronizează ${getSelectedSyncCount()} selectați`
+                  ? "Synchronizing..."
+                  : `Synchronize ${getSelectedSyncCount()} selected users`
               }}
             </button>
           </div>
@@ -89,8 +95,162 @@
       </div>
     </div>
 
+    <!-- Show Department Comparison View if CSV uploaded -->
+    <div *ngIf="showDepartmentComparison">
+      <div class="mb-6">
+        <div class="bg-card border border-border rounded-lg p-4 mb-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+              <div>
+                <p class="text-sm text-muted-foreground">Total Changes</p>
+                <p class="text-2xl font-bold text-foreground">
+                  {{ getDepartmentChangesCount() }}
+                </p>
+              </div>
+              <div>
+                <p class="text-sm text-muted-foreground">Selected</p>
+                <p class="text-2xl font-bold text-blue-600">
+                  {{ getSelectedDepartmentSyncCount() }}
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button
+                (click)="toggleAllDepartmentSelections(true)"
+                [disabled]="!hasDepartmentChanges()"
+                class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Select All
+              </button>
+              <button
+                (click)="toggleAllDepartmentSelections(false)"
+                [disabled]="!hasDepartmentChanges()"
+                class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Deselect All
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-foreground">Department CSV Comparison</h2>
+          <div class="flex gap-3">
+            <div class="relative flex-1 max-w-xs">
+              <input
+                type="text"
+                [(ngModel)]="departmentSearchQuery"
+                placeholder="Search departments..."
+                class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              />
+              <svg
+                class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </div>
+            <button
+              (click)="cancelDepartmentComparison()"
+              class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              (click)="syncSelectedDepartments()"
+              [disabled]="isSyncing || !hasDepartmentChanges() || getSelectedDepartmentSyncCount() === 0"
+              class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {{
+                !hasDepartmentChanges()
+                  ? "No new departments to import"
+                  : (isSyncing
+                    ? "Synchronizing..."
+                    : `Synchronize ${getSelectedDepartmentSyncCount()} selected departments`)
+              }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <div
+            *ngFor="let comparison of getFilteredDepartmentComparisons()"
+            class="bg-card border border-border rounded-lg overflow-hidden"
+          >
+            <div class="px-6 py-4 bg-muted/30 border-b border-border">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    [checked]="comparison.selected"
+                    [disabled]="comparison.status === 'unchanged'"
+                    (change)="toggleDepartmentSelection(comparison)"
+                    class="w-4 h-4 rounded border-border disabled:opacity-50"
+                  />
+                  <div>
+                    <h3 class="text-lg font-semibold text-foreground">
+                      {{ comparison.csvDepartment?.name || comparison.dbDepartment?.name || 'Unknown Department' }}
+                    </h3>
+                    <p class="text-sm text-muted-foreground">Department</p>
+                  </div>
+                </div>
+                <span
+                  [ngClass]="{
+                    'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border': true,
+                    'bg-green-500/10 text-green-700 border-green-500/20': comparison.status === 'new',
+                    'bg-gray-500/10 text-gray-700 border-gray-500/20': comparison.status === 'unchanged',
+                  }"
+                >
+                  {{ comparison.status }}
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-[1fr,auto,1fr]">
+              <div class="p-4 bg-red-50/30">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-medium text-muted-foreground uppercase">Department (Database)</span>
+                </div>
+                <p
+                  class="font-mono text-sm"
+                >
+                  {{ comparison.dbDepartment?.name || 'N/A' }}
+                </p>
+              </div>
+              <div class="flex items-center justify-center bg-muted/20 px-2">
+                <span class="text-muted-foreground">=</span>
+              </div>
+              <div class="p-4 bg-green-50/30">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs font-medium text-muted-foreground uppercase">Department (CSV)</span>
+                  <span
+                    *ngIf="comparison.status === 'new'"
+                    class="text-xs text-green-600"
+                  >+ added</span>
+                </div>
+                <p
+                  class="font-mono text-sm"
+                  [class.font-semibold]="comparison.status === 'new'"
+                  [class.text-green-700]="comparison.status === 'new'"
+                >
+                  {{ comparison.csvDepartment?.name || 'N/A' }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Normal User List View -->
-    <div *ngIf="!showComparison">
+    <div *ngIf="!showComparison && !showDepartmentComparison">
       <!-- Stats Cards -->
       <div
         *ngIf="stats$ | async as stats"
@@ -302,7 +462,7 @@
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 ></path>
               </svg>
-              {{ isUploading ? "Se încarcă..." : "Importă CSV" }}
+              {{ isUploading ? "Loading..." : "Import CSV" }}
               <input
                 type="file"
                 accept=".csv"
@@ -311,6 +471,32 @@
                 class="hidden"
               />
             </label>
+
+                      <label
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-green-600 hover:bg-green-700 cursor-pointer transition-colors"
+                      >
+                        <svg
+                          class="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          ></path>
+                        </svg>
+                        {{ isUploading ? "Loading..." : "Import Departments" }}
+                        <input
+                          type="file"
+                          accept=".csv"
+                          (change)="onDepartmentFileSelected($event)"
+                          [disabled]="isUploading"
+                          class="hidden"
+                        />
+                      </label>
           </div>
         </div>
       </div>
@@ -406,7 +592,7 @@
                     {{
                       user.role === UserRole.LineManager
                         ? "Line Manager"
-                        : "Angajat"
+                        : "Employee"
                     }}
                   </span>
                 </td>

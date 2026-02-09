@@ -45,4 +45,8 @@ export class DepartmentsComponent implements OnInit {
   navigateToDashboard(): void {
     this.router.navigate(['/dashboard']);
   }
+
+  navigateToImportHistory(): void {
+    this.router.navigate(['/import-history']);
+  }
 }
