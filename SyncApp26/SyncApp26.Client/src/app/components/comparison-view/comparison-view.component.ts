@@ -134,18 +134,34 @@ export class ComparisonViewComponent {
       if (this.searchQuery.trim()) {
         const query = this.searchQuery.toLowerCase();
         
-        const user = comparison.csvUser || comparison.dbUser;
-        const firstName = user?.firstName?.toLowerCase() || '';
-        const lastName = user?.lastName?.toLowerCase() || '';
-        const department = user?.departmentName?.toLowerCase() || '';
-        const assignedToName = user?.assignedToName?.toLowerCase() || '';
-        const fullName = `${firstName} ${lastName}`;
+        // Search in both CSV and DB user fields
+        const csvUser = comparison.csvUser;
+        const dbUser = comparison.dbUser;
         
-        const directMatch = fullName.includes(query) || department.includes(query);
-
-        const assignedToMatch = assignedToName.includes(query);
+        const csvFirstName = csvUser?.firstName?.toLowerCase() || '';
+        const csvLastName = csvUser?.lastName?.toLowerCase() || '';
+        const csvEmail = csvUser?.email?.toLowerCase() || '';
+        const csvDepartment = csvUser?.departmentName?.toLowerCase() || '';
+        const csvAssignedTo = csvUser?.assignedToName?.toLowerCase() || '';
         
-        return directMatch || assignedToMatch;
+        const dbFirstName = dbUser?.firstName?.toLowerCase() || '';
+        const dbLastName = dbUser?.lastName?.toLowerCase() || '';
+        const dbEmail = dbUser?.email?.toLowerCase() || '';
+        const dbDepartment = dbUser?.departmentName?.toLowerCase() || '';
+        const dbAssignedTo = dbUser?.assignedToName?.toLowerCase() || '';
+        
+        const csvFullName = `${csvFirstName} ${csvLastName}`;
+        const dbFullName = `${dbFirstName} ${dbLastName}`;
+        
+        // Check if query matches any field from CSV or DB
+        return csvFullName.includes(query) || 
+               dbFullName.includes(query) ||
+               csvEmail.includes(query) || 
+               dbEmail.includes(query) ||
+               csvDepartment.includes(query) || 
+               dbDepartment.includes(query) ||
+               csvAssignedTo.includes(query) || 
+               dbAssignedTo.includes(query);
       }
 
       return true;
