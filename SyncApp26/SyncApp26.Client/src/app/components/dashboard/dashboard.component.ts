@@ -60,6 +60,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   currentComparisons: UserComparison[] = [];
   totalSyncItems = 0;
+  currentDepartmentComparisons: CSVDepartmentComparisonDTO[] = [];
+  departmentSearchQuery: string = '';
 
   uploadProgress: UploadProgress | null = null;
   syncProgress: SyncProgressUpdate | null = null;
@@ -273,6 +275,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (comparisons) => {
           console.log('CSV uploaded and compared:', comparisons);
+          this.currentDepartmentComparisons = comparisons;
           this.isUploading = false;
           this.showDepartmentComparison = true;
         },
@@ -464,7 +467,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getFilteredDepartmentComparisons(): CSVDepartmentComparisonDTO[] {
     // Filter to show only new departments
-    let filtered = this.currentDepartmentComparisons.filter(comp => comp.status === 'new');
+    let filtered = this.currentDepartmentComparisons.filter((comp: CSVDepartmentComparisonDTO) => comp.status === 'new');
 
     // Apply search query if provided
     if (!this.departmentSearchQuery.trim()) {
@@ -472,7 +475,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     const query = this.departmentSearchQuery.toLowerCase();
-    return filtered.filter(comp => {
+    return filtered.filter((comp: CSVDepartmentComparisonDTO) => {
       const csvName = comp.csvDepartment?.name?.toLowerCase() || '';
       return csvName.includes(query);
     });

@@ -18,17 +18,19 @@ public class CsvSyncService : ICsvSyncService
     private readonly IImportHistoryRepository _importHistoryRepository;
     private readonly IImportConflictRepository _importConflictRepository;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, ISyncNotificationService notificationService)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IImportConflictRepository importConflictRepository)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
         _notificationService = notificationService;
+        _importHistoryRepository = importHistoryRepository;
+        _importConflictRepository = importConflictRepository;
     }
 
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
     {
         var comparisons = new List<UserComparisonDTO>();
-        
+
         // Use optimized no-tracking query for read-only comparison
         var dbUsers = await _userRepository.GetAllUsersForComparisonAsync();
         var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
@@ -39,7 +41,7 @@ public class CsvSyncService : ICsvSyncService
         int processedCount = 0;
         int lastPercent = 0;
         var csvEmails = new HashSet<string>();
-        
+
         // For SignalR progress - don't await to avoid blocking the processing loop
         Task? progressTask = null;
 
@@ -49,7 +51,7 @@ public class CsvSyncService : ICsvSyncService
             processedCount++;
             var email = csvUser.Email.ToLower();
             csvEmails.Add(email);
-            
+
             // Send progress update every 5% or every 500 records (less frequent to reduce overhead)
             if (connectionId != null && processedCount % 500 == 0)
             {
@@ -152,7 +154,7 @@ public class CsvSyncService : ICsvSyncService
                 };
 
                 comparisons.Add(comparison);
-                
+
                 // Stream result to frontend
                 if (connectionId != null)
                 {
@@ -194,7 +196,7 @@ public class CsvSyncService : ICsvSyncService
                 };
 
                 comparisons.Add(comparison);
-                
+
                 // Stream result to frontend - fire and forget
                 if (connectionId != null)
                 {
@@ -202,7 +204,7 @@ public class CsvSyncService : ICsvSyncService
                 }
             }
         }
-        
+
         // Await final progress task if any
         if (progressTask != null)
         {
@@ -231,7 +233,7 @@ public class CsvSyncService : ICsvSyncService
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var result = new SyncResultDTO { Success = true };
-        
+
         // Load all data once
         var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
         var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
@@ -243,6 +245,15 @@ public class CsvSyncService : ICsvSyncService
         var usersToDelete = new List<User>();
         var departmentsToAdd = new Dictionary<string, Department>();
 
+        // Create import history record
+        var importHistory = new ImportHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportDate = DateTime.UtcNow,
+            FileName = "CSV Import"
+        };
+        bool importHistoryCreated = false;
+
         int totalItems = syncRequest.Items.Count;
         int processedItems = 0;
         Task? progressTask = null;
@@ -251,7 +262,7 @@ public class CsvSyncService : ICsvSyncService
         foreach (var item in syncRequest.Items)
         {
             processedItems++;
-            
+
             // Send progress update every 100 items - fire and forget
             if (connectionId != null && processedItems % 100 == 0)
             {
@@ -265,7 +276,7 @@ public class CsvSyncService : ICsvSyncService
                     // Prepare new user
                     var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
                         ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
-                    
+
                     if (department == null)
                     {
                         // Queue department creation
@@ -318,7 +329,7 @@ public class CsvSyncService : ICsvSyncService
                         result.Errors.Add($"User {item.CsvData.Email} not found");
                         continue;
                     }
-                    
+
                     if (existingUser != null)
                     {
                         if (item.Conflicts.Any())
@@ -351,7 +362,7 @@ public class CsvSyncService : ICsvSyncService
                                     Status = "rejected"
                                 };
 
-                                if(historyField == "firstname" || historyField == "lastname")
+                                if (historyField == "firstname" || historyField == "lastname")
                                 {
                                     rejectedConflict.Status = "accepted";
                                 }
@@ -361,7 +372,7 @@ public class CsvSyncService : ICsvSyncService
                         }
 
                         bool hasChanges = false;
-        
+
                         // If conflicts exist, apply only selected resolutions
                         if (item.Conflicts.Any())
                         {
@@ -369,7 +380,7 @@ public class CsvSyncService : ICsvSyncService
                             {
                                 // If no SelectedValue is specified, default to "csv"
                                 var selectedValue = conflict.SelectedValue ?? "csv";
-                
+
                                 if (selectedValue == "csv")
                                 {
                                     switch (conflict.Field.ToLower())
@@ -436,7 +447,7 @@ public class CsvSyncService : ICsvSyncService
                                                     OldValue = existingUser.Department.Name,
                                                     NewValue = department.Name,
                                                     Status = "accepted"
-                                                }; 
+                                                };
                                                 existingUser.DepartmentId = department.Id;
                                                 hasChanges = true;
                                                 await _importConflictRepository.AddAsync(importConflict);
@@ -446,7 +457,7 @@ public class CsvSyncService : ICsvSyncService
                                             var newAssignedToId = item.CsvData.AssignedToEmail != null
                                                 ? dbUsers.FirstOrDefault(u => u.Email.Equals(item.CsvData.AssignedToEmail, StringComparison.OrdinalIgnoreCase))?.Id
                                                 : null;
-                                            
+
                                             // Validate that the assigned manager is actually a line manager
                                             if (newAssignedToId.HasValue)
                                             {
@@ -479,7 +490,7 @@ public class CsvSyncService : ICsvSyncService
                                                     newAssignedToId = null;
                                                 }
                                             }
-                                            
+
                                             if (existingUser.AssignedToId != newAssignedToId)
                                             {
                                                 var importConflict = new ImportConflict
@@ -488,8 +499,8 @@ public class CsvSyncService : ICsvSyncService
                                                     ImportHistoryId = importHistory.Id,
                                                     UserId = existingUser.Id,
                                                     FieldName = "assignedtoname",
-                                                    OldValue = existingUser.AssignedTo != null ? $"{existingUser.AssignedTo.FirstName} {existingUser.AssignedTo.LastName}" : null,
-                                                    NewValue = item.CsvData.AssignedToEmail,
+                                                    OldValue = existingUser.AssignedTo != null ? $"{existingUser.AssignedTo.FirstName} {existingUser.AssignedTo.LastName}" : string.Empty,
+                                                    NewValue = item.CsvData.AssignedToEmail ?? string.Empty,
                                                     Status = "accepted"
                                                 };
                                                 existingUser.AssignedToId = newAssignedToId;
@@ -514,7 +525,7 @@ public class CsvSyncService : ICsvSyncService
                                 existingUser.LastName = item.CsvData.LastName;
                                 hasChanges = true;
                             }
-            
+
                             var dept = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
                                 ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
                             if (dept == null)
@@ -533,11 +544,11 @@ public class CsvSyncService : ICsvSyncService
                                 existingUser.DepartmentId = dept.Id;
                                 hasChanges = true;
                             }
-            
+
                             var assignedToId = item.CsvData.AssignedToEmail != null
                                 ? dbUsers.FirstOrDefault(u => u.Email.Equals(item.CsvData.AssignedToEmail, StringComparison.OrdinalIgnoreCase))?.Id
                                 : null;
-                            
+
                             // Validate that the assigned manager is actually a line manager
                             if (assignedToId.HasValue)
                             {
@@ -547,7 +558,7 @@ public class CsvSyncService : ICsvSyncService
                                     assignedToId = null;
                                 }
                             }
-                            
+
                             if (existingUser.AssignedToId != assignedToId)
                             {
                                 existingUser.AssignedToId = assignedToId;
@@ -572,7 +583,7 @@ public class CsvSyncService : ICsvSyncService
                     // Soft delete user if hasn't been updated in 90 days
                     if (dbUserMap.TryGetValue(item.Id, out var userToDelete))
                     {
-                        if(userToDelete.UpdatedAt != null && userToDelete.UpdatedAt > DateTime.UtcNow.AddDays(-90))
+                        if (userToDelete.UpdatedAt != null && userToDelete.UpdatedAt > DateTime.UtcNow.AddDays(-90))
                         {
                             result.RecordsSkipped++;
                             continue; // Skip deletion
@@ -594,13 +605,13 @@ public class CsvSyncService : ICsvSyncService
                 result.Errors.Add($"Failed to process user {item.CsvData?.Email ?? item.Id}: {ex.Message}");
             }
         }
-        
+
         // Await final progress task if any
         if (progressTask != null)
         {
             await progressTask;
         }
-        
+
         // Execute all batched operations
         try
         {
@@ -612,19 +623,19 @@ public class CsvSyncService : ICsvSyncService
                     await _departmentRepository.AddDepartmentAsync(dept);
                 }
             }
-            
+
             // Bulk add new users
             if (usersToAdd.Any())
             {
                 await _userRepository.AddUsersAsync(usersToAdd);
             }
-            
+
             // Bulk update modified users
             if (usersToUpdate.Any())
             {
                 await _userRepository.UpdateUsersAsync(usersToUpdate);
             }
-            
+
             // Bulk update deleted users (soft delete)
             if (usersToDelete.Any())
             {
@@ -636,11 +647,11 @@ public class CsvSyncService : ICsvSyncService
             result.Success = false;
             result.Errors.Add($"Failed to execute batch operations: {ex.Message}");
         }
-        
+
         // Final status update
         if (connectionId != null)
         {
-             await _notificationService.SendSyncProgress(connectionId, result.RecordsProcessed, result.RecordsFailed, result.RecordsSkipped);
+            await _notificationService.SendSyncProgress(connectionId, result.RecordsProcessed, result.RecordsFailed, result.RecordsSkipped);
         }
 
         stopwatch.Stop();
@@ -649,7 +660,7 @@ public class CsvSyncService : ICsvSyncService
         result.Message = result.Success
             ? $"Successfully synced {result.RecordsProcessed} records in {result.ProcessingTimeMs}ms"
             : $"Synced with errors: {result.RecordsFailed} failed";
-            
+
         return result;
     }
 

@@ -101,3 +101,21 @@ export interface SyncProgressUpdate {
   skipped: number;
   message?: string;
 }
+
+export interface ImportHistoryItem {
+  id: string;
+  importDate: string;
+  fileName: string;
+}
+
+export interface ImportConflictHistory {
+  id: string;
+  importHistoryId: string;
+  importDate?: string;
+  importFileName?: string;
+  userId: string;
+  fieldName: string;
+  oldValue: string;
+  newValue: string;
+  status: string; // 'accepted' | 'rejected'
+}

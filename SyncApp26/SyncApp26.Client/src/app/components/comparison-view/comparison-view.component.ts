@@ -1,12 +1,13 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
 
 @Component({
   selector: 'app-comparison-view',
   standalone: true,
-  imports: [CommonModule, ScrollingModule],
+  imports: [CommonModule, FormsModule, ScrollingModule],
   templateUrl: './comparison-view.component.html',
   styleUrls: ['./comparison-view.component.css']
 })

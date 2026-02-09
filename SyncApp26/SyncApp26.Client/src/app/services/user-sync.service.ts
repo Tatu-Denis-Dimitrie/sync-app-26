@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department } from '../models/csv-sync.model';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
 import { from } from 'rxjs';
@@ -176,7 +176,7 @@ export class UserSyncService {
   getDepartments(): Observable<Department[]> {
     return this.users$.pipe(
       map(users => {
-        const deptMap = new Map<string, { lineManagers: Set<string>, employees: Set<string> }>();
+        const deptMap = new Map<string, { lineManagers: number, employees: number }>();
 
         users.forEach(user => {
           if (!deptMap.has(user.departmentName)) {
@@ -208,26 +208,26 @@ export class UserSyncService {
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
-    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
-      map(departments => {
-        const users = this.usersSubject.getValue();
-        return {
-          total: users.length,
-          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-          employees: users.filter(u => u.role === UserRole.Employee).length,
-          departments: departments.length
-        };
-      }),
-      catchError(error => {
-        console.error('Error fetching stats:', error);
-        const users = this.usersSubject.getValue();
-        return of({
-          total: users.length,
-          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-          employees: users.filter(u => u.role === UserRole.Employee).length,
-          departments: new Set(users.map(u => u.departmentName)).size
-        });
-      })
+    return this.users$.pipe(
+      switchMap(users => 
+        this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+          map(departments => ({
+            total: users.length,
+            lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+            employees: users.filter(u => u.role === UserRole.Employee).length,
+            departments: departments.length
+          })),
+          catchError(error => {
+            console.error('Error fetching departments for stats:', error);
+            return of({
+              total: users.length,
+              lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+              employees: users.filter(u => u.role === UserRole.Employee).length,
+              departments: new Set(users.map(u => u.departmentName)).size
+            });
+          })
+        )
+      )
     );
   }
 
