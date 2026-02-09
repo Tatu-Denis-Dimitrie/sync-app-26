@@ -54,6 +54,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
 builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
 builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
+builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
+builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
 
 var app = builder.Build();
 
