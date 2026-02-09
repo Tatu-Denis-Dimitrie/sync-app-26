@@ -36,6 +36,58 @@
         </button>
       </div>
     </div>
+
+    <div class="filters-container">
+      <button
+        (click)="filterNew = !filterNew; onFilterChange()"
+        [ngClass]="{ 'filter-new': true, 'inactive': !filterNew }"
+        class="filter-button"
+      >
+        <span>➕</span>
+        <span>New</span>
+      </button>
+
+      <button
+        (click)="filterModified = !filterModified; onFilterChange()"
+        [ngClass]="{ 'filter-modified': true, 'inactive': !filterModified }"
+        class="filter-button"
+      >
+        <span>✏️</span>
+        <span>Modified</span>
+      </button>
+
+      <button
+        (click)="filterDeleted = !filterDeleted; onFilterChange()"
+        [ngClass]="{ 'filter-deleted': true, 'inactive': !filterDeleted }"
+        class="filter-button"
+      >
+        <span>🗑️</span>
+        <span>Deleted</span>
+      </button>
+
+      <div class="flex-1 relative">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onFilterChange()"
+          placeholder="Search by name or department..."
+          class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        />
+        <svg
+          class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          ></path>
+        </svg>
+      </div>
+    </div>
   </div>
 
   <div class="space-y-6">

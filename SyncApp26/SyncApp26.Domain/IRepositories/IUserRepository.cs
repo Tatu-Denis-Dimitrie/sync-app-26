@@ -14,5 +14,7 @@ namespace SyncApp26.Domain.IRepositories
         Task UpdateUserAsync(User user);
         Task UpdateUsersAsync(IEnumerable<User> users);
         Task DeleteUserAsync(Guid id);
+        Task<bool> IsUserLineManagerAsync(Guid userId);
+        Task<User?> GetUserByEmailAsync(string email);
     }
 }

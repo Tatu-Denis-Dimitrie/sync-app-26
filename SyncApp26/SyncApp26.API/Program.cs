@@ -44,6 +44,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IImportConflictRepository, ImportConflictRepository>();
+builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
 
 
 // Services

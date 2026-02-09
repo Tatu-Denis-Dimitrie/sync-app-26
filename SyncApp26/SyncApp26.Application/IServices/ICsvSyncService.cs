@@ -1,4 +1,5 @@
 using SyncApp26.Shared.DTOs;
+using SyncApp26.Shared.DTOs.CSV.Department;
 
 namespace SyncApp26.Application.IServices;
 

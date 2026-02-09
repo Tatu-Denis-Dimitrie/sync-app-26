@@ -43,6 +43,7 @@ public class FieldConflictDTO
 public class SyncRequestDTO
 {
     public List<UserSyncItemDTO> Items { get; set; } = new();
+    public string? FileName { get; set; }
 }
 
 public class UserSyncItemDTO

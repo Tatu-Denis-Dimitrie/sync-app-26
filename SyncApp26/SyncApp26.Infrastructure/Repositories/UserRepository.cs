@@ -96,5 +96,19 @@ namespace SyncApp26.Infrastructure.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<bool> IsUserLineManagerAsync(Guid userId)
+        {
+            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null);
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _context.Users
+                .Include(u => u.Department)
+                .Include(u => u.AssignedTo)
+                .Where(u => u.DeletedAt == null)
+                .FirstOrDefaultAsync(u => u.Email == email);
+        }
     }
 }

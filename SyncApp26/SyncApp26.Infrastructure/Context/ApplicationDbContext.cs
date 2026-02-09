@@ -12,6 +12,8 @@ namespace SyncApp26.Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<ImportConflict> ImportConflicts { get; set; }
+        public DbSet<ImportHistory> ImportHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -73,6 +75,54 @@ namespace SyncApp26.Infrastructure.Context
                     .HasMaxLength(200);
 
                 entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            // Configure ImportConflict entity
+            modelBuilder.Entity<ImportConflict>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.FieldName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.OldValue)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.NewValue)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.Status)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                // Configure relationships
+                entity.HasOne(e => e.ImportHistory)
+                    .WithMany()
+                    .HasForeignKey(e => e.ImportHistoryId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Create indexes
+                entity.HasIndex(e => e.ImportHistoryId);
+                entity.HasIndex(e => e.UserId);
+            });
+
+            // Configure ImportHistory entity
+            modelBuilder.Entity<ImportHistory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.ImportDate)
+                    .IsRequired();
+
+                entity.Property(e => e.FileName)
+                    .IsRequired()
+                    .HasMaxLength(255);
             });
         }
     }

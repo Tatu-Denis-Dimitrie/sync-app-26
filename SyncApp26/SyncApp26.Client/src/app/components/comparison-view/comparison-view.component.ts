@@ -15,6 +15,11 @@ export class ComparisonViewComponent {
   @Output() selectionChange = new EventEmitter<UserComparison[]>();
   @Output() fieldConflictResolved = new EventEmitter<{ comparisonId: string, field: string, value: 'db' | 'csv' }>();
 
+  filterNew = true;
+  filterModified = true;
+  filterDeleted = true;
+  searchQuery = '';
+
   selectAll(): void {
     this.comparisons.forEach(c => c.selected = true);
     this.selectionChange.emit(this.comparisons);
@@ -114,6 +119,39 @@ export class ComparisonViewComponent {
 
   hasFieldConflict(comparison: UserComparison, field: string): boolean {
     return comparison.conflicts.some(c => c.field === field);
+  }
+
+  getFilteredComparisons(): UserComparison[] {
+    return this.comparisons.filter(comparison => {
+      const statusMatch = 
+        (this.filterNew && comparison.status === 'new') ||
+        (this.filterModified && comparison.status === 'modified') ||
+        (this.filterDeleted && comparison.status === 'deleted');
+      
+      if (!statusMatch) return false;
+
+      if (this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase();
+        
+        const user = comparison.csvUser || comparison.dbUser;
+        const firstName = user?.firstName?.toLowerCase() || '';
+        const lastName = user?.lastName?.toLowerCase() || '';
+        const department = user?.departmentName?.toLowerCase() || '';
+        const assignedToName = user?.assignedToName?.toLowerCase() || '';
+        const fullName = `${firstName} ${lastName}`;
+        
+        const directMatch = fullName.includes(query) || department.includes(query);
+
+        const assignedToMatch = assignedToName.includes(query);
+        
+        return directMatch || assignedToMatch;
+      }
+
+      return true;
+    });
+  }
+
+  onFilterChange(): void {
   }
 
 }

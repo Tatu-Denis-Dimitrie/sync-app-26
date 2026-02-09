@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { Observable, Subject, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, takeUntil } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
+import { DepartmentsSyncService} from '../../services/departments-sync.service';
+import { CSVDepartmentComparisonDTO } from '../../models/csv-department-sync.model';
 import { User, UserComparison, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { ComparisonViewComponent } from '../comparison-view/comparison-view.component';
@@ -45,9 +47,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get selectedRole(): UserRole | 'all' { return this.selectedRole$.value; }
   set selectedRole(value: UserRole | 'all') { this.selectedRole$.next(value); }
+  
   isUploading = false;
   isSyncing = false;
   showComparison = false;
+  showDepartmentComparison = false;
   showErrorModal = false;
   errorModalTitle = '';
   errorModalErrors: string[] = [];
@@ -66,9 +70,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   serverTimingInfo: { validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null = null;
 
   UserRole = UserRole;
+  fileName = '';
 
   constructor(
     private userSyncService: UserSyncService,
+    private departmentsSyncService: DepartmentsSyncService,
     private router: Router
   ) { }
 
@@ -149,7 +155,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
+      this.fileName = file.name;
       this.uploadFile(file);
+    }
+  }
+
+  onDepartmentFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      this.uploadDepartmentFile(file);
     }
   }
 
@@ -251,6 +266,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  uploadDepartmentFile(file: File): void {
+    this.isUploading = true;
+    this.departmentsSyncService.uploadAndCompareDepartments(file)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (comparisons) => {
+          console.log('CSV uploaded and compared:', comparisons);
+          this.isUploading = false;
+          this.showDepartmentComparison = true;
+        },
+        error: (error) => {
+          console.error('Upload failed:', error);
+          this.isUploading = false;
+
+          if (error.status === 400 && error.error) {
+            const errorData = error.error;
+
+            if (errorData.errors && errorData.errors.length > 0) {
+              this.errorModalTitle = 'CSV Validation Failed';
+              this.errorModalErrors = errorData.errors.slice(0, 20);
+              this.errorModalWarnings = errorData.warnings || [];
+              this.showErrorModal = true;
+            } else if (errorData.error) {
+              this.errorModalTitle = 'Upload Error';
+              this.errorModalErrors = [errorData.error];
+              this.errorModalWarnings = [];
+              this.showErrorModal = true;
+            }
+          } else {
+            this.errorModalTitle = 'Upload Failed';
+            this.errorModalErrors = [error.message || 'Unknown error occurred'];
+            this.errorModalWarnings = [];
+            this.showErrorModal = true;
+          }
+        }
+      });
+  }
+
   closeErrorModal(): void {
     this.showErrorModal = false;
     this.errorModalTitle = '';
@@ -292,9 +345,62 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
+  syncSelectedDepartments(): void {
+    if (!this.currentDepartmentComparisons || this.currentDepartmentComparisons.length === 0) {
+      return;
+    }
+
+    this.isSyncing = true;
+    const selected = this.currentDepartmentComparisons.filter((c: any) => c.selected);
+    this.departmentsSyncService.syncDepartments(selected)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          console.log('Department sync successful:', result);
+          this.isSyncing = false;
+          this.showDepartmentComparison = false;
+        },
+        error: (error) => {
+          console.error('Department sync failed:', error);
+          this.isSyncing = false;
+        }
+      });
+  }
+
   cancelComparison(): void {
     this.userSyncService.clearComparison();
     this.showComparison = false;
+  }
+
+  cancelDepartmentComparison(): void {
+    this.departmentsSyncService.clearComparison();
+    this.showDepartmentComparison = false;
+  }
+
+  toggleAllDepartmentSelections(checked: boolean): void {
+    this.currentDepartmentComparisons = this.currentDepartmentComparisons.map((c: any) => ({
+      ...c,
+      selected: c.status === 'new' ? checked : false
+    }));
+  }
+
+  toggleDepartmentSelection(comparison: any): void {
+    if (comparison.status !== 'new') {
+      return;
+    }
+    comparison.selected = !comparison.selected;
+  }
+
+  getSelectedDepartmentSyncCount(): number {
+    return this.currentDepartmentComparisons.filter((c: any) => c.selected).length;
+  }
+
+  getDepartmentChangesCount(): number {
+    return this.currentDepartmentComparisons.filter((c: any) => c.status === 'new').length;
+  }
+
+  hasDepartmentChanges(): boolean {
+    return this.getDepartmentChangesCount() > 0;
   }
 
   onPageChange(page: number): void {
@@ -350,5 +456,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   navigateToEmployees(): void {
     this.router.navigate(['/employees']);
+  }
+
+  navigateToImportHistory(): void {
+    this.router.navigate(['/import-history']);
+  }
+
+  getFilteredDepartmentComparisons(): CSVDepartmentComparisonDTO[] {
+    // Filter to show only new departments
+    let filtered = this.currentDepartmentComparisons.filter(comp => comp.status === 'new');
+
+    // Apply search query if provided
+    if (!this.departmentSearchQuery.trim()) {
+      return filtered;
+    }
+
+    const query = this.departmentSearchQuery.toLowerCase();
+    return filtered.filter(comp => {
+      const csvName = comp.csvDepartment?.name?.toLowerCase() || '';
+      return csvName.includes(query);
+    });
   }
 }
