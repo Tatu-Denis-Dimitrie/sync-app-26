@@ -22,12 +22,14 @@ export class ComparisonViewComponent {
   searchQuery = '';
 
   selectAll(): void {
-    this.comparisons.forEach(c => c.selected = true);
+    const filtered = this.getFilteredComparisons();
+    filtered.forEach(c => c.selected = true);
     this.selectionChange.emit(this.comparisons);
   }
 
   deselectAll(): void {
-    this.comparisons.forEach(c => c.selected = false);
+    const filtered = this.getFilteredComparisons();
+    filtered.forEach(c => c.selected = false);
     this.selectionChange.emit(this.comparisons);
   }
 
@@ -102,11 +104,11 @@ export class ComparisonViewComponent {
   }
 
   getConflictCount(): number {
-    return this.comparisons.filter(c => c.conflicts.length > 0).length;
+    return this.getFilteredComparisons().filter(c => c.conflicts.length > 0).length;
   }
 
   getSelectedCount(): number {
-    return this.comparisons.filter(c => c.selected).length;
+    return this.getFilteredComparisons().filter(c => c.selected).length;
   }
 
   formatFieldName(field: string): string {

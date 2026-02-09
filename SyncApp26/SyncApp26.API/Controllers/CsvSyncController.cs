@@ -36,7 +36,7 @@ public class CsvSyncController : ControllerBase
     {
         var startTime = DateTime.UtcNow;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        
+
         if (file == null || file.Length == 0)
         {
             return BadRequest(new { error = "No file uploaded" });
@@ -56,11 +56,36 @@ public class CsvSyncController : ControllerBase
             long validationTimeMs = 0;
             long comparisonTimeMs = 0;
 
-            // Single-pass validation and processing
+            // Step 1: Validate CSV file
+            var validationStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            CsvValidationResultDTO validationResult;
+
+            using (var validationStream = file.OpenReadStream())
+            {
+                validationResult = await _csvValidationService.ValidateCsvFile(validationStream, file.FileName);
+            }
+
+            validationStopwatch.Stop();
+            validationTimeMs = validationStopwatch.ElapsedMilliseconds;
+
+            // If validation failed with errors, return validation result
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(new
+                {
+                    error = "CSV validation failed",
+                    errors = validationResult.Errors,
+                    warnings = validationResult.Warnings,
+                    totalRows = validationResult.TotalRows,
+                    validRows = validationResult.ValidRows,
+                    invalidRows = validationResult.InvalidRows
+                });
+            }
+
+            // Step 2: Parse and compare with database
             var comparisonStopwatch = System.Diagnostics.Stopwatch.StartNew();
             List<UserComparisonDTO> comparisons;
-            CsvValidationResultDTO? validationResult = null;
-            
+
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -71,35 +96,28 @@ public class CsvSyncController : ControllerBase
             }))
             {
                 csv.Context.RegisterClassMap<CsvUserMap>();
-                
-                // Validate headers quickly
                 csv.Read();
                 csv.ReadHeader();
-                var headers = csv.HeaderRecord;
-                
-                if (headers == null || !headers.Contains("Email") || !headers.Contains("FirstName"))
-                {
-                    return BadRequest(new { error = "CSV validation failed", errors = new[] { "Missing required headers: Email, FirstName, LastName, DepartmentName" } });
-                }
-                
+
                 // Stream records for processing
                 var csvUsers = csv.GetRecords<CsvUserDTO>();
-                
-                // Pass connectionId for progress tracking (totalRows estimated during processing)
-                comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, 0, connectionId);
-                totalRows = comparisons.Count;
+
+                // Pass connectionId for progress tracking
+                comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, validationResult.ValidRows, connectionId);
+                totalRows = validationResult.TotalRows;
             }
-            
+
             comparisonStopwatch.Stop();
             comparisonTimeMs = comparisonStopwatch.ElapsedMilliseconds;
             stopwatch.Stop();
-            
+
             _logger.LogInformation($"Compared CSV with {totalRows} rows, found {comparisons.Count} comparisons in {stopwatch.ElapsedMilliseconds}ms");
 
             var response = new ComparisonResponseDTO
             {
                 Comparisons = comparisons,
                 TotalRows = totalRows,
+                Warnings = validationResult.Warnings,
                 ValidationTimeMs = validationTimeMs,
                 ComparisonTimeMs = comparisonTimeMs,
                 TotalTimeMs = stopwatch.ElapsedMilliseconds

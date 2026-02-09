@@ -195,6 +195,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
             }
           });
           
+          // Check for warnings
+          this.userSyncService.warnings$.pipe(takeUntil(this.destroy$)).subscribe(warnings => {
+            if (warnings && warnings.length > 0) {
+              this.errorModalTitle = 'CSV Validation Warnings';
+              this.errorModalErrors = [];
+              this.errorModalWarnings = warnings;
+              this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
+              this.showErrorModal = true;
+            }
+          });
+          
           setTimeout(() => this.successMessage = '', 10000);
         },
         error: (error) => {

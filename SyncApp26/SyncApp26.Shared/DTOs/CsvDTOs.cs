@@ -69,6 +69,7 @@ public class ComparisonResponseDTO
 {
     public List<UserComparisonDTO> Comparisons { get; set; } = new();
     public int TotalRows { get; set; }
+    public List<string> Warnings { get; set; } = new();
     public long ValidationTimeMs { get; set; }
     public long ComparisonTimeMs { get; set; }
     public long TotalTimeMs { get; set; }

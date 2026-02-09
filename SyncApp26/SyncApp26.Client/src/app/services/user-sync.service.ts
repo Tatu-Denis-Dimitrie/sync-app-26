@@ -30,12 +30,14 @@ export class UserSyncService {
   private currentComparisonSubject = new BehaviorSubject<UserComparison[] | null>(null);
   private usersSubject = new BehaviorSubject<User[]>([]);
   private timingInfoSubject = new BehaviorSubject<{ validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null>(null);
+  private warningsSubject = new BehaviorSubject<string[]>([]);
 
   syncProgress$ = this.syncProgressSubject.asObservable();
   currentComparison$ = this.currentComparisonSubject.asObservable();
   users$ = this.usersSubject.asObservable();
   uploadProgress$!: Observable<UploadProgress>;
   timingInfo$ = this.timingInfoSubject.asObservable();
+  warnings$ = this.warningsSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -277,8 +279,15 @@ export class UserSyncService {
           totalTimeMs: response.totalTimeMs
         });
         
+        // Store warnings if present
+        this.warningsSubject.next(response.warnings || []);
+        
         if (response.totalTimeMs) {
           console.log(`Server processing time: ${response.totalTimeMs}ms (Validation: ${response.validationTimeMs}ms, Comparison: ${response.comparisonTimeMs}ms)`);
+        }
+        
+        if (response.warnings && response.warnings.length > 0) {
+          console.warn(`CSV validation warnings (${response.warnings.length}):`, response.warnings);
         }
       }),
       map(response => response.comparisons),

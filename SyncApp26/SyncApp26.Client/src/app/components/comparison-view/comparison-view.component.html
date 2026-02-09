@@ -5,7 +5,7 @@
         <div>
           <p class="text-sm text-muted-foreground">Total Changes</p>
           <p class="text-2xl font-bold text-foreground">
-            {{ comparisons.length }}
+            {{ getFilteredComparisons().length }}
           </p>
         </div>
         <div>
@@ -40,7 +40,7 @@
     <div class="filters-container">
       <button
         (click)="filterNew = !filterNew; onFilterChange()"
-        [ngClass]="{ 'filter-new': true, 'inactive': !filterNew }"
+        [ngClass]="{ 'filter-new': true, inactive: !filterNew }"
         class="filter-button"
       >
         <span>➕</span>
@@ -49,7 +49,7 @@
 
       <button
         (click)="filterModified = !filterModified; onFilterChange()"
-        [ngClass]="{ 'filter-modified': true, 'inactive': !filterModified }"
+        [ngClass]="{ 'filter-modified': true, inactive: !filterModified }"
         class="filter-button"
       >
         <span>✏️</span>
@@ -58,7 +58,7 @@
 
       <button
         (click)="filterDeleted = !filterDeleted; onFilterChange()"
-        [ngClass]="{ 'filter-deleted': true, 'inactive': !filterDeleted }"
+        [ngClass]="{ 'filter-deleted': true, inactive: !filterDeleted }"
         class="filter-button"
       >
         <span>🗑️</span>
@@ -91,321 +91,338 @@
   </div>
 
   <div class="space-y-6">
-    <cdk-virtual-scroll-viewport itemSize="350" minBufferPx="800" maxBufferPx="2000" class="h-[calc(100vh-250px)] w-full">
-    <div
-      *cdkVirtualFor="let comparison of comparisons"
-      class="bg-card border border-border rounded-lg overflow-hidden mb-6 mx-1"
+    <cdk-virtual-scroll-viewport
+      itemSize="350"
+      minBufferPx="800"
+      maxBufferPx="2000"
+      class="h-[calc(100vh-250px)] w-full"
     >
-      <div class="px-6 py-4 bg-muted/30 border-b border-border">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              [checked]="comparison.selected"
-              (change)="toggleSelection(comparison)"
-              class="w-4 h-4 rounded border-border"
-            />
-            <div>
-              <h3 class="text-lg font-semibold text-foreground">
-                {{
-                  (comparison.csvUser?.firstName ||
-                    comparison.dbUser?.firstName) +
-                    " " +
-                    (comparison.csvUser?.lastName ||
-                      comparison.dbUser?.lastName) || "Unknown User"
-                }}
-              </h3>
-              <p class="text-sm text-muted-foreground">
-                ID: {{ comparison.id }}
+      <div
+        *cdkVirtualFor="let comparison of getFilteredComparisons()"
+        class="bg-card border border-border rounded-lg overflow-hidden mb-6 mx-1"
+      >
+        <div class="px-6 py-4 bg-muted/30 border-b border-border">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                [checked]="comparison.selected"
+                (change)="toggleSelection(comparison)"
+                class="w-4 h-4 rounded border-border"
+              />
+              <div>
+                <h3 class="text-lg font-semibold text-foreground">
+                  {{
+                    (comparison.csvUser?.firstName ||
+                      comparison.dbUser?.firstName) +
+                      " " +
+                      (comparison.csvUser?.lastName ||
+                        comparison.dbUser?.lastName) || "Unknown User"
+                  }}
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                  ID: {{ comparison.id }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span
+                [ngClass]="getStatusColor(comparison.status)"
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
+              >
+                <span class="mr-1">{{ getStatusIcon(comparison.status) }}</span>
+                {{ comparison.status }}
+              </span>
+              <span
+                *ngIf="hasConflicts(comparison)"
+                class="text-sm text-muted-foreground"
+              >
+                {{ getSelectedFieldsCount(comparison) }} /
+                {{ comparison.conflicts.length }} fields selected
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divide-y divide-border">
+          <!-- Fields -->
+          <ng-container
+            *ngFor="let field of ['departmentName', 'assignedToName', 'role']"
+          >
+            <!-- Using a loop for fields would be cleaner but structure varies slightly. 
+                  Keeping existing structure for now but inside virtual scroll item. -->
+          </ng-container>
+
+          <!-- Department -->
+          <div
+            *ngIf="comparison.dbUser || comparison.csvUser"
+            class="grid grid-cols-[1fr,auto,1fr]"
+          >
+            <div class="p-4 bg-red-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Department (Database)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'departmentName')"
+                  class="text-xs text-red-600"
+                  >- removed</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.line-through]="
+                  hasFieldConflict(comparison, 'departmentName')
+                "
+                [class.text-muted-foreground]="
+                  hasFieldConflict(comparison, 'departmentName')
+                "
+              >
+                {{ comparison.dbUser?.departmentName || "N/A" }}
+              </p>
+            </div>
+            <div class="flex items-center justify-center bg-muted/20 px-2">
+              <div
+                *ngIf="hasFieldConflict(comparison, 'departmentName')"
+                class="flex flex-col items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="isFieldSelected(comparison, 'departmentName')"
+                  (change)="
+                    toggleFieldSelection(comparison.id, 'departmentName')
+                  "
+                  class="w-4 h-4 rounded border-border"
+                  title="Select to sync this field"
+                />
+                <svg
+                  class="w-4 h-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </div>
+              <span
+                *ngIf="!hasFieldConflict(comparison, 'departmentName')"
+                class="text-muted-foreground"
+                >=</span
+              >
+            </div>
+            <div class="p-4 bg-green-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Department (CSV)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'departmentName')"
+                  class="text-xs text-green-600"
+                  >+ added</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.font-semibold]="
+                  hasFieldConflict(comparison, 'departmentName')
+                "
+                [class.text-green-700]="
+                  hasFieldConflict(comparison, 'departmentName')
+                "
+              >
+                {{ comparison.csvUser?.departmentName || "N/A" }}
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <span
-              [ngClass]="getStatusColor(comparison.status)"
-              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
-            >
-              <span class="mr-1">{{ getStatusIcon(comparison.status) }}</span>
-              {{ comparison.status }}
-            </span>
-            <span
-              *ngIf="hasConflicts(comparison)"
-              class="text-sm text-muted-foreground"
-            >
-              {{ getSelectedFieldsCount(comparison) }} /
-              {{ comparison.conflicts.length }} fields selected
-            </span>
-          </div>
-        </div>
-      </div>
 
-      <div class="divide-y divide-border">
-        <!-- Fields -->
-        <ng-container *ngFor="let field of ['departmentName', 'assignedToName', 'role']">
-             <!-- Using a loop for fields would be cleaner but structure varies slightly. 
-                  Keeping existing structure for now but inside virtual scroll item. -->
-        </ng-container>
-
-        <!-- Department -->
-        <div
-          *ngIf="comparison.dbUser || comparison.csvUser"
-          class="grid grid-cols-[1fr,auto,1fr]"
-        >
-          <div class="p-4 bg-red-50/30">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-medium text-muted-foreground uppercase"
-                >Department (Database)</span
+          <!-- Line Manager -->
+          <div
+            *ngIf="comparison.dbUser || comparison.csvUser"
+            class="grid grid-cols-[1fr,auto,1fr]"
+          >
+            <div class="p-4 bg-red-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Line Manager (Database)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'assignedToName')"
+                  class="text-xs text-red-600"
+                  >- removed</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.line-through]="
+                  hasFieldConflict(comparison, 'assignedToName')
+                "
+                [class.text-muted-foreground]="
+                  hasFieldConflict(comparison, 'assignedToName')
+                "
               >
-              <span
-                *ngIf="hasFieldConflict(comparison, 'departmentName')"
-                class="text-xs text-red-600"
-                >- removed</span
-              >
+                {{ comparison.dbUser?.assignedToName || "None" }}
+              </p>
             </div>
-            <p
-              class="font-mono text-sm"
-              [class.line-through]="
-                hasFieldConflict(comparison, 'departmentName')
-              "
-              [class.text-muted-foreground]="
-                hasFieldConflict(comparison, 'departmentName')
-              "
-            >
-              {{ comparison.dbUser?.departmentName || "N/A" }}
-            </p>
-          </div>
-          <div class="flex items-center justify-center bg-muted/20 px-2">
-            <div
-              *ngIf="hasFieldConflict(comparison, 'departmentName')"
-              class="flex flex-col items-center gap-2"
-            >
-              <input
-                type="checkbox"
-                [checked]="isFieldSelected(comparison, 'departmentName')"
-                (change)="toggleFieldSelection(comparison.id, 'departmentName')"
-                class="w-4 h-4 rounded border-border"
-                title="Select to sync this field"
-              />
-              <svg
-                class="w-4 h-4 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                ></path>
-              </svg>
-            </div>
-            <span
-              *ngIf="!hasFieldConflict(comparison, 'departmentName')"
-              class="text-muted-foreground"
-              >=</span
-            >
-          </div>
-          <div class="p-4 bg-green-50/30">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-medium text-muted-foreground uppercase"
-                >Department (CSV)</span
-              >
-              <span
-                *ngIf="hasFieldConflict(comparison, 'departmentName')"
-                class="text-xs text-green-600"
-                >+ added</span
-              >
-            </div>
-            <p
-              class="font-mono text-sm"
-              [class.font-semibold]="
-                hasFieldConflict(comparison, 'departmentName')
-              "
-              [class.text-green-700]="
-                hasFieldConflict(comparison, 'departmentName')
-              "
-            >
-              {{ comparison.csvUser?.departmentName || "N/A" }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Line Manager -->
-        <div
-          *ngIf="comparison.dbUser || comparison.csvUser"
-          class="grid grid-cols-[1fr,auto,1fr]"
-        >
-          <div class="p-4 bg-red-50/30">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-medium text-muted-foreground uppercase"
-                >Line Manager (Database)</span
-              >
-              <span
+            <div class="flex items-center justify-center bg-muted/20 px-2">
+              <div
                 *ngIf="hasFieldConflict(comparison, 'assignedToName')"
-                class="text-xs text-red-600"
-                >- removed</span
+                class="flex flex-col items-center gap-2"
               >
-            </div>
-            <p
-              class="font-mono text-sm"
-              [class.line-through]="
-                hasFieldConflict(comparison, 'assignedToName')
-              "
-              [class.text-muted-foreground]="
-                hasFieldConflict(comparison, 'assignedToName')
-              "
-            >
-              {{ comparison.dbUser?.assignedToName || "None" }}
-            </p>
-          </div>
-          <div class="flex items-center justify-center bg-muted/20 px-2">
-            <div
-              *ngIf="hasFieldConflict(comparison, 'assignedToName')"
-              class="flex flex-col items-center gap-2"
-            >
-              <input
-                type="checkbox"
-                [checked]="isFieldSelected(comparison, 'assignedToName')"
-                (change)="toggleFieldSelection(comparison.id, 'assignedToName')"
-                class="w-4 h-4 rounded border-border"
-                title="Select to sync this field"
-              />
-              <svg
-                class="w-4 h-4 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                ></path>
-              </svg>
-            </div>
-            <span
-              *ngIf="!hasFieldConflict(comparison, 'assignedToName')"
-              class="text-muted-foreground"
-              >=</span
-            >
-          </div>
-          <div class="p-4 bg-green-50/30">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-medium text-muted-foreground uppercase"
-                >Line Manager (CSV)</span
-              >
+                <input
+                  type="checkbox"
+                  [checked]="isFieldSelected(comparison, 'assignedToName')"
+                  (change)="
+                    toggleFieldSelection(comparison.id, 'assignedToName')
+                  "
+                  class="w-4 h-4 rounded border-border"
+                  title="Select to sync this field"
+                />
+                <svg
+                  class="w-4 h-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </div>
               <span
-                *ngIf="hasFieldConflict(comparison, 'assignedToName')"
-                class="text-xs text-green-600"
-                >+ added</span
+                *ngIf="!hasFieldConflict(comparison, 'assignedToName')"
+                class="text-muted-foreground"
+                >=</span
               >
             </div>
-            <p
-              class="font-mono text-sm"
-              [class.font-semibold]="
-                hasFieldConflict(comparison, 'assignedToName')
-              "
-              [class.text-green-700]="
-                hasFieldConflict(comparison, 'assignedToName')
-              "
-            >
-              {{ comparison.csvUser?.assignedToName || "None" }}
-            </p>
+            <div class="p-4 bg-green-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Line Manager (CSV)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'assignedToName')"
+                  class="text-xs text-green-600"
+                  >+ added</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.font-semibold]="
+                  hasFieldConflict(comparison, 'assignedToName')
+                "
+                [class.text-green-700]="
+                  hasFieldConflict(comparison, 'assignedToName')
+                "
+              >
+                {{ comparison.csvUser?.assignedToName || "None" }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Role -->
+          <div
+            *ngIf="comparison.dbUser || comparison.csvUser"
+            class="grid grid-cols-[1fr,auto,1fr]"
+          >
+            <div class="p-4 bg-red-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Role (Database)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'role')"
+                  class="text-xs text-red-600"
+                  >- removed</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.line-through]="hasFieldConflict(comparison, 'role')"
+                [class.text-muted-foreground]="
+                  hasFieldConflict(comparison, 'role')
+                "
+              >
+                {{ comparison.dbUser?.role || "N/A" }}
+              </p>
+            </div>
+            <div class="flex items-center justify-center bg-muted/20 px-2">
+              <div
+                *ngIf="hasFieldConflict(comparison, 'role')"
+                class="flex flex-col items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="isFieldSelected(comparison, 'role')"
+                  (change)="toggleFieldSelection(comparison.id, 'role')"
+                  class="w-4 h-4 rounded border-border"
+                  title="Select to sync this field"
+                />
+                <svg
+                  class="w-4 h-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </div>
+              <span
+                *ngIf="!hasFieldConflict(comparison, 'role')"
+                class="text-muted-foreground"
+                >=</span
+              >
+            </div>
+            <div class="p-4 bg-green-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Role (CSV)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'role')"
+                  class="text-xs text-green-600"
+                  >+ added</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.font-semibold]="hasFieldConflict(comparison, 'role')"
+                [class.text-green-700]="hasFieldConflict(comparison, 'role')"
+              >
+                {{ comparison.csvUser?.role || "N/A" }}
+              </p>
+            </div>
           </div>
         </div>
 
-        <!-- Role -->
         <div
-          *ngIf="comparison.dbUser || comparison.csvUser"
-          class="grid grid-cols-[1fr,auto,1fr]"
+          *ngIf="hasConflicts(comparison)"
+          class="px-6 py-3 bg-blue-50/30 border-t border-border"
         >
-          <div class="p-4 bg-red-50/30">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-medium text-muted-foreground uppercase"
-                >Role (Database)</span
-              >
-              <span
-                *ngIf="hasFieldConflict(comparison, 'role')"
-                class="text-xs text-red-600"
-                >- removed</span
-              >
-            </div>
-            <p
-              class="font-mono text-sm"
-              [class.line-through]="hasFieldConflict(comparison, 'role')"
-              [class.text-muted-foreground]="
-                hasFieldConflict(comparison, 'role')
-              "
-            >
-              {{ comparison.dbUser?.role || "N/A" }}
-            </p>
-          </div>
-          <div class="flex items-center justify-center bg-muted/20 px-2">
-            <div
-              *ngIf="hasFieldConflict(comparison, 'role')"
-              class="flex flex-col items-center gap-2"
-            >
-              <input
-                type="checkbox"
-                [checked]="isFieldSelected(comparison, 'role')"
-                (change)="toggleFieldSelection(comparison.id, 'role')"
-                class="w-4 h-4 rounded border-border"
-                title="Select to sync this field"
-              />
-              <svg
-                class="w-4 h-4 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                ></path>
-              </svg>
-            </div>
-            <span
-              *ngIf="!hasFieldConflict(comparison, 'role')"
-              class="text-muted-foreground"
-              >=</span
-            >
-          </div>
-          <div class="p-4 bg-green-50/30">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-medium text-muted-foreground uppercase"
-                >Role (CSV)</span
-              >
-              <span
-                *ngIf="hasFieldConflict(comparison, 'role')"
-                class="text-xs text-green-600"
-                >+ added</span
-              >
-            </div>
-            <p
-              class="font-mono text-sm"
-              [class.font-semibold]="hasFieldConflict(comparison, 'role')"
-              [class.text-green-700]="hasFieldConflict(comparison, 'role')"
-            >
-              {{ comparison.csvUser?.role || "N/A" }}
-            </p>
-          </div>
+          <p class="text-xs text-blue-700">
+            Check the boxes in the middle column to select which fields you want
+            to update. Only selected fields will be synced.
+          </p>
         </div>
       </div>
-
-      <div
-        *ngIf="hasConflicts(comparison)"
-        class="px-6 py-3 bg-blue-50/30 border-t border-border"
-      >
-        <p class="text-xs text-blue-700">
-          Check the boxes in the middle column to select which fields you want
-          to update. Only selected fields will be synced.
-        </p>
-      </div>
-    </div>
     </cdk-virtual-scroll-viewport>
 
     <div
