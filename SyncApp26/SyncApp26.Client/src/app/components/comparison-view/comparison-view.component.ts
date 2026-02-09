@@ -20,17 +20,24 @@ export class ComparisonViewComponent {
   filterModified = true;
   filterDeleted = true;
   searchQuery = '';
+  allUsersSelected = false;
+  allConflictsSelected = false;
 
-  selectAll(): void {
+  toggleSelectAllUsers(): void {
     const filtered = this.getFilteredComparisons();
-    filtered.forEach(c => c.selected = true);
+    this.allUsersSelected = !this.allUsersSelected;
+    filtered.forEach(c => c.selected = this.allUsersSelected);
     this.selectionChange.emit(this.comparisons);
   }
 
-  deselectAll(): void {
+  toggleSelectAllConflicts(): void {
     const filtered = this.getFilteredComparisons();
-    filtered.forEach(c => c.selected = false);
-    this.selectionChange.emit(this.comparisons);
+    this.allConflictsSelected = !this.allConflictsSelected;
+    filtered.forEach(comparison => {
+      comparison.conflicts.forEach(conflict => {
+        conflict.selected = this.allConflictsSelected;
+      });
+    });
   }
 
   toggleSelection(comparison: UserComparison): void {
