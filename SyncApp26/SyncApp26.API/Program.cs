@@ -7,10 +7,12 @@ using SyncApp26.Infrastructure.Repositories;
 using SyncApp26.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using System.IO;
+using SyncApp26.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -45,13 +47,13 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IImportConflictRepository, ImportConflictRepository>();
 builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
 
+
 // Services
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
 builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
-builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
-builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
+builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
 
 var app = builder.Build();
 
@@ -83,5 +85,6 @@ app.UseHttpsRedirection();
 app.UseCors();
 
 app.MapControllers();
+app.MapHub<SyncApp26.API.Hubs.SyncHub>("/hubs/sync");
 
 app.Run();

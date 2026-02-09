@@ -1,13 +1,10 @@
 using SyncApp26.Shared.DTOs;
 using SyncApp26.Shared.DTOs.CSV.Department;
 
-namespace SyncApp26.Application.IServices
+namespace SyncApp26.Application.IServices;
+
+public interface ICsvSyncService
 {
-    public interface ICsvSyncService
-    {
-        Task<List<UserComparisonDTO>> CompareWithDatabase(List<CsvUserDTO> csvUsers);
-        Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest);
-        Task<List<CSVDepartmentComparisionDTO>> CompareDepartmentsWithDatabase(List<CSVDepartmentDTO> csvDepartments);
-        Task<SyncResultDTO> SyncDepartments(List<CSVDepartmentComparisionDTO> departmentSyncList);
-    }
+    Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null);
+    Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest, string? connectionId = null);
 }

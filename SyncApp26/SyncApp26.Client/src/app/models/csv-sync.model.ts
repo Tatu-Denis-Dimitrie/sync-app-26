@@ -69,6 +69,15 @@ export interface SyncResult {
   recordsSkipped: number;
   message?: string;
   errors?: string[];
+  processingTimeMs?: number;
+}
+
+export interface ComparisonResponse {
+  comparisons: UserComparison[];
+  totalRows: number;
+  validationTimeMs: number;
+  comparisonTimeMs: number;
+  totalTimeMs: number;
 }
 
 export interface PaginationParams {
@@ -86,20 +95,9 @@ export interface SyncProgress {
   status: SyncStatus;
 }
 
-export interface ImportConflictHistory {
-  id: string;
-  importHistoryId: string;
-  importDate?: string;
-  importFileName?: string;
-  userId: string;
-  fieldName: string;
-  oldValue: string;
-  newValue: string;
-  status: 'accepted' | 'rejected';
-}
-
-export interface ImportHistoryItem {
-  id: string;
-  importDate: string;
-  fileName: string;
+export interface SyncProgressUpdate {
+  processed: number;
+  failed: number;
+  skipped: number;
+  message?: string;
 }

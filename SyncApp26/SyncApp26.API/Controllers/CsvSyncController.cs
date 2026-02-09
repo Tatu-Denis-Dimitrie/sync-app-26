@@ -27,13 +27,16 @@ public class CsvSyncController : ControllerBase
         _csvValidationService = csvValidationService;
         _logger = logger;
     }
-
     /// <summary>
     /// Upload CSV file and compare with database
     /// </summary>
     [HttpPost("upload")]
-    public async Task<ActionResult<List<UserComparisonDTO>>> UploadAndCompare(IFormFile file)
+    [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit for large CSVs
+    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file)
     {
+        var startTime = DateTime.UtcNow;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
         if (file == null || file.Length == 0)
         {
             return BadRequest(new { error = "No file uploaded" });
@@ -44,35 +47,20 @@ public class CsvSyncController : ControllerBase
             return BadRequest(new { error = "File must be a CSV file" });
         }
 
+        // Get connection ID for SignalR progress updates
+        string? connectionId = Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
+
         try
         {
-            // Validate CSV file first
-            using (var validationStream = file.OpenReadStream())
-            {
-                var validationResult = await _csvValidationService.ValidateCsvFile(validationStream, file.FileName);
+            int totalRows = 0;
+            long validationTimeMs = 0;
+            long comparisonTimeMs = 0;
 
-                if (!validationResult.IsValid)
-                {
-                    _logger.LogWarning($"CSV validation failed: {validationResult.Errors.Count} errors");
-                    return BadRequest(new
-                    {
-                        error = "CSV validation failed",
-                        errors = validationResult.Errors,
-                        warnings = validationResult.Warnings,
-                        totalRows = validationResult.TotalRows,
-                        validRows = validationResult.ValidRows,
-                        invalidRows = validationResult.InvalidRows
-                    });
-                }
-
-                if (validationResult.Warnings.Count > 0)
-                {
-                    _logger.LogInformation($"CSV validation passed with {validationResult.Warnings.Count} warnings");
-                }
-            }
-
-            var csvUsers = new List<CsvUserDTO>();
-
+            // Single-pass validation and processing
+            var comparisonStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            List<UserComparisonDTO> comparisons;
+            CsvValidationResultDTO? validationResult = null;
+            
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -83,18 +71,41 @@ public class CsvSyncController : ControllerBase
             }))
             {
                 csv.Context.RegisterClassMap<CsvUserMap>();
-                csvUsers = csv.GetRecords<CsvUserDTO>().ToList();
+                
+                // Validate headers quickly
+                csv.Read();
+                csv.ReadHeader();
+                var headers = csv.HeaderRecord;
+                
+                if (headers == null || !headers.Contains("Email") || !headers.Contains("FirstName"))
+                {
+                    return BadRequest(new { error = "CSV validation failed", errors = new[] { "Missing required headers: Email, FirstName, LastName, DepartmentName" } });
+                }
+                
+                // Stream records for processing
+                var csvUsers = csv.GetRecords<CsvUserDTO>();
+                
+                // Pass connectionId for progress tracking (totalRows estimated during processing)
+                comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, 0, connectionId);
+                totalRows = comparisons.Count;
             }
+            
+            comparisonStopwatch.Stop();
+            comparisonTimeMs = comparisonStopwatch.ElapsedMilliseconds;
+            stopwatch.Stop();
+            
+            _logger.LogInformation($"Compared CSV with {totalRows} rows, found {comparisons.Count} comparisons in {stopwatch.ElapsedMilliseconds}ms");
 
-            if (csvUsers.Count == 0)
+            var response = new ComparisonResponseDTO
             {
-                return BadRequest(new { error = "CSV file is empty or invalid" });
-            }
+                Comparisons = comparisons,
+                TotalRows = totalRows,
+                ValidationTimeMs = validationTimeMs,
+                ComparisonTimeMs = comparisonTimeMs,
+                TotalTimeMs = stopwatch.ElapsedMilliseconds
+            };
 
-            var comparisons = await _csvSyncService.CompareWithDatabase(csvUsers);
-            _logger.LogInformation($"Compared CSV with {csvUsers.Count} users, found {comparisons.Count} comparisons");
-
-            return Ok(comparisons);
+            return Ok(response);
         }
         catch (Exception ex)
         {
@@ -114,9 +125,12 @@ public class CsvSyncController : ControllerBase
             return BadRequest(new { error = "No sync items provided" });
         }
 
+        // Get connection ID for SignalR progress updates
+        string? connectionId = Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
+
         try
         {
-            var result = await _csvSyncService.SyncUsers(syncRequest);
+            var result = await _csvSyncService.SyncUsers(syncRequest, connectionId);
             _logger.LogInformation($"Sync completed: {result.RecordsProcessed} processed, {result.RecordsFailed} failed");
 
             if (!result.Success)

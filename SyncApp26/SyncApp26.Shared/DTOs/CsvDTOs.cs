@@ -62,4 +62,14 @@ public class SyncResultDTO
     public int RecordsSkipped { get; set; }
     public string? Message { get; set; }
     public List<string> Errors { get; set; } = new();
+    public long ProcessingTimeMs { get; set; }
+}
+
+public class ComparisonResponseDTO
+{
+    public List<UserComparisonDTO> Comparisons { get; set; } = new();
+    public int TotalRows { get; set; }
+    public long ValidationTimeMs { get; set; }
+    public long ComparisonTimeMs { get; set; }
+    public long TotalTimeMs { get; set; }
 }
