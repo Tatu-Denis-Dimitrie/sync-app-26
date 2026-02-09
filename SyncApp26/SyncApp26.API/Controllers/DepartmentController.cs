@@ -49,13 +49,14 @@ namespace SyncApp26.API.Controllers
             var department = new Department
             {
                 Id = Guid.NewGuid(),
-                Name = departmentRequestDTO.Name,
+                Name = departmentRequestDTO.Name.Trim(),
                 CreatedAt = DateTime.UtcNow
             };
 
             await _departmentService.AddDepartmentAsync(department);
 
-            return new DepartmentResponseDTO {
+            return new DepartmentResponseDTO
+            {
                 Success = true,
                 Message = "Department created successfully",
             };
@@ -76,7 +77,7 @@ namespace SyncApp26.API.Controllers
             var department = new Department
             {
                 Id = id,
-                Name = departmentRequestDTO.Name,
+                Name = departmentRequestDTO.Name.Trim(),
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -100,7 +101,7 @@ namespace SyncApp26.API.Controllers
                     Message = "Department not found",
                 };
             }
-            
+
             existingDepartment.DeletedAt = DateTime.UtcNow;
             await _departmentService.UpdateDepartmentAsync(existingDepartment);
             return new DepartmentResponseDTO

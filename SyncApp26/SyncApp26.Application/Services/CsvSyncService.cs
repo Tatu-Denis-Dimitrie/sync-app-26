@@ -84,11 +84,11 @@ public class CsvSyncService : ICsvSyncService
 
                 var csvUserData = new CsvUserDataDTO
                 {
-                    FirstName = csvUser.FirstName,
-                    LastName = csvUser.LastName,
-                    Email = csvUser.Email,
-                    DepartmentName = csvUser.DepartmentName,
-                    AssignedToEmail = csvUser.AssignedToEmail,
+                    FirstName = csvUser.FirstName.Trim(),
+                    LastName = csvUser.LastName.Trim(),
+                    Email = csvUser.Email.Trim(),
+                    DepartmentName = csvUser.DepartmentName.Trim(),
+                    AssignedToEmail = csvUser.AssignedToEmail?.Trim(),
                     AssignedToName = csvManager != null ? $"{csvManager.FirstName} {csvManager.LastName}" : null
                 };
 
@@ -185,11 +185,11 @@ public class CsvSyncService : ICsvSyncService
                     Status = "new",
                     CsvUser = new CsvUserDataDTO
                     {
-                        FirstName = csvUser.FirstName,
-                        LastName = csvUser.LastName,
-                        Email = csvUser.Email,
-                        DepartmentName = csvUser.DepartmentName,
-                        AssignedToEmail = csvUser.AssignedToEmail,
+                        FirstName = csvUser.FirstName.Trim(),
+                        LastName = csvUser.LastName.Trim(),
+                        Email = csvUser.Email.Trim(),
+                        DepartmentName = csvUser.DepartmentName.Trim(),
+                        AssignedToEmail = csvUser.AssignedToEmail?.Trim(),
                         AssignedToName = newCsvManager != null ? $"{newCsvManager.FirstName} {newCsvManager.LastName}" : null
                     },
                     Selected = true // Auto-select new records
@@ -283,7 +283,7 @@ public class CsvSyncService : ICsvSyncService
                         department = new Department
                         {
                             Id = Guid.NewGuid(),
-                            Name = item.CsvData.DepartmentName,
+                            Name = item.CsvData.DepartmentName.Trim(),
                             CreatedAt = DateTime.UtcNow
                         };
                         departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = department;
@@ -308,9 +308,9 @@ public class CsvSyncService : ICsvSyncService
                     var newUser = new User
                     {
                         Id = Guid.NewGuid(),
-                        FirstName = item.CsvData.FirstName,
-                        LastName = item.CsvData.LastName,
-                        Email = item.CsvData.Email,
+                        FirstName = item.CsvData.FirstName.Trim(),
+                        LastName = item.CsvData.LastName.Trim(),
+                        Email = item.CsvData.Email.Trim(),
                         DepartmentId = department.Id,
                         AssignedToId = assignedToId,
                         CreatedAt = DateTime.UtcNow
@@ -395,11 +395,11 @@ public class CsvSyncService : ICsvSyncService
                                                     UserId = existingUser.Id,
                                                     FieldName = "firstname",
                                                     OldValue = existingUser.FirstName,
-                                                    NewValue = item.CsvData.FirstName,
+                                                    NewValue = item.CsvData.FirstName.Trim(),
                                                     Status = "accepted"
                                                 };
 
-                                                existingUser.FirstName = item.CsvData.FirstName;
+                                                existingUser.FirstName = item.CsvData.FirstName.Trim();
                                                 hasChanges = true;
                                                 await _importConflictRepository.AddAsync(importConflict);
                                             }
@@ -414,10 +414,10 @@ public class CsvSyncService : ICsvSyncService
                                                     UserId = existingUser.Id,
                                                     FieldName = "lastname",
                                                     OldValue = existingUser.LastName,
-                                                    NewValue = item.CsvData.LastName,
+                                                    NewValue = item.CsvData.LastName.Trim(),
                                                     Status = "accepted"
                                                 };
-                                                existingUser.LastName = item.CsvData.LastName;
+                                                existingUser.LastName = item.CsvData.LastName.Trim();
                                                 hasChanges = true;
                                                 await _importConflictRepository.AddAsync(importConflict);
                                             }
@@ -430,7 +430,7 @@ public class CsvSyncService : ICsvSyncService
                                                 department = new Department
                                                 {
                                                     Id = Guid.NewGuid(),
-                                                    Name = item.CsvData.DepartmentName,
+                                                    Name = item.CsvData.DepartmentName.Trim(),
                                                     CreatedAt = DateTime.UtcNow
                                                 };
                                                 departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = department;
@@ -517,12 +517,12 @@ public class CsvSyncService : ICsvSyncService
                             // If no conflicts exist, update all fields that differ from database
                             if (existingUser.FirstName != item.CsvData.FirstName)
                             {
-                                existingUser.FirstName = item.CsvData.FirstName;
+                                existingUser.FirstName = item.CsvData.FirstName.Trim();
                                 hasChanges = true;
                             }
                             if (existingUser.LastName != item.CsvData.LastName)
                             {
-                                existingUser.LastName = item.CsvData.LastName;
+                                existingUser.LastName = item.CsvData.LastName.Trim();
                                 hasChanges = true;
                             }
 
@@ -533,7 +533,7 @@ public class CsvSyncService : ICsvSyncService
                                 dept = new Department
                                 {
                                     Id = Guid.NewGuid(),
-                                    Name = item.CsvData.DepartmentName,
+                                    Name = item.CsvData.DepartmentName.Trim(),
                                     CreatedAt = DateTime.UtcNow
                                 };
                                 departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = dept;

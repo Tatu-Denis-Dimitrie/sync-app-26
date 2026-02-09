@@ -314,11 +314,11 @@ public sealed class CsvUserMap : ClassMap<CsvUserDTO>
 {
     public CsvUserMap()
     {
-        Map(m => m.FirstName).Name("FirstName", "First Name", "first_name");
-        Map(m => m.LastName).Name("LastName", "Last Name", "last_name");
-        Map(m => m.Email).Name("Email", "email");
-        Map(m => m.DepartmentName).Name("DepartmentName", "Department Name", "Department", "department_name", "department");
-        Map(m => m.AssignedToEmail).Name("AssignedToEmail", "Assigned To Email", "Line Manager Email", "Manager Email", "assigned_to_email", "manager_email").Optional();
+        Map(m => m.FirstName).Name("FirstName", "First Name", "first_name").Convert(args => args.Row.GetField("FirstName")?.Trim() ?? string.Empty);
+        Map(m => m.LastName).Name("LastName", "Last Name", "last_name").Convert(args => args.Row.GetField("LastName")?.Trim() ?? string.Empty);
+        Map(m => m.Email).Name("Email", "email").Convert(args => args.Row.GetField("Email")?.Trim() ?? string.Empty);
+        Map(m => m.DepartmentName).Name("DepartmentName", "Department Name", "Department", "department_name", "department").Convert(args => args.Row.GetField("DepartmentName")?.Trim() ?? string.Empty);
+        Map(m => m.AssignedToEmail).Name("AssignedToEmail", "Assigned To Email", "Line Manager Email", "Manager Email", "assigned_to_email", "manager_email").Optional().Convert(args => args.Row.GetField("AssignedToEmail")?.Trim());
     }
 }
 
@@ -326,6 +326,6 @@ public sealed class CsvDepartmentMap : ClassMap<CSVDepartmentDTO>
 {
     public CsvDepartmentMap()
     {
-        Map(m => m.Name).Name("Name", "DepartmentName", "Department Name", "department_name", "department");
+        Map(m => m.Name).Name("Name", "DepartmentName", "Department Name", "department_name", "department").Convert(args => args.Row.GetField("Name")?.Trim() ?? string.Empty);
     }
 }
