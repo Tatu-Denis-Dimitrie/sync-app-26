@@ -31,6 +31,7 @@ export class UserSyncService {
   private usersSubject = new BehaviorSubject<User[]>([]);
   private timingInfoSubject = new BehaviorSubject<{ validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null>(null);
   private warningsSubject = new BehaviorSubject<string[]>([]);
+  private errorsSubject = new BehaviorSubject<string[]>([]);
 
   syncProgress$ = this.syncProgressSubject.asObservable();
   currentComparison$ = this.currentComparisonSubject.asObservable();
@@ -38,6 +39,7 @@ export class UserSyncService {
   uploadProgress$!: Observable<UploadProgress>;
   timingInfo$ = this.timingInfoSubject.asObservable();
   warnings$ = this.warningsSubject.asObservable();
+  errors$ = this.errorsSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -238,7 +240,7 @@ export class UserSyncService {
   /**
    * Upload CSV file and compare with database
    */
-  uploadAndCompare(file: File): Observable<UserComparison[]> {
+  uploadAndCompare(file: File, skipInvalidRows: boolean = false): Observable<UserComparison[]> {
     // Reset comparisons
     this.currentComparisonSubject.next([]);
 
@@ -259,7 +261,10 @@ export class UserSyncService {
         const formData = new FormData();
         formData.append('file', file);
 
-        return this.http.post<any>(`${environment.apiUrl}/CsvSync/upload`, formData, { headers });
+        // Add query parameter for skipping invalid rows
+        const url = `${environment.apiUrl}/CsvSync/upload${skipInvalidRows ? '?skipInvalidRows=true' : ''}`;
+
+        return this.http.post<any>(url, formData, { headers });
       }),
       map((response: any) => {
         // Handle both old format (array) and new format (object with comparisons)
@@ -279,8 +284,9 @@ export class UserSyncService {
           totalTimeMs: response.totalTimeMs
         });
         
-        // Store warnings if present
+        // Store warnings and errors if present
         this.warningsSubject.next(response.warnings || []);
+        this.errorsSubject.next(response.errors || []);
         
         if (response.totalTimeMs) {
           console.log(`Server processing time: ${response.totalTimeMs}ms (Validation: ${response.validationTimeMs}ms, Comparison: ${response.comparisonTimeMs}ms)`);
@@ -288,6 +294,10 @@ export class UserSyncService {
         
         if (response.warnings && response.warnings.length > 0) {
           console.warn(`CSV validation warnings (${response.warnings.length}):`, response.warnings);
+        }
+        
+        if (response.errors && response.errors.length > 0) {
+          console.warn(`CSV validation errors (${response.invalidRows} rows skipped):`, response.errors);
         }
       }),
       map(response => response.comparisons),

@@ -32,7 +32,7 @@ public class CsvSyncController : ControllerBase
     /// </summary>
     [HttpPost("upload")]
     [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit for large CSVs
-    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file)
+    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file, [FromQuery] bool skipInvalidRows = false)
     {
         var startTime = DateTime.UtcNow;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -68,8 +68,8 @@ public class CsvSyncController : ControllerBase
             validationStopwatch.Stop();
             validationTimeMs = validationStopwatch.ElapsedMilliseconds;
 
-            // If validation failed with errors, return validation result
-            if (!validationResult.IsValid)
+            // If validation failed with all rows invalid, return error
+            if (!validationResult.IsValid && validationResult.ValidRows == 0)
             {
                 return BadRequest(new
                 {
@@ -82,9 +82,25 @@ public class CsvSyncController : ControllerBase
                 });
             }
 
-            // Step 2: Parse and compare with database
+            // If validation has errors but also valid rows, and user hasn't chosen to skip
+            if (!validationResult.IsValid && validationResult.ValidRows > 0 && !skipInvalidRows)
+            {
+                return BadRequest(new
+                {
+                    error = "CSV has some invalid rows",
+                    errors = validationResult.Errors,
+                    warnings = validationResult.Warnings,
+                    totalRows = validationResult.TotalRows,
+                    validRows = validationResult.ValidRows,
+                    invalidRows = validationResult.InvalidRows,
+                    canProceedWithValidRows = true // Signal frontend that partial upload is possible
+                });
+            }
+
+            // Step 2: Parse and compare with database (skip invalid rows if needed)
             var comparisonStopwatch = System.Diagnostics.Stopwatch.StartNew();
             List<UserComparisonDTO> comparisons;
+            var invalidRowSet = new HashSet<int>(validationResult.InvalidRowNumbers);
 
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
@@ -99,11 +115,26 @@ public class CsvSyncController : ControllerBase
                 csv.Read();
                 csv.ReadHeader();
 
-                // Stream records for processing
-                var csvUsers = csv.GetRecords<CsvUserDTO>();
+                // Stream records for processing, skip invalid rows if needed
+                var allCsvUsers = csv.GetRecords<CsvUserDTO>().ToList();
+
+                List<CsvUserDTO> csvUsersToProcess;
+                if (invalidRowSet.Count > 0 && skipInvalidRows)
+                {
+                    // Skip invalid rows (row numbers are 1-based, index is 0-based)
+                    csvUsersToProcess = allCsvUsers
+                        .Select((user, index) => new { user, rowNumber = index + 1 })
+                        .Where(x => !invalidRowSet.Contains(x.rowNumber))
+                        .Select(x => x.user)
+                        .ToList();
+                }
+                else
+                {
+                    csvUsersToProcess = allCsvUsers;
+                }
 
                 // Pass connectionId for progress tracking
-                comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, validationResult.ValidRows, connectionId);
+                comparisons = await _csvSyncService.CompareWithDatabase(csvUsersToProcess, csvUsersToProcess.Count, connectionId);
                 totalRows = validationResult.TotalRows;
             }
 
@@ -117,6 +148,9 @@ public class CsvSyncController : ControllerBase
             {
                 Comparisons = comparisons,
                 TotalRows = totalRows,
+                ValidRows = validationResult.ValidRows,
+                InvalidRows = validationResult.InvalidRows,
+                Errors = skipInvalidRows ? validationResult.Errors : new List<string>(),
                 Warnings = validationResult.Warnings,
                 ValidationTimeMs = validationTimeMs,
                 ComparisonTimeMs = comparisonTimeMs,

@@ -25,11 +25,9 @@
             </svg>
           </button>
           <div>
-            <h1 class="text-xl font-semibold text-foreground">
-              Employee Details
-            </h1>
+            <h1 class="text-xl font-semibold text-foreground">SyncApp 26</h1>
             <p class="text-sm text-muted-foreground">
-              Complete information about each employee
+              Synchronize employee data with CSV import
             </p>
           </div>
         </div>
@@ -53,8 +51,7 @@
             Users
           </button>
           <button
-            (click)="navigateToEmployees()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-gray-500"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-white bg-gray-500"
           >
             Employees
           </button>
@@ -417,11 +414,18 @@
             <div *ngIf="conflictsLoading" class="text-sm text-muted-foreground">
               Loading conflict history...
             </div>
-            <div *ngIf="!conflictsLoading && conflictsError" class="text-sm text-red-600">
+            <div
+              *ngIf="!conflictsLoading && conflictsError"
+              class="text-sm text-red-600"
+            >
               {{ conflictsError }}
             </div>
             <div
-              *ngIf="!conflictsLoading && !conflictsError && importConflicts.length === 0"
+              *ngIf="
+                !conflictsLoading &&
+                !conflictsError &&
+                importConflicts.length === 0
+              "
               class="text-sm text-muted-foreground"
             >
               No conflict history for this employee.
@@ -444,8 +448,13 @@
                 </p>
               </div>
 
-              <div *ngFor="let conflict of group.conflicts" class="border-t border-border">
-                <div class="px-4 py-3 bg-muted/10 border-b border-border flex items-center justify-between">
+              <div
+                *ngFor="let conflict of group.conflicts"
+                class="border-t border-border"
+              >
+                <div
+                  class="px-4 py-3 bg-muted/10 border-b border-border flex items-center justify-between"
+                >
                   <div>
                     <p class="text-sm font-semibold text-foreground">
                       {{ formatConflictField(conflict.fieldName) }}
@@ -461,14 +470,18 @@
 
                 <div class="grid grid-cols-[1fr,auto,1fr]">
                   <div class="p-4 bg-red-50/30">
-                    <div class="text-xs font-medium text-muted-foreground uppercase mb-2">
+                    <div
+                      class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                    >
                       Database
                     </div>
                     <p class="font-mono text-sm text-foreground">
                       {{ conflict.oldValue || "N/A" }}
                     </p>
                   </div>
-                  <div class="flex items-center justify-center bg-muted/20 px-2">
+                  <div
+                    class="flex items-center justify-center bg-muted/20 px-2"
+                  >
                     <svg
                       class="w-4 h-4 text-muted-foreground"
                       fill="none"
@@ -484,7 +497,9 @@
                     </svg>
                   </div>
                   <div class="p-4 bg-green-50/30">
-                    <div class="text-xs font-medium text-muted-foreground uppercase mb-2">
+                    <div
+                      class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                    >
                       CSV
                     </div>
                     <p class="font-mono text-sm text-foreground">
