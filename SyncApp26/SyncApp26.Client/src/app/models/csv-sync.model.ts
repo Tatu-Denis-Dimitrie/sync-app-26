@@ -78,6 +78,7 @@ export interface ComparisonResponse {
   validationTimeMs: number;
   comparisonTimeMs: number;
   totalTimeMs: number;
+  fileName?: string;
 }
 
 export interface PaginationParams {

@@ -249,3 +249,24 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Large CSV test files
+**/sample-csvs/*_10k.csv
+**/sample-csvs/users_10k.csv
+**/sample-csvs/10k_*.csv
+
+# Angular build artifacts with hashes
+**/dist/**/*.js
+**/dist/**/*.css
+**/dist/**/index.html
+**/dist/**/favicon.ico
+**/dist/**/3rdpartylicenses.txt
+**/dist/**/prerendered-routes.json
+main-*.js
+polyfills-*.js
+styles-*.css
+
+# Angular client build output
+SyncApp26.Client/dist/
+SyncApp26.Client/.angular/
+SyncApp26.Client/node_modules/

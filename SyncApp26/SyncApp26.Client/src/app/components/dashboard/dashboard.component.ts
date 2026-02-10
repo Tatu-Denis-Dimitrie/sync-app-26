@@ -187,6 +187,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('CSV uploaded and compared:', comparisons);
           this.isUploading = false;
           this.showComparison = true;
+          this.fileName = file.name;
           
           // Get server timing info
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
@@ -352,6 +353,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('CSV uploaded with valid rows only:', comparisons);
           this.isUploading = false;
           this.showComparison = true;
+          this.fileName = this.currentUploadFile?.name || this.fileName;
           
           // Get server timing info
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
@@ -394,7 +396,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.syncStartTime = Date.now();
     this.serverTimingInfo = null;
 
-    this.userSyncService.syncUsers(this.currentComparisons)
+    this.userSyncService.syncUsers(this.currentComparisons, this.fileName)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {

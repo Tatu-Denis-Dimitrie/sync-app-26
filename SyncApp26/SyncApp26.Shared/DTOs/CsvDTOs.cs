@@ -76,4 +76,5 @@ public class ComparisonResponseDTO
     public long ValidationTimeMs { get; set; }
     public long ComparisonTimeMs { get; set; }
     public long TotalTimeMs { get; set; }
+    public string? FileName { get; set; }
 }

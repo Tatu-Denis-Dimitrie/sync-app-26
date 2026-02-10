@@ -250,7 +250,7 @@ public class CsvSyncService : ICsvSyncService
         {
             Id = Guid.NewGuid(),
             ImportDate = DateTime.UtcNow,
-            FileName = "CSV Import"
+            FileName = syncRequest.FileName ?? "CSV Import"
         };
         bool importHistoryCreated = false;
 

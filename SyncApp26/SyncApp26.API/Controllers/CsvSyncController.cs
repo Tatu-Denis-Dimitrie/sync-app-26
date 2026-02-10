@@ -154,7 +154,8 @@ public class CsvSyncController : ControllerBase
                 Warnings = validationResult.Warnings,
                 ValidationTimeMs = validationTimeMs,
                 ComparisonTimeMs = comparisonTimeMs,
-                TotalTimeMs = stopwatch.ElapsedMilliseconds
+                TotalTimeMs = stopwatch.ElapsedMilliseconds,
+                FileName = file.FileName
             };
 
             return Ok(response);
