@@ -270,3 +270,5 @@ styles-*.css
 SyncApp26.Client/dist/
 SyncApp26.Client/.angular/
 SyncApp26.Client/node_modules/
+SyncApp26/SyncApp26.Infrastructure/SyncApp26.db-shm
+SyncApp26/SyncApp26.Infrastructure/SyncApp26.db-wal

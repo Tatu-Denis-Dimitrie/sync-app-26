@@ -398,25 +398,22 @@
                 <p class="text-sm font-medium text-green-600 mt-1">Active</p>
               </div>
               <div>
-                <p class="text-xs text-muted-foreground">Created</p>
+                <p class="text-xs text-muted-foreground">
+                  {{ selectedUser.updatedAt ? "Last Updated" : "Created" }}
+                </p>
                 <p class="text-sm font-medium text-foreground mt-1">
-                  {{ formatDate(selectedUser.createdAt) }}
+                  {{
+                    formatDate(selectedUser.updatedAt || selectedUser.createdAt)
+                  }}
+                  <span class="text-xs text-muted-foreground ml-1"
+                    >({{
+                      getRelativeTime(
+                        selectedUser.updatedAt || selectedUser.createdAt
+                      )
+                    }})</span
+                  >
                 </p>
               </div>
-            </div>
-            <div
-              *ngIf="selectedUser.updatedAt"
-              class="mt-3 pt-3 border-t border-border"
-            >
-              <p class="text-xs text-muted-foreground">Last Updated</p>
-              <p
-                class="text-sm font-medium text-foreground mt-1 flex items-center gap-2"
-              >
-                {{ formatDate(selectedUser.updatedAt) }}
-                <span class="text-xs text-muted-foreground"
-                  >({{ getRelativeTime(selectedUser.updatedAt) }})</span
-                >
-              </p>
             </div>
           </div>
 

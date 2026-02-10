@@ -631,18 +631,17 @@
                   [title]="
                     user.updatedAt
                       ? 'Updated: ' + formatDate(user.updatedAt)
-                      : 'Never updated'
+                      : 'Created: ' + formatDate(user.createdAt)
                   "
                 >
-                  <div *ngIf="user.updatedAt" class="flex flex-col">
-                    <span>{{ formatDate(user.updatedAt) }}</span>
+                  <div class="flex flex-col">
+                    <span>{{
+                      formatDate(user.updatedAt || user.createdAt)
+                    }}</span>
                     <span class="text-xs opacity-60">{{
-                      getRelativeTime(user.updatedAt)
+                      getRelativeTime(user.updatedAt || user.createdAt)
                     }}</span>
                   </div>
-                  <span *ngIf="!user.updatedAt" class="text-muted-foreground"
-                    >—</span
-                  >
                 </td>
               </tr>
               <tr *ngIf="totalItems === 0">
