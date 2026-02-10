@@ -1,0 +1,16 @@
+FirstName,LastName,Email,DepartmentName,AssignedToEmail
+Isabella,Garcia,isabella.garcia@example.com,Operations,
+Jacob,Rodriguez,jacob.rodriguez@example.com,Operations,isabella.garcia@example.com
+Mia,Wilson,mia.wilson@example.com,Quality Assurance,
+Ethan,Martinez,ethan.martinez@example.com,Quality Assurance,mia.wilson@example.com
+Sophia,Anderson,sophia.anderson@example.com,Legal,
+Oliver,Thomas,oliver.thomas@example.com,Legal,sophia.anderson@example.com
+Emma,Taylor,emma.taylor@example.com,Product Management,
+Liam,Moore,liam.moore@example.com,Product Management,emma.taylor@example.com
+Ava,Jackson,ava.jackson@example.com,Customer Service,
+Noah,White,noah.white@example.com,Customer Service,ava.jackson@example.com
+Charlotte,Harris,charlotte.harris@example.com,Business Development,
+William,Martin,william.martin@example.com,Business Development,charlotte.harris@example.com
+Amelia,Thompson,amelia.thompson@example.com,Logistics,
+James,Garcia,james.garcia2@example.com,Logistics,amelia.thompson@example.com
+Lucas,Lee,lucas.lee@example.com,Engineering,john.smith@syncapp.com

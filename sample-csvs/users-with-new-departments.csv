@@ -1,0 +1,9 @@
+FirstName,LastName,Email,DepartmentName,AssignedToEmail
+Alice,Cooper,alice.cooper@example.com,IT Support,
+Bob,Martin,bob.martin@example.com,IT Support,alice.cooper@example.com
+Charlie,Brown,charlie.brown@example.com,Research & Development,
+Diana,Prince,diana.prince@example.com,Research & Development,charlie.brown@example.com
+Edward,Norton,edward.norton@example.com,Finance,
+Frank,Sinatra,frank.sinatra@example.com,Finance,edward.norton@example.com
+Grace,Kelly,grace.kelly@example.com,Engineering,john.smith@syncapp.com
+Henry,Ford,henry.ford@example.com,Customer Success,
