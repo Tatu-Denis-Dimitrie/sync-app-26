@@ -362,11 +362,6 @@ public class CsvSyncService : ICsvSyncService
                                     Status = "rejected"
                                 };
 
-                                if (historyField == "firstname" || historyField == "lastname")
-                                {
-                                    rejectedConflict.Status = "accepted";
-                                }
-
                                 await _importConflictRepository.AddAsync(rejectedConflict);
                             }
                         }
