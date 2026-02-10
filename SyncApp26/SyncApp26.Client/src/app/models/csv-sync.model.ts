@@ -78,6 +78,7 @@ export interface ComparisonResponse {
   validationTimeMs: number;
   comparisonTimeMs: number;
   totalTimeMs: number;
+  fileName?: string;
 }
 
 export interface PaginationParams {
@@ -100,4 +101,22 @@ export interface SyncProgressUpdate {
   failed: number;
   skipped: number;
   message?: string;
+}
+
+export interface ImportHistoryItem {
+  id: string;
+  importDate: string;
+  fileName: string;
+}
+
+export interface ImportConflictHistory {
+  id: string;
+  importHistoryId: string;
+  importDate?: string;
+  importFileName?: string;
+  userId: string;
+  fieldName: string;
+  oldValue: string;
+  newValue: string;
+  status: string; // 'accepted' | 'rejected'
 }

@@ -31,24 +31,25 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Where(u => u.DeletedAt == null)
                 .ToListAsync();
         }
-        
+
         // Optimized method for CSV comparison - no tracking, minimal includes
         public async Task<List<User>> GetAllUsersForComparisonAsync()
         {
             return await _context.Users
                 .AsNoTracking()
                 .Include(u => u.Department)
+                .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .ToListAsync();
         }
-        
+
         // Bulk update method for better performance
         public async Task UpdateUsersAsync(IEnumerable<User> users)
         {
             _context.Users.UpdateRange(users);
             await _context.SaveChangesAsync();
         }
-        
+
         // Bulk add method
         public async Task AddUsersAsync(IEnumerable<User> users)
         {

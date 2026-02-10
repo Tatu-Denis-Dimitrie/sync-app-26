@@ -1,203 +1,215 @@
 <div class="min-h-screen bg-background">
-	<header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-		<div class="container mx-auto px-4 py-4">
-			<div class="flex items-center justify-between">
-				<div class="flex items-center space-x-3">
-					<button
-						(click)="navigateToDashboard()"
-						class="w-8 h-8 bg-primary rounded-md flex items-center justify-center hover:bg-primary/90 transition-colors"
-					>
-						<svg
-							class="w-5 h-5 text-primary-foreground"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M3 7l9-4 9 4-9 4-9-4zm0 7l9 4 9-4"
-							></path>
-						</svg>
-					</button>
-					<div>
-						<h1 class="text-xl font-semibold text-foreground">Import History</h1>
-						<p class="text-sm text-muted-foreground">
-							See all imports and their conflicts
-						</p>
-					</div>
-				</div>
-				<div class="flex gap-2">
-					<button
-						(click)="navigateToDepartments()"
-						class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-					>
-						Departments
-					</button>
-					<button
-						(click)="navigateToImportHistory()"
-						class="px-4 py-2 border border-border rounded-md text-sm font-medium text-white bg-gray-500"
-					>
-                        Import History
-                    </button>
-					<button
-						(click)="navigateToUsers()"
-						class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-					>
-						Users
-					</button>
-					<button
-						(click)="navigateToEmployees()"
-						class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-					>
-						Employees
-					</button>
-				</div>
-			</div>
-		</div>
-	</header>
+  <header
+    class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40"
+  >
+    <div class="container mx-auto px-4 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <button
+            (click)="navigateToDashboard()"
+            class="w-8 h-8 bg-primary rounded-md flex items-center justify-center hover:bg-primary/90 transition-colors"
+          >
+            <svg
+              class="w-5 h-5 text-primary-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              ></path>
+            </svg>
+          </button>
+          <div>
+            <h1 class="text-xl font-semibold text-foreground">SyncApp 26</h1>
+            <p class="text-sm text-muted-foreground">
+              Synchronize employee data with CSV import
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button
+            (click)="navigateToDepartments()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Departments
+          </button>
+          <button
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-white bg-gray-500"
+          >
+            Import History
+          </button>
+          <button
+            (click)="navigateToUsers()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Users
+          </button>
+          <button
+            (click)="navigateToEmployees()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Employees
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
 
-	<div class="container mx-auto px-4 py-8">
-		<div class="flex flex-col md:flex-row gap-3 mb-6">
-			<div class="relative flex-1">
-				<input
-					type="text"
-					[(ngModel)]="searchQuery"
-					placeholder="Search by file name..."
-					class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-				/>
-				<svg
-					class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-					></path>
-				</svg>
-			</div>
-			<button
-				(click)="toggleSortOrder()"
-				class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-			>
-				Sort: {{ sortOrder === 'asc' ? 'Oldest' : 'Newest' }}
-			</button>
-		</div>
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row gap-3 mb-6">
+      <div class="relative flex-1">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Search by file name..."
+          class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        />
+        <svg
+          class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          ></path>
+        </svg>
+      </div>
+      <button
+        (click)="toggleSortOrder()"
+        class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+      >
+        Sort: {{ sortOrder === "asc" ? "Oldest" : "Newest" }}
+      </button>
+    </div>
 
-		<div *ngIf="loading" class="text-sm text-muted-foreground">
-			Loading import history...
-		</div>
-		<div *ngIf="!loading && error" class="text-sm text-red-600">
-			{{ error }}
-		</div>
-		<div *ngIf="!loading && !error && getFilteredHistories().length === 0" class="text-sm text-muted-foreground">
-			No import history available.
-		</div>
+    <div *ngIf="loading" class="text-sm text-muted-foreground">
+      Loading import history...
+    </div>
+    <div *ngIf="!loading && error" class="text-sm text-red-600">
+      {{ error }}
+    </div>
+    <div
+      *ngIf="!loading && !error && getFilteredHistories().length === 0"
+      class="text-sm text-muted-foreground"
+    >
+      No import history available.
+    </div>
 
-		<div class="space-y-6" *ngIf="!loading && !error && getFilteredHistories().length > 0">
-			<div
-				*ngFor="let history of getFilteredHistories()"
-				class="bg-card border border-border rounded-lg overflow-hidden"
-			>
-				<div
-					class="px-6 py-4 bg-muted/30 border-b border-border flex items-center justify-between cursor-pointer"
-					(click)="toggleHistory(history.id)"
-				>
-					<div>
-						<h3 class="text-lg font-semibold text-foreground">
-							{{ history.fileName || 'Import' }}
-						</h3>
-						<p class="text-xs text-muted-foreground">
-							ID: {{ history.id }}
-						</p>
-						<p class="text-xs text-muted-foreground">
-							Date: {{ formatDate(history.importDate) }}
-						</p>
-					</div>
-					<div class="flex items-center gap-3">
-						<span class="text-sm text-muted-foreground">
-							{{ getConflicts(history.id).length }} conflicts
-						</span>
-					</div>
-				</div>
+    <div
+      class="space-y-6"
+      *ngIf="!loading && !error && getFilteredHistories().length > 0"
+    >
+      <div
+        *ngFor="let history of getFilteredHistories()"
+        class="bg-card border border-border rounded-lg overflow-hidden"
+      >
+        <div
+          class="px-6 py-4 bg-muted/30 border-b border-border flex items-center justify-between cursor-pointer"
+          (click)="toggleHistory(history.id)"
+        >
+          <div>
+            <h3 class="text-lg font-semibold text-foreground">
+              {{ history.fileName || "Import" }}
+            </h3>
+            <p class="text-xs text-muted-foreground">ID: {{ history.id }}</p>
+            <p class="text-xs text-muted-foreground">
+              Date: {{ formatDate(history.importDate) }}
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-muted-foreground">
+              {{ getConflicts(history.id).length }} conflicts
+            </span>
+          </div>
+        </div>
 
-				<div *ngIf="isExpanded(history.id)" class="divide-y divide-border">
-					<div
-						*ngIf="getConflicts(history.id).length === 0"
-						class="p-6 text-sm text-muted-foreground"
-					>
-						No conflicts for this import.
-					</div>
+        <div *ngIf="isExpanded(history.id)" class="divide-y divide-border">
+          <div
+            *ngIf="getConflicts(history.id).length === 0"
+            class="p-6 text-sm text-muted-foreground"
+          >
+            No conflicts for this import.
+          </div>
 
-					<div
-						*ngFor="let group of getConflictGroups(history.id)"
-						class="border-t border-border"
-					>
-						<div class="px-6 py-4 bg-muted/20 border-b border-border">
-							<p class="text-sm font-semibold text-foreground">
-								{{ group.userName }}
-							</p>
-							<p class="text-xs text-muted-foreground">
-								ID: {{ group.userId }}
-							</p>
-						</div>
+          <div
+            *ngFor="let group of getConflictGroups(history.id)"
+            class="border-t border-border"
+          >
+            <div class="px-6 py-4 bg-muted/20 border-b border-border">
+              <p class="text-sm font-semibold text-foreground">
+                {{ group.userName }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                ID: {{ group.userId }}
+              </p>
+            </div>
 
-						<div *ngFor="let conflict of group.conflicts" class="border-t border-border">
-							<div class="px-6 py-3 flex items-center justify-between">
-								<div>
-									<p class="text-sm font-semibold text-foreground">
-										{{ formatConflictField(conflict.fieldName) }}
-									</p>
-								</div>
-								<span
-									[ngClass]="getStatusColor(conflict.status)"
-									class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
-								>
-									{{ conflict.status }}
-								</span>
-							</div>
-							<div class="grid grid-cols-[1fr,auto,1fr]">
-								<div class="p-4 bg-red-50/30">
-									<div class="text-xs font-medium text-muted-foreground uppercase mb-2">
-										Database
-									</div>
-									<p class="font-mono text-sm text-foreground">
-										{{ conflict.oldValue || 'N/A' }}
-									</p>
-								</div>
-								<div class="flex items-center justify-center bg-muted/20 px-2">
-									<svg
-										class="w-4 h-4 text-muted-foreground"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M9 5l7 7-7 7"
-										></path>
-									</svg>
-								</div>
-								<div class="p-4 bg-green-50/30">
-									<div class="text-xs font-medium text-muted-foreground uppercase mb-2">
-										CSV
-									</div>
-									<p class="font-mono text-sm text-foreground">
-										{{ conflict.newValue || 'N/A' }}
-									</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+            <div
+              *ngFor="let conflict of group.conflicts"
+              class="border-t border-border"
+            >
+              <div class="px-6 py-3 flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-foreground">
+                    {{ formatConflictField(conflict.fieldName) }}
+                  </p>
+                </div>
+                <span
+                  [ngClass]="getStatusColor(conflict.status)"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
+                >
+                  {{ conflict.status }}
+                </span>
+              </div>
+              <div class="grid grid-cols-[1fr,auto,1fr]">
+                <div class="p-4 bg-red-50/30">
+                  <div
+                    class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                  >
+                    Database
+                  </div>
+                  <p class="font-mono text-sm text-foreground">
+                    {{ conflict.oldValue || "N/A" }}
+                  </p>
+                </div>
+                <div class="flex items-center justify-center bg-muted/20 px-2">
+                  <svg
+                    class="w-4 h-4 text-muted-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    ></path>
+                  </svg>
+                </div>
+                <div class="p-4 bg-green-50/30">
+                  <div
+                    class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                  >
+                    CSV
+                  </div>
+                  <p class="font-mono text-sm text-foreground">
+                    {{ conflict.newValue || "N/A" }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

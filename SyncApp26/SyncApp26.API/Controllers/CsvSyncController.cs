@@ -32,11 +32,11 @@ public class CsvSyncController : ControllerBase
     /// </summary>
     [HttpPost("upload")]
     [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit for large CSVs
-    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file)
+    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file, [FromQuery] bool skipInvalidRows = false)
     {
         var startTime = DateTime.UtcNow;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        
+
         if (file == null || file.Length == 0)
         {
             return BadRequest(new { error = "No file uploaded" });
@@ -56,11 +56,52 @@ public class CsvSyncController : ControllerBase
             long validationTimeMs = 0;
             long comparisonTimeMs = 0;
 
-            // Single-pass validation and processing
+            // Step 1: Validate CSV file
+            var validationStopwatch = System.Diagnostics.Stopwatch.StartNew();
+            CsvValidationResultDTO validationResult;
+
+            using (var validationStream = file.OpenReadStream())
+            {
+                validationResult = await _csvValidationService.ValidateCsvFile(validationStream, file.FileName);
+            }
+
+            validationStopwatch.Stop();
+            validationTimeMs = validationStopwatch.ElapsedMilliseconds;
+
+            // If validation failed with all rows invalid, return error
+            if (!validationResult.IsValid && validationResult.ValidRows == 0)
+            {
+                return BadRequest(new
+                {
+                    error = "CSV validation failed",
+                    errors = validationResult.Errors,
+                    warnings = validationResult.Warnings,
+                    totalRows = validationResult.TotalRows,
+                    validRows = validationResult.ValidRows,
+                    invalidRows = validationResult.InvalidRows
+                });
+            }
+
+            // If validation has errors but also valid rows, and user hasn't chosen to skip
+            if (!validationResult.IsValid && validationResult.ValidRows > 0 && !skipInvalidRows)
+            {
+                return BadRequest(new
+                {
+                    error = "CSV has some invalid rows",
+                    errors = validationResult.Errors,
+                    warnings = validationResult.Warnings,
+                    totalRows = validationResult.TotalRows,
+                    validRows = validationResult.ValidRows,
+                    invalidRows = validationResult.InvalidRows,
+                    canProceedWithValidRows = true // Signal frontend that partial upload is possible
+                });
+            }
+
+            // Step 2: Parse and compare with database (skip invalid rows if needed)
             var comparisonStopwatch = System.Diagnostics.Stopwatch.StartNew();
             List<UserComparisonDTO> comparisons;
-            CsvValidationResultDTO? validationResult = null;
-            
+            var invalidRowSet = new HashSet<int>(validationResult.InvalidRowNumbers);
+
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -71,38 +112,50 @@ public class CsvSyncController : ControllerBase
             }))
             {
                 csv.Context.RegisterClassMap<CsvUserMap>();
-                
-                // Validate headers quickly
                 csv.Read();
                 csv.ReadHeader();
-                var headers = csv.HeaderRecord;
-                
-                if (headers == null || !headers.Contains("Email") || !headers.Contains("FirstName"))
+
+                // Stream records for processing, skip invalid rows if needed
+                var allCsvUsers = csv.GetRecords<CsvUserDTO>().ToList();
+
+                List<CsvUserDTO> csvUsersToProcess;
+                if (invalidRowSet.Count > 0 && skipInvalidRows)
                 {
-                    return BadRequest(new { error = "CSV validation failed", errors = new[] { "Missing required headers: Email, FirstName, LastName, DepartmentName" } });
+                    // Skip invalid rows (row numbers are 1-based, index is 0-based)
+                    csvUsersToProcess = allCsvUsers
+                        .Select((user, index) => new { user, rowNumber = index + 1 })
+                        .Where(x => !invalidRowSet.Contains(x.rowNumber))
+                        .Select(x => x.user)
+                        .ToList();
                 }
-                
-                // Stream records for processing
-                var csvUsers = csv.GetRecords<CsvUserDTO>();
-                
-                // Pass connectionId for progress tracking (totalRows estimated during processing)
-                comparisons = await _csvSyncService.CompareWithDatabase(csvUsers, 0, connectionId);
-                totalRows = comparisons.Count;
+                else
+                {
+                    csvUsersToProcess = allCsvUsers;
+                }
+
+                // Pass connectionId for progress tracking
+                comparisons = await _csvSyncService.CompareWithDatabase(csvUsersToProcess, csvUsersToProcess.Count, connectionId);
+                totalRows = validationResult.TotalRows;
             }
-            
+
             comparisonStopwatch.Stop();
             comparisonTimeMs = comparisonStopwatch.ElapsedMilliseconds;
             stopwatch.Stop();
-            
+
             _logger.LogInformation($"Compared CSV with {totalRows} rows, found {comparisons.Count} comparisons in {stopwatch.ElapsedMilliseconds}ms");
 
             var response = new ComparisonResponseDTO
             {
                 Comparisons = comparisons,
                 TotalRows = totalRows,
+                ValidRows = validationResult.ValidRows,
+                InvalidRows = validationResult.InvalidRows,
+                Errors = skipInvalidRows ? validationResult.Errors : new List<string>(),
+                Warnings = validationResult.Warnings,
                 ValidationTimeMs = validationTimeMs,
                 ComparisonTimeMs = comparisonTimeMs,
-                TotalTimeMs = stopwatch.ElapsedMilliseconds
+                TotalTimeMs = stopwatch.ElapsedMilliseconds,
+                FileName = file.FileName
             };
 
             return Ok(response);
@@ -262,11 +315,11 @@ public sealed class CsvUserMap : ClassMap<CsvUserDTO>
 {
     public CsvUserMap()
     {
-        Map(m => m.FirstName).Name("FirstName", "First Name", "first_name");
-        Map(m => m.LastName).Name("LastName", "Last Name", "last_name");
-        Map(m => m.Email).Name("Email", "email");
-        Map(m => m.DepartmentName).Name("DepartmentName", "Department Name", "Department", "department_name", "department");
-        Map(m => m.AssignedToEmail).Name("AssignedToEmail", "Assigned To Email", "Line Manager Email", "Manager Email", "assigned_to_email", "manager_email").Optional();
+        Map(m => m.FirstName).Name("FirstName", "First Name", "first_name").Convert(args => args.Row.GetField("FirstName")?.Trim() ?? string.Empty);
+        Map(m => m.LastName).Name("LastName", "Last Name", "last_name").Convert(args => args.Row.GetField("LastName")?.Trim() ?? string.Empty);
+        Map(m => m.Email).Name("Email", "email").Convert(args => args.Row.GetField("Email")?.Trim() ?? string.Empty);
+        Map(m => m.DepartmentName).Name("DepartmentName", "Department Name", "Department", "department_name", "department").Convert(args => args.Row.GetField("DepartmentName")?.Trim() ?? string.Empty);
+        Map(m => m.AssignedToEmail).Name("AssignedToEmail", "Assigned To Email", "Line Manager Email", "Manager Email", "assigned_to_email", "manager_email").Optional().Convert(args => args.Row.GetField("AssignedToEmail")?.Trim());
     }
 }
 
@@ -274,6 +327,6 @@ public sealed class CsvDepartmentMap : ClassMap<CSVDepartmentDTO>
 {
     public CsvDepartmentMap()
     {
-        Map(m => m.Name).Name("Name", "DepartmentName", "Department Name", "department_name", "department");
+        Map(m => m.Name).Name("Name", "DepartmentName", "Department Name", "department_name", "department").Convert(args => args.Row.GetField("Name")?.Trim() ?? string.Empty);
     }
 }

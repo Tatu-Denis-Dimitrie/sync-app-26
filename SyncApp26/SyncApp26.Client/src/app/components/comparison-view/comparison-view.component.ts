@@ -1,12 +1,13 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
 
 @Component({
   selector: 'app-comparison-view',
   standalone: true,
-  imports: [CommonModule, ScrollingModule],
+  imports: [CommonModule, FormsModule, ScrollingModule],
   templateUrl: './comparison-view.component.html',
   styleUrls: ['./comparison-view.component.css']
 })
@@ -19,15 +20,24 @@ export class ComparisonViewComponent {
   filterModified = true;
   filterDeleted = true;
   searchQuery = '';
+  allUsersSelected = false;
+  allConflictsSelected = false;
 
-  selectAll(): void {
-    this.comparisons.forEach(c => c.selected = true);
+  toggleSelectAllUsers(): void {
+    const filtered = this.getFilteredComparisons();
+    this.allUsersSelected = !this.allUsersSelected;
+    filtered.forEach(c => c.selected = this.allUsersSelected);
     this.selectionChange.emit(this.comparisons);
   }
 
-  deselectAll(): void {
-    this.comparisons.forEach(c => c.selected = false);
-    this.selectionChange.emit(this.comparisons);
+  toggleSelectAllConflicts(): void {
+    const filtered = this.getFilteredComparisons();
+    this.allConflictsSelected = !this.allConflictsSelected;
+    filtered.forEach(comparison => {
+      comparison.conflicts.forEach(conflict => {
+        conflict.selected = this.allConflictsSelected;
+      });
+    });
   }
 
   toggleSelection(comparison: UserComparison): void {
@@ -101,11 +111,11 @@ export class ComparisonViewComponent {
   }
 
   getConflictCount(): number {
-    return this.comparisons.filter(c => c.conflicts.length > 0).length;
+    return this.getFilteredComparisons().filter(c => c.conflicts.length > 0).length;
   }
 
   getSelectedCount(): number {
-    return this.comparisons.filter(c => c.selected).length;
+    return this.getFilteredComparisons().filter(c => c.selected).length;
   }
 
   formatFieldName(field: string): string {
@@ -114,7 +124,11 @@ export class ComparisonViewComponent {
 
   formatDate(date: Date | string | undefined): string {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString();
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
   }
 
   hasFieldConflict(comparison: UserComparison, field: string): boolean {
@@ -133,18 +147,34 @@ export class ComparisonViewComponent {
       if (this.searchQuery.trim()) {
         const query = this.searchQuery.toLowerCase();
         
-        const user = comparison.csvUser || comparison.dbUser;
-        const firstName = user?.firstName?.toLowerCase() || '';
-        const lastName = user?.lastName?.toLowerCase() || '';
-        const department = user?.departmentName?.toLowerCase() || '';
-        const assignedToName = user?.assignedToName?.toLowerCase() || '';
-        const fullName = `${firstName} ${lastName}`;
+        // Search in both CSV and DB user fields
+        const csvUser = comparison.csvUser;
+        const dbUser = comparison.dbUser;
         
-        const directMatch = fullName.includes(query) || department.includes(query);
-
-        const assignedToMatch = assignedToName.includes(query);
+        const csvFirstName = csvUser?.firstName?.toLowerCase() || '';
+        const csvLastName = csvUser?.lastName?.toLowerCase() || '';
+        const csvEmail = csvUser?.email?.toLowerCase() || '';
+        const csvDepartment = csvUser?.departmentName?.toLowerCase() || '';
+        const csvAssignedTo = csvUser?.assignedToName?.toLowerCase() || '';
         
-        return directMatch || assignedToMatch;
+        const dbFirstName = dbUser?.firstName?.toLowerCase() || '';
+        const dbLastName = dbUser?.lastName?.toLowerCase() || '';
+        const dbEmail = dbUser?.email?.toLowerCase() || '';
+        const dbDepartment = dbUser?.departmentName?.toLowerCase() || '';
+        const dbAssignedTo = dbUser?.assignedToName?.toLowerCase() || '';
+        
+        const csvFullName = `${csvFirstName} ${csvLastName}`;
+        const dbFullName = `${dbFirstName} ${dbLastName}`;
+        
+        // Check if query matches any field from CSV or DB
+        return csvFullName.includes(query) || 
+               dbFullName.includes(query) ||
+               csvEmail.includes(query) || 
+               dbEmail.includes(query) ||
+               csvDepartment.includes(query) || 
+               dbDepartment.includes(query) ||
+               csvAssignedTo.includes(query) || 
+               dbAssignedTo.includes(query);
       }
 
       return true;

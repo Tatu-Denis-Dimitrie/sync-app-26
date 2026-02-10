@@ -57,9 +57,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   errorModalErrors: string[] = [];
   errorModalWarnings: string[] = [];
   errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
+  canProceedWithValidRows = false;
+  currentUploadFile: File | null = null;
 
   currentComparisons: UserComparison[] = [];
   totalSyncItems = 0;
+  currentDepartmentComparisons: CSVDepartmentComparisonDTO[] = [];
+  departmentSearchQuery: string = '';
 
   uploadProgress: UploadProgress | null = null;
   syncProgress: SyncProgressUpdate | null = null;
@@ -173,6 +177,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.successMessage = '';
     this.uploadStartTime = Date.now();
     this.serverTimingInfo = null;
+    this.currentUploadFile = file; // Save for potential retry
 
     this.userSyncService.uploadAndCompare(file)
       .pipe(takeUntil(this.destroy$))
@@ -182,6 +187,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('CSV uploaded and compared:', comparisons);
           this.isUploading = false;
           this.showComparison = true;
+          this.fileName = file.name;
           
           // Get server timing info
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
@@ -190,6 +196,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.successMessage = `Analysis completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(timing.totalTimeMs)}, Network: ${this.formatDuration(duration - timing.totalTimeMs)})`;
             } else {
               this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
+            }
+          });
+          
+          // Check for warnings
+          this.userSyncService.warnings$.pipe(takeUntil(this.destroy$)).subscribe(warnings => {
+            if (warnings && warnings.length > 0) {
+              this.errorModalTitle = 'CSV Validation Warnings';
+              this.errorModalErrors = [];
+              this.errorModalWarnings = warnings;
+              this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
+              this.showErrorModal = true;
             }
           });
           
@@ -204,7 +221,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
             const errorData = error.error;
 
             if (errorData.errors && errorData.errors.length > 0) {
-              this.errorModalTitle = 'CSV Validation Failed';
+              // Check if we can proceed with valid rows only
+              this.canProceedWithValidRows = errorData.canProceedWithValidRows === true;
+              
+              this.errorModalTitle = this.canProceedWithValidRows 
+                ? 'CSV Has Invalid Rows - Proceed with Valid Rows?' 
+                : 'CSV Validation Failed';
               this.errorModalErrors = [];
               this.errorModalWarnings = [];
 
@@ -273,6 +295,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (comparisons) => {
           console.log('CSV uploaded and compared:', comparisons);
+          this.currentDepartmentComparisons = comparisons;
           this.isUploading = false;
           this.showDepartmentComparison = true;
         },
@@ -306,10 +329,64 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   closeErrorModal(): void {
     this.showErrorModal = false;
+    this.canProceedWithValidRows = false;
     this.errorModalTitle = '';
     this.errorModalErrors = [];
     this.errorModalWarnings = [];
     this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
+  }
+
+  proceedWithValidRows(): void {
+    if (!this.currentUploadFile) return;
+    
+    this.showErrorModal = false;
+    this.canProceedWithValidRows = false;
+    this.isUploading = true;
+    this.uploadStartTime = Date.now();
+
+    // Re-upload with skipInvalidRows flag
+    this.userSyncService.uploadAndCompare(this.currentUploadFile, true)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (comparisons) => {
+          const duration = Date.now() - this.uploadStartTime;
+          console.log('CSV uploaded with valid rows only:', comparisons);
+          this.isUploading = false;
+          this.showComparison = true;
+          this.fileName = this.currentUploadFile?.name || this.fileName;
+          
+          // Get server timing info
+          this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
+            this.serverTimingInfo = timing;
+            if (timing) {
+              this.successMessage = `Analysis completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(timing.totalTimeMs)}, Network: ${this.formatDuration(duration - timing.totalTimeMs)})`;
+            } else {
+              this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
+            }
+          });
+          
+          // Show info about skipped rows if any
+          this.userSyncService.errors$.pipe(takeUntil(this.destroy$)).subscribe(errors => {
+            if (errors && errors.length > 0) {
+              // Show notification about skipped rows
+              const skippedCount = errors.length;
+              this.successMessage += ` (${skippedCount} invalid rows skipped)`;
+            }
+          });
+          
+          setTimeout(() => this.successMessage = '', 10000);
+        },
+        error: (error) => {
+          console.error('Upload with valid rows failed:', error);
+          this.isUploading = false;
+          this.errorModalTitle = 'Upload Failed';
+          this.errorModalErrors = [error.message || 'Unknown error occurred'];
+          this.errorModalWarnings = [];
+          this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
+          this.canProceedWithValidRows = false;
+          this.showErrorModal = true;
+        }
+      });
   }
 
   syncSelectedUsers(): void {
@@ -319,7 +396,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.syncStartTime = Date.now();
     this.serverTimingInfo = null;
 
-    this.userSyncService.syncUsers(this.currentComparisons)
+    this.userSyncService.syncUsers(this.currentComparisons, this.fileName)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
@@ -429,9 +506,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return role === UserRole.LineManager ? '👔' : '👤';
   }
 
-  formatDate(date: Date | string): string {
+  formatDate(date: Date | string | undefined): string {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString();
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
   }
 
   onComparisonSelectionChange(comparisons: UserComparison[]): void {
@@ -464,7 +545,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getFilteredDepartmentComparisons(): CSVDepartmentComparisonDTO[] {
     // Filter to show only new departments
-    let filtered = this.currentDepartmentComparisons.filter(comp => comp.status === 'new');
+    let filtered = this.currentDepartmentComparisons.filter((comp: CSVDepartmentComparisonDTO) => comp.status === 'new');
 
     // Apply search query if provided
     if (!this.departmentSearchQuery.trim()) {
@@ -472,9 +553,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     const query = this.departmentSearchQuery.toLowerCase();
-    return filtered.filter(comp => {
+    return filtered.filter((comp: CSVDepartmentComparisonDTO) => {
       const csvName = comp.csvDepartment?.name?.toLowerCase() || '';
       return csvName.includes(query);
     });
+  }
+
+  getRelativeTime(date: Date | string | undefined): string {
+    if (!date) return '';
+    const now = new Date().getTime();
+    const then = new Date(date).getTime();
+    const diff = now - then;
+    
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'just now';
   }
 }

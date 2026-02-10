@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department } from '../models/csv-sync.model';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
 import { from } from 'rxjs';
@@ -30,12 +30,16 @@ export class UserSyncService {
   private currentComparisonSubject = new BehaviorSubject<UserComparison[] | null>(null);
   private usersSubject = new BehaviorSubject<User[]>([]);
   private timingInfoSubject = new BehaviorSubject<{ validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null>(null);
+  private warningsSubject = new BehaviorSubject<string[]>([]);
+  private errorsSubject = new BehaviorSubject<string[]>([]);
 
   syncProgress$ = this.syncProgressSubject.asObservable();
   currentComparison$ = this.currentComparisonSubject.asObservable();
   users$ = this.usersSubject.asObservable();
   uploadProgress$!: Observable<UploadProgress>;
   timingInfo$ = this.timingInfoSubject.asObservable();
+  warnings$ = this.warningsSubject.asObservable();
+  errors$ = this.errorsSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -176,7 +180,7 @@ export class UserSyncService {
   getDepartments(): Observable<Department[]> {
     return this.users$.pipe(
       map(users => {
-        const deptMap = new Map<string, { lineManagers: Set<string>, employees: Set<string> }>();
+        const deptMap = new Map<string, { lineManagers: number, employees: number }>();
 
         users.forEach(user => {
           if (!deptMap.has(user.departmentName)) {
@@ -208,26 +212,26 @@ export class UserSyncService {
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
-    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
-      map(departments => {
-        const users = this.usersSubject.getValue();
-        return {
-          total: users.length,
-          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-          employees: users.filter(u => u.role === UserRole.Employee).length,
-          departments: departments.length
-        };
-      }),
-      catchError(error => {
-        console.error('Error fetching stats:', error);
-        const users = this.usersSubject.getValue();
-        return of({
-          total: users.length,
-          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-          employees: users.filter(u => u.role === UserRole.Employee).length,
-          departments: new Set(users.map(u => u.departmentName)).size
-        });
-      })
+    return this.users$.pipe(
+      switchMap(users => 
+        this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+          map(departments => ({
+            total: users.length,
+            lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+            employees: users.filter(u => u.role === UserRole.Employee).length,
+            departments: departments.length
+          })),
+          catchError(error => {
+            console.error('Error fetching departments for stats:', error);
+            return of({
+              total: users.length,
+              lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+              employees: users.filter(u => u.role === UserRole.Employee).length,
+              departments: new Set(users.map(u => u.departmentName)).size
+            });
+          })
+        )
+      )
     );
   }
 
@@ -236,7 +240,7 @@ export class UserSyncService {
   /**
    * Upload CSV file and compare with database
    */
-  uploadAndCompare(file: File): Observable<UserComparison[]> {
+  uploadAndCompare(file: File, skipInvalidRows: boolean = false): Observable<UserComparison[]> {
     // Reset comparisons
     this.currentComparisonSubject.next([]);
 
@@ -257,7 +261,10 @@ export class UserSyncService {
         const formData = new FormData();
         formData.append('file', file);
 
-        return this.http.post<any>(`${environment.apiUrl}/CsvSync/upload`, formData, { headers });
+        // Add query parameter for skipping invalid rows
+        const url = `${environment.apiUrl}/CsvSync/upload${skipInvalidRows ? '?skipInvalidRows=true' : ''}`;
+
+        return this.http.post<any>(url, formData, { headers });
       }),
       map((response: any) => {
         // Handle both old format (array) and new format (object with comparisons)
@@ -277,8 +284,20 @@ export class UserSyncService {
           totalTimeMs: response.totalTimeMs
         });
         
+        // Store warnings and errors if present
+        this.warningsSubject.next(response.warnings || []);
+        this.errorsSubject.next(response.errors || []);
+        
         if (response.totalTimeMs) {
           console.log(`Server processing time: ${response.totalTimeMs}ms (Validation: ${response.validationTimeMs}ms, Comparison: ${response.comparisonTimeMs}ms)`);
+        }
+        
+        if (response.warnings && response.warnings.length > 0) {
+          console.warn(`CSV validation warnings (${response.warnings.length}):`, response.warnings);
+        }
+        
+        if (response.errors && response.errors.length > 0) {
+          console.warn(`CSV validation errors (${response.invalidRows} rows skipped):`, response.errors);
         }
       }),
       map(response => response.comparisons),
