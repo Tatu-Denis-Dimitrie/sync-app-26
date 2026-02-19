@@ -453,9 +453,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('Department sync successful:', result);
           this.isSyncing = false;
           this.showDepartmentComparison = false;
-          
-          // Refresh departments list to show newly added departments
-          this.userSyncService.refreshDepartments();
         },
         error: (error) => {
           console.error('Department sync failed:', error);
