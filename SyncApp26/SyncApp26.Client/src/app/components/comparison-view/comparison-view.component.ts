@@ -22,6 +22,8 @@ export class ComparisonViewComponent {
   searchQuery = '';
   allUsersSelected = false;
   allConflictsSelected = false;
+  sortField: 'createdAt' | 'updatedAt' = 'updatedAt';
+  sortDirection: 'asc' | 'desc' = 'desc';
 
   toggleSelectAllUsers(): void {
     const filtered = this.getFilteredComparisons();
@@ -136,7 +138,7 @@ export class ComparisonViewComponent {
   }
 
   getFilteredComparisons(): UserComparison[] {
-    return this.comparisons.filter(comparison => {
+    let filtered = this.comparisons.filter(comparison => {
       const statusMatch = 
         (this.filterNew && comparison.status === 'new') ||
         (this.filterModified && comparison.status === 'modified') ||
@@ -167,7 +169,7 @@ export class ComparisonViewComponent {
         const dbFullName = `${dbFirstName} ${dbLastName}`;
         
         // Check if query matches any field from CSV or DB
-        return csvFullName.includes(query) || 
+        const matchesSearch = csvFullName.includes(query) || 
                dbFullName.includes(query) ||
                csvEmail.includes(query) || 
                dbEmail.includes(query) ||
@@ -175,13 +177,47 @@ export class ComparisonViewComponent {
                dbDepartment.includes(query) ||
                csvAssignedTo.includes(query) || 
                dbAssignedTo.includes(query);
+        
+        if (!matchesSearch) return false;
       }
 
       return true;
     });
+
+    // Sort the filtered comparisons
+    filtered = filtered.sort((a, b) => {
+      // Use dbUser for date sorting since it has the database timestamps
+      const aDate = a.dbUser?.[this.sortField];
+      const bDate = b.dbUser?.[this.sortField];
+      
+      const aValue = aDate ? new Date(aDate).getTime() : 0;
+      const bValue = bDate ? new Date(bDate).getTime() : 0;
+      
+      return this.sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    });
+
+    return filtered;
   }
 
   onFilterChange(): void {
+  }
+
+  toggleSort(field: 'createdAt' | 'updatedAt'): void {
+    if (this.sortField === field) {
+      // Toggle direction if same field
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      // Set new field with default descending direction
+      this.sortField = field;
+      this.sortDirection = 'desc';
+    }
+  }
+
+  getSortIcon(field: 'createdAt' | 'updatedAt'): string {
+    if (this.sortField !== field) {
+      return '↕️'; // Not sorted
+    }
+    return this.sortDirection === 'asc' ? '↑' : '↓';
   }
 
 }
