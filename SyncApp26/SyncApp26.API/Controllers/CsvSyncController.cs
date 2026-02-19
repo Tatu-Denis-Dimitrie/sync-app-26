@@ -16,15 +16,18 @@ public class CsvSyncController : ControllerBase
 {
     private readonly ICsvSyncService _csvSyncService;
     private readonly ICsvValidationService _csvValidationService;
+    private readonly IDepartmentService _departmentService;
     private readonly ILogger<CsvSyncController> _logger;
 
     public CsvSyncController(
         ICsvSyncService csvSyncService,
         ICsvValidationService csvValidationService,
+        IDepartmentService departmentService,
         ILogger<CsvSyncController> logger)
     {
         _csvSyncService = csvSyncService;
         _csvValidationService = csvValidationService;
+        _departmentService = departmentService;
         _logger = logger;
     }
     /// <summary>
@@ -60,9 +63,14 @@ public class CsvSyncController : ControllerBase
             var validationStopwatch = System.Diagnostics.Stopwatch.StartNew();
             CsvValidationResultDTO validationResult;
 
+            // Fetch existing departments for validation
+            var existingDepartments = (await _departmentService.GetAllDepartmentsAsync())
+                .Select(d => d.Name.ToLower())
+                .ToHashSet();
+
             using (var validationStream = file.OpenReadStream())
             {
-                validationResult = await _csvValidationService.ValidateCsvFile(validationStream, file.FileName);
+                validationResult = await _csvValidationService.ValidateCsvFile(validationStream, file.FileName, existingDepartments);
             }
 
             validationStopwatch.Stop();
