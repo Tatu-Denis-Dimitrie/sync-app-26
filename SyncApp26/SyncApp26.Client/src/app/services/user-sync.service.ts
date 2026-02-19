@@ -29,6 +29,7 @@ export class UserSyncService {
   private syncProgressSubject = new BehaviorSubject<SyncProgressUpdate | null>(null);
   private currentComparisonSubject = new BehaviorSubject<UserComparison[] | null>(null);
   private usersSubject = new BehaviorSubject<User[]>([]);
+  private departmentsSubject = new BehaviorSubject<Department[]>([]);
   private timingInfoSubject = new BehaviorSubject<{ validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null>(null);
   private warningsSubject = new BehaviorSubject<string[]>([]);
   private errorsSubject = new BehaviorSubject<string[]>([]);
@@ -36,6 +37,7 @@ export class UserSyncService {
   syncProgress$ = this.syncProgressSubject.asObservable();
   currentComparison$ = this.currentComparisonSubject.asObservable();
   users$ = this.usersSubject.asObservable();
+  departments$ = this.departmentsSubject.asObservable();
   uploadProgress$!: Observable<UploadProgress>;
   timingInfo$ = this.timingInfoSubject.asObservable();
   warnings$ = this.warningsSubject.asObservable();
@@ -47,6 +49,7 @@ export class UserSyncService {
   ) {
     this.uploadProgress$ = this.signalrService.uploadProgress$;
     this.loadUsers();
+    this.loadDepartments();
 
     // Subscribe to SignalR sync progress and update local subject
     this.signalrService.syncProgress$.subscribe(progress => {
@@ -61,12 +64,70 @@ export class UserSyncService {
     this.getUsers().subscribe({
       next: (users) => {
         this.usersSubject.next(users);
+        this.refreshDepartmentCounts();
       },
       error: (error) => {
         console.error('Error loading users:', error);
         this.usersSubject.next([]);
       }
     });
+  }
+
+  /**
+   * Load departments from API
+   */
+  private loadDepartments(): void {
+    this.http.get<{ id: string; name: string }[]>(this.departmentUrl).pipe(
+      catchError(error => {
+        console.error('Error loading departments:', error);
+        return of([]);
+      })
+    ).subscribe(apiDepartments => {
+      // Initialize departments with zero counts
+      const departments: Department[] = apiDepartments.map(dept => ({
+        id: dept.id,
+        name: dept.name,
+        lineManagerCount: 0,
+        employeeCount: 0
+      }));
+      this.departmentsSubject.next(departments);
+      // Refresh counts based on users
+      this.refreshDepartmentCounts();
+    });
+  }
+
+  /**
+   * Refresh department counts from current users
+   */
+  private refreshDepartmentCounts(): void {
+    const users = this.usersSubject.value;
+    const departments = this.departmentsSubject.value;
+    
+    if (departments.length === 0) return;
+
+    // Create a map of department counts
+    const deptMap = new Map<string, { lineManagers: number, employees: number }>();
+
+    users.forEach(user => {
+      if (!deptMap.has(user.departmentName)) {
+        deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
+      }
+      const dept = deptMap.get(user.departmentName)!;
+      if (user.role === UserRole.LineManager) {
+        dept.lineManagers++;
+      } else {
+        dept.employees++;
+      }
+    });
+
+    // Update departments with counts
+    const updatedDepartments = departments.map(dept => ({
+      ...dept,
+      lineManagerCount: deptMap.get(dept.name)?.lineManagers || 0,
+      employeeCount: deptMap.get(dept.name)?.employees || 0
+    }));
+
+    this.departmentsSubject.next(updatedDepartments);
   }
 
   /**
@@ -178,34 +239,14 @@ export class UserSyncService {
    * Get departments from backend with user counts
    */
   getDepartments(): Observable<Department[]> {
-    return this.users$.pipe(
-      map(users => {
-        const deptMap = new Map<string, { lineManagers: number, employees: number }>();
+    return this.departments$;
+  }
 
-        users.forEach(user => {
-          if (!deptMap.has(user.departmentName)) {
-            deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
-          }
-          const dept = deptMap.get(user.departmentName)!;
-          if (user.role === UserRole.LineManager) {
-            dept.lineManagers++;
-          } else {
-            dept.employees++;
-          }
-        });
-
-        return Array.from(deptMap.entries()).map(([name, data]) => ({
-          id: name.toLowerCase().replace(/\s+/g, '-'),
-          name,
-          lineManagerCount: data.lineManagers,
-          employeeCount: data.employees
-        }));
-      }),
-      catchError(error => {
-        console.error('Error fetching departments:', error);
-        return of([]);
-      })
-    );
+  /**
+   * Refresh departments from API
+   */
+  refreshDepartments(): void {
+    this.loadDepartments();
   }
 
   /**
