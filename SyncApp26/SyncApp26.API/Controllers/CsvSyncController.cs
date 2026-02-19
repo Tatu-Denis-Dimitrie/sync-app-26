@@ -63,8 +63,9 @@ public class CsvSyncController : ControllerBase
             var validationStopwatch = System.Diagnostics.Stopwatch.StartNew();
             CsvValidationResultDTO validationResult;
 
-            // Fetch existing departments for validation
+            // Fetch existing ACTIVE departments for validation
             var existingDepartments = (await _departmentService.GetAllDepartmentsAsync())
+                .Where(d => d.IsActive) // Only include active departments
                 .Select(d => d.Name.ToLower())
                 .ToHashSet();
 

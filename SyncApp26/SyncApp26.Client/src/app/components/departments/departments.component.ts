@@ -2,8 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, BehaviorSubject, combineLatest, Subject } from 'rxjs';
+import { map, switchMap, startWith } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
@@ -21,6 +21,7 @@ export class DepartmentsComponent implements OnInit {
   stats$!: Observable<any>;
 
   private currentPage$ = new BehaviorSubject<number>(1);
+  private refreshTrigger$ = new Subject<void>();
   pageSize = 9; // 3x3 grid
   totalItems = 0;
 
@@ -42,7 +43,12 @@ export class DepartmentsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.departments$ = this.userSyncService.getDepartments();
+    // Refresh departments when requested
+    this.departments$ = this.refreshTrigger$.pipe(
+      startWith(null), // Initial load
+      switchMap(() => this.userSyncService.getDepartments())
+    );
+    
     this.stats$ = this.userSyncService.getUserStats();
 
     this.paginatedDepartments$ = combineLatest([
@@ -97,6 +103,22 @@ export class DepartmentsComponent implements OnInit {
 
   navigateToDepartments(): void {
     this.router.navigate(['/departments']);
+  }
+
+  toggleDepartmentStatus(event: Event, dept: Department): void {
+    event.stopPropagation(); // Prevent navigation when clicking button
+    
+    const newStatus = !dept.isActive;
+    this.userSyncService.updateDepartment(dept.id, dept.name, newStatus).subscribe({
+      next: () => {
+        console.log(`Department ${dept.name} ${newStatus ? 'activated' : 'deactivated'}`);
+        // Trigger refresh to show updated status
+        this.refreshTrigger$.next();
+      },
+      error: (error) => {
+        console.error('Error toggling department status:', error);
+      }
+    });
   }
 
   navigateToUsers(): void {

@@ -33,7 +33,9 @@ public class CsvSyncService : ICsvSyncService
 
         // Use optimized no-tracking query for read-only comparison
         var dbUsers = await _userRepository.GetAllUsersForComparisonAsync();
-        var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
+        var departments = (await _departmentRepository.GetAllDepartmentsAsync())
+            .Where(d => d.IsActive) // Only consider active departments
+            .ToList();
 
         // Create a map of email to DB user for O(1) lookup
         var dbUserMap = dbUsers.ToDictionary(u => u.Email.ToLower(), u => u);
@@ -236,7 +238,9 @@ public class CsvSyncService : ICsvSyncService
 
         // Load all data once
         var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
-        var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
+        var departments = (await _departmentRepository.GetAllDepartmentsAsync())
+            .Where(d => d.IsActive) // Only consider active departments
+            .ToList();
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
 
         // Batch collections for bulk operations
@@ -277,9 +281,9 @@ public class CsvSyncService : ICsvSyncService
 
                     if (department == null)
                     {
-                        // Department does not exist - cannot create user
+                        // Department does not exist or is inactive - cannot create user
                         result.RecordsFailed++;
-                        result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist in the database. Please create the department first.");
+                        result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist or is inactive. Please ensure the department exists and is active.");
                         continue;
                     }
 
@@ -414,8 +418,8 @@ public class CsvSyncService : ICsvSyncService
                                             var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
                                             if (department == null)
                                             {
-                                                // Department does not exist - skip this field update
-                                                result.Errors.Add($"User {item.CsvData.Email}: Cannot update department to '{item.CsvData.DepartmentName}' - department does not exist in the database.");
+                                                // Department does not exist or is inactive - skip this field update
+                                                result.Errors.Add($"User {item.CsvData.Email}: Cannot update department to '{item.CsvData.DepartmentName}' - department does not exist or is inactive.");
                                                 break;
                                             }
                                             if (existingUser.DepartmentId != department.Id)
@@ -511,9 +515,9 @@ public class CsvSyncService : ICsvSyncService
                             var dept = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
                             if (dept == null)
                             {
-                                // Department does not exist - skip this user update
+                                // Department does not exist or is inactive - skip this user update
                                 result.RecordsFailed++;
-                                result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist in the database. Cannot update user.");
+                                result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist or is inactive. Cannot update user.");
                                 continue;
                             }
                             if (existingUser.DepartmentId != dept.Id)

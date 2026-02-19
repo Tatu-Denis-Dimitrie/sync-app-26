@@ -70,6 +70,37 @@ export class UserSyncService {
   }
 
   /**
+   * Calculate department counts from users
+   */
+  private calculateDepartmentCounts(departments: { id: string; name: string; isActive: boolean }[]): Department[] {
+    const users = this.usersSubject.value;
+    
+    // Create a map of department counts
+    const deptMap = new Map<string, { lineManagers: number, employees: number }>();
+
+    users.forEach(user => {
+      if (!deptMap.has(user.departmentName)) {
+        deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
+      }
+      const dept = deptMap.get(user.departmentName)!;
+      if (user.role === UserRole.LineManager) {
+        dept.lineManagers++;
+      } else {
+        dept.employees++;
+      }
+    });
+
+    // Map departments with counts
+    return departments.map(dept => ({
+      id: dept.id,
+      name: dept.name,
+      isActive: dept.isActive,
+      lineManagerCount: deptMap.get(dept.name)?.lineManagers || 0,
+      employeeCount: deptMap.get(dept.name)?.employees || 0
+    }));
+  }
+
+  /**
    * Map backend user to frontend user and calculate role
    */
   private mapBackendUser(backendUser: BackendUser, allUsers: BackendUser[]): User {
@@ -178,34 +209,23 @@ export class UserSyncService {
    * Get departments from backend with user counts
    */
   getDepartments(): Observable<Department[]> {
-    return this.users$.pipe(
-      map(users => {
-        const deptMap = new Map<string, { lineManagers: number, employees: number }>();
-
-        users.forEach(user => {
-          if (!deptMap.has(user.departmentName)) {
-            deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
-          }
-          const dept = deptMap.get(user.departmentName)!;
-          if (user.role === UserRole.LineManager) {
-            dept.lineManagers++;
-          } else {
-            dept.employees++;
-          }
-        });
-
-        return Array.from(deptMap.entries()).map(([name, data]) => ({
-          id: name.toLowerCase().replace(/\s+/g, '-'),
-          name,
-          lineManagerCount: data.lineManagers,
-          employeeCount: data.employees
-        }));
-      }),
+    return this.http.get<{ id: string; name: string; isActive: boolean }[]>(this.departmentUrl).pipe(
+      map(apiDepartments => this.calculateDepartmentCounts(apiDepartments)),
       catchError(error => {
-        console.error('Error fetching departments:', error);
+        console.error('Error loading departments:', error);
         return of([]);
       })
     );
+  }
+
+  /**
+   * Update department (toggle active status or change name)
+   */
+  updateDepartment(id: string, name: string, isActive: boolean): Observable<any> {
+    return this.http.put(`${this.departmentUrl}/${id}`, {
+      name: name,
+      isActive: isActive
+    });
   }
 
   /**
