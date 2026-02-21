@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
@@ -10,7 +10,7 @@ import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
   templateUrl: './comparison-view.component.html',
   styleUrls: ['./comparison-view.component.css']
 })
-export class ComparisonViewComponent {
+export class ComparisonViewComponent implements OnChanges {
   @Input() comparisons: UserComparison[] = [];
   @Output() selectionChange = new EventEmitter<UserComparison[]>();
   @Output() fieldConflictResolved = new EventEmitter<{ comparisonId: string, field: string, value: 'db' | 'csv' }>();
@@ -19,19 +19,71 @@ export class ComparisonViewComponent {
   filterModified = true;
   filterDeleted = true;
   searchQuery = '';
+  private explicitlySelected = new Set<string>();
+  private explicitlyDeselected = new Set<string>();
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['comparisons'] && changes['comparisons'].previousValue !== changes['comparisons'].currentValue) {
+      this.filterNew = true;
+      this.filterModified = true;
+      this.filterDeleted = true;
+      this.searchQuery = '';
+    }
+  }
 
   selectAll(): void {
-    this.comparisons.forEach(c => c.selected = true);
+    const filteredIds = new Set(this.getFilteredComparisons().map(c => c.id));
+    this.comparisons.forEach(c => {
+      if (filteredIds.has(c.id)) {
+        c.selected = true;
+        this.explicitlySelected.add(c.id);
+        this.explicitlyDeselected.delete(c.id);
+      }
+    });
     this.selectionChange.emit(this.comparisons);
   }
 
   deselectAll(): void {
-    this.comparisons.forEach(c => c.selected = false);
+    const filteredIds = new Set(this.getFilteredComparisons().map(c => c.id));
+    this.comparisons.forEach(c => {
+      if (filteredIds.has(c.id)) {
+        c.selected = false;
+        this.explicitlyDeselected.add(c.id);
+        this.explicitlySelected.delete(c.id);
+      }
+    });
     this.selectionChange.emit(this.comparisons);
+  }
+
+  toggleStatusFilter(status: 'new' | 'modified' | 'deleted'): void {
+    let isEnabled = false;
+
+    if (status === 'new') {
+      this.filterNew = !this.filterNew;
+      isEnabled = this.filterNew;
+    } else if (status === 'modified') {
+      this.filterModified = !this.filterModified;
+      isEnabled = this.filterModified;
+    } else {
+      this.filterDeleted = !this.filterDeleted;
+      isEnabled = this.filterDeleted;
+    }
+
+    this.updateSelectionForStatus(status, isEnabled);
+    this.onFilterChange();
   }
 
   toggleSelection(comparison: UserComparison): void {
     comparison.selected = !comparison.selected;
+
+    if (comparison.selected) {
+      this.explicitlySelected.add(comparison.id);
+      this.explicitlyDeselected.delete(comparison.id);
+    } else {
+      this.explicitlyDeselected.add(comparison.id);
+      this.explicitlySelected.delete(comparison.id);
+    }
+
     this.selectionChange.emit(this.comparisons);
   }
 
@@ -153,6 +205,39 @@ export class ComparisonViewComponent {
   }
 
   onFilterChange(): void {
+  }
+
+  private updateSelectionForStatus(status: 'new' | 'modified' | 'deleted', isEnabled: boolean): void {
+    this.comparisons.forEach(comparison => {
+      if (comparison.status === status) {
+        if (!isEnabled) {
+          if (comparison.selected) {
+            this.explicitlySelected.add(comparison.id);
+            this.explicitlyDeselected.delete(comparison.id);
+          } else {
+            this.explicitlyDeselected.add(comparison.id);
+            this.explicitlySelected.delete(comparison.id);
+          }
+
+          comparison.selected = false;
+          return;
+        }
+
+        if (this.explicitlySelected.has(comparison.id)) {
+          comparison.selected = true;
+          return;
+        }
+
+        if (this.explicitlyDeselected.has(comparison.id)) {
+          comparison.selected = false;
+          return;
+        }
+
+        comparison.selected = false;
+      }
+    });
+
+    this.selectionChange.emit(this.comparisons);
   }
 
 }

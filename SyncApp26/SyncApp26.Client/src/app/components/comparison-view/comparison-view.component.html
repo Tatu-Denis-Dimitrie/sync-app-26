@@ -39,7 +39,7 @@
 
     <div class="filters-container">
       <button
-        (click)="filterNew = !filterNew; onFilterChange()"
+        (click)="toggleStatusFilter('new')"
         [ngClass]="{ 'filter-new': true, 'inactive': !filterNew }"
         class="filter-button"
       >
@@ -48,7 +48,7 @@
       </button>
 
       <button
-        (click)="filterModified = !filterModified; onFilterChange()"
+        (click)="toggleStatusFilter('modified')"
         [ngClass]="{ 'filter-modified': true, 'inactive': !filterModified }"
         class="filter-button"
       >
@@ -57,7 +57,7 @@
       </button>
 
       <button
-        (click)="filterDeleted = !filterDeleted; onFilterChange()"
+        (click)="toggleStatusFilter('deleted')"
         [ngClass]="{ 'filter-deleted': true, 'inactive': !filterDeleted }"
         class="filter-button"
       >
