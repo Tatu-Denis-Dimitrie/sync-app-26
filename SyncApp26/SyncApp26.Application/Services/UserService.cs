@@ -28,9 +28,9 @@ namespace SyncApp26.Application.Services
             return await _userRepository.GetUsersByDepartmentIdAsync(departmentId);
         }
 
-        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(string assignedToPersonalId)
+        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(Guid assignedToId)
         {
-            return await _userRepository.GetUsersAssignedToAsync(assignedToPersonalId);
+            return await _userRepository.GetUsersAssignedToAsync(assignedToId);
         }
 
         public async Task AddUserAsync(User user)

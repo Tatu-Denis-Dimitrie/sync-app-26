@@ -38,7 +38,7 @@ namespace SyncApp26.API.Controllers
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToPersonalId = user.AssignedToPersonalId,
+                AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -63,7 +63,7 @@ namespace SyncApp26.API.Controllers
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToPersonalId = user.AssignedToPersonalId,
+                AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -83,7 +83,7 @@ namespace SyncApp26.API.Controllers
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToPersonalId = user.AssignedToPersonalId,
+                AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -116,7 +116,7 @@ namespace SyncApp26.API.Controllers
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToPersonalId = user.AssignedToPersonalId,
+                AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -126,15 +126,15 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("assigned-to/{assignedToId}")]
-        public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetUsersAssignedTo(string assignedToPersonalId)
+        public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetUsersAssignedTo(Guid assignedToId)
         {
-            var lineManager = await _userService.GetUserByPersonalIdAsync(assignedToPersonalId);
+            var lineManager = await _userService.GetUserByIdAsync(assignedToId);
             if (lineManager == null)
             {
                 return NotFound(new { message = "Line manager not found" });
             }
 
-            var users = await _userService.GetUsersAssignedToAsync(assignedToPersonalId);
+            var users = await _userService.GetUsersAssignedToAsync(assignedToId);
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
@@ -144,7 +144,7 @@ namespace SyncApp26.API.Controllers
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToPersonalId = user.AssignedToPersonalId,
+                AssignedToId = user.AssignedToId,
                 AssignedToName = $"{lineManager.FirstName} {lineManager.LastName}",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -189,9 +189,9 @@ namespace SyncApp26.API.Controllers
             }
 
             // Verify assigned to user exists if provided
-            if (userRequestDTO.AssignedToPersonalId != null)
+            if (userRequestDTO.AssignedToId != null)
             {
-                var assignedTo = await _userService.GetUserByPersonalIdAsync(userRequestDTO.AssignedToPersonalId);
+                var assignedTo = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
                 if (assignedTo == null)
                 {
                     return BadRequest(new UserResponseDTO
@@ -210,7 +210,7 @@ namespace SyncApp26.API.Controllers
                 LastName = userRequestDTO.LastName,
                 Email = userRequestDTO.Email,
                 DepartmentId = userRequestDTO.DepartmentId,
-                AssignedToPersonalId = userRequestDTO.AssignedToPersonalId,
+                AssignedToId = userRequestDTO.AssignedToId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -258,7 +258,7 @@ namespace SyncApp26.API.Controllers
             }
 
             // Check for circular assignment (user cannot be assigned to themselves)
-            if (userRequestDTO.AssignedToPersonalId != null && userRequestDTO.AssignedToPersonalId == existingUser.PersonalId)
+            if (userRequestDTO.AssignedToId != null && userRequestDTO.AssignedToId == existingUser.Id)
             {
                 return BadRequest(new UserResponseDTO
                 {
@@ -279,9 +279,9 @@ namespace SyncApp26.API.Controllers
             }
 
             // Verify assigned to user exists if provided
-            if (userRequestDTO.AssignedToPersonalId != null)
+            if (userRequestDTO.AssignedToId != null)
             {
-                var assignedTo = await _userService.GetUserByPersonalIdAsync(userRequestDTO.AssignedToPersonalId);
+                var assignedTo = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
                 if (assignedTo == null)
                 {
                     return BadRequest(new UserResponseDTO
@@ -292,7 +292,7 @@ namespace SyncApp26.API.Controllers
                 }
 
                 // Check for circular reference: ensure the assignedTo user is not already managed by this user
-                if (assignedTo.AssignedToPersonalId == existingUser.PersonalId)
+                if (assignedTo.AssignedToId == existingUser.Id)
                 {
                     return BadRequest(new UserResponseDTO
                     {
@@ -306,7 +306,7 @@ namespace SyncApp26.API.Controllers
             existingUser.LastName = userRequestDTO.LastName;
             existingUser.Email = userRequestDTO.Email;
             existingUser.DepartmentId = userRequestDTO.DepartmentId;
-            existingUser.AssignedToPersonalId = userRequestDTO.AssignedToPersonalId;
+            existingUser.AssignedToId = userRequestDTO.AssignedToId;
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(existingUser);

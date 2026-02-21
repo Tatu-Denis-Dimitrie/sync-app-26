@@ -285,11 +285,12 @@ export class UserSyncService {
         id: c.status === 'new' ? c.id : (c.dbUser?.id || c.id),
         status: c.status,
         csvData: c.csvUser ? {
+          personalId: c.csvUser.personalId,
           firstName: c.csvUser.firstName,
           lastName: c.csvUser.lastName,
           email: c.csvUser.email,
           departmentName: c.csvUser.departmentName,
-          assignedToEmail: (c.csvUser as any).assignedToEmail || null
+          assignedToPersonalId: c.csvUser.assignedToPersonalId || null
         } : null,
         conflicts: c.conflicts.map(conflict => ({
           field: conflict.field,

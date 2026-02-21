@@ -41,12 +41,12 @@ namespace SyncApp26.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(string assignedToPersonalId)
+        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(Guid assignedToId)
         {
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.AssignedToPersonalId == assignedToPersonalId && u.DeletedAt == null)
+                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null)
                 .ToListAsync();
         }
 
@@ -73,9 +73,9 @@ namespace SyncApp26.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> IsUserLineManagerAsync(string userPersonalId)
+        public async Task<bool> IsUserLineManagerAsync(Guid userId)
         {
-            return await _context.Users.AnyAsync(u => u.AssignedToPersonalId == userPersonalId && u.DeletedAt == null);
+            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null);
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)

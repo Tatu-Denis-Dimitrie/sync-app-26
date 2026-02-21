@@ -49,20 +49,15 @@ namespace SyncApp26.Infrastructure.Context
                     .HasForeignKey(e => e.DepartmentId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.Property(e => e.AssignedToPersonalId)
-                    .HasMaxLength(50);
-
                 // Configure self-referencing relationship for line manager
                 entity.HasOne(e => e.AssignedTo)
                     .WithMany(u => u.AssignedUsers)
-                    .HasForeignKey(e => e.AssignedToPersonalId)
-                    .HasPrincipalKey(u => u.PersonalId)
+                    .HasForeignKey(e => e.AssignedToId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 // Create indexes
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.HasIndex(e => e.DepartmentId);
-                entity.HasIndex(e => e.AssignedToPersonalId);
                 entity.HasIndex(e => e.PersonalId).IsUnique();
             });
 

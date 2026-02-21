@@ -9,7 +9,7 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public required string Email { get; set; }
         public Guid DepartmentId { get; set; }
         public required string DepartmentName { get; set; }
-        public string? AssignedToPersonalId { get; set; }
+        public Guid? AssignedToId { get; set; }
         public string? AssignedToName { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
