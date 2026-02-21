@@ -32,6 +32,32 @@ namespace SyncApp26.API.Controllers
             return Ok(new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                DepartmentId = user.DepartmentId,
+                DepartmentName = user.Department?.Name ?? "Unknown",
+                AssignedToId = user.AssignedToId,
+                AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            });
+        }
+
+        [HttpGet("personal-id/{personalId}")]
+        public async Task<ActionResult<UserGETResponseDTO>> GetUserByPersonalId(string personalId)
+        {
+            var user = await _userService.GetUserByPersonalIdAsync(personalId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new UserGETResponseDTO
+            {
+                Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -51,6 +77,7 @@ namespace SyncApp26.API.Controllers
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -83,6 +110,7 @@ namespace SyncApp26.API.Controllers
             var responseList = usersList.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -110,6 +138,7 @@ namespace SyncApp26.API.Controllers
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -160,7 +189,7 @@ namespace SyncApp26.API.Controllers
             }
 
             // Verify assigned to user exists if provided
-            if (userRequestDTO.AssignedToId.HasValue)
+            if (userRequestDTO.AssignedToId != null)
             {
                 var assignedTo = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
                 if (assignedTo == null)
@@ -176,6 +205,7 @@ namespace SyncApp26.API.Controllers
             var user = new User
             {
                 Id = Guid.NewGuid(),
+                PersonalId = Guid.NewGuid().ToString(),
                 FirstName = userRequestDTO.FirstName,
                 LastName = userRequestDTO.LastName,
                 Email = userRequestDTO.Email,
@@ -228,7 +258,7 @@ namespace SyncApp26.API.Controllers
             }
 
             // Check for circular assignment (user cannot be assigned to themselves)
-            if (userRequestDTO.AssignedToId.HasValue && userRequestDTO.AssignedToId.Value == id)
+            if (userRequestDTO.AssignedToId != null && userRequestDTO.AssignedToId == existingUser.Id)
             {
                 return BadRequest(new UserResponseDTO
                 {
@@ -249,7 +279,7 @@ namespace SyncApp26.API.Controllers
             }
 
             // Verify assigned to user exists if provided
-            if (userRequestDTO.AssignedToId.HasValue)
+            if (userRequestDTO.AssignedToId != null)
             {
                 var assignedTo = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
                 if (assignedTo == null)
@@ -262,7 +292,7 @@ namespace SyncApp26.API.Controllers
                 }
 
                 // Check for circular reference: ensure the assignedTo user is not already managed by this user
-                if (assignedTo.AssignedToId == id)
+                if (assignedTo.AssignedToId == existingUser.Id)
                 {
                     return BadRequest(new UserResponseDTO
                     {

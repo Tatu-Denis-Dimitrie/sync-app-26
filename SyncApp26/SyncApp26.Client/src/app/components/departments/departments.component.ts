@@ -2,9 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, merge, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
+import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 
@@ -38,57 +39,18 @@ export class DepartmentsComponent implements OnInit {
 
   constructor(
     private userSyncService: UserSyncService,
+    private departmentsSyncService: DepartmentsSyncService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.departments$ = this.userSyncService.getDepartments();
-    this.stats$ = this.userSyncService.getUserStats();
-
-    this.paginatedDepartments$ = combineLatest([
-      this.departments$,
-      this.searchQuery$,
-      this.sizeFilter$,
-      this.currentPage$
-    ]).pipe(
-      map(([departments, searchQuery, sizeFilter, currentPage]) => {
-        // Filter departments
-        let filtered = departments.filter(dept => {
-          const matchesSearch = !searchQuery ||
-            dept.name.toLowerCase().includes(searchQuery.toLowerCase());
-          
-          const totalPersonnel = dept.lineManagerCount + dept.employeeCount;
-          let matchesSize = true;
-          if (sizeFilter === 'small') {
-            matchesSize = totalPersonnel <= 10;
-          } else if (sizeFilter === 'medium') {
-            matchesSize = totalPersonnel > 10 && totalPersonnel <= 50;
-          } else if (sizeFilter === 'large') {
-            matchesSize = totalPersonnel > 50;
-          }
-          
-          return matchesSearch && matchesSize;
-        });
-
-        this.totalItems = filtered.length;
-
-        // Paginate
-        const startIndex = (currentPage - 1) * this.pageSize;
-        return filtered.slice(startIndex, startIndex + this.pageSize);
-      })
+    const refresh$ = merge(of(null), this.departmentsSyncService.departmentsSynced$);
+    this.departments$ = refresh$.pipe(
+      switchMap(() => this.userSyncService.getDepartments())
     );
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage = page;
-  }
-
-  onSearchChange(): void {
-    this.currentPage = 1;
-  }
-
-  onFilterChange(): void {
-    this.currentPage = 1;
+    this.stats$ = refresh$.pipe(
+      switchMap(() => this.userSyncService.getUserStats())
+    );
   }
 
   viewDepartmentUsers(departmentName: string): void {

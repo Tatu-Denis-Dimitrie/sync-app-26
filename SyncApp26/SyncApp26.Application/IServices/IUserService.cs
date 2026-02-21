@@ -11,7 +11,6 @@ namespace SyncApp26.Application.IServices
         Task AddUserAsync(User user);
         Task UpdateUserAsync(User user);
         Task DeleteUserAsync(Guid userId);
-
-
+        Task<User?> GetUserByPersonalIdAsync(string personalId);
     }
 }

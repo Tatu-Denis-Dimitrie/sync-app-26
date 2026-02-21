@@ -47,5 +47,10 @@ namespace SyncApp26.Application.Services
         {
             await _userRepository.DeleteUserAsync(id);
         }
+
+        public async Task<User?> GetUserByPersonalIdAsync(string personalId)
+        {
+            return await _userRepository.GetUserByPersonalIdAsync(personalId);
+        }
     }
 }

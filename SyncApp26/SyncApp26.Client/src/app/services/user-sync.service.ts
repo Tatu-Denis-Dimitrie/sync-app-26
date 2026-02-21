@@ -9,12 +9,13 @@ import { from } from 'rxjs';
 
 interface BackendUser {
   id: string;
+  personalId: string;
   firstName: string;
   lastName: string;
   email: string;
   departmentId: string;
   departmentName: string;
-  assignedToId?: string;
+  assignedToPersonalId?: string;
   assignedToName?: string;
   createdAt: string;
   updatedAt?: string;
@@ -74,16 +75,17 @@ export class UserSyncService {
    */
   private mapBackendUser(backendUser: BackendUser, allUsers: BackendUser[]): User {
     // Determine role: if user has anyone assigned to them, they're a line manager
-    const hasDirectReports = allUsers.some(u => u.assignedToId === backendUser.id);
-
+    const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
+    
     return {
       id: backendUser.id,
+      personalId: backendUser.personalId,
       firstName: backendUser.firstName,
       lastName: backendUser.lastName,
       email: backendUser.email,
       departmentId: backendUser.departmentId,
       departmentName: backendUser.departmentName,
-      assignedToId: backendUser.assignedToId,
+      assignedToPersonalId: backendUser.assignedToPersonalId,
       assignedToName: backendUser.assignedToName,
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
@@ -115,16 +117,17 @@ export class UserSyncService {
       map(backendUser => {
         // We need all users to calculate role, so we'll use the cached users
         const allUsers = this.usersSubject.value;
-        const hasDirectReports = allUsers.some(u => u.assignedToId === backendUser.id);
-
+        const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
+        
         return {
           id: backendUser.id,
+          personalId: backendUser.personalId,
           firstName: backendUser.firstName,
           lastName: backendUser.lastName,
           email: backendUser.email,
           departmentId: backendUser.departmentId,
           departmentName: backendUser.departmentName,
-          assignedToId: backendUser.assignedToId,
+          assignedToPersonalId: backendUser.assignedToPersonalId,
           assignedToName: backendUser.assignedToName,
           createdAt: new Date(backendUser.createdAt),
           updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
@@ -133,6 +136,33 @@ export class UserSyncService {
       }),
       catchError(error => {
         console.error('Error fetching user:', error);
+        return of(null);
+      })
+    );
+  }
+
+  getByPersonalId(personalId: string): Observable<User | null> {
+    return this.http.get<BackendUser>(`${this.apiUrl}/personalId/${personalId}`).pipe(
+      map(backendUser => {
+        const allUsers = this.usersSubject.value;
+        const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
+        return {
+          id: backendUser.id,
+          personalId: backendUser.personalId,
+          firstName: backendUser.firstName,
+          lastName: backendUser.lastName,
+          email: backendUser.email,
+          departmentId: backendUser.departmentId,
+          departmentName: backendUser.departmentName,
+          assignedToPersonalId: backendUser.assignedToPersonalId,
+          assignedToName: backendUser.assignedToName,
+          createdAt: new Date(backendUser.createdAt),
+          updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
+          role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
+        };
+      }),
+      catchError(error => {
+        console.error('Error fetching user by personal ID:', error);
         return of(null);
       })
     );
@@ -322,11 +352,12 @@ export class UserSyncService {
         id: c.status === 'new' ? c.id : (c.dbUser?.id || c.id),
         status: c.status,
         csvData: c.csvUser ? {
+          personalId: c.csvUser.personalId,
           firstName: c.csvUser.firstName,
           lastName: c.csvUser.lastName,
           email: c.csvUser.email,
           departmentName: c.csvUser.departmentName,
-          assignedToEmail: (c.csvUser as any).assignedToEmail || null
+          assignedToPersonalId: c.csvUser.assignedToPersonalId || null
         } : null,
         conflicts: c.conflicts.map(conflict => ({
           field: conflict.field,

@@ -13,12 +13,13 @@ export enum SyncStatus {
 
 export interface User {
   id: string;
+  personalId: string;
   firstName: string;
   lastName: string;
   email: string;
   departmentId: string;
   departmentName: string;
-  assignedToId?: string;
+  assignedToPersonalId?: string;
   assignedToName?: string;
   createdAt: Date;
   updatedAt?: Date;

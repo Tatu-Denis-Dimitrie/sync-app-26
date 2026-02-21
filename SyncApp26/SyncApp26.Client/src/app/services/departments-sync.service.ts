@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, of } from 'rxjs';
+import { Observable, BehaviorSubject, Subject, of } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { CSVDepartmentComparisonDTO } from '../models/csv-department-sync.model';
@@ -13,8 +13,10 @@ import { SyncResult } from '../models/csv-sync.model';
 export class DepartmentsSyncService {
   private apiUrl = environment.apiUrl + '/CsvSync';
   private currentComparisonSubject = new BehaviorSubject<CSVDepartmentComparisonDTO[] | null>(null);
+  private departmentsSyncedSubject = new Subject<void>();
 
   currentComparison$ = this.currentComparisonSubject.asObservable();
+  departmentsSynced$ = this.departmentsSyncedSubject.asObservable();
 
   constructor(private http: HttpClient) { }
 
@@ -49,6 +51,7 @@ export class DepartmentsSyncService {
       tap((result) => {
         if (result.success) {
           this.currentComparisonSubject.next(null); //clear comparison on success
+          this.departmentsSyncedSubject.next();
         }
       }),
       catchError(error => {

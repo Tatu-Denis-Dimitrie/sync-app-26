@@ -1,19 +1,14 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using SyncApp26.Shared.DTOs;
+using SyncApp26.Application.IServices;
 
 namespace SyncApp26.Application.Services;
 
-public interface ICsvValidationService
-{
-    Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName);
-    bool IsValidEmail(string email);
-}
-
 public class CsvValidationService : ICsvValidationService
 {
-    private static readonly string[] RequiredHeaders = { "FirstName", "LastName", "Email", "DepartmentName" };
-    private static readonly string[] OptionalHeaders = { "AssignedToEmail" };
+    private static readonly string[] RequiredHeaders = { "PersonalId", "FirstName", "LastName", "Email", "DepartmentName" };
+    private static readonly string[] OptionalHeaders = { "AssignedToPersonalId" };
     private static readonly Regex EmailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
 
     public async Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName)
@@ -268,6 +263,8 @@ public class CsvValidationService : ICsvValidationService
             var normalized = NormalizeHeaderName(headers[i]);
 
             // Map to standard field names
+            if (normalized == NormalizeHeaderName("PersonalId") || normalized == "personalid" || normalized == "personal_id")
+                map["PersonalId"] = i;
             if (normalized == NormalizeHeaderName("FirstName") || normalized == "firstname")
                 map["FirstName"] = i;
             else if (normalized == NormalizeHeaderName("LastName") || normalized == "lastname")
@@ -276,8 +273,8 @@ public class CsvValidationService : ICsvValidationService
                 map["Email"] = i;
             else if (normalized == NormalizeHeaderName("DepartmentName") || normalized == "department")
                 map["DepartmentName"] = i;
-            else if (normalized == NormalizeHeaderName("AssignedToEmail") || normalized == "manageremail" || normalized == "linemanageremail")
-                map["AssignedToEmail"] = i;
+            else if (normalized == NormalizeHeaderName("AssignedToPersonalId") || normalized == "managerpersonalid" || normalized == "linemanagerpersonalid")
+                map["AssignedToPersonalId"] = i;
         }
 
         return map;
@@ -293,6 +290,19 @@ public class CsvValidationService : ICsvValidationService
         {
             errors.Add($"Row {rowNumber}: Expected {expectedColumnCount} columns, found {values.Count}");
             return (errors, warnings);
+        }
+
+        if(columnMap.TryGetValue("PersonalId", out int personalIdIdx))
+        {
+            var personalId = values[personalIdIdx];
+            if (string.IsNullOrWhiteSpace(personalId))
+            {
+                errors.Add($"Row {rowNumber}: PersonalId is required and cannot be empty");
+            }
+            else if (personalId.Length > 50)
+            {
+                errors.Add($"Row {rowNumber}: PersonalId is too long (max 50 characters)");
+            }
         }
 
         // Validate FirstName
@@ -351,13 +361,13 @@ public class CsvValidationService : ICsvValidationService
             }
         }
 
-        // Validate AssignedToEmail (optional)
-        if (columnMap.TryGetValue("AssignedToEmail", out int assignedIdx))
+        // Validate AssignedToPersonalId (optional)
+        if (columnMap.TryGetValue("AssignedToPersonalId", out int assignedIdx))
         {
-            var assignedEmail = values[assignedIdx];
-            if (!string.IsNullOrWhiteSpace(assignedEmail) && !IsValidEmail(assignedEmail))
+            var assignedPersonalId = values[assignedIdx];
+            if (!string.IsNullOrWhiteSpace(assignedPersonalId))
             {
-                warnings.Add($"Row {rowNumber}: AssignedToEmail '{assignedEmail}' is not in valid format");
+                warnings.Add($"Row {rowNumber}: AssignedToPersonalId '{assignedPersonalId}' is not in valid format");
             }
         }
 
@@ -366,16 +376,6 @@ public class CsvValidationService : ICsvValidationService
 
     public bool IsValidEmail(string email)
     {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
-
-        try
-        {
-            return EmailRegex.IsMatch(email);
-        }
-        catch
-        {
-            return false;
-        }
+        return EmailRegex.IsMatch(email);
     }
 }

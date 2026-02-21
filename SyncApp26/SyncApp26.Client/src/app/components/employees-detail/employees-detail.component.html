@@ -276,7 +276,7 @@
                   >Employee ID</label
                 >
                 <p class="text-foreground font-medium mt-1">
-                  {{ selectedUser.id }}
+                  {{ selectedUser.personalId }}
                 </p>
               </div>
 
@@ -336,12 +336,12 @@
                 </p>
               </div>
 
-              <div *ngIf="selectedUser.assignedToId">
+              <div *ngIf="selectedUser.assignedToPersonalId">
                 <label class="text-sm font-medium text-muted-foreground"
                   >Manager ID</label
                 >
                 <p class="text-foreground font-medium mt-1">
-                  {{ selectedUser.assignedToId }}
+                  {{ selectedUser.assignedToPersonalId }}
                 </p>
               </div>
 

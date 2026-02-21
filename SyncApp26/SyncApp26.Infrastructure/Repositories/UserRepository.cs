@@ -111,5 +111,14 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
+
+        public async Task<User?> GetUserByPersonalIdAsync(string personalId)
+        {
+            return await _context.Users
+                .Include(u => u.Department)
+                .Include(u => u.AssignedTo)
+                .Where(u => u.DeletedAt == null)
+                .FirstOrDefaultAsync(u => u.PersonalId == personalId);
+        }
     }
 }

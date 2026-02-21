@@ -49,6 +49,10 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasIndex(e => new { e.DepartmentId, e.DeletedAt })
                     .HasDatabaseName("IX_Users_DepartmentId_DeletedAt");
 
+                entity.Property(e => e.PersonalId)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
 
@@ -63,6 +67,11 @@ namespace SyncApp26.Infrastructure.Context
                     .WithMany(u => u.AssignedUsers)
                     .HasForeignKey(e => e.AssignedToId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                // Create indexes
+                entity.HasIndex(e => e.Email).IsUnique();
+                entity.HasIndex(e => e.DepartmentId);
+                entity.HasIndex(e => e.PersonalId).IsUnique();
             });
 
             // Configure Department entity
