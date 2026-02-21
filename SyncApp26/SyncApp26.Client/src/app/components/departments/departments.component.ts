@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, merge, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
+import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { Department } from '../../models/csv-sync.model';
 
 @Component({
@@ -18,12 +20,18 @@ export class DepartmentsComponent implements OnInit {
 
   constructor(
     private userSyncService: UserSyncService,
+    private departmentsSyncService: DepartmentsSyncService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.departments$ = this.userSyncService.getDepartments();
-    this.stats$ = this.userSyncService.getUserStats();
+    const refresh$ = merge(of(null), this.departmentsSyncService.departmentsSynced$);
+    this.departments$ = refresh$.pipe(
+      switchMap(() => this.userSyncService.getDepartments())
+    );
+    this.stats$ = refresh$.pipe(
+      switchMap(() => this.userSyncService.getUserStats())
+    );
   }
 
   viewDepartmentUsers(departmentName: string): void {
