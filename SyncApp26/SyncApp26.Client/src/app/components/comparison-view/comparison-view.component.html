@@ -307,6 +307,91 @@
           </div>
         </div>
 
+        <div class="divide-y divide-border">
+        <div
+          *ngIf="comparison.dbUser || comparison.csvUser"
+          class="grid grid-cols-[1fr,auto,1fr]"
+        >
+          <div class="p-4 bg-red-50/30">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-muted-foreground uppercase"
+                >Email (Database)</span
+              >
+              <span
+                *ngIf="hasFieldConflict(comparison, 'email')"
+                class="text-xs text-red-600"
+                >- removed</span
+              >
+            </div>
+            <p
+              class="font-mono text-sm"
+              [class.line-through]="
+                hasFieldConflict(comparison, 'email')
+              "
+              [class.text-muted-foreground]="
+                hasFieldConflict(comparison, 'email')
+              "
+            >
+              {{ comparison.dbUser?.email || "N/A" }}
+            </p>
+          </div>
+          <div class="flex items-center justify-center bg-muted/20 px-2">
+            <div
+              *ngIf="hasFieldConflict(comparison, 'email')"
+              class="flex flex-col items-center gap-2"
+            >
+              <input
+                type="checkbox"
+                [checked]="isFieldSelected(comparison, 'email')"
+                (change)="toggleFieldSelection(comparison.id, 'email')"
+                class="w-4 h-4 rounded border-border"
+                title="Select to sync this field"
+              />
+              <svg
+                class="w-4 h-4 text-muted-foreground"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                ></path>
+              </svg>
+            </div>
+            <span
+              *ngIf="!hasFieldConflict(comparison, 'email')"
+              class="text-muted-foreground"
+              >=</span
+            >
+          </div>
+          <div class="p-4 bg-green-50/30">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-muted-foreground uppercase"
+                >Email (CSV)</span
+              >
+              <span
+                *ngIf="hasFieldConflict(comparison, 'email')"
+                class="text-xs text-green-600"
+                >+ added</span
+              >
+            </div>
+            <p
+              class="font-mono text-sm"
+              [class.font-semibold]="
+                hasFieldConflict(comparison, 'email')
+              "
+              [class.text-green-700]="
+                hasFieldConflict(comparison, 'email')
+              "
+            >
+              {{ comparison.csvUser?.email || "N/A" }}
+            </p>
+          </div>
+        </div>
+
         <div
           *ngIf="comparison.dbUser || comparison.csvUser"
           class="grid grid-cols-[1fr,auto,1fr]"
