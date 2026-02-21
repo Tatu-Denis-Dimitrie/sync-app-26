@@ -292,7 +292,7 @@ public class CsvValidationService : ICsvValidationService
             return (errors, warnings);
         }
 
-        if(columnMap.TryGetValue("PersonalId", out int personalIdIdx))
+        if (columnMap.TryGetValue("PersonalId", out int personalIdIdx))
         {
             var personalId = values[personalIdIdx];
             if (string.IsNullOrWhiteSpace(personalId))

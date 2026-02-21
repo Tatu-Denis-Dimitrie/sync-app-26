@@ -42,12 +42,7 @@ public class CsvSyncService : ICsvSyncService
             .Where(u => !string.IsNullOrWhiteSpace(u.PersonalId))
             .ToDictionary(u => u.PersonalId.Trim(), u => u, StringComparer.OrdinalIgnoreCase);
 
-        int processedCount = 0;
-        int lastPercent = 0;
         var csvEmails = new HashSet<string>();
-
-        // For SignalR progress - don't await to avoid blocking the processing loop
-        Task? progressTask = null;
 
         // Process CSV users
         foreach (var csvUser in csvUsers)
@@ -111,7 +106,7 @@ public class CsvSyncService : ICsvSyncService
                     });
                 }
 
-                if(dbUser.Email != csvUser.Email)
+                if (dbUser.Email != csvUser.Email)
                 {
                     conflicts.Add(new FieldConflictDTO
                     {
@@ -381,7 +376,7 @@ public class CsvSyncService : ICsvSyncService
                                             }
                                             break;
                                         case "email":
-                                            if(existingUser.Email != item.CsvData.Email)
+                                            if (existingUser.Email != item.CsvData.Email)
                                             {
                                                 var importConflict = new ImportConflict
                                                 {
@@ -475,7 +470,7 @@ public class CsvSyncService : ICsvSyncService
                                 existingUser.DepartmentId = dept.Id;
                                 hasChanges = true;
                             }
-            
+
                             var assignedToManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
                             var assignedToId = assignedToManager?.Id;
 

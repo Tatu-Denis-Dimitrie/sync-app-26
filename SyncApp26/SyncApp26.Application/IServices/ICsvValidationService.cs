@@ -4,7 +4,7 @@ namespace SyncApp26.Application.IServices
 {
     public interface ICsvValidationService
     {
-        Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName);
+        Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName, HashSet<string>? existingDepartments = null);
         bool IsValidEmail(string email);
     }
 }
