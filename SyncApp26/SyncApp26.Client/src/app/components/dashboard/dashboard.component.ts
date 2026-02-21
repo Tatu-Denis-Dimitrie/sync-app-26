@@ -38,6 +38,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private searchQuery$ = new BehaviorSubject<string>('');
   private selectedDepartment$ = new BehaviorSubject<string>('all');
   private selectedRole$ = new BehaviorSubject<UserRole | 'all'>('all');
+  private sortField$ = new BehaviorSubject<'createdAt' | 'updatedAt'>('updatedAt');
+  private sortDirection$ = new BehaviorSubject<'asc' | 'desc'>('desc');
 
   get searchQuery(): string { return this.searchQuery$.value; }
   set searchQuery(value: string) { this.searchQuery$.next(value); }
@@ -47,6 +49,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get selectedRole(): UserRole | 'all' { return this.selectedRole$.value; }
   set selectedRole(value: UserRole | 'all') { this.selectedRole$.next(value); }
+
+  get sortField(): 'createdAt' | 'updatedAt' { return this.sortField$.value; }
+  set sortField(value: 'createdAt' | 'updatedAt') { this.sortField$.next(value); }
+
+  get sortDirection(): 'asc' | 'desc' { return this.sortDirection$.value; }
+  set sortDirection(value: 'asc' | 'desc') { this.sortDirection$.next(value); }
   
   isUploading = false;
   isSyncing = false;
@@ -115,9 +123,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.searchQuery$,
       this.selectedDepartment$,
       this.selectedRole$,
-      this.currentPage$
+      this.currentPage$,
+      this.sortField$,
+      this.sortDirection$
     ]).pipe(
-      map(([users, stats, searchQuery, selectedDepartment, selectedRole, currentPage]) => {
+      map(([users, stats, searchQuery, selectedDepartment, selectedRole, currentPage, sortField, sortDirection]) => {
         // Filter users
         let filtered = users.filter(user => {
           const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
@@ -129,6 +139,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const matchesRole = selectedRole === 'all' ||
             user.role === selectedRole;
           return matchesSearch && matchesDepartment && matchesRole;
+        });
+
+        // Sort users
+        filtered = filtered.sort((a, b) => {
+          const aValue = a[sortField] ? new Date(a[sortField]!).getTime() : 0;
+          const bValue = b[sortField] ? new Date(b[sortField]!).getTime() : 0;
+          return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
         });
 
         this.totalItems = filtered.length;
@@ -505,6 +522,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onRoleFilterChange(): void {
     this.currentPage = 1;
+  }
+
+  toggleSort(field: 'createdAt' | 'updatedAt'): void {
+    if (this.sortField === field) {
+      // Toggle direction if same field
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      // Set new field with default descending direction
+      this.sortField = field;
+      this.sortDirection = 'desc';
+    }
+  }
+
+  getSortIcon(field: 'createdAt' | 'updatedAt'): string {
+    if (this.sortField !== field) {
+      return '↕️'; // Not sorted
+    }
+    return this.sortDirection === 'asc' ? '↑' : '↓';
   }
 
   getRoleBadgeColor(role: UserRole): string {

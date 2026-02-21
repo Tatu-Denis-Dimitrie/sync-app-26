@@ -4,5 +4,6 @@ namespace SyncApp26.Shared.DTOs.Response.Department
     {
         public Guid Id { get; set; }
         public required string Name { get; set; }
+        public bool IsActive { get; set; }
     }
 }

@@ -33,7 +33,9 @@ public class CsvSyncService : ICsvSyncService
 
         // Use optimized no-tracking query for read-only comparison
         var dbUsers = await _userRepository.GetAllUsersForComparisonAsync();
-        var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
+        var departments = (await _departmentRepository.GetAllDepartmentsAsync())
+            .Where(d => d.IsActive) // Only consider active departments
+            .ToList();
 
         // Create a map of personalId to DB user for quick lookup
         var dbUserMap = dbUsers
@@ -214,14 +216,15 @@ public class CsvSyncService : ICsvSyncService
 
         // Load all data once
         var dbUsers = (await _userRepository.GetAllUsersAsync()).ToList();
-        var departments = (await _departmentRepository.GetAllDepartmentsAsync()).ToList();
+        var departments = (await _departmentRepository.GetAllDepartmentsAsync())
+            .Where(d => d.IsActive) // Only consider active departments
+            .ToList();
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
 
         // Batch collections for bulk operations
         var usersToAdd = new List<User>();
         var usersToUpdate = new List<User>();
         var usersToDelete = new List<User>();
-        var departmentsToAdd = new Dictionary<string, Department>();
 
         // Create import history record
         var importHistory = new ImportHistory
@@ -252,20 +255,14 @@ public class CsvSyncService : ICsvSyncService
                 if (item.Status == "new" && item.CsvData != null)
                 {
                     // Prepare new user
-                    var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
-                        ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
+                    var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
 
                     if (department == null)
                     {
-                        // Queue department creation
-                        department = new Department
-                        {
-                            Id = Guid.NewGuid(),
-                            Name = item.CsvData.DepartmentName.Trim(),
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = department;
-                        departments.Add(department);
+                        // Department does not exist or is inactive - cannot create user
+                        result.RecordsFailed++;
+                        result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist or is inactive. Please ensure the department exists and is active.");
+                        continue;
                     }
 
                     var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
@@ -402,18 +399,12 @@ public class CsvSyncService : ICsvSyncService
                                             }
                                             break;
                                         case "departmentname":
-                                            var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
-                                                ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
+                                            var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
                                             if (department == null)
                                             {
-                                                department = new Department
-                                                {
-                                                    Id = Guid.NewGuid(),
-                                                    Name = item.CsvData.DepartmentName.Trim(),
-                                                    CreatedAt = DateTime.UtcNow
-                                                };
-                                                departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = department;
-                                                departments.Add(department);
+                                                // Department does not exist or is inactive - skip this field update
+                                                result.Errors.Add($"User {item.CsvData.Email}: Cannot update department to '{item.CsvData.DepartmentName}' - department does not exist or is inactive.");
+                                                break;
                                             }
                                             if (existingUser.DepartmentId != department.Id)
                                             {
@@ -471,18 +462,13 @@ public class CsvSyncService : ICsvSyncService
                                 hasChanges = true;
                             }
 
-                            var dept = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase))
-                                ?? departmentsToAdd.GetValueOrDefault(item.CsvData.DepartmentName.ToLower());
+                            var dept = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
                             if (dept == null)
                             {
-                                dept = new Department
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Name = item.CsvData.DepartmentName.Trim(),
-                                    CreatedAt = DateTime.UtcNow
-                                };
-                                departmentsToAdd[item.CsvData.DepartmentName.ToLower()] = dept;
-                                departments.Add(dept);
+                                // Department does not exist or is inactive - skip this user update
+                                result.RecordsFailed++;
+                                result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist or is inactive. Cannot update user.");
+                                continue;
                             }
                             if (existingUser.DepartmentId != dept.Id)
                             {
@@ -549,15 +535,6 @@ public class CsvSyncService : ICsvSyncService
         // Execute all batched operations
         try
         {
-            // Add new departments first (referenced by users)
-            if (departmentsToAdd.Any())
-            {
-                foreach (var dept in departmentsToAdd.Values)
-                {
-                    await _departmentRepository.AddDepartmentAsync(dept);
-                }
-            }
-
             // Bulk add new users
             if (usersToAdd.Any())
             {

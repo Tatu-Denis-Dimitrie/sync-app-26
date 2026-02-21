@@ -21,30 +21,35 @@ namespace SyncApp26.Infrastructure.Data
                 {
                     Id = Guid.NewGuid(),
                     Name = "Engineering",
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-6)
                 },
                 new Department
                 {
                     Id = Guid.NewGuid(),
                     Name = "Human Resources",
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-6)
                 },
                 new Department
                 {
                     Id = Guid.NewGuid(),
                     Name = "Sales",
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new Department
                 {
                     Id = Guid.NewGuid(),
                     Name = "Marketing",
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new Department
                 {
                     Id = Guid.NewGuid(),
                     Name = "Finance",
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 }
             };

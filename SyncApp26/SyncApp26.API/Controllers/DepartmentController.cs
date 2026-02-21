@@ -28,7 +28,8 @@ namespace SyncApp26.API.Controllers
             return Ok(new DepartmentGETResponseDTO
             {
                 Id = department.Id,
-                Name = department.Name
+                Name = department.Name,
+                IsActive = department.IsActive
             });
         }
 
@@ -39,7 +40,8 @@ namespace SyncApp26.API.Controllers
             return Ok(departments.Select(d => new DepartmentGETResponseDTO
             {
                 Id = d.Id,
-                Name = d.Name
+                Name = d.Name,
+                IsActive = d.IsActive
             }));
         }
 
@@ -50,6 +52,7 @@ namespace SyncApp26.API.Controllers
             {
                 Id = Guid.NewGuid(),
                 Name = departmentRequestDTO.Name.Trim(),
+                IsActive = departmentRequestDTO.IsActive,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -78,6 +81,7 @@ namespace SyncApp26.API.Controllers
             {
                 Id = id,
                 Name = departmentRequestDTO.Name.Trim(),
+                IsActive = departmentRequestDTO.IsActive,
                 UpdatedAt = DateTime.UtcNow
             };
 

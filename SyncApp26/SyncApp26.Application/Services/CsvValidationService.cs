@@ -11,7 +11,7 @@ public class CsvValidationService : ICsvValidationService
     private static readonly string[] OptionalHeaders = { "AssignedToPersonalId" };
     private static readonly Regex EmailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
 
-    public async Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName)
+    public async Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName, HashSet<string>? existingDepartments = null)
     {
         var result = new CsvValidationResultDTO { IsValid = true };
 
@@ -100,7 +100,7 @@ public class CsvValidationService : ICsvValidationService
                 var dataLine = lines[i];
                 var values = ParseCsvLine(dataLine);
 
-                var rowValidation = ValidateDataRow(rowNumber, values, columnMap, headers.Count);
+                var rowValidation = ValidateDataRow(rowNumber, values, columnMap, headers.Count, existingDepartments);
                 if (rowValidation.errors.Count > 0)
                 {
                     result.InvalidRows++;
@@ -280,7 +280,7 @@ public class CsvValidationService : ICsvValidationService
         return map;
     }
 
-    private (List<string> errors, List<string> warnings) ValidateDataRow(int rowNumber, List<string> values, Dictionary<string, int> columnMap, int expectedColumnCount)
+    private (List<string> errors, List<string> warnings) ValidateDataRow(int rowNumber, List<string> values, Dictionary<string, int> columnMap, int expectedColumnCount, HashSet<string>? existingDepartments = null)
     {
         var errors = new List<string>();
         var warnings = new List<string>();
@@ -358,6 +358,10 @@ public class CsvValidationService : ICsvValidationService
             else if (department.Length > 100)
             {
                 errors.Add($"Row {rowNumber}: DepartmentName is too long (max 100 characters)");
+            }
+            else if (existingDepartments != null && !existingDepartments.Contains(department.Trim().ToLower()))
+            {
+                errors.Add($"Row {rowNumber}: Department '{department}' does not exist in the database. Please create the department first.");
             }
         }
 

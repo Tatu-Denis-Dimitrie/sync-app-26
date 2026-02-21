@@ -212,15 +212,25 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
       <div
         *ngFor="let dept of paginatedDepartments$ | async"
-        class="bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
+        [class]="
+          dept.isActive
+            ? 'bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group'
+            : 'bg-card border border-red-300 rounded-lg p-6 opacity-75 transition-all cursor-pointer group'
+        "
         (click)="viewDepartmentUsers(dept.name)"
       >
         <div class="flex items-start justify-between mb-4">
           <div
-            class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+            [class]="
+              dept.isActive
+                ? 'w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors'
+                : 'w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center transition-colors'
+            "
           >
             <svg
-              class="w-6 h-6 text-primary"
+              [class]="
+                dept.isActive ? 'w-6 h-6 text-primary' : 'w-6 h-6 text-red-600'
+              "
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -253,6 +263,51 @@
         >
           {{ dept.name }}
         </h3>
+
+        <!-- Active/Inactive Badge with Toggle Button -->
+        <div class="mb-3 flex items-center justify-between">
+          <span
+            *ngIf="dept.isActive"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-700 border border-green-500/20"
+          >
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Active
+          </span>
+          <span
+            *ngIf="!dept.isActive"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 border border-red-500/20"
+          >
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Inactive
+          </span>
+
+          <!-- Toggle Button -->
+          <button
+            (click)="toggleDepartmentStatus($event, dept)"
+            [class]="
+              dept.isActive
+                ? 'px-3 py-1 text-xs font-medium rounded-md border transition-colors hover:bg-red-50 text-red-600 border-red-300'
+                : 'px-3 py-1 text-xs font-medium rounded-md border transition-colors hover:bg-green-50 text-green-600 border-green-300'
+            "
+            [title]="
+              dept.isActive ? 'Deactivate department' : 'Activate department'
+            "
+          >
+            {{ dept.isActive ? "Deactivate" : "Activate" }}
+          </button>
+        </div>
 
         <div class="space-y-2">
           <div

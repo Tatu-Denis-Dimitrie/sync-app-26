@@ -2,8 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable, merge, of, BehaviorSubject, combineLatest } from 'rxjs';
-import { switchMap, map } from 'rxjs/operators';
+import { Observable, merge, of, BehaviorSubject, combineLatest, Subject } from 'rxjs';
+import { switchMap, map, startWith } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { Department } from '../../models/csv-sync.model';
@@ -22,6 +22,7 @@ export class DepartmentsComponent implements OnInit {
   stats$!: Observable<any>;
 
   private currentPage$ = new BehaviorSubject<number>(1);
+  private refreshTrigger$ = new Subject<void>();
   pageSize = 9; // 3x3 grid
   totalItems = 0;
 
@@ -44,10 +45,16 @@ export class DepartmentsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const refresh$ = merge(of(null), this.departmentsSyncService.departmentsSynced$);
+    // Refresh departments when requested or when sync happens
+    const refresh$ = merge(
+      this.refreshTrigger$.pipe(startWith(null)), // Initial load and manual refresh
+      this.departmentsSyncService.departmentsSynced$ // Auto-refresh after department sync
+    );
+    
     this.departments$ = refresh$.pipe(
       switchMap(() => this.userSyncService.getDepartments())
     );
+    
     this.stats$ = refresh$.pipe(
       switchMap(() => this.userSyncService.getUserStats())
     );
@@ -88,6 +95,22 @@ export class DepartmentsComponent implements OnInit {
 
   navigateToDepartments(): void {
     this.router.navigate(['/departments']);
+  }
+
+  toggleDepartmentStatus(event: Event, dept: Department): void {
+    event.stopPropagation(); // Prevent navigation when clicking button
+    
+    const newStatus = !dept.isActive;
+    this.userSyncService.updateDepartment(dept.id, dept.name, newStatus).subscribe({
+      next: () => {
+        console.log(`Department ${dept.name} ${newStatus ? 'activated' : 'deactivated'}`);
+        // Trigger refresh to show updated status
+        this.refreshTrigger$.next();
+      },
+      error: (error) => {
+        console.error('Error toggling department status:', error);
+      }
+    });
   }
 
   navigateToUsers(): void {
