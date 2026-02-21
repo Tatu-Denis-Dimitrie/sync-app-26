@@ -5,7 +5,6 @@ using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration;
 using SyncApp26.Application.IServices;
-using SyncApp26.Application.Services;
 using SyncApp26.Shared.DTOs.CSV.Department;
 
 namespace SyncApp26.API.Controllers;
@@ -248,11 +247,12 @@ public sealed class CsvUserMap : ClassMap<CsvUserDTO>
 {
     public CsvUserMap()
     {
+        Map(m => m.PersonalId).Name("PersonalId", "Personal ID", "personal_id");
         Map(m => m.FirstName).Name("FirstName", "First Name", "first_name");
         Map(m => m.LastName).Name("LastName", "Last Name", "last_name");
         Map(m => m.Email).Name("Email", "email");
         Map(m => m.DepartmentName).Name("DepartmentName", "Department Name", "Department", "department_name", "department");
-        Map(m => m.AssignedToEmail).Name("AssignedToEmail", "Assigned To Email", "Line Manager Email", "Manager Email", "assigned_to_email", "manager_email").Optional();
+        Map(m => m.AssignedToPersonalId).Name("AssignedToPersonalId", "Assigned To Personal ID", "Line Manager Personal ID", "Manager Personal ID", "assigned_to_personal_id", "manager_personal_id").Optional();
     }
 }
 

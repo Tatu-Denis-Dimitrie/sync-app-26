@@ -63,7 +63,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Smith",
                     Email = "john.smith@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // CTO - no manager
+                    AssignedToPersonalId = null, // CTO - no manager
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-6)
                 },
                 new User
@@ -73,7 +74,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Johnson",
                     Email = "sarah.johnson@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // Will be set to John later
+                    AssignedToPersonalId = null,
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -83,7 +85,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Brown",
                     Email = "michael.brown@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // Will be set to John later
+                    AssignedToPersonalId = null, // Will be set to John later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -93,7 +96,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Davis",
                     Email = "emily.davis@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // Will be set to Sarah later
+                    AssignedToPersonalId = null, // Will be set to Sarah later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -103,7 +107,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Wilson",
                     Email = "david.wilson@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // Will be set to Sarah later
+                    AssignedToPersonalId = null, // Will be set to Sarah later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -113,7 +118,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Martinez",
                     Email = "jessica.martinez@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // Will be set to Michael later
+                    AssignedToPersonalId = null, // Will be set to Michael later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
                 new User
@@ -123,7 +129,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Garcia",
                     Email = "daniel.garcia@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // Will be set to Michael later
+                    AssignedToPersonalId = null, // Will be set to Michael later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
                 new User
@@ -133,7 +140,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Rodriguez",
                     Email = "ashley.rodriguez@syncapp.com",
                     DepartmentId = departments[0].Id,
-                    AssignedToId = null, // Will be set to Sarah later
+                    AssignedToPersonalId = null, // Will be set to Sarah later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-2)
                 },
 
@@ -145,7 +153,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Anderson",
                     Email = "lisa.anderson@syncapp.com",
                     DepartmentId = departments[1].Id,
-                    AssignedToId = null, // HR Director
+                    AssignedToPersonalId = null, // HR Director
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-6)
                 },
                 new User
@@ -155,7 +164,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Taylor",
                     Email = "robert.taylor@syncapp.com",
                     DepartmentId = departments[1].Id,
-                    AssignedToId = null, // Will be set to Lisa later
+                    AssignedToPersonalId = null, // Will be set to Lisa later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -165,7 +175,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Thomas",
                     Email = "amanda.thomas@syncapp.com",
                     DepartmentId = departments[1].Id,
-                    AssignedToId = null, // Will be set to Lisa later
+                    AssignedToPersonalId = null, // Will be set to Lisa later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
 
@@ -177,7 +188,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Moore",
                     Email = "christopher.moore@syncapp.com",
                     DepartmentId = departments[2].Id,
-                    AssignedToId = null, // Sales Director
+                    AssignedToPersonalId = null, // Sales Director
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -187,7 +199,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Jackson",
                     Email = "nicole.jackson@syncapp.com",
                     DepartmentId = departments[2].Id,
-                    AssignedToId = null, // Will be set to Christopher later
+                    AssignedToPersonalId = null, // Will be set to Christopher later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -197,7 +210,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "White",
                     Email = "matthew.white@syncapp.com",
                     DepartmentId = departments[2].Id,
-                    AssignedToId = null, // Will be set to Christopher later
+                    AssignedToPersonalId = null, // Will be set to Christopher later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
                 new User
@@ -207,7 +221,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Harris",
                     Email = "jennifer.harris@syncapp.com",
                     DepartmentId = departments[2].Id,
-                    AssignedToId = null, // Will be set to Christopher later
+                    AssignedToPersonalId = null, // Will be set to Christopher later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-2)
                 },
 
@@ -219,7 +234,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Martin",
                     Email = "ryan.martin@syncapp.com",
                     DepartmentId = departments[3].Id,
-                    AssignedToId = null, // Marketing Director
+                    AssignedToPersonalId = null, // Marketing Director
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -229,7 +245,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Thompson",
                     Email = "lauren.thompson@syncapp.com",
                     DepartmentId = departments[3].Id,
-                    AssignedToId = null, // Will be set to Ryan later
+                    AssignedToPersonalId = null, // Will be set to Ryan later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -239,7 +256,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Lee",
                     Email = "kevin.lee@syncapp.com",
                     DepartmentId = departments[3].Id,
-                    AssignedToId = null, // Will be set to Ryan later
+                    AssignedToPersonalId = null, // Will be set to Ryan later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
 
@@ -251,7 +269,8 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Walker",
                     Email = "michelle.walker@syncapp.com",
                     DepartmentId = departments[4].Id,
-                    AssignedToId = null, // CFO
+                    AssignedToPersonalId = null, // CFO
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -261,36 +280,37 @@ namespace SyncApp26.Infrastructure.Data
                     LastName = "Hall",
                     Email = "brian.hall@syncapp.com",
                     DepartmentId = departments[4].Id,
-                    AssignedToId = null, // Will be set to Michelle later
+                    AssignedToPersonalId = null, // Will be set to Michelle later
+                    PersonalId = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 }
             };
 
             // Set up the management hierarchy
             // Engineering: John is CTO, Sarah and Michael are team leads under John, others under team leads
-            users[1].AssignedToId = users[0].Id; // Sarah reports to John
-            users[2].AssignedToId = users[0].Id; // Michael reports to John
-            users[3].AssignedToId = users[1].Id; // Emily reports to Sarah
-            users[4].AssignedToId = users[1].Id; // David reports to Sarah
-            users[5].AssignedToId = users[2].Id; // Jessica reports to Michael
-            users[6].AssignedToId = users[2].Id; // Daniel reports to Michael
-            users[7].AssignedToId = users[1].Id; // Ashley reports to Sarah
+            users[1].AssignedToPersonalId = users[0].PersonalId; // Sarah reports to John
+            users[2].AssignedToPersonalId = users[0].PersonalId; // Michael reports to John
+            users[3].AssignedToPersonalId = users[1].PersonalId; // Emily reports to Sarah
+            users[4].AssignedToPersonalId = users[1].PersonalId; // David reports to Sarah
+            users[5].AssignedToPersonalId = users[2].PersonalId; // Jessica reports to Michael
+            users[6].AssignedToPersonalId = users[2].PersonalId; // Daniel reports to Michael
+            users[7].AssignedToPersonalId = users[1].PersonalId; // Ashley reports to Sarah
 
             // HR: Lisa is director, others report to her
-            users[9].AssignedToId = users[8].Id;  // Robert reports to Lisa
-            users[10].AssignedToId = users[8].Id; // Amanda reports to Lisa
+            users[9].AssignedToPersonalId = users[8].PersonalId;  // Robert reports to Lisa
+            users[10].AssignedToPersonalId = users[8].PersonalId; // Amanda reports to Lisa
 
             // Sales: Christopher is director, others report to him
-            users[12].AssignedToId = users[11].Id; // Nicole reports to Christopher
-            users[13].AssignedToId = users[11].Id; // Matthew reports to Christopher
-            users[14].AssignedToId = users[11].Id; // Jennifer reports to Christopher
+            users[12].AssignedToPersonalId = users[11].PersonalId; // Nicole reports to Christopher
+            users[13].AssignedToPersonalId = users[11].PersonalId; // Matthew reports to Christopher
+            users[14].AssignedToPersonalId = users[11].PersonalId; // Jennifer reports to Christopher
 
             // Marketing: Ryan is director, others report to him
-            users[16].AssignedToId = users[15].Id; // Lauren reports to Ryan
-            users[17].AssignedToId = users[15].Id; // Kevin reports to Ryan
+            users[16].AssignedToPersonalId = users[15].PersonalId; // Lauren reports to Ryan
+            users[17].AssignedToPersonalId = users[15].PersonalId; // Kevin reports to Ryan
 
             // Finance: Michelle is CFO, Brian reports to her
-            users[19].AssignedToId = users[18].Id; // Brian reports to Michelle
+            users[19].AssignedToPersonalId = users[18].PersonalId; // Brian reports to Michelle
 
             await context.Users.AddRangeAsync(users);
             await context.SaveChangesAsync();

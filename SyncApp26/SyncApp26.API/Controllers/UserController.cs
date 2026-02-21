@@ -32,12 +32,38 @@ namespace SyncApp26.API.Controllers
             return Ok(new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
+                AssignedToPersonalId = user.AssignedToPersonalId,
+                AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            });
+        }
+
+        [HttpGet("personal-id/{personalId}")]
+        public async Task<ActionResult<UserGETResponseDTO>> GetUserByPersonalId(string personalId)
+        {
+            var user = await _userService.GetUserByPersonalIdAsync(personalId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new UserGETResponseDTO
+            {
+                Id = user.Id,
+                PersonalId = user.PersonalId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                DepartmentId = user.DepartmentId,
+                DepartmentName = user.Department?.Name ?? "Unknown",
+                AssignedToPersonalId = user.AssignedToPersonalId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -51,12 +77,13 @@ namespace SyncApp26.API.Controllers
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
+                AssignedToPersonalId = user.AssignedToPersonalId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -83,12 +110,13 @@ namespace SyncApp26.API.Controllers
             var responseList = usersList.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
+                AssignedToPersonalId = user.AssignedToPersonalId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -98,24 +126,25 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("assigned-to/{assignedToId}")]
-        public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetUsersAssignedTo(Guid assignedToId)
+        public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetUsersAssignedTo(string assignedToPersonalId)
         {
-            var lineManager = await _userService.GetUserByIdAsync(assignedToId);
+            var lineManager = await _userService.GetUserByPersonalIdAsync(assignedToPersonalId);
             if (lineManager == null)
             {
                 return NotFound(new { message = "Line manager not found" });
             }
 
-            var users = await _userService.GetUsersAssignedToAsync(assignedToId);
+            var users = await _userService.GetUsersAssignedToAsync(assignedToPersonalId);
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
+                PersonalId = user.PersonalId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
                 DepartmentId = user.DepartmentId,
                 DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
+                AssignedToPersonalId = user.AssignedToPersonalId,
                 AssignedToName = $"{lineManager.FirstName} {lineManager.LastName}",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -160,9 +189,9 @@ namespace SyncApp26.API.Controllers
             }
 
             // Verify assigned to user exists if provided
-            if (userRequestDTO.AssignedToId.HasValue)
+            if (userRequestDTO.AssignedToPersonalId != null)
             {
-                var assignedTo = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
+                var assignedTo = await _userService.GetUserByPersonalIdAsync(userRequestDTO.AssignedToPersonalId);
                 if (assignedTo == null)
                 {
                     return BadRequest(new UserResponseDTO
@@ -176,11 +205,12 @@ namespace SyncApp26.API.Controllers
             var user = new User
             {
                 Id = Guid.NewGuid(),
+                PersonalId = Guid.NewGuid().ToString(),
                 FirstName = userRequestDTO.FirstName,
                 LastName = userRequestDTO.LastName,
                 Email = userRequestDTO.Email,
                 DepartmentId = userRequestDTO.DepartmentId,
-                AssignedToId = userRequestDTO.AssignedToId,
+                AssignedToPersonalId = userRequestDTO.AssignedToPersonalId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -228,7 +258,7 @@ namespace SyncApp26.API.Controllers
             }
 
             // Check for circular assignment (user cannot be assigned to themselves)
-            if (userRequestDTO.AssignedToId.HasValue && userRequestDTO.AssignedToId.Value == id)
+            if (userRequestDTO.AssignedToPersonalId != null && userRequestDTO.AssignedToPersonalId == existingUser.PersonalId)
             {
                 return BadRequest(new UserResponseDTO
                 {
@@ -249,9 +279,9 @@ namespace SyncApp26.API.Controllers
             }
 
             // Verify assigned to user exists if provided
-            if (userRequestDTO.AssignedToId.HasValue)
+            if (userRequestDTO.AssignedToPersonalId != null)
             {
-                var assignedTo = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
+                var assignedTo = await _userService.GetUserByPersonalIdAsync(userRequestDTO.AssignedToPersonalId);
                 if (assignedTo == null)
                 {
                     return BadRequest(new UserResponseDTO
@@ -262,7 +292,7 @@ namespace SyncApp26.API.Controllers
                 }
 
                 // Check for circular reference: ensure the assignedTo user is not already managed by this user
-                if (assignedTo.AssignedToId == id)
+                if (assignedTo.AssignedToPersonalId == existingUser.PersonalId)
                 {
                     return BadRequest(new UserResponseDTO
                     {
@@ -276,7 +306,7 @@ namespace SyncApp26.API.Controllers
             existingUser.LastName = userRequestDTO.LastName;
             existingUser.Email = userRequestDTO.Email;
             existingUser.DepartmentId = userRequestDTO.DepartmentId;
-            existingUser.AssignedToId = userRequestDTO.AssignedToId;
+            existingUser.AssignedToPersonalId = userRequestDTO.AssignedToPersonalId;
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(existingUser);

@@ -41,12 +41,12 @@ namespace SyncApp26.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(Guid assignedToId)
+        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(string assignedToPersonalId)
         {
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null)
+                .Where(u => u.AssignedToPersonalId == assignedToPersonalId && u.DeletedAt == null)
                 .ToListAsync();
         }
 
@@ -73,9 +73,9 @@ namespace SyncApp26.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> IsUserLineManagerAsync(Guid userId)
+        public async Task<bool> IsUserLineManagerAsync(string userPersonalId)
         {
-            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null);
+            return await _context.Users.AnyAsync(u => u.AssignedToPersonalId == userPersonalId && u.DeletedAt == null);
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -85,6 +85,15 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<User?> GetUserByPersonalIdAsync(string personalId)
+        {
+            return await _context.Users
+                .Include(u => u.Department)
+                .Include(u => u.AssignedTo)
+                .Where(u => u.DeletedAt == null)
+                .FirstOrDefaultAsync(u => u.PersonalId == personalId);
         }
     }
 }

@@ -136,11 +136,12 @@ export class ComparisonViewComponent {
         const user = comparison.csvUser || comparison.dbUser;
         const firstName = user?.firstName?.toLowerCase() || '';
         const lastName = user?.lastName?.toLowerCase() || '';
+        const email = user?.email?.toLowerCase() || '';
         const department = user?.departmentName?.toLowerCase() || '';
         const assignedToName = user?.assignedToName?.toLowerCase() || '';
         const fullName = `${firstName} ${lastName}`;
         
-        const directMatch = fullName.includes(query) || department.includes(query);
+        const directMatch = fullName.includes(query) || department.includes(query) || email.includes(query);
 
         const assignedToMatch = assignedToName.includes(query);
         

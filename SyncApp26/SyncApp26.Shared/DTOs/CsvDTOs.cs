@@ -4,11 +4,12 @@ namespace SyncApp26.Shared.DTOs;
 
 public class CsvUserDTO
 {
+    public required string PersonalId { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
     public required string Email { get; set; }
     public required string DepartmentName { get; set; }
-    public string? AssignedToEmail { get; set; } // Line manager email for lookup
+    public string? AssignedToPersonalId { get; set; } // Line manager personal ID for lookup
 }
 
 public class UserComparisonDTO
@@ -23,11 +24,12 @@ public class UserComparisonDTO
 
 public class CsvUserDataDTO
 {
+    public required string PersonalId { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
     public required string Email { get; set; }
     public required string DepartmentName { get; set; }
-    public string? AssignedToEmail { get; set; } // Line manager email
+    public string? AssignedToPersonalId { get; set; } // Line manager personal ID
     public string? AssignedToName { get; set; } // Line manager display name
 }
 

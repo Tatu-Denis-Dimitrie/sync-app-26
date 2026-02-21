@@ -28,9 +28,9 @@ namespace SyncApp26.Application.Services
             return await _userRepository.GetUsersByDepartmentIdAsync(departmentId);
         }
 
-        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(Guid assignedToId)
+        public async Task<IEnumerable<User>> GetUsersAssignedToAsync(string assignedToPersonalId)
         {
-            return await _userRepository.GetUsersAssignedToAsync(assignedToId);
+            return await _userRepository.GetUsersAssignedToAsync(assignedToPersonalId);
         }
 
         public async Task AddUserAsync(User user)
@@ -46,6 +46,11 @@ namespace SyncApp26.Application.Services
         public async Task DeleteUserAsync(Guid id)
         {
             await _userRepository.DeleteUserAsync(id);
+        }
+
+        public async Task<User?> GetUserByPersonalIdAsync(string personalId)
+        {
+            return await _userRepository.GetUserByPersonalIdAsync(personalId);
         }
     }
 }

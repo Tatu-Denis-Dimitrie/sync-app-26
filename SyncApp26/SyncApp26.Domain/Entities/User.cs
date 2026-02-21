@@ -4,10 +4,11 @@ namespace SyncApp26.Domain.Entities
     {
         public Guid Id { get; set; }
         public Guid DepartmentId { get; set; }
-        public Guid? AssignedToId { get; set; }
+        public string? AssignedToPersonalId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
+        public string PersonalId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
