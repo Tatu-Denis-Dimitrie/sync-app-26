@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
-import { map, delay, tap, catchError } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
+import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
+import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
+import { from } from 'rxjs';
 
 interface BackendUser {
   id: string;
@@ -25,16 +27,32 @@ interface BackendUser {
 export class UserSyncService {
   private apiUrl = environment.apiUrl + environment.endpoints.users;
   private departmentUrl = environment.apiUrl + environment.endpoints.departments;
-  private syncProgressSubject = new BehaviorSubject<SyncProgress | null>(null);
+  private syncProgressSubject = new BehaviorSubject<SyncProgressUpdate | null>(null);
   private currentComparisonSubject = new BehaviorSubject<UserComparison[] | null>(null);
   private usersSubject = new BehaviorSubject<User[]>([]);
+  private timingInfoSubject = new BehaviorSubject<{ validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null>(null);
+  private warningsSubject = new BehaviorSubject<string[]>([]);
+  private errorsSubject = new BehaviorSubject<string[]>([]);
 
   syncProgress$ = this.syncProgressSubject.asObservable();
   currentComparison$ = this.currentComparisonSubject.asObservable();
   users$ = this.usersSubject.asObservable();
+  uploadProgress$!: Observable<UploadProgress>;
+  timingInfo$ = this.timingInfoSubject.asObservable();
+  warnings$ = this.warningsSubject.asObservable();
+  errors$ = this.errorsSubject.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private signalrService: UserSyncSignalrService
+  ) {
+    this.uploadProgress$ = this.signalrService.uploadProgress$;
     this.loadUsers();
+
+    // Subscribe to SignalR sync progress and update local subject
+    this.signalrService.syncProgress$.subscribe(progress => {
+      this.syncProgressSubject.next(progress);
+    });
   }
 
   /**
@@ -190,18 +208,11 @@ export class UserSyncService {
    * Get departments from backend with user counts
    */
   getDepartments(): Observable<Department[]> {
-    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
-      map((departments: any[]) => {
+    return this.users$.pipe(
+      map(users => {
         const deptMap = new Map<string, { lineManagers: number, employees: number }>();
-        
-        // Initialize all departments from backend
-        departments.forEach(dept => {
-          deptMap.set(dept.name, { lineManagers: 0, employees: 0 });
-        });
 
-        // Get current users and count them
-        const currentUsers = this.usersSubject.getValue();
-        currentUsers.forEach(user => {
+        users.forEach(user => {
           if (!deptMap.has(user.departmentName)) {
             deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
           }
@@ -231,45 +242,101 @@ export class UserSyncService {
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
-    return this.http.get<any[]>(`${this.departmentUrl}`).pipe(
-      map(departments => {
-        const users = this.usersSubject.getValue();
-        return {
-          total: users.length,
-          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-          employees: users.filter(u => u.role === UserRole.Employee).length,
-          departments: departments.length
-        };
-      }),
-      catchError(error => {
-        console.error('Error fetching stats:', error);
-        const users = this.usersSubject.getValue();
-        return of({
-          total: users.length,
-          lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-          employees: users.filter(u => u.role === UserRole.Employee).length,
-          departments: new Set(users.map(u => u.departmentName)).size
-        });
-      })
+    return this.users$.pipe(
+      switchMap(users => 
+        this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+          map(departments => ({
+            total: users.length,
+            lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+            employees: users.filter(u => u.role === UserRole.Employee).length,
+            departments: departments.length
+          })),
+          catchError(error => {
+            console.error('Error fetching departments for stats:', error);
+            return of({
+              total: users.length,
+              lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+              employees: users.filter(u => u.role === UserRole.Employee).length,
+              departments: new Set(users.map(u => u.departmentName)).size
+            });
+          })
+        )
+      )
     );
   }
+
+  // ... other methods
 
   /**
    * Upload CSV file and compare with database
    */
-  uploadAndCompare(file: File): Observable<UserComparison[]> {
-    const formData = new FormData();
-    formData.append('file', file);
+  uploadAndCompare(file: File, skipInvalidRows: boolean = false): Observable<UserComparison[]> {
+    // Reset comparisons
+    this.currentComparisonSubject.next([]);
 
-    return this.http.post<UserComparison[]>(`${environment.apiUrl}/CsvSync/upload`, formData).pipe(
-      tap((comparisons) => {
-        this.currentComparisonSubject.next(comparisons);
+    // Subscribe to SignalR results and accumulate
+    const subscription = this.signalrService.comparisonResult$.subscribe(comparison => {
+      const current = this.currentComparisonSubject.value || [];
+      this.currentComparisonSubject.next([...current, comparison]);
+    });
+
+    return from(this.signalrService.startConnection()).pipe(
+      switchMap(() => {
+        const connectionId = this.signalrService.getConnectionId();
+        const headers: any = {};
+        if (connectionId) {
+          headers['X-Connection-Id'] = connectionId;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Add query parameter for skipping invalid rows
+        const url = `${environment.apiUrl}/CsvSync/upload${skipInvalidRows ? '?skipInvalidRows=true' : ''}`;
+
+        return this.http.post<any>(url, formData, { headers });
       }),
+      map((response: any) => {
+        // Handle both old format (array) and new format (object with comparisons)
+        if (Array.isArray(response)) {
+          return { comparisons: response, totalRows: response.length, validationTimeMs: 0, comparisonTimeMs: 0, totalTimeMs: 0 };
+        }
+        return response;
+      }),
+      tap((response) => {
+        // Use the final list from server to ensure completeness and correct order
+        this.currentComparisonSubject.next(response.comparisons);
+        
+        // Store timing information for display
+        this.timingInfoSubject.next({
+          validationTimeMs: response.validationTimeMs,
+          comparisonTimeMs: response.comparisonTimeMs,
+          totalTimeMs: response.totalTimeMs
+        });
+        
+        // Store warnings and errors if present
+        this.warningsSubject.next(response.warnings || []);
+        this.errorsSubject.next(response.errors || []);
+        
+        if (response.totalTimeMs) {
+          console.log(`Server processing time: ${response.totalTimeMs}ms (Validation: ${response.validationTimeMs}ms, Comparison: ${response.comparisonTimeMs}ms)`);
+        }
+        
+        if (response.warnings && response.warnings.length > 0) {
+          console.warn(`CSV validation warnings (${response.warnings.length}):`, response.warnings);
+        }
+        
+        if (response.errors && response.errors.length > 0) {
+          console.warn(`CSV validation errors (${response.invalidRows} rows skipped):`, response.errors);
+        }
+      }),
+      map(response => response.comparisons),
       catchError(error => {
         console.error('Error uploading CSV:', error);
         this.currentComparisonSubject.next(null);
-        throw error; // Re-throw to let component handle it
-      })
+        throw error;
+      }),
+      finalize(() => subscription.unsubscribe())
     );
   }
 
@@ -303,7 +370,15 @@ export class UserSyncService {
 
     const syncRequest = { items: selectedItems, fileName: fileName || null };
 
-    return this.http.post<SyncResult>(`${environment.apiUrl}/CsvSync/sync`, syncRequest).pipe(
+    return from(this.signalrService.startConnection()).pipe(
+      switchMap(() => {
+        const connectionId = this.signalrService.getConnectionId();
+        const headers: any = {};
+        if (connectionId) {
+          headers['X-Connection-Id'] = connectionId;
+        }
+        return this.http.post<SyncResult>(`${environment.apiUrl}/CsvSync/sync`, syncRequest, { headers });
+      }),
       tap((result) => {
         if (result.success) {
           // Refresh users list after successful sync
@@ -320,7 +395,7 @@ export class UserSyncService {
           recordsSkipped: 0,
           message: error.error?.error || 'Sync failed',
           errors: [error.message]
-        });
+        } as SyncResult);
       })
     );
   }

@@ -1,12 +1,13 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
 
 @Component({
   selector: 'app-comparison-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ScrollingModule],
   templateUrl: './comparison-view.component.html',
   styleUrls: ['./comparison-view.component.css']
 })
@@ -153,11 +154,11 @@ export class ComparisonViewComponent implements OnChanges {
   }
 
   getConflictCount(): number {
-    return this.comparisons.filter(c => c.conflicts.length > 0).length;
+    return this.getFilteredComparisons().filter(c => c.conflicts.length > 0).length;
   }
 
   getSelectedCount(): number {
-    return this.comparisons.filter(c => c.selected).length;
+    return this.getFilteredComparisons().filter(c => c.selected).length;
   }
 
   formatFieldName(field: string): string {
@@ -166,7 +167,11 @@ export class ComparisonViewComponent implements OnChanges {
 
   formatDate(date: Date | string | undefined): string {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString();
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
   }
 
   hasFieldConflict(comparison: UserComparison, field: string): boolean {
@@ -197,7 +202,15 @@ export class ComparisonViewComponent implements OnChanges {
 
         const assignedToMatch = assignedToName.includes(query);
         
-        return directMatch || assignedToMatch;
+        // Check if query matches any field from CSV or DB
+        return csvFullName.includes(query) || 
+               dbFullName.includes(query) ||
+               csvEmail.includes(query) || 
+               dbEmail.includes(query) ||
+               csvDepartment.includes(query) || 
+               dbDepartment.includes(query) ||
+               csvAssignedTo.includes(query) || 
+               dbAssignedTo.includes(query);
       }
 
       return true;

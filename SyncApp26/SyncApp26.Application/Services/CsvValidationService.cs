@@ -104,6 +104,7 @@ public class CsvValidationService : ICsvValidationService
                 if (rowValidation.errors.Count > 0)
                 {
                     result.InvalidRows++;
+                    result.InvalidRowNumbers.Add(rowNumber);
                     result.Errors.AddRange(rowValidation.errors);
                     result.IsValid = false;
                 }

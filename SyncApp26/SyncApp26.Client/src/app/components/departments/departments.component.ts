@@ -1,22 +1,41 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, merge, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { Department } from '../../models/csv-sync.model';
+import { PaginationComponent } from '../pagination/pagination.component';
 
 @Component({
   selector: 'app-departments',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   templateUrl: './departments.component.html',
   styleUrls: ['./departments.component.css']
 })
 export class DepartmentsComponent implements OnInit {
   departments$!: Observable<Department[]>;
+  paginatedDepartments$!: Observable<Department[]>;
   stats$!: Observable<any>;
+
+  private currentPage$ = new BehaviorSubject<number>(1);
+  pageSize = 9; // 3x3 grid
+  totalItems = 0;
+
+  get currentPage(): number { return this.currentPage$.value; }
+  set currentPage(value: number) { this.currentPage$.next(value); }
+
+  private searchQuery$ = new BehaviorSubject<string>('');
+  private sizeFilter$ = new BehaviorSubject<string>('all');
+
+  get searchQuery(): string { return this.searchQuery$.value; }
+  set searchQuery(value: string) { this.searchQuery$.next(value); }
+
+  get sizeFilter(): string { return this.sizeFilter$.value; }
+  set sizeFilter(value: string) { this.sizeFilter$.next(value); }
 
   constructor(
     private userSyncService: UserSyncService,

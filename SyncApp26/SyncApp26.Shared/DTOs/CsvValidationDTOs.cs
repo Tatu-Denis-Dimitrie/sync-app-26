@@ -8,6 +8,7 @@ public class CsvValidationResultDTO
     public int TotalRows { get; set; }
     public int ValidRows { get; set; }
     public int InvalidRows { get; set; }
+    public List<int> InvalidRowNumbers { get; set; } = new(); // Row numbers with errors (1-based)
 }
 
 public class CsvValidationErrorDTO

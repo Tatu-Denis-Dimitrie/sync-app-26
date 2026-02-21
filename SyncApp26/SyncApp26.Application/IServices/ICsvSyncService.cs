@@ -5,8 +5,8 @@ namespace SyncApp26.Application.IServices
 {
     public interface ICsvSyncService
     {
-        Task<List<UserComparisonDTO>> CompareWithDatabase(List<CsvUserDTO> csvUsers);
-        Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest);
+        Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows = 0, string? connectionId = null);
+        Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest, string? connectionId = null);
         Task<List<CSVDepartmentComparisionDTO>> CompareDepartmentsWithDatabase(List<CSVDepartmentDTO> csvDepartments);
         Task<SyncResultDTO> SyncDepartments(List<CSVDepartmentComparisionDTO> departmentSyncList);
     }

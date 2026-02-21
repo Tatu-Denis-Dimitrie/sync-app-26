@@ -3,6 +3,7 @@ export const environment = {
   apiUrl: 'https://your-production-api.com/api',
   endpoints: {
     users: '/user',
-    departments: '/department'
+    departments: '/department',
+    version: '/version'
   }
 };

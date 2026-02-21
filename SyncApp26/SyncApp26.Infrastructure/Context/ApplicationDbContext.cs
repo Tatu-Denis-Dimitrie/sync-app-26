@@ -35,6 +35,19 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.Email)
                     .IsRequired()
                     .HasMaxLength(255);
+                
+                // Add index on Email for fast lookups (most common query in CSV sync)
+                entity.HasIndex(e => e.Email)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Users_Email");
+                
+                // Add index on DeletedAt for soft delete filtering
+                entity.HasIndex(e => e.DeletedAt)
+                    .HasDatabaseName("IX_Users_DeletedAt");
+                
+                // Add composite index for department + soft delete queries
+                entity.HasIndex(e => new { e.DepartmentId, e.DeletedAt })
+                    .HasDatabaseName("IX_Users_DepartmentId_DeletedAt");
 
                 entity.Property(e => e.PersonalId)
                     .IsRequired()

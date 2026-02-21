@@ -3,6 +3,7 @@ export const environment = {
   apiUrl: 'https://staging-api.yourcompany.com/api',
   endpoints: {
     users: '/user',
-    departments: '/department'
+    departments: '/department',
+    version: '/version'
   }
 };
