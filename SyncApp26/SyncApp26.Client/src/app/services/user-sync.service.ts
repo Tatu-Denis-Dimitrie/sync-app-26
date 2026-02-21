@@ -209,28 +209,36 @@ export class UserSyncService {
    */
   getDepartments(): Observable<Department[]> {
     return this.users$.pipe(
-      map(users => {
-        const deptMap = new Map<string, { lineManagers: number, employees: number }>();
+      switchMap(users =>
+        this.http.get<any[]>(`${this.departmentUrl}`).pipe(
+          map((departments: any[]) => {
+            const deptMap = new Map<string, { lineManagers: number, employees: number }>();
 
-        users.forEach(user => {
-          if (!deptMap.has(user.departmentName)) {
-            deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
-          }
-          const dept = deptMap.get(user.departmentName)!;
-          if (user.role === UserRole.LineManager) {
-            dept.lineManagers++;
-          } else {
-            dept.employees++;
-          }
-        });
+            departments.forEach(dept => {
+              deptMap.set(dept.name, { lineManagers: 0, employees: 0 });
+            });
 
-        return Array.from(deptMap.entries()).map(([name, data]) => ({
-          id: name.toLowerCase().replace(/\s+/g, '-'),
-          name,
-          lineManagerCount: data.lineManagers,
-          employeeCount: data.employees
-        }));
-      }),
+            users.forEach(user => {
+              if (!deptMap.has(user.departmentName)) {
+                deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
+              }
+              const department = deptMap.get(user.departmentName)!;
+              if (user.role === UserRole.LineManager) {
+                department.lineManagers++;
+              } else {
+                department.employees++;
+              }
+            });
+
+            return Array.from(deptMap.entries()).map(([name, data]) => ({
+              id: name.toLowerCase().replace(/\s+/g, '-'),
+              name,
+              lineManagerCount: data.lineManagers,
+              employeeCount: data.employees
+            }));
+          })
+        )
+      ),
       catchError(error => {
         console.error('Error fetching departments:', error);
         return of([]);

@@ -1,13 +1,12 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ScrollingModule } from '@angular/cdk/scrolling';
 import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
 
 @Component({
   selector: 'app-comparison-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, ScrollingModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './comparison-view.component.html',
   styleUrls: ['./comparison-view.component.css']
 })
@@ -22,6 +21,16 @@ export class ComparisonViewComponent implements OnChanges {
   searchQuery = '';
   private explicitlySelected = new Set<string>();
   private explicitlyDeselected = new Set<string>();
+
+  get allUsersSelected(): boolean {
+    const filtered = this.getFilteredComparisons();
+    return filtered.length > 0 && filtered.every(c => c.selected);
+  }
+
+  get allConflictsSelected(): boolean {
+    const conflicts = this.getFilteredComparisons().flatMap(c => c.conflicts);
+    return conflicts.length > 0 && conflicts.every(conflict => conflict.selected);
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['comparisons'] && changes['comparisons'].previousValue !== changes['comparisons'].currentValue) {
@@ -42,6 +51,15 @@ export class ComparisonViewComponent implements OnChanges {
       }
     });
     this.selectionChange.emit(this.comparisons);
+  }
+
+  toggleSelectAllUsers(): void {
+    if (this.allUsersSelected) {
+      this.deselectAll();
+      return;
+    }
+
+    this.selectAll();
   }
 
   deselectAll(): void {
@@ -108,6 +126,19 @@ export class ComparisonViewComponent implements OnChanges {
         conflict.selected = !conflict.selected;
       }
     }
+  }
+
+  toggleSelectAllConflicts(): void {
+    const shouldSelectAll = !this.allConflictsSelected;
+
+    this.getFilteredComparisons().forEach(comparison => {
+      comparison.conflicts.forEach(conflict => {
+        conflict.selected = shouldSelectAll;
+        if (shouldSelectAll) {
+          conflict.selectedValue = 'csv';
+        }
+      });
+    });
   }
 
   isFieldSelected(comparison: UserComparison, field: string): boolean {
@@ -190,17 +221,22 @@ export class ComparisonViewComponent implements OnChanges {
       if (this.searchQuery.trim()) {
         const query = this.searchQuery.toLowerCase();
         
-        const user = comparison.csvUser || comparison.dbUser;
-        const firstName = user?.firstName?.toLowerCase() || '';
-        const lastName = user?.lastName?.toLowerCase() || '';
-        const email = user?.email?.toLowerCase() || '';
-        const department = user?.departmentName?.toLowerCase() || '';
-        const assignedToName = user?.assignedToName?.toLowerCase() || '';
-        const fullName = `${firstName} ${lastName}`;
+        const csvUser = comparison.csvUser;
+        const dbUser = comparison.dbUser;
         
-        const directMatch = fullName.includes(query) || department.includes(query) || email.includes(query);
-
-        const assignedToMatch = assignedToName.includes(query);
+        const csvFirstName = csvUser?.firstName?.toLowerCase() || '';
+        const csvLastName = csvUser?.lastName?.toLowerCase() || '';
+        const csvEmail = csvUser?.email?.toLowerCase() || '';
+        const csvDepartment = csvUser?.departmentName?.toLowerCase() || '';
+        const csvAssignedTo = csvUser?.assignedToName?.toLowerCase() || '';
+        const csvFullName = `${csvFirstName} ${csvLastName}`;
+        
+        const dbFirstName = dbUser?.firstName?.toLowerCase() || '';
+        const dbLastName = dbUser?.lastName?.toLowerCase() || '';
+        const dbEmail = dbUser?.email?.toLowerCase() || '';
+        const dbDepartment = dbUser?.departmentName?.toLowerCase() || '';
+        const dbAssignedTo = dbUser?.assignedToName?.toLowerCase() || '';
+        const dbFullName = `${dbFirstName} ${dbLastName}`;
         
         // Check if query matches any field from CSV or DB
         return csvFullName.includes(query) || 
