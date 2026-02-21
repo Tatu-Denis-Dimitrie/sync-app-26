@@ -2,8 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable, merge, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { Observable, merge, of, BehaviorSubject, combineLatest } from 'rxjs';
+import { switchMap, map } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { Department } from '../../models/csv-sync.model';
@@ -51,6 +51,35 @@ export class DepartmentsComponent implements OnInit {
     this.stats$ = refresh$.pipe(
       switchMap(() => this.userSyncService.getUserStats())
     );
+
+    this.paginatedDepartments$ = combineLatest([
+      this.departments$,
+      this.searchQuery$,
+      this.sizeFilter$,
+      this.currentPage$
+    ]).pipe(
+      map(([departments, searchQuery, sizeFilter, currentPage]) => {
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+
+        const filtered = departments.filter(department => {
+          const totalPeople = department.lineManagerCount + department.employeeCount;
+          const matchesSearch = !normalizedQuery || department.name.toLowerCase().includes(normalizedQuery);
+
+          const matchesSize =
+            sizeFilter === 'all' ||
+            (sizeFilter === 'small' && totalPeople <= 10) ||
+            (sizeFilter === 'medium' && totalPeople >= 11 && totalPeople <= 50) ||
+            (sizeFilter === 'large' && totalPeople > 50);
+
+          return matchesSearch && matchesSize;
+        });
+
+        this.totalItems = filtered.length;
+
+        const startIndex = (currentPage - 1) * this.pageSize;
+        return filtered.slice(startIndex, startIndex + this.pageSize);
+      })
+    );
   }
 
   viewDepartmentUsers(departmentName: string): void {
@@ -75,5 +104,17 @@ export class DepartmentsComponent implements OnInit {
 
   navigateToImportHistory(): void {
     this.router.navigate(['/import-history']);
+  }
+
+  onPageChange(event: any): void {
+    this.currentPage = typeof event === 'number' ? event : event.page;
+  }
+
+  onSearchChange(): void {
+    this.currentPage = 1;
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 1;
   }
 }

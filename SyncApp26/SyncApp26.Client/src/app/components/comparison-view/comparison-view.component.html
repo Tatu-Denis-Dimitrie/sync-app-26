@@ -106,14 +106,9 @@
   </div>
 
   <div class="space-y-6">
-    <cdk-virtual-scroll-viewport
-      itemSize="350"
-      minBufferPx="800"
-      maxBufferPx="2000"
-      class="h-[calc(100vh-250px)] w-full"
-    >
+    <div class="h-[calc(100vh-250px)] w-full overflow-y-auto">
       <div
-        *cdkVirtualFor="let comparison of getFilteredComparisons()"
+        *ngFor="let comparison of getFilteredComparisons()"
         class="bg-card border border-border rounded-lg overflow-hidden mb-6 mx-1"
       >
         <div class="px-6 py-4 bg-muted/30 border-b border-border">
@@ -703,7 +698,7 @@
           </p>
         </div>
       </div>
-    </cdk-virtual-scroll-viewport>
+    </div>
 
     <div
       *ngIf="comparisons.length === 0"

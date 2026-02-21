@@ -295,7 +295,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (comparisons) => {
           console.log('CSV uploaded and compared:', comparisons);
-          this.currentDepartmentComparisons = comparisons;
+          this.currentDepartmentComparisons = this.normalizeDepartmentComparisons(comparisons);
           this.isUploading = false;
           this.showDepartmentComparison = true;
         },
@@ -428,7 +428,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.isSyncing = true;
-    const selected = this.currentDepartmentComparisons.filter((c: any) => c.selected);
+    const selected = this.currentDepartmentComparisons.filter((c: CSVDepartmentComparisonDTO) => c.selected && c.status === 'new');
     this.departmentsSyncService.syncDepartments(selected)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -455,7 +455,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   toggleAllDepartmentSelections(checked: boolean): void {
-    this.currentDepartmentComparisons = this.currentDepartmentComparisons.map((c: any) => ({
+    this.currentDepartmentComparisons = this.currentDepartmentComparisons.map((c: CSVDepartmentComparisonDTO) => ({
       ...c,
       selected: c.status === 'new' ? checked : false
     }));
@@ -466,6 +466,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     comparison.selected = !comparison.selected;
+  }
+
+  private normalizeDepartmentComparisons(comparisons: CSVDepartmentComparisonDTO[]): CSVDepartmentComparisonDTO[] {
+    return (comparisons || []).map(comparison => {
+      const normalizedStatus = (comparison.status || '').toLowerCase() as CSVDepartmentComparisonDTO['status'];
+      return {
+        ...comparison,
+        status: normalizedStatus,
+        selected: normalizedStatus === 'new'
+      };
+    });
   }
 
   getSelectedDepartmentSyncCount(): number {
