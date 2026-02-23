@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, merge, of, BehaviorSubject, combineLatest, Subject } from 'rxjs';
-import { switchMap, map, startWith } from 'rxjs/operators';
+import { switchMap, map, startWith, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { Department } from '../../models/csv-sync.model';
@@ -18,6 +18,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
 })
 export class DepartmentsComponent implements OnInit {
   departments$!: Observable<Department[]>;
+  deletedDepartments$!: Observable<Department[]>;
   paginatedDepartments$!: Observable<Department[]>;
   stats$!: Observable<any>;
 
@@ -42,7 +43,7 @@ export class DepartmentsComponent implements OnInit {
     private userSyncService: UserSyncService,
     private departmentsSyncService: DepartmentsSyncService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Refresh departments when requested or when sync happens
@@ -50,11 +51,15 @@ export class DepartmentsComponent implements OnInit {
       this.refreshTrigger$.pipe(startWith(null)), // Initial load and manual refresh
       this.departmentsSyncService.departmentsSynced$ // Auto-refresh after department sync
     );
-    
+
     this.departments$ = refresh$.pipe(
       switchMap(() => this.userSyncService.getDepartments())
     );
-    
+
+    this.deletedDepartments$ = refresh$.pipe(
+      switchMap(() => this.userSyncService.getDeletedDepartments())
+    );
+
     this.stats$ = refresh$.pipe(
       switchMap(() => this.userSyncService.getUserStats())
     );
@@ -99,7 +104,7 @@ export class DepartmentsComponent implements OnInit {
 
   toggleDepartmentStatus(event: Event, dept: Department): void {
     event.stopPropagation(); // Prevent navigation when clicking button
-    
+
     const newStatus = !dept.isActive;
     this.userSyncService.updateDepartment(dept.id, dept.name, newStatus).subscribe({
       next: () => {
@@ -139,5 +144,122 @@ export class DepartmentsComponent implements OnInit {
 
   onFilterChange(): void {
     this.currentPage = 1;
+  }
+
+  getDaysRemaining(deletedAt: string | Date | undefined): number {
+    if (!deletedAt) return 0;
+    const deletedDate = new Date(deletedAt);
+    const deletionDate = new Date(deletedDate.getTime() + 90 * 24 * 60 * 60 * 1000); // Add 90 days
+    const today = new Date();
+    const diffTime = Math.max(0, deletionDate.getTime() - today.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  // Edit and Delete Modals
+  isEditModalOpen = false;
+  isDeleteModalOpen = false;
+  selectedDept: Department | null = null;
+  editDeptName = '';
+  transferToDeptId = '';
+  allDepartments: Department[] = [];
+
+  openEditModal(dept: Department, event: Event): void {
+    event.stopPropagation();
+    this.selectedDept = dept;
+    this.editDeptName = dept.name;
+    this.isEditModalOpen = true;
+  }
+
+  closeEditModal(): void {
+    this.isEditModalOpen = false;
+    this.selectedDept = null;
+    this.editDeptName = '';
+  }
+
+  saveDepartment(): void {
+    if (!this.selectedDept || !this.editDeptName.trim()) return;
+
+    this.userSyncService.updateDepartment(this.selectedDept.id, this.editDeptName, this.selectedDept.isActive)
+      .subscribe({
+        next: () => {
+          this.closeEditModal();
+          this.refreshTrigger$.next();
+        },
+        error: (err) => {
+          console.error('Error updating department:', err);
+          alert(err.error?.message || 'Error updating department');
+        }
+      });
+  }
+
+  openDeleteModal(dept: Department, event: Event): void {
+    event.stopPropagation();
+    this.selectedDept = dept;
+    this.transferToDeptId = '';
+
+    // Store all other active departments for the transfer dropdown
+    this.departments$.pipe(take(1)).subscribe(depts => {
+      this.allDepartments = depts.filter(d => d.id !== dept.id && d.isActive);
+      this.isDeleteModalOpen = true;
+    });
+  }
+
+  closeDeleteModal(): void {
+    this.isDeleteModalOpen = false;
+    this.selectedDept = null;
+    this.transferToDeptId = '';
+  }
+
+  confirmDelete(): void {
+    if (!this.selectedDept) return;
+
+    const hasUsers = (this.selectedDept.employeeCount + this.selectedDept.lineManagerCount) > 0;
+    if (hasUsers && !this.transferToDeptId) {
+      alert('Please select a department to transfer the existing users to.');
+      return;
+    }
+
+    this.userSyncService.deleteDepartment(this.selectedDept.id, hasUsers ? this.transferToDeptId : undefined)
+      .subscribe({
+        next: () => {
+          this.closeDeleteModal();
+          this.refreshTrigger$.next();
+        },
+        error: (err) => {
+          console.error('Error deleting department:', err);
+          alert(err.error?.message || 'Error deleting department');
+        }
+      });
+  }
+
+  isRestoreModalOpen = false;
+  deptToRestore: Department | null = null;
+
+  openRestoreModal(dept: Department, event: Event): void {
+    event.stopPropagation();
+    this.deptToRestore = dept;
+    this.isRestoreModalOpen = true;
+  }
+
+  closeRestoreModal(): void {
+    this.isRestoreModalOpen = false;
+    this.deptToRestore = null;
+  }
+
+  confirmRestore(): void {
+    if (!this.deptToRestore) return;
+
+    this.userSyncService.restoreDepartment(this.deptToRestore.id).subscribe({
+      next: () => {
+        console.log(`Department ${this.deptToRestore?.name} restored successfully`);
+        this.closeRestoreModal();
+        this.refreshTrigger$.next();
+      },
+      error: (err) => {
+        console.error('Error restoring department:', err);
+        alert(err.error?.message || 'Error restoring department');
+        this.closeRestoreModal();
+      }
+    });
   }
 }

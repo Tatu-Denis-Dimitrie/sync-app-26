@@ -5,7 +5,7 @@ import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators
 import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
-import { from } from 'rxjs';
+import { from, combineLatest } from 'rxjs';
 
 interface BackendUser {
   id: string;
@@ -15,6 +15,7 @@ interface BackendUser {
   email: string;
   departmentId: string;
   departmentName: string;
+  assignedToId?: string;
   assignedToPersonalId?: string;
   assignedToName?: string;
   createdAt: string;
@@ -71,19 +72,16 @@ export class UserSyncService {
   }
 
   /**
-   * Calculate department counts from users
+   * Calculate department counts from users matching their logic
    */
-  private calculateDepartmentCounts(departments: { id: string; name: string; isActive: boolean }[]): Department[] {
-    const users = this.usersSubject.value;
-    
-    // Create a map of department counts
+  private calculateDepartmentCounts(departments: { id: string; name: string; isActive: boolean; deletedAt?: string | Date }[], users: User[]): Department[] {
     const deptMap = new Map<string, { lineManagers: number, employees: number }>();
 
     users.forEach(user => {
-      if (!deptMap.has(user.departmentName)) {
-        deptMap.set(user.departmentName, { lineManagers: 0, employees: 0 });
+      if (!deptMap.has(user.departmentId)) {
+        deptMap.set(user.departmentId, { lineManagers: 0, employees: 0 });
       }
-      const dept = deptMap.get(user.departmentName)!;
+      const dept = deptMap.get(user.departmentId)!;
       if (user.role === UserRole.LineManager) {
         dept.lineManagers++;
       } else {
@@ -91,13 +89,13 @@ export class UserSyncService {
       }
     });
 
-    // Map departments with counts
     return departments.map(dept => ({
       id: dept.id,
       name: dept.name,
       isActive: dept.isActive,
-      lineManagerCount: deptMap.get(dept.name)?.lineManagers || 0,
-      employeeCount: deptMap.get(dept.name)?.employees || 0
+      deletedAt: dept.deletedAt,
+      lineManagerCount: deptMap.get(dept.id)?.lineManagers || 0,
+      employeeCount: deptMap.get(dept.id)?.employees || 0
     }));
   }
 
@@ -105,9 +103,10 @@ export class UserSyncService {
    * Map backend user to frontend user and calculate role
    */
   private mapBackendUser(backendUser: BackendUser, allUsers: BackendUser[]): User {
-    // Determine role: if user has anyone assigned to them, they're a line manager
-    const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
-    
+    // Determine role: if user has an assigned manager, they are an Employee.
+    // Otherwise, they are a Line Manager.
+    const isEmployee = !!backendUser.assignedToId || !!backendUser.assignedToPersonalId;
+
     return {
       id: backendUser.id,
       personalId: backendUser.personalId,
@@ -116,11 +115,12 @@ export class UserSyncService {
       email: backendUser.email,
       departmentId: backendUser.departmentId,
       departmentName: backendUser.departmentName,
+      assignedToId: backendUser.assignedToId,
       assignedToPersonalId: backendUser.assignedToPersonalId,
       assignedToName: backendUser.assignedToName,
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-      role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
+      role: isEmployee ? UserRole.Employee : UserRole.LineManager
     };
   }
 
@@ -149,7 +149,7 @@ export class UserSyncService {
         // We need all users to calculate role, so we'll use the cached users
         const allUsers = this.usersSubject.value;
         const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
-        
+
         return {
           id: backendUser.id,
           personalId: backendUser.personalId,
@@ -158,6 +158,7 @@ export class UserSyncService {
           email: backendUser.email,
           departmentId: backendUser.departmentId,
           departmentName: backendUser.departmentName,
+          assignedToId: backendUser.assignedToId,
           assignedToPersonalId: backendUser.assignedToPersonalId,
           assignedToName: backendUser.assignedToName,
           createdAt: new Date(backendUser.createdAt),
@@ -185,6 +186,7 @@ export class UserSyncService {
           email: backendUser.email,
           departmentId: backendUser.departmentId,
           departmentName: backendUser.departmentName,
+          assignedToId: backendUser.assignedToId,
           assignedToPersonalId: backendUser.assignedToPersonalId,
           assignedToName: backendUser.assignedToName,
           createdAt: new Date(backendUser.createdAt),
@@ -239,10 +241,29 @@ export class UserSyncService {
    * Get departments from backend with user counts
    */
   getDepartments(): Observable<Department[]> {
-    return this.http.get<{ id: string; name: string; isActive: boolean }[]>(this.departmentUrl).pipe(
-      map(apiDepartments => this.calculateDepartmentCounts(apiDepartments)),
+    return combineLatest([
+      this.http.get<{ id: string; name: string; isActive: boolean; deletedAt?: string | Date }[]>(this.departmentUrl),
+      this.users$
+    ]).pipe(
+      map(([apiDepartments, users]) => this.calculateDepartmentCounts(apiDepartments, users)),
       catchError(error => {
         console.error('Error loading departments:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get deleted departments from backend
+   */
+  getDeletedDepartments(): Observable<Department[]> {
+    return combineLatest([
+      this.http.get<{ id: string; name: string; isActive: boolean; deletedAt?: string | Date }[]>(`${this.departmentUrl}/scheduled-for-deletion`),
+      this.users$
+    ]).pipe(
+      map(([apiDepartments, users]) => this.calculateDepartmentCounts(apiDepartments, users)),
+      catchError(error => {
+        console.error('Error loading deleted departments:', error);
         return of([]);
       })
     );
@@ -259,11 +280,46 @@ export class UserSyncService {
   }
 
   /**
+   * Delete a department (soft delete)
+   */
+  deleteDepartment(id: string, transferToId?: string): Observable<any> {
+    const url = transferToId ? `${this.departmentUrl}/${id}?transferToId=${transferToId}` : `${this.departmentUrl}/${id}`;
+    return this.http.delete(url).pipe(
+      tap(() => this.loadUsers()) // Refresh users list after possible transfer
+    );
+  }
+
+  /**
+   * Restore a soft-deleted department
+   */
+  restoreDepartment(id: string): Observable<any> {
+    return this.http.post(`${this.departmentUrl}/${id}/restore`, {});
+  }
+
+  /**
+   * Update user details
+   */
+  updateUser(id: string, userData: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}`, userData).pipe(
+      tap(() => this.loadUsers()) // Refresh users list after update
+    );
+  }
+
+  /**
+   * Delete a user
+   */
+  deleteUser(id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${id}`).pipe(
+      tap(() => this.loadUsers()) // Refresh users list after deletion
+    );
+  }
+
+  /**
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
     return this.users$.pipe(
-      switchMap(users => 
+      switchMap(users =>
         this.http.get<any[]>(`${this.departmentUrl}`).pipe(
           map(departments => ({
             total: users.length,
@@ -326,26 +382,26 @@ export class UserSyncService {
       tap((response) => {
         // Use the final list from server to ensure completeness and correct order
         this.currentComparisonSubject.next(response.comparisons);
-        
+
         // Store timing information for display
         this.timingInfoSubject.next({
           validationTimeMs: response.validationTimeMs,
           comparisonTimeMs: response.comparisonTimeMs,
           totalTimeMs: response.totalTimeMs
         });
-        
+
         // Store warnings and errors if present
         this.warningsSubject.next(response.warnings || []);
         this.errorsSubject.next(response.errors || []);
-        
+
         if (response.totalTimeMs) {
           console.log(`Server processing time: ${response.totalTimeMs}ms (Validation: ${response.validationTimeMs}ms, Comparison: ${response.comparisonTimeMs}ms)`);
         }
-        
+
         if (response.warnings && response.warnings.length > 0) {
           console.warn(`CSV validation warnings (${response.warnings.length}):`, response.warnings);
         }
-        
+
         if (response.errors && response.errors.length > 0) {
           console.warn(`CSV validation errors (${response.invalidRows} rows skipped):`, response.errors);
         }

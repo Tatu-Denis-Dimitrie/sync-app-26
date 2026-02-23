@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { User, UserRole, Department, ImportConflictHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
@@ -23,35 +23,35 @@ export class EmployeesDetailComponent implements OnInit {
   importConflicts: ImportConflictHistory[] = [];
   conflictsLoading = false;
   conflictsError = '';
-  
+
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 10;
   totalItems = 0;
-  
+
   get currentPage(): number { return this.currentPage$.value; }
   set currentPage(value: number) { this.currentPage$.next(value); }
-  
+
   private searchQuery$ = new BehaviorSubject<string>('');
   private selectedDepartment$ = new BehaviorSubject<string>('all');
-  
+
   get searchQuery(): string { return this.searchQuery$.value; }
   set searchQuery(value: string) { this.searchQuery$.next(value); }
-  
+
   get selectedDepartment(): string { return this.selectedDepartment$.value; }
   set selectedDepartment(value: string) { this.selectedDepartment$.next(value); }
-  
+
   UserRole = UserRole;
 
   constructor(
     private userSyncService: UserSyncService,
     private router: Router,
     private route: ActivatedRoute
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.users$ = this.userSyncService.users$;
     this.departments$ = this.userSyncService.getDepartments();
-    
+
     // Check if specific user ID in route params
     this.route.params.subscribe(params => {
       if (params['id']) {
@@ -63,7 +63,7 @@ export class EmployeesDetailComponent implements OnInit {
         });
       }
     });
-    
+
     this.paginatedUsers$ = combineLatest([
       this.users$,
       this.searchQuery$,
@@ -74,17 +74,17 @@ export class EmployeesDetailComponent implements OnInit {
         // Filter users
         let filtered = users.filter(user => {
           const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-          const matchesSearch = !searchQuery || 
+          const matchesSearch = !searchQuery ||
             fullName.includes(searchQuery.toLowerCase()) ||
             user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
             user.departmentName.toLowerCase().includes(searchQuery.toLowerCase());
-          const matchesDepartment = selectedDepartment === 'all' || 
+          const matchesDepartment = selectedDepartment === 'all' ||
             user.departmentName === selectedDepartment;
           return matchesSearch && matchesDepartment;
         });
-        
+
         this.totalItems = filtered.length;
-        
+
         // Paginate
         const startIndex = (currentPage - 1) * this.pageSize;
         return filtered.slice(startIndex, startIndex + this.pageSize);
@@ -205,12 +205,12 @@ export class EmployeesDetailComponent implements OnInit {
     const now = new Date().getTime();
     const then = new Date(date).getTime();
     const diff = now - then;
-    
+
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d ago`;
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;
@@ -235,5 +235,118 @@ export class EmployeesDetailComponent implements OnInit {
 
   navigateToImportHistory(): void {
     this.router.navigate(['/import-history']);
+  }
+
+  // Edit and Delete Modal State and Logic
+  isEditModalOpen = false;
+  isDeleteModalOpen = false;
+
+  editForm = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    departmentId: '',
+    role: UserRole.Employee,
+    assignedToId: ''
+  };
+
+  allUsers: User[] = [];
+
+  openEditModal(user: User, event: Event): void {
+    event.stopPropagation();
+    this.selectedUser = user;
+    this.editForm = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      departmentId: user.departmentId,
+      role: user.role || UserRole.Employee,
+      assignedToId: user.assignedToId || ''
+    };
+
+    // Store all users for the Line Manager dropdown
+    this.users$.pipe(take(1)).subscribe(users => {
+      this.allUsers = users;
+      this.isEditModalOpen = true;
+    });
+  }
+
+  closeEditModal(): void {
+    this.isEditModalOpen = false;
+  }
+
+  getAvailableLineManagers(): User[] {
+    // Exclude the current user from being their own line manager
+    // Only include line managers from the selected department in the edit form
+    return this.allUsers.filter(u =>
+      u.role === UserRole.LineManager &&
+      u.departmentId === this.editForm.departmentId &&
+      (!this.selectedUser || u.id !== this.selectedUser.id)
+    );
+  }
+
+  saveUser(): void {
+    if (!this.selectedUser) return;
+
+    const payload = {
+      firstName: this.editForm.firstName,
+      lastName: this.editForm.lastName,
+      email: this.editForm.email,
+      departmentId: this.editForm.departmentId,
+      assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
+    };
+
+    if (this.editForm.role === UserRole.Employee && !payload.assignedToId) {
+      alert('Please select a Line Manager for the Employee.');
+      return;
+    }
+
+    this.userSyncService.updateUser(this.selectedUser.id, payload).subscribe({
+      next: () => {
+        this.closeEditModal();
+        // Since loadUsers is called in service, users$ will emit updated list
+        // Update the selectedUser with the new details locally to rapidly refresh UI
+        if (this.selectedUser) {
+          this.selectedUser.firstName = payload.firstName;
+          this.selectedUser.lastName = payload.lastName;
+          this.selectedUser.email = payload.email;
+          this.selectedUser.departmentId = payload.departmentId;
+          // The re-evaluation of Role/DepartmentName will happen when users$ emits automatically in selectUser trigger
+          this.users$.pipe(take(1)).subscribe(users => {
+            const updated = users.find(u => u.id === this.selectedUser?.id);
+            if (updated) this.selectedUser = updated;
+          });
+        }
+      },
+      error: (err) => {
+        console.error('Error updating user:', err);
+        alert(err.error?.message || 'Error updating user');
+      }
+    });
+  }
+
+  openDeleteModal(user: User, event: Event): void {
+    event.stopPropagation();
+    this.selectedUser = user;
+    this.isDeleteModalOpen = true;
+  }
+
+  closeDeleteModal(): void {
+    this.isDeleteModalOpen = false;
+  }
+
+  confirmDelete(): void {
+    if (!this.selectedUser) return;
+
+    this.userSyncService.deleteUser(this.selectedUser.id).subscribe({
+      next: () => {
+        this.closeDeleteModal();
+        this.closeDetails(); // Close the detail panel since the user is gone
+      },
+      error: (err) => {
+        console.error('Error deleting user:', err);
+        alert(err.error?.message || 'Error deleting user');
+      }
+    });
   }
 }

@@ -19,6 +19,7 @@ export interface User {
   email: string;
   departmentId: string;
   departmentName: string;
+  assignedToId?: string;
   assignedToPersonalId?: string;
   assignedToName?: string;
   createdAt: Date;
@@ -33,6 +34,7 @@ export interface Department {
   isActive: boolean;
   lineManagerCount: number;
   employeeCount: number;
+  deletedAt?: string | Date;
 }
 
 export interface UserComparison {

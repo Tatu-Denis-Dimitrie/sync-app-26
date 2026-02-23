@@ -32,5 +32,15 @@ namespace SyncApp26.Application.Services
         {
             await _departmentRepository.UpdateDepartmentAsync(department);
         }
+
+        public async Task<IEnumerable<Department>> GetDeletedDepartmentsAsync()
+        {
+            return await _departmentRepository.GetDeletedDepartmentsAsync();
+        }
+
+        public async Task<Department?> GetDeletedDepartmentByIdAsync(Guid id)
+        {
+            return await _departmentRepository.GetDeletedDepartmentByIdAsync(id);
+        }
     }
 }
