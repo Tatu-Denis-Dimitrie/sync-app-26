@@ -45,6 +45,45 @@ namespace SyncApp26.API.Controllers
             }));
         }
 
+        [HttpGet("scheduled-for-deletion")]
+        public async Task<ActionResult<IEnumerable<DepartmentGETResponseDTO>>> GetScheduledForDeletionDepartments()
+        {
+            var departments = await _departmentService.GetDeletedDepartmentsAsync();
+            return Ok(departments.Select(d => new DepartmentGETResponseDTO
+            {
+                Id = d.Id,
+                Name = d.Name,
+                IsActive = d.IsActive,
+                DeletedAt = d.DeletedAt
+            }));
+        }
+
+        [HttpPost("{id}/restore")]
+        public async Task<ActionResult<DepartmentResponseDTO>> RestoreDepartment(Guid id)
+        {
+            var existingDepartment = await _departmentService.GetDeletedDepartmentByIdAsync(id);
+            if (existingDepartment == null)
+            {
+                return new DepartmentResponseDTO
+                {
+                    Success = false,
+                    Message = "Scheduled for deletion department not found",
+                };
+            }
+
+            existingDepartment.DeletedAt = null;
+            existingDepartment.IsActive = false; // Restore as inactive by default
+            existingDepartment.UpdatedAt = DateTime.UtcNow;
+
+            await _departmentService.UpdateDepartmentAsync(existingDepartment);
+
+            return new DepartmentResponseDTO
+            {
+                Success = true,
+                Message = "Department successfully restored"
+            };
+        }
+
         [HttpPost]
         public async Task<ActionResult<DepartmentResponseDTO>> AddDepartment([FromBody] DepartmentRequestDTO departmentRequestDTO)
         {
@@ -94,7 +133,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<DepartmentResponseDTO>> DeleteDepartment(Guid id)
+        public async Task<ActionResult<DepartmentResponseDTO>> DeleteDepartment(Guid id, [FromQuery] Guid? transferToId, [FromServices] IUserService userService)
         {
             var existingDepartment = await _departmentService.GetDepartmentByIdAsync(id);
             if (existingDepartment == null)
@@ -106,12 +145,52 @@ namespace SyncApp26.API.Controllers
                 };
             }
 
+            var usersInDepartment = await userService.GetUsersByDepartmentIdAsync(id);
+            if (usersInDepartment.Any())
+            {
+                if (!transferToId.HasValue)
+                {
+                    return BadRequest(new DepartmentResponseDTO
+                    {
+                        Success = false,
+                        Message = "Department has assigned users. Please provide a transfer department ID."
+                    });
+                }
+
+                var transferDepartment = await _departmentService.GetDepartmentByIdAsync(transferToId.Value);
+                if (transferDepartment == null)
+                {
+                    return BadRequest(new DepartmentResponseDTO
+                    {
+                        Success = false,
+                        Message = "Transfer department not found."
+                    });
+                }
+
+                if (transferToId.Value == id)
+                {
+                    return BadRequest(new DepartmentResponseDTO
+                    {
+                        Success = false,
+                        Message = "Cannot transfer users to the same department being deleted."
+                    });
+                }
+
+                foreach (var user in usersInDepartment)
+                {
+                    user.DepartmentId = transferToId.Value;
+                    await userService.UpdateUserAsync(user);
+                }
+            }
+
+            existingDepartment.IsActive = false;
             existingDepartment.DeletedAt = DateTime.UtcNow;
             await _departmentService.UpdateDepartmentAsync(existingDepartment);
+            
             return new DepartmentResponseDTO
             {
                 Success = true,
-                Message = "Department deleted successfully",
+                Message = "Department deleted/deactivated successfully",
             };
         }
     }

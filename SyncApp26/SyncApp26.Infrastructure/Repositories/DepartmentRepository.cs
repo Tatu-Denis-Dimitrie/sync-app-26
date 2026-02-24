@@ -39,5 +39,19 @@ namespace SyncApp26.Infrastructure.Repositories
             _context.Departments.Update(department);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<IEnumerable<Department>> GetDeletedDepartmentsAsync()
+        {
+            return await _context.Departments
+                .Where(d => d.DeletedAt != null)
+                .ToListAsync();
+        }
+
+        public async Task<Department?> GetDeletedDepartmentByIdAsync(Guid id)
+        {
+            return await _context.Departments
+                .Where(d => d.DeletedAt != null)
+                .FirstOrDefaultAsync(d => d.Id == id);
+        }
     }
 }

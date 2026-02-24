@@ -57,6 +57,9 @@ builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
 builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
 builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
 
+// Background Services
+builder.Services.AddHostedService<DepartmentCleanupService>();
+
 var app = builder.Build();
 
 // Seed the database
