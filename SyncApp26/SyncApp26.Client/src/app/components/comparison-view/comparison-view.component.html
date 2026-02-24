@@ -83,7 +83,7 @@
       <div class="flex gap-2">
         <button
           (click)="toggleSort('createdAt')"
-          class="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-accent transition-colors flex items-center gap-1"
+          class="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-accent hover:text-foreground transition-colors flex items-center gap-1"
           [class.bg-primary]="sortField === 'createdAt'"
           [class.text-primary-foreground]="sortField === 'createdAt'"
           title="Sort by created date"
@@ -92,7 +92,7 @@
         </button>
         <button
           (click)="toggleSort('updatedAt')"
-          class="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-accent transition-colors flex items-center gap-1"
+          class="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-accent hover:text-foreground transition-colors flex items-center gap-1"
           [class.bg-primary]="sortField === 'updatedAt'"
           [class.text-primary-foreground]="sortField === 'updatedAt'"
           title="Sort by updated date"
