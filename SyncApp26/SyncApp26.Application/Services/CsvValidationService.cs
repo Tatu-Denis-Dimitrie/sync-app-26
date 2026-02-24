@@ -369,7 +369,7 @@ public class CsvValidationService : ICsvValidationService
         if (columnMap.TryGetValue("AssignedToPersonalId", out int assignedIdx))
         {
             var assignedPersonalId = values[assignedIdx];
-            if (!string.IsNullOrWhiteSpace(assignedPersonalId))
+            if (!string.IsNullOrWhiteSpace(assignedPersonalId) && !Guid.TryParse(assignedPersonalId, out _))
             {
                 warnings.Add($"Row {rowNumber}: AssignedToPersonalId '{assignedPersonalId}' is not in valid format");
             }
