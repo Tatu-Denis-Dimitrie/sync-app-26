@@ -15,6 +15,16 @@ export interface RegisterResponse {
   token: string;
 }
 
+export interface LoginRequest {
+    email: string;
+    password: string;
+}
+
+export interface LoginResponse {
+    token: string;
+    message: string;
+}
+
 export interface ErrorResponse {
   message: string;
 }
@@ -29,5 +39,9 @@ export class AuthenticationService {
 
   register(request: RegisterRequest): Observable<RegisterResponse> {
     return this.http.post<RegisterResponse>(`${this.apiUrl}/register`, request);
+  }
+
+  login(request: LoginRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request);
   }
 }

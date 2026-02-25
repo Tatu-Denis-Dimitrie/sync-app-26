@@ -42,7 +42,10 @@
         <a routerLink="/forgot-password" class="link">Forgot Password?</a>
       </div>
 
-      <button type="submit" class="login-button">Sign In</button>
+      <button type="submit" class="login-button" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Sign In</span>
+        <span *ngIf="isLoading">Signing in...</span>
+      </button>
     </form>
 
     <div class="login-footer">
