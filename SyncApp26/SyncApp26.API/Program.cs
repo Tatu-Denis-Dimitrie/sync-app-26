@@ -58,6 +58,7 @@ builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
 builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();
