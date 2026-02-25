@@ -52,5 +52,10 @@ namespace SyncApp26.Application.Services
         {
             return await _userRepository.GetUserByPersonalIdAsync(personalId);
         }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _userRepository.GetUserByEmailAsync(email);
+        }
     }
 }

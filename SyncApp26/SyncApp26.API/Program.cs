@@ -56,6 +56,8 @@ builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
 builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
 builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
 builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();

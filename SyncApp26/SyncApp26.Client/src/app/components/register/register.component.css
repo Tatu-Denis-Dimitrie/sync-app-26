@@ -94,6 +94,16 @@
 	text-align: center;
 }
 
+.success-message {
+	padding: 0.75rem;
+	background-color: #d1fae5;
+	border: 1px solid #6ee7b7;
+	border-radius: 8px;
+	color: #065f46;
+	font-size: 0.875rem;
+	text-align: center;
+}
+
 .register-button {
 	width: 100%;
 	padding: 0.65rem;
@@ -106,6 +116,12 @@
 	cursor: pointer;
 	transition: all 0.3s ease;
 	margin-top: 0.25rem;
+}
+
+.register-button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
 }
 
 .register-button:hover {

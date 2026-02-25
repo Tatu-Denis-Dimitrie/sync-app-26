@@ -80,7 +80,14 @@
 				{{ errorMessage }}
 			</div>
 
-			<button type="submit" class="register-button">Register</button>
+			<div *ngIf="successMessage" class="success-message">
+				{{ successMessage }}
+			</div>
+
+			<button type="submit" class="register-button" [disabled]="isLoading">
+				<span *ngIf="!isLoading">Register</span>
+				<span *ngIf="isLoading">Registering...</span>
+			</button>
 		</form>
 
 		<div class="register-footer">
