@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { LoginComponent } from './components/login/login.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { DepartmentsComponent } from './components/departments/departments.component';
 import { UsersListComponent } from './components/users-list/users-list.component';
@@ -6,12 +7,13 @@ import { EmployeesDetailComponent } from './components/employees-detail/employee
 import { ImportHistoryComponent } from './components/import-history/import-history.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+  { path: '', redirectTo: '/login', pathMatch: 'full' },
+  { path: 'login', component: LoginComponent },
   { path: 'dashboard', component: DashboardComponent },
   { path: 'departments', component: DepartmentsComponent },
   { path: 'users', component: UsersListComponent },
   { path: 'employees', component: EmployeesDetailComponent },
   { path: 'employees/:id', component: EmployeesDetailComponent },
   { path: 'import-history', component: ImportHistoryComponent },
-  { path: '**', redirectTo: '/dashboard' }
+  { path: '**', redirectTo: '/login' }
 ];
