@@ -1,17 +1,17 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
-  username: string = '';
+  email: string = '';
   password: string = '';
   errorMessage: string = '';
 
@@ -19,10 +19,10 @@ export class LoginComponent {
 
   onLogin(): void {
     // For now, just navigate to dashboard without authentication
-    if (this.username && this.password) {
+    if (this.email && this.password) {
       this.router.navigate(['/dashboard']);
     } else {
-      this.errorMessage = 'Please enter username and password';
+      this.errorMessage = 'Please enter email and password';
     }
   }
 
