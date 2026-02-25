@@ -11,7 +11,7 @@ import { Router, RouterLink } from '@angular/router';
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
-  username: string = '';
+  email: string = '';
   password: string = '';
   errorMessage: string = '';
 
@@ -19,10 +19,10 @@ export class LoginComponent {
 
   onLogin(): void {
     // For now, just navigate to dashboard without authentication
-    if (this.username && this.password) {
+    if (this.email && this.password) {
       this.router.navigate(['/dashboard']);
     } else {
-      this.errorMessage = 'Please enter username and password';
+      this.errorMessage = 'Please enter email and password';
     }
   }
 
