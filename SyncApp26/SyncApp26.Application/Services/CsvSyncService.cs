@@ -579,7 +579,7 @@ public class CsvSyncService : ICsvSyncService
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
-            DepartmentId = user.DepartmentId,
+            DepartmentId = user.DepartmentId ?? Guid.Empty,
             DepartmentName = user.Department.Name,
             AssignedToId = user.AssignedTo?.Id,
             AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
