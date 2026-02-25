@@ -130,6 +130,24 @@
   font-size: 0.875rem;
 }
 
+.footer-link {
+  margin-top: 0.75rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.footer-link .link {
+  color: #088395;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-link .link:hover {
+  color: #09637E;
+  text-decoration: underline;
+}
+
 /* Responsive Design */
 @media (max-width: 480px) {
   .login-card {

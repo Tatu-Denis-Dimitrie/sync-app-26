@@ -5,10 +5,12 @@ import { DepartmentsComponent } from './components/departments/departments.compo
 import { UsersListComponent } from './components/users-list/users-list.component';
 import { EmployeesDetailComponent } from './components/employees-detail/employees-detail.component';
 import { ImportHistoryComponent } from './components/import-history/import-history.component';
+import { RegisterComponent } from './components/register/register.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
+  { path: 'register', component: RegisterComponent },
   { path: 'dashboard', component: DashboardComponent },
   { path: 'departments', component: DepartmentsComponent },
   { path: 'users', component: UsersListComponent },
