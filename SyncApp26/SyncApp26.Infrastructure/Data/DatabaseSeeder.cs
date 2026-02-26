@@ -57,6 +57,70 @@ namespace SyncApp26.Infrastructure.Data
             await context.Departments.AddRangeAsync(departments);
             await context.SaveChangesAsync();
 
+            var functions = new List<Function>
+            {
+                // Engineering functions
+                new() { Id = Guid.NewGuid(), Name = "CTO", CreatedAt = DateTime.UtcNow.AddMonths(-6) },
+                new() { Id = Guid.NewGuid(), Name = "Team Lead", CreatedAt = DateTime.UtcNow.AddMonths(-6) },
+                new() { Id = Guid.NewGuid(), Name = "Software Engineer", CreatedAt = DateTime.UtcNow.AddMonths(-6) },
+                new() { Id = Guid.NewGuid(), Name = "QA Engineer", CreatedAt = DateTime.UtcNow.AddMonths(-6) },
+
+                // Human Resources functions
+                new() { Id = Guid.NewGuid(), Name = "HR Director", CreatedAt = DateTime.UtcNow.AddMonths(-6) },
+                new() { Id = Guid.NewGuid(), Name = "HR Specialist", CreatedAt = DateTime.UtcNow.AddMonths(-6) },
+                new() { Id = Guid.NewGuid(), Name = "Recruiter", CreatedAt = DateTime.UtcNow.AddMonths(-6) },
+
+                // Sales functions
+                new() { Id = Guid.NewGuid(), Name = "Sales Director", CreatedAt = DateTime.UtcNow.AddMonths(-5) },
+                new() { Id = Guid.NewGuid(), Name = "Account Executive", CreatedAt = DateTime.UtcNow.AddMonths(-5) },
+                new() { Id = Guid.NewGuid(), Name = "Sales Representative", CreatedAt = DateTime.UtcNow.AddMonths(-5) },
+
+                // Marketing functions
+                new() { Id = Guid.NewGuid(), Name = "Marketing Director", CreatedAt = DateTime.UtcNow.AddMonths(-5) },
+                new() { Id = Guid.NewGuid(), Name = "Content Specialist", CreatedAt = DateTime.UtcNow.AddMonths(-5) },
+                new() { Id = Guid.NewGuid(), Name = "Digital Marketing Specialist", CreatedAt = DateTime.UtcNow.AddMonths(-5) },
+
+                // Finance functions
+                new() { Id = Guid.NewGuid(), Name = "CFO", CreatedAt = DateTime.UtcNow.AddMonths(-4) },
+                new() { Id = Guid.NewGuid(), Name = "Financial Analyst", CreatedAt = DateTime.UtcNow.AddMonths(-4) },
+                new() { Id = Guid.NewGuid(), Name = "Accountant", CreatedAt = DateTime.UtcNow.AddMonths(-4) }
+            };
+
+            await context.Functions.AddRangeAsync(functions);
+            await context.SaveChangesAsync();
+
+            var departmentFunctions = new List<DepartmentFunction>
+            {
+                // Engineering
+                new() { DepartmentId = departments[0].Id, FunctionId = functions[0].Id},
+                new() { DepartmentId = departments[0].Id, FunctionId = functions[1].Id},
+                new() { DepartmentId = departments[0].Id, FunctionId = functions[2].Id},
+                new() { DepartmentId = departments[0].Id, FunctionId = functions[3].Id},
+
+                // Human Resources
+                new() { DepartmentId = departments[1].Id, FunctionId = functions[4].Id },
+                new() { DepartmentId = departments[1].Id, FunctionId = functions[5].Id },
+                new() { DepartmentId = departments[1].Id, FunctionId = functions[6].Id },
+
+                // Sales
+                new() { DepartmentId = departments[2].Id, FunctionId = functions[7].Id },
+                new() { DepartmentId = departments[2].Id, FunctionId = functions[8].Id },
+                new() { DepartmentId = departments[2].Id, FunctionId = functions[9].Id },
+
+                // Marketing
+                new() { DepartmentId = departments[3].Id, FunctionId = functions[10].Id },
+                new() { DepartmentId = departments[3].Id, FunctionId = functions[11].Id },
+                new() { DepartmentId = departments[3].Id, FunctionId = functions[12].Id },
+
+                // Finance
+                new() { DepartmentId = departments[4].Id, FunctionId = functions[13].Id },
+                new() { DepartmentId = departments[4].Id, FunctionId = functions[14].Id },
+                new() { DepartmentId = departments[4].Id, FunctionId = functions[15].Id },
+            };
+
+            await context.DepartmentFunctions.AddRangeAsync(departmentFunctions);
+            await context.SaveChangesAsync();
+
             // Create 20 users with relationships
             var users = new List<User>
             {

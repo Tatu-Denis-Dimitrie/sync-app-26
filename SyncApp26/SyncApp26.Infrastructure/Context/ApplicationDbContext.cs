@@ -15,6 +15,9 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<ImportConflict> ImportConflicts { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
         public DbSet<DocumentSignatureToken> DocumentSignatureTokens { get; set; }
+        public DbSet<Function> Functions { get; set; }
+        public DbSet<DepartmentFunction> DepartmentFunctions { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -133,6 +136,35 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.FileName)
                     .IsRequired()
                     .HasMaxLength(255);
+            });
+
+            // Configure Function entity
+            modelBuilder.Entity<Function>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            // Configure DepartmentFunction entity
+            modelBuilder.Entity<DepartmentFunction>(entity =>
+            {
+                entity.HasKey(e => new { e.DepartmentId, e.FunctionId });
+
+                // Configure relationships
+                entity.HasOne(df => df.Department)
+                    .WithMany(d => d.DepartmentFunctions)
+                    .HasForeignKey(df => df.DepartmentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(df => df.Function)
+                    .WithMany(f => f.DepartmentFunctions)
+                    .HasForeignKey(df => df.FunctionId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
