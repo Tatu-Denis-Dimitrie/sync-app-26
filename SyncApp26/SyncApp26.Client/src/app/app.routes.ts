@@ -12,21 +12,29 @@ import { RegisterComponent } from './components/register/register.component';
 import { DocumentSignatureComponent } from './pages/document-signature/document-signature.component';
 import { TestSignatureComponent } from './pages/test-signature/test-signature.component';
 import { AdminGuard } from './guards/admin.guard';
+import { AuthGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
+  
+  // Public routes (no authentication required)
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
-  { path: 'access-restricted', component: AccessRestrictedComponent },  
-  { path: 'dashboard', component: DashboardComponent },
-  { path: 'departments', component: DepartmentsComponent },
-  { path: 'users', component: UsersListComponent },
-  { path: 'employees', component: EmployeesDetailComponent },
-  { path: 'employees/:id', component: EmployeesDetailComponent },
-  { path: 'import-history', component: ImportHistoryComponent },
   { path: 'sign/:token', component: DocumentSignatureComponent },
-  { path: 'test-signature', component: TestSignatureComponent },
+  
+  // Authenticated routes (login required)
+  { path: 'access-restricted', component: AccessRestrictedComponent, canActivate: [AuthGuard] },
+  
+  // Admin only routes
+  { path: 'dashboard', component: DashboardComponent, canActivate: [AdminGuard] },
+  { path: 'departments', component: DepartmentsComponent, canActivate: [AdminGuard] },
+  { path: 'users', component: UsersListComponent, canActivate: [AdminGuard] },
+  { path: 'employees', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
+  { path: 'employees/:id', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
+  { path: 'import-history', component: ImportHistoryComponent, canActivate: [AdminGuard] },
+  { path: 'test-signature', component: TestSignatureComponent, canActivate: [AdminGuard] },
+  
   { path: '**', redirectTo: '/login' }
 ];
