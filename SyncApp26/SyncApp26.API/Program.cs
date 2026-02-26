@@ -8,6 +8,7 @@ using SyncApp26.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using System.IO;
 using SyncApp26.API.Services;
+using SyncApp26.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,7 @@ builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();
