@@ -122,6 +122,13 @@ button:disabled {
   background: #f0f9ff;
 }
 
+textarea.edit-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
 .edit-input {
   min-width: 200px;
 }

@@ -29,6 +29,24 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public string? CommuteRoute { get; set; }
         public int? CommuteDurationMinutes { get; set; }
 
+        // Training fields
+        public DateTime? IntroductoryTrainingDate { get; set; }
+        public int? IntroductoryTrainingHours { get; set; }
+        public string? IntroductoryTrainingInstructor { get; set; }
+        public string? IntroductoryTrainingInstructorFunction { get; set; }
+        public string? IntroductoryTrainingContent { get; set; }
+
+        public DateTime? WorkplaceTrainingDate { get; set; }
+        public string? WorkplaceTrainingLocation { get; set; }
+        public int? WorkplaceTrainingHours { get; set; }
+        public string? WorkplaceTrainingInstructor { get; set; }
+        public string? WorkplaceTrainingInstructorFunction { get; set; }
+        public string? WorkplaceTrainingContent { get; set; }
+
+        public string? AdmittedByName { get; set; }
+        public string? AdmittedByFunction { get; set; }
+        public DateTime? AdmittedDate { get; set; }
+
         // Employment dates
         public DateTime? HireDate { get; set; }
         public DateTime CreatedAt { get; set; }

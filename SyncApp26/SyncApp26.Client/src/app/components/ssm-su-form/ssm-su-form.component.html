@@ -133,24 +133,29 @@
           <h4>Instruirea introductiv generală</h4>
           <p>
             a fost efectuată la data
-            <span class="field">{{ formatDate(userForm.hireDate) }}</span>
+            <span *ngIf="!editMode" class="field">{{ formatDate(formData.introductoryTrainingDate) || formatDate(userForm.hireDate) }}</span>
+            <input *ngIf="editMode" type="date" [(ngModel)]="formData.introductoryTrainingDate" class="edit-input" />
           </p>
-          <p>timp de <span class="field">8</span> ore de către</p>
           <p>
-            <span class="field">{{ getManagerFullName() }}</span>
+            timp de 
+            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingHours || '8' }}</span>
+            <input *ngIf="editMode" type="number" [(ngModel)]="formData.introductoryTrainingHours" class="edit-input" style="width: 60px;" />
+            ore de către
+          </p>
+          <p>
+            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructor || getManagerFullName() }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
           </p>
           <p>
             având funcția de
-            <span class="field">{{
-              userForm.managerFunctionName || "Manager"
-            }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructorFunction || userForm.managerFunctionName || "Manager" }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructorFunction" class="edit-input" placeholder="Funcția instructorului" />
           </p>
           <p><strong>Conținutul instruirii:</strong></p>
-          <div class="field-box">
-            <p>____________________________________________</p>
-            <p>____________________________________________</p>
-            <p>____________________________________________</p>
+          <div class="field-box" *ngIf="!editMode">
+            <p>{{ formData.introductoryTrainingContent || '____________________________________________' }}</p>
           </div>
+          <textarea *ngIf="editMode" [(ngModel)]="formData.introductoryTrainingContent" class="edit-input" rows="4" placeholder="Descrieți conținutul instruirii..."></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• a celui instruit: ________________</p>
@@ -163,27 +168,32 @@
           <h4>Instruirea la locul de muncă</h4>
           <p>
             a fost efectuată la data
-            <span class="field">{{ formatDate(userForm.hireDate) }}</span>
+            <span *ngIf="!editMode" class="field">{{ formatDate(formData.workplaceTrainingDate) || formatDate(userForm.hireDate) }}</span>
+            <input *ngIf="editMode" type="date" [(ngModel)]="formData.workplaceTrainingDate" class="edit-input" />
           </p>
           <p>
             loc de muncă/post de lucru
-            <span class="field">{{ userForm.functionName || "N/A" }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingLocation || userForm.functionName || "N/A" }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingLocation" class="edit-input" placeholder="Locul de muncă" />
           </p>
           <p>
-            timp de <span class="field">2</span> ore de către
-            <span class="field">{{ getManagerFullName() }}</span>
+            timp de 
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingHours || '2' }}</span>
+            <input *ngIf="editMode" type="number" [(ngModel)]="formData.workplaceTrainingHours" class="edit-input" style="width: 60px;" />
+            ore de către
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructor || getManagerFullName() }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
           </p>
           <p>
             având funcția de
-            <span class="field">{{
-              userForm.managerFunctionName || "Manager"
-            }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructorFunction || userForm.managerFunctionName || "Manager" }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructorFunction" class="edit-input" placeholder="Funcția instructorului" />
           </p>
           <p><strong>Conținutul instruirii:</strong></p>
-          <div class="field-box">
-            <p>____________________________________________</p>
-            <p>____________________________________________</p>
+          <div class="field-box" *ngIf="!editMode">
+            <p>{{ formData.workplaceTrainingContent || '____________________________________________' }}</p>
           </div>
+          <textarea *ngIf="editMode" [(ngModel)]="formData.workplaceTrainingContent" class="edit-input" rows="3" placeholder="Descrieți conținutul instruirii..."></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• a celui instruit: ________________</p>
@@ -196,15 +206,19 @@
           <p><strong>Admis la lucru</strong></p>
           <p>
             Numele și prenumele:
-            <span class="field">{{ getManagerFullName() }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.admittedByName || getManagerFullName() }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByName" class="edit-input" placeholder="Numele și prenumele" />
           </p>
           <p>
             Funcția:
-            <span class="field">{{
-              userForm.managerFunctionName || "Manager"
-            }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.admittedByFunction || userForm.managerFunctionName || "Manager" }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByFunction" class="edit-input" placeholder="Funcția" />
           </p>
-          <p>Data și semnătura: ___________________</p>
+          <p>
+            Data și semnătura: 
+            <span *ngIf="!editMode">{{ formatDate(formData.admittedDate) || '___________________' }}</span>
+            <input *ngIf="editMode" type="date" [(ngModel)]="formData.admittedDate" class="edit-input" />
+          </p>
         </div>
       </div>
 
@@ -296,18 +310,27 @@
           <h4>1. Instructajul introductiv general</h4>
           <p>
             a fost efectuat la data de
-            <span class="field">{{ formatDate(userForm.hireDate) }}</span>
+            <span *ngIf="!editMode" class="field">{{ formatDate(formData.introductoryTrainingDate) || formatDate(userForm.hireDate) }}</span>
+            <input *ngIf="editMode" type="date" [(ngModel)]="formData.introductoryTrainingDate" class="edit-input" />
           </p>
           <p>
-            timp de <span class="field">8</span> ore de către
-            <span class="field">{{ getManagerFullName() }}</span>
+            timp de 
+            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingHours || '8' }}</span>
+            <input *ngIf="editMode" type="number" [(ngModel)]="formData.introductoryTrainingHours" class="edit-input" style="width: 60px;" />
+            ore de către
+            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructor || getManagerFullName() }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
           </p>
-          <p>având funcția de <span class="field">Cadru tehnic</span></p>
+          <p>
+            având funcția de 
+            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructorFunction || 'Cadru tehnic' }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructorFunction" class="edit-input" placeholder="Funcția" />
+          </p>
           <p><strong>Conținutul instructajului:</strong></p>
-          <div class="field-box">
-            <p>____________________________________________</p>
-            <p>____________________________________________</p>
+          <div class="field-box" *ngIf="!editMode">
+            <p>{{ formData.introductoryTrainingContent || '____________________________________________' }}</p>
           </div>
+          <textarea *ngIf="editMode" [(ngModel)]="formData.introductoryTrainingContent" class="edit-input" rows="3" placeholder="Descrieți conținutul instructajului..."></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• persoanei instruite: ________________</p>
@@ -319,31 +342,36 @@
           <h4>2. Instructajul la locul de muncă</h4>
           <p>
             a fost efectuat la data de
-            <span class="field">{{ formatDate(userForm.hireDate) }}</span>
+            <span *ngIf="!editMode" class="field">{{ formatDate(formData.workplaceTrainingDate) || formatDate(userForm.hireDate) }}</span>
+            <input *ngIf="editMode" type="date" [(ngModel)]="formData.workplaceTrainingDate" class="edit-input" />
           </p>
           <p>
             pentru locul de muncă
-            <span class="field">{{ userForm.departmentName || "N/A" }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingLocation || userForm.departmentName || "N/A" }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingLocation" class="edit-input" placeholder="Locul de muncă" />
           </p>
           <p>
             specialitatea (meseria)
             <span class="field">{{ userForm.functionName || "N/A" }}</span>
           </p>
           <p>
-            timp de <span class="field">8</span> ore, de către
-            <span class="field">{{ getManagerFullName() }}</span>
+            timp de 
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingHours || '8' }}</span>
+            <input *ngIf="editMode" type="number" [(ngModel)]="formData.workplaceTrainingHours" class="edit-input" style="width: 60px;" />
+            ore, de către
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructor || getManagerFullName() }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
           </p>
           <p>
             având funcția de
-            <span class="field">{{
-              userForm.managerFunctionName || "Manager"
-            }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructorFunction || userForm.managerFunctionName || "Manager" }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructorFunction" class="edit-input" placeholder="Funcția instructorului" />
           </p>
           <p><strong>Conținutul instructajului:</strong></p>
-          <div class="field-box">
-            <p>____________________________________________</p>
-            <p>____________________________________________</p>
+          <div class="field-box" *ngIf="!editMode">
+            <p>{{ formData.workplaceTrainingContent || '____________________________________________' }}</p>
           </div>
+          <textarea *ngIf="editMode" [(ngModel)]="formData.workplaceTrainingContent" class="edit-input" rows="3" placeholder="Descrieți conținutul instructajului..."></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• persoanei instruite: ________________</p>
@@ -358,15 +386,19 @@
           <h4>3. Admis la lucru</h4>
           <p>
             Numele și prenumele:
-            <span class="field">{{ getManagerFullName() }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.admittedByName || getManagerFullName() }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByName" class="edit-input" placeholder="Numele și prenumele" />
           </p>
           <p>
             Funcția:
-            <span class="field">{{
-              userForm.managerFunctionName || "Manager"
-            }}</span>
+            <span *ngIf="!editMode" class="field">{{ formData.admittedByFunction || userForm.managerFunctionName || "Manager" }}</span>
+            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByFunction" class="edit-input" placeholder="Funcția" />
           </p>
-          <p>Data și semnătura: ___________________</p>
+          <p>
+            Data și semnătura: 
+            <span *ngIf="!editMode">{{ formatDate(formData.admittedDate) || '___________________' }}</span>
+            <input *ngIf="editMode" type="date" [(ngModel)]="formData.admittedDate" class="edit-input" />
+          </p>
         </div>
       </div>
 

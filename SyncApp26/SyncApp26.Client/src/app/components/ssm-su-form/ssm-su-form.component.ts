@@ -26,6 +26,20 @@ interface UserSSMSUForm {
   qualifications?: string;
   commuteRoute?: string;
   commuteDurationMinutes?: number;
+  introductoryTrainingDate?: string;
+  introductoryTrainingHours?: number;
+  introductoryTrainingInstructor?: string;
+  introductoryTrainingInstructorFunction?: string;
+  introductoryTrainingContent?: string;
+  workplaceTrainingDate?: string;
+  workplaceTrainingLocation?: string;
+  workplaceTrainingHours?: number;
+  workplaceTrainingInstructor?: string;
+  workplaceTrainingInstructorFunction?: string;
+  workplaceTrainingContent?: string;
+  admittedByName?: string;
+  admittedByFunction?: string;
+  admittedDate?: string;
   hireDate?: string;
   createdAt: string;
 }
@@ -55,7 +69,21 @@ export class SsmSuFormComponent implements OnInit {
     education: '',
     qualifications: '',
     commuteRoute: '',
-    commuteDurationMinutes: null as number | null
+    commuteDurationMinutes: null as number | null,
+    introductoryTrainingDate: '',
+    introductoryTrainingHours: null as number | null,
+    introductoryTrainingInstructor: '',
+    introductoryTrainingInstructorFunction: '',
+    introductoryTrainingContent: '',
+    workplaceTrainingDate: '',
+    workplaceTrainingLocation: '',
+    workplaceTrainingHours: null as number | null,
+    workplaceTrainingInstructor: '',
+    workplaceTrainingInstructorFunction: '',
+    workplaceTrainingContent: '',
+    admittedByName: '',
+    admittedByFunction: '',
+    admittedDate: ''
   };
 
   constructor(
@@ -98,7 +126,21 @@ export class SsmSuFormComponent implements OnInit {
         education: this.userForm.education || '',
         qualifications: this.userForm.qualifications || '',
         commuteRoute: this.userForm.commuteRoute || '',
-        commuteDurationMinutes: this.userForm.commuteDurationMinutes || null
+        commuteDurationMinutes: this.userForm.commuteDurationMinutes || null,
+        introductoryTrainingDate: this.userForm.introductoryTrainingDate || '',
+        introductoryTrainingHours: this.userForm.introductoryTrainingHours || null,
+        introductoryTrainingInstructor: this.userForm.introductoryTrainingInstructor || '',
+        introductoryTrainingInstructorFunction: this.userForm.introductoryTrainingInstructorFunction || '',
+        introductoryTrainingContent: this.userForm.introductoryTrainingContent || '',
+        workplaceTrainingDate: this.userForm.workplaceTrainingDate || '',
+        workplaceTrainingLocation: this.userForm.workplaceTrainingLocation || '',
+        workplaceTrainingHours: this.userForm.workplaceTrainingHours || null,
+        workplaceTrainingInstructor: this.userForm.workplaceTrainingInstructor || '',
+        workplaceTrainingInstructorFunction: this.userForm.workplaceTrainingInstructorFunction || '',
+        workplaceTrainingContent: this.userForm.workplaceTrainingContent || '',
+        admittedByName: this.userForm.admittedByName || '',
+        admittedByFunction: this.userForm.admittedByFunction || '',
+        admittedDate: this.userForm.admittedDate || ''
       };
     }
   }

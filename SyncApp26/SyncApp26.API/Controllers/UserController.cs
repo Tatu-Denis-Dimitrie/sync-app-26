@@ -371,6 +371,20 @@ namespace SyncApp26.API.Controllers
                 Qualifications = user.Qualifications,
                 CommuteRoute = user.CommuteRoute,
                 CommuteDurationMinutes = user.CommuteDurationMinutes,
+                IntroductoryTrainingDate = user.IntroductoryTrainingDate,
+                IntroductoryTrainingHours = user.IntroductoryTrainingHours,
+                IntroductoryTrainingInstructor = user.IntroductoryTrainingInstructor,
+                IntroductoryTrainingInstructorFunction = user.IntroductoryTrainingInstructorFunction,
+                IntroductoryTrainingContent = user.IntroductoryTrainingContent,
+                WorkplaceTrainingDate = user.WorkplaceTrainingDate,
+                WorkplaceTrainingLocation = user.WorkplaceTrainingLocation,
+                WorkplaceTrainingHours = user.WorkplaceTrainingHours,
+                WorkplaceTrainingInstructor = user.WorkplaceTrainingInstructor,
+                WorkplaceTrainingInstructorFunction = user.WorkplaceTrainingInstructorFunction,
+                WorkplaceTrainingContent = user.WorkplaceTrainingContent,
+                AdmittedByName = user.AdmittedByName,
+                AdmittedByFunction = user.AdmittedByFunction,
+                AdmittedDate = user.AdmittedDate,
                 HireDate = user.CreatedAt, // Using CreatedAt as HireDate
                 CreatedAt = user.CreatedAt
             });
@@ -399,6 +413,25 @@ namespace SyncApp26.API.Controllers
             user.Qualifications = dto.Qualifications;
             user.CommuteRoute = dto.CommuteRoute;
             user.CommuteDurationMinutes = dto.CommuteDurationMinutes;
+
+            // Update training fields
+            user.IntroductoryTrainingDate = dto.IntroductoryTrainingDate;
+            user.IntroductoryTrainingHours = dto.IntroductoryTrainingHours;
+            user.IntroductoryTrainingInstructor = dto.IntroductoryTrainingInstructor;
+            user.IntroductoryTrainingInstructorFunction = dto.IntroductoryTrainingInstructorFunction;
+            user.IntroductoryTrainingContent = dto.IntroductoryTrainingContent;
+
+            user.WorkplaceTrainingDate = dto.WorkplaceTrainingDate;
+            user.WorkplaceTrainingLocation = dto.WorkplaceTrainingLocation;
+            user.WorkplaceTrainingHours = dto.WorkplaceTrainingHours;
+            user.WorkplaceTrainingInstructor = dto.WorkplaceTrainingInstructor;
+            user.WorkplaceTrainingInstructorFunction = dto.WorkplaceTrainingInstructorFunction;
+            user.WorkplaceTrainingContent = dto.WorkplaceTrainingContent;
+
+            user.AdmittedByName = dto.AdmittedByName;
+            user.AdmittedByFunction = dto.AdmittedByFunction;
+            user.AdmittedDate = dto.AdmittedDate;
+
             user.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(user);
