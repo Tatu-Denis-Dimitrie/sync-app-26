@@ -12,6 +12,7 @@ namespace SyncApp26.Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<Role> Roles { get; set; }
         public DbSet<ImportConflict> ImportConflicts { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
         public DbSet<Function> Functions { get; set; }
@@ -37,16 +38,16 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.Email)
                     .IsRequired()
                     .HasMaxLength(255);
-                
+
                 // Add index on Email for fast lookups (most common query in CSV sync)
                 entity.HasIndex(e => e.Email)
                     .IsUnique()
                     .HasDatabaseName("IX_Users_Email");
-                
+
                 // Add index on DeletedAt for soft delete filtering
                 entity.HasIndex(e => e.DeletedAt)
                     .HasDatabaseName("IX_Users_DeletedAt");
-                
+
                 // Add composite index for department + soft delete queries
                 entity.HasIndex(e => new { e.DepartmentId, e.DeletedAt })
                     .HasDatabaseName("IX_Users_DepartmentId_DeletedAt");
@@ -62,6 +63,12 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasOne(e => e.Department)
                     .WithMany(d => d.Users)
                     .HasForeignKey(e => e.DepartmentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Configure relationship with Role
+                entity.HasOne(e => e.Role)
+                    .WithMany(r => r.Users)
+                    .HasForeignKey(e => e.RoleId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 // Configure self-referencing relationship for line manager
@@ -84,6 +91,21 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.Name)
                     .IsRequired()
                     .HasMaxLength(200);
+
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            // Configure Role entity
+            modelBuilder.Entity<Role>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
 
                 entity.HasIndex(e => e.Name).IsUnique();
             });
