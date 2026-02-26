@@ -41,11 +41,12 @@ export class LoginComponent {
       next: (response) => {
         this.isLoading = false;
 
-        if (response.token) {
-          localStorage.setItem('authToken', response.token);
+        // Check role and redirect accordingly
+        if (response.user.role === 'Admin') {
+          this.router.navigate(['/dashboard']);
+        } else {
+          this.router.navigate(['/access-restricted']);
         }
-
-        this.router.navigate(['/dashboard']);
       },
       error: (error) => {
         this.isLoading = false;

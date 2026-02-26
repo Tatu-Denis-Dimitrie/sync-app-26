@@ -6,6 +6,7 @@ namespace SyncApp26.Domain.Entities
         public Guid? DepartmentId { get; set; }
         public Guid? FunctionId { get; set; }
         public Guid? AssignedToId { get; set; }
+        public Guid RoleId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
@@ -19,9 +20,10 @@ namespace SyncApp26.Domain.Entities
         public DateTime? DeletedAt { get; set; }
 
         // Navigation properties
-        public Department Department { get; set; }
+        public Department? Department { get; set; }
+        public Role? Role { get; set; }
         public User? AssignedTo { get; set; }  // Line manager
         public ICollection<User> AssignedUsers { get; set; } = new List<User>();  // Direct reports
-        public Function Function { get; set; }
+        public Function? Function { get; set; }
     }
 }

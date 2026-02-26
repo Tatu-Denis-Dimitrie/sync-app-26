@@ -15,6 +15,10 @@
 # Environment files
 /.env
 
+# Configuration files with sensitive data
+**/appsettings.json
+**/appsettings.Development.json
+
 # Angular CLI and build artefacts
 /.angular-cli.json
 /.ng/

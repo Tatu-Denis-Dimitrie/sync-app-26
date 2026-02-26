@@ -148,7 +148,19 @@ namespace SyncApp26.API.Controllers
 
                 var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email);
 
-                return Ok(new { message = "Login successful.", token });
+                return Ok(new
+                {
+                    message = "Login successful.",
+                    token,
+                    user = new
+                    {
+                        id = user.Id,
+                        email = user.Email,
+                        firstName = user.FirstName,
+                        lastName = user.LastName,
+                        role = user.Role?.Name ?? "Basic User"
+                    }
+                });
             }
             catch (Exception ex)
             {

@@ -95,12 +95,12 @@ public class CsvSyncService : ICsvSyncService
                     });
                 }
 
-                if (dbUser.Department.Name != csvUser.DepartmentName)
+                if (dbUser.Department?.Name != csvUser.DepartmentName)
                 {
                     conflicts.Add(new FieldConflictDTO
                     {
                         Field = "departmentName",
-                        DbValue = dbUser.Department.Name,
+                        DbValue = dbUser.Department?.Name ?? string.Empty,
                         CsvValue = csvUser.DepartmentName,
                         Selected = false
                     });
@@ -409,7 +409,7 @@ public class CsvSyncService : ICsvSyncService
                                                     ImportHistoryId = importHistory.Id,
                                                     UserId = existingUser.Id,
                                                     FieldName = "departmentname",
-                                                    OldValue = existingUser.Department.Name,
+                                                    OldValue = existingUser.Department?.Name ?? string.Empty,
                                                     NewValue = department.Name,
                                                     Status = "accepted"
                                                 };
@@ -580,7 +580,7 @@ public class CsvSyncService : ICsvSyncService
             LastName = user.LastName,
             Email = user.Email,
             DepartmentId = user.DepartmentId ?? Guid.Empty,
-            DepartmentName = user.Department.Name,
+            DepartmentName = user.Department?.Name ?? "No Department",
             AssignedToId = user.AssignedTo?.Id,
             AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
             CreatedAt = user.CreatedAt,

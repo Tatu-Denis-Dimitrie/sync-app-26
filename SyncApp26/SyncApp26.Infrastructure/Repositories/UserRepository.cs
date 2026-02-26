@@ -107,6 +107,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Role)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Email == email);
