@@ -8,6 +8,8 @@ import { UsersListComponent } from './components/users-list/users-list.component
 import { EmployeesDetailComponent } from './components/employees-detail/employees-detail.component';
 import { ImportHistoryComponent } from './components/import-history/import-history.component';
 import { RegisterComponent } from './components/register/register.component';
+import { DocumentSignatureComponent } from './pages/document-signature/document-signature.component';
+import { TestSignatureComponent } from './pages/test-signature/test-signature.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -21,5 +23,7 @@ export const routes: Routes = [
   { path: 'employees', component: EmployeesDetailComponent },
   { path: 'employees/:id', component: EmployeesDetailComponent },
   { path: 'import-history', component: ImportHistoryComponent },
+  { path: 'sign/:token', component: DocumentSignatureComponent },
+  { path: 'test-signature', component: TestSignatureComponent },
   { path: '**', redirectTo: '/login' }
 ];

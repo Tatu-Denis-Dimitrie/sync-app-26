@@ -5,17 +5,18 @@ import { Router } from '@angular/router';
 import { Observable, Subject, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, takeUntil } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
-import { DepartmentsSyncService} from '../../services/departments-sync.service';
+import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { CSVDepartmentComparisonDTO } from '../../models/csv-department-sync.model';
 import { User, UserComparison, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { ComparisonViewComponent } from '../comparison-view/comparison-view.component';
 import { UploadProgress, SyncProgressUpdate } from '../../services/user-sync.signalr.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -55,7 +56,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get sortDirection(): 'asc' | 'desc' { return this.sortDirection$.value; }
   set sortDirection(value: 'asc' | 'desc') { this.sortDirection$.next(value); }
-  
+
   isUploading = false;
   isSyncing = false;
   showComparison = false;
@@ -205,7 +206,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isUploading = false;
           this.showComparison = true;
           this.fileName = file.name;
-          
+
           // Get server timing info
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
             this.serverTimingInfo = timing;
@@ -215,7 +216,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
             }
           });
-          
+
           // Check for warnings
           this.userSyncService.warnings$.pipe(takeUntil(this.destroy$)).subscribe(warnings => {
             if (warnings && warnings.length > 0) {
@@ -226,7 +227,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.showErrorModal = true;
             }
           });
-          
+
           setTimeout(() => this.successMessage = '', 10000);
         },
         error: (error) => {
@@ -240,9 +241,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
             if (errorData.errors && errorData.errors.length > 0) {
               // Check if we can proceed with valid rows only
               this.canProceedWithValidRows = errorData.canProceedWithValidRows === true;
-              
-              this.errorModalTitle = this.canProceedWithValidRows 
-                ? 'CSV Has Invalid Rows - Proceed with Valid Rows?' 
+
+              this.errorModalTitle = this.canProceedWithValidRows
+                ? 'CSV Has Invalid Rows - Proceed with Valid Rows?'
                 : 'CSV Validation Failed';
               this.errorModalErrors = [];
               this.errorModalWarnings = [];
@@ -355,7 +356,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   proceedWithValidRows(): void {
     if (!this.currentUploadFile) return;
-    
+
     this.showErrorModal = false;
     this.canProceedWithValidRows = false;
     this.isUploading = true;
@@ -371,7 +372,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isUploading = false;
           this.showComparison = true;
           this.fileName = this.currentUploadFile?.name || this.fileName;
-          
+
           // Get server timing info
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
             this.serverTimingInfo = timing;
@@ -381,7 +382,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
             }
           });
-          
+
           // Show info about skipped rows if any
           this.userSyncService.errors$.pipe(takeUntil(this.destroy$)).subscribe(errors => {
             if (errors && errors.length > 0) {
@@ -390,7 +391,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.successMessage += ` (${skippedCount} invalid rows skipped)`;
             }
           });
-          
+
           setTimeout(() => this.successMessage = '', 10000);
         },
         error: (error) => {
@@ -421,13 +422,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('Sync successful:', result);
           this.isSyncing = false;
           this.showComparison = false;
-          
+
           if (result.processingTimeMs) {
             this.successMessage = `Sync completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(result.processingTimeMs)}, Network: ${this.formatDuration(duration - result.processingTimeMs)})`;
           } else {
             this.successMessage = `Sync completed in ${this.formatDuration(duration)}`;
           }
-          
+
           setTimeout(() => this.successMessage = '', 10000);
 
           this.userSyncService.refreshUsers();
@@ -610,12 +611,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const now = new Date().getTime();
     const then = new Date(date).getTime();
     const diff = now - then;
-    
+
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d ago`;
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;

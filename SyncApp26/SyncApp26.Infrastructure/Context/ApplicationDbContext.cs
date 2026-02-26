@@ -14,6 +14,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<Department> Departments { get; set; }
         public DbSet<ImportConflict> ImportConflicts { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
+        public DbSet<DocumentSignatureToken> DocumentSignatureTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
