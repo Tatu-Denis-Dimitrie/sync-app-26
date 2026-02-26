@@ -157,7 +157,17 @@ export class SsmSuFormComponent implements OnInit {
     if (!this.userId) return;
 
     this.saving = true;
-    this.http.put(`${environment.apiUrl}/user/${this.userId}/ssm-su-form`, this.formData)
+
+    // Prepare data - convert empty strings to null for date fields
+    const dataToSend = {
+      ...this.formData,
+      dateOfBirth: this.formData.dateOfBirth || null,
+      introductoryTrainingDate: this.formData.introductoryTrainingDate || null,
+      workplaceTrainingDate: this.formData.workplaceTrainingDate || null,
+      admittedDate: this.formData.admittedDate || null
+    };
+
+    this.http.put(`${environment.apiUrl}/user/${this.userId}/ssm-su-form`, dataToSend)
       .subscribe({
         next: () => {
           this.saving = false;
