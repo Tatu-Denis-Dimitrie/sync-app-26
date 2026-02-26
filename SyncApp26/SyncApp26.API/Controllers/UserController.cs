@@ -339,5 +339,75 @@ namespace SyncApp26.API.Controllers
                 Message = "User deleted successfully"
             });
         }
+
+        [HttpGet("{id}/ssm-su-form")]
+        public async Task<ActionResult<UserSSMSUFormDTO>> GetUserSSMSUForm(Guid id)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found" });
+            }
+
+            return Ok(new UserSSMSUFormDTO
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PersonalId = user.PersonalId,
+                DepartmentName = user.Department?.Name,
+                FunctionName = user.Function?.Name,
+                RoleName = user.Role?.Name,
+                ManagerFirstName = user.AssignedTo?.FirstName,
+                ManagerLastName = user.AssignedTo?.LastName,
+                ManagerFunctionName = user.AssignedTo?.Function?.Name,
+                DateOfBirth = user.DateOfBirth,
+                PlaceOfBirth = user.PlaceOfBirth,
+                Address = user.Address,
+                BloodGroup = user.BloodGroup,
+                BadgeNumber = user.BadgeNumber,
+                Education = user.Education,
+                Qualifications = user.Qualifications,
+                CommuteRoute = user.CommuteRoute,
+                CommuteDurationMinutes = user.CommuteDurationMinutes,
+                HireDate = user.CreatedAt, // Using CreatedAt as HireDate
+                CreatedAt = user.CreatedAt
+            });
+        }
+
+        [HttpPut("{id}/ssm-su-form")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateUserSSMSUForm(Guid id, [FromBody] UpdateUserSSMSUFormDTO dto)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new UserResponseDTO
+                {
+                    Success = false,
+                    Message = "User not found"
+                });
+            }
+
+            // Update SSM/SU fields
+            user.DateOfBirth = dto.DateOfBirth;
+            user.PlaceOfBirth = dto.PlaceOfBirth;
+            user.Address = dto.Address;
+            user.BloodGroup = dto.BloodGroup;
+            user.BadgeNumber = dto.BadgeNumber;
+            user.Education = dto.Education;
+            user.Qualifications = dto.Qualifications;
+            user.CommuteRoute = dto.CommuteRoute;
+            user.CommuteDurationMinutes = dto.CommuteDurationMinutes;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            return Ok(new UserResponseDTO
+            {
+                Success = true,
+                Message = "SSM/SU form updated successfully"
+            });
+        }
     }
 }

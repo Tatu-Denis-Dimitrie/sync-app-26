@@ -237,6 +237,13 @@ export class EmployeesDetailComponent implements OnInit {
     this.router.navigate(['/import-history']);
   }
 
+  viewSSMSUForm(user: User, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.router.navigate(['/employees', user.id, 'ssm-su']);
+  }
+
   // Edit and Delete Modal State and Logic
   isEditModalOpen = false;
   isDeleteModalOpen = false;

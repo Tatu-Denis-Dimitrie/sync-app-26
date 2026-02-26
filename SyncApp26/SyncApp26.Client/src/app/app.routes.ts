@@ -13,6 +13,7 @@ import { DocumentSignatureComponent } from './pages/document-signature/document-
 import { TestSignatureComponent } from './pages/test-signature/test-signature.component';
 import { AdminGuard } from './guards/admin.guard';
 import { AuthGuard } from './guards/auth.guard';
+import { SsmSuFormComponent } from './components/ssm-su-form/ssm-su-form.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -33,6 +34,7 @@ export const routes: Routes = [
   { path: 'users', component: UsersListComponent, canActivate: [AdminGuard] },
   { path: 'employees', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
   { path: 'employees/:id', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
+  { path: 'employees/:id/ssm-su', component: SsmSuFormComponent, canActivate: [AdminGuard] },
   { path: 'import-history', component: ImportHistoryComponent, canActivate: [AdminGuard] },
   { path: 'test-signature', component: TestSignatureComponent, canActivate: [AdminGuard] },
   

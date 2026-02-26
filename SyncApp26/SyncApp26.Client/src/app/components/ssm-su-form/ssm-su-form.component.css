@@ -1,0 +1,306 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Times New Roman', serif;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ddd;
+  align-items: center;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+.tab-button:hover {
+  background: #f5f5f5;
+}
+
+.tab-button.active {
+  background: #088395;
+  color: white;
+  border-color: #088395;
+}
+
+.edit-button,
+.save-button,
+.cancel-button,
+.back-button,
+.print-button {
+  padding: 8px 16px;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+}
+
+.edit-button {
+  background: #088395;
+}
+
+.edit-button:hover {
+  background: #09637E;
+}
+
+.save-button {
+  background: #10b981;
+}
+
+.save-button:hover:not(:disabled) {
+  background: #059669;
+}
+
+.cancel-button {
+  background: #ef4444;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.back-button {
+  background: #6b7280;
+}
+
+.back-button:hover {
+  background: #4b5563;
+}
+
+.print-button {
+  background: #09637E;
+}
+
+.print-button:hover {
+  background: #088395;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.w-4 {
+  width: 16px;
+  height: 16px;
+}
+
+.edit-input,
+.edit-input-small {
+  border: 1px solid #088395;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  background: #f0f9ff;
+}
+
+.edit-input {
+  min-width: 200px;
+}
+
+.edit-input-small {
+  min-width: 100px;
+}
+
+.edit-group {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.form-container {
+  background: white;
+}
+
+.cover-page {
+  border: 2px solid #000;
+  padding: 40px;
+  margin-bottom: 30px;
+  text-align: center;
+  background: white;
+  page-break-after: always;
+}
+
+.cover-page h1 {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 40px;
+  text-transform: uppercase;
+}
+
+.su-cover h1 {
+  color: #d32f2f;
+}
+
+.cover-info {
+  text-align: left;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.cover-info p {
+  margin: 15px 0;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.page {
+  border: 1px solid #000;
+  padding: 30px;
+  margin-bottom: 30px;
+  background: white;
+  min-height: 800px;
+  page-break-after: always;
+}
+
+.page h2 {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-decoration: underline;
+  text-align: center;
+}
+
+.page h3 {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 25px 0 15px 0;
+  text-decoration: underline;
+}
+
+.page h4 {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 15px 0 10px 0;
+}
+
+.section {
+  margin-bottom: 25px;
+}
+
+.section p {
+  margin: 10px 0;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.field {
+  border-bottom: 1px solid #000;
+  padding: 0 5px;
+  display: inline-block;
+  min-width: 100px;
+}
+
+.field-box {
+  border: 1px solid #000;
+  padding: 15px;
+  margin: 10px 0;
+  min-height: 80px;
+}
+
+.field-box p {
+  margin: 5px 0;
+}
+
+.instruction-section {
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin: 20px 0;
+  background: #f9f9f9;
+}
+
+.signatures {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.signatures p {
+  margin: 8px 0;
+}
+
+.instruction-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 14px;
+}
+
+.instruction-table th,
+.instruction-table td {
+  border: 1px solid #000;
+  padding: 10px;
+  text-align: left;
+}
+
+.instruction-table th {
+  background: #f0f0f0;
+  font-weight: bold;
+}
+
+.instruction-table td {
+  min-height: 40px;
+}
+
+/* Print styles */
+@media print {
+  .tabs,
+  .button-group,
+  .edit-button,
+  .save-button,
+  .cancel-button,
+  .back-button,
+  .print-button {
+    display: none !important;
+  }
+
+  .edit-input,
+  .edit-input-small {
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .page {
+    border: none;
+    margin: 0;
+    padding: 20px;
+  }
+
+  .cover-page,
+  .page {
+    page-break-after: always;
+  }
+
+  body {
+    background: white;
+  }
+}
