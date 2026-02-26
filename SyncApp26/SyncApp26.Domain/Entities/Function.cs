@@ -1,10 +1,9 @@
 namespace SyncApp26.Domain.Entities
 {
-    public class Department
+    public class Function
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
-        public bool IsActive { get; set; } = true; // Default to active
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
