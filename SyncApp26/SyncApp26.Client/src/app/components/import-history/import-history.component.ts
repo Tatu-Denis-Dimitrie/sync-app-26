@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { UserSyncService } from '../../services/user-sync.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { ImportConflictHistory, ImportHistoryItem, User } from '../../models/csv-sync.model';
 
 @Component({
@@ -23,7 +24,15 @@ export class ImportHistoryComponent implements OnInit {
   searchQuery = '';
   sortOrder: 'asc' | 'desc' = 'desc';
 
-  constructor(private userSyncService: UserSyncService, private router: Router) {}
+  constructor(
+    private userSyncService: UserSyncService,
+    private authService: AuthenticationService,
+    private router: Router
+  ) {}
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     this.loadUsers();

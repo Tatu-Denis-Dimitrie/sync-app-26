@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 
@@ -44,9 +45,14 @@ export class UsersListComponent implements OnInit {
 
   constructor(
     private userSyncService: UserSyncService,
+    private authService: AuthenticationService,
     private router: Router,
     private route: ActivatedRoute
   ) { }
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     this.users$ = this.userSyncService.users$;

@@ -6,6 +6,7 @@ import { Observable, merge, of, BehaviorSubject, combineLatest, Subject } from '
 import { switchMap, map, startWith, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 
@@ -42,8 +43,13 @@ export class DepartmentsComponent implements OnInit {
   constructor(
     private userSyncService: UserSyncService,
     private departmentsSyncService: DepartmentsSyncService,
+    private authService: AuthenticationService,
     private router: Router
   ) { }
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     // Refresh departments when requested or when sync happens

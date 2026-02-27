@@ -6,6 +6,7 @@ import { Observable, Subject, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take, takeUntil } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { CSVDepartmentComparisonDTO } from '../../models/csv-department-sync.model';
 import { User, UserComparison, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
@@ -93,8 +94,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private userSyncService: UserSyncService,
     private departmentsSyncService: DepartmentsSyncService,
+    private authService: AuthenticationService,
     private router: Router
   ) { }
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     this.users$ = this.userSyncService.users$;
