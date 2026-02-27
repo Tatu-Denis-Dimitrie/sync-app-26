@@ -307,6 +307,16 @@ textarea.edit-input {
     page-break-after: always;
   }
 
+  .section,
+  .instruction-section,
+  .field-box,
+  .signatures,
+  .instruction-table,
+  .instruction-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   body {
     background: white;
   }

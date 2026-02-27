@@ -9,14 +9,14 @@
         (click)="selectedTab = 'ssm'"
         class="tab-button"
       >
-        Fișa SSM
+        SSM File
       </button>
       <button
         [class.active]="selectedTab === 'su'"
         (click)="selectedTab = 'su'"
         class="tab-button"
       >
-        Fișa SU
+        SU File
       </button>
       
       <div class="button-group">
@@ -26,25 +26,25 @@
               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
             </path>
           </svg>
-          Editează
+          Edit
         </button>
         <button *ngIf="editMode" (click)="saveForm()" [disabled]="saving" class="save-button">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
           </svg>
-          {{ saving ? 'Se salvează...' : 'Salvează' }}
+          {{ saving ? 'Saving...' : 'Save' }}
         </button>
         <button *ngIf="editMode" (click)="toggleEditMode()" [disabled]="saving" class="cancel-button">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
-          Anulează
+          Cancel
         </button>
         <button (click)="goBack()" class="back-button">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
           </svg>
-          Înapoi
+          Back
         </button>
         <button *ngIf="!editMode" (click)="print()" class="print-button">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,7 +52,7 @@
               d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
             </path>
           </svg>
-          Printează
+          Print
         </button>
       </div>
     </div>
@@ -130,7 +130,7 @@
 
         <h3>Instruire la angajare</h3>
         <div class="section instruction-section">
-          <h4>Instruirea introductiv generală</h4>
+          <h4>1. Instruirea introductiv generală</h4>
           <p>
             a fost efectuată la data
             <span *ngIf="!editMode" class="field">{{ formatDate(formData.introductoryTrainingDate) || formatDate(userForm.hireDate) }}</span>
@@ -165,7 +165,7 @@
         </div>
 
         <div class="section instruction-section">
-          <h4>Instruirea la locul de muncă</h4>
+          <h4>2. Instruirea la locul de muncă</h4>
           <p>
             a fost efectuată la data
             <span *ngIf="!editMode" class="field">{{ formatDate(formData.workplaceTrainingDate) || formatDate(userForm.hireDate) }}</span>
@@ -224,7 +224,7 @@
 
       <!-- Pagina Instruire periodică -->
       <div class="page">
-        <h2>Instruire periodică</h2>
+        <h2>3. Instruire periodică</h2>
         <table class="instruction-table">
           <thead>
             <tr>
@@ -307,7 +307,7 @@
 
         <h3>Instructajul la angajare</h3>
         <div class="section instruction-section">
-          <h4>1. Instructajul introductiv general</h4>
+          <h4>1. Instructajul introductiv generală</h4>
           <p>
             a fost efectuat la data de
             <span *ngIf="!editMode" class="field">{{ formatDate(formData.introductoryTrainingDate) || formatDate(userForm.hireDate) }}</span>
