@@ -18,6 +18,7 @@ interface BackendUser {
   assignedToId?: string;
   assignedToPersonalId?: string;
   assignedToName?: string;
+  function?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -54,6 +55,11 @@ export class UserSyncService {
     this.signalrService.syncProgress$.subscribe(progress => {
       this.syncProgressSubject.next(progress);
     });
+  }
+
+  private normalizeFunction(functionName?: string): string {
+    const value = functionName?.trim();
+    return value ? value : 'unknown';
   }
 
   /**
@@ -118,6 +124,7 @@ export class UserSyncService {
       assignedToId: backendUser.assignedToId,
       assignedToPersonalId: backendUser.assignedToPersonalId,
       assignedToName: backendUser.assignedToName,
+      function: this.normalizeFunction(backendUser.function),
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
       role: isEmployee ? UserRole.Employee : UserRole.LineManager
@@ -161,6 +168,7 @@ export class UserSyncService {
           assignedToId: backendUser.assignedToId,
           assignedToPersonalId: backendUser.assignedToPersonalId,
           assignedToName: backendUser.assignedToName,
+          function: this.normalizeFunction(backendUser.function),
           createdAt: new Date(backendUser.createdAt),
           updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
           role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
@@ -189,6 +197,7 @@ export class UserSyncService {
           assignedToId: backendUser.assignedToId,
           assignedToPersonalId: backendUser.assignedToPersonalId,
           assignedToName: backendUser.assignedToName,
+          function: this.normalizeFunction(backendUser.function),
           createdAt: new Date(backendUser.createdAt),
           updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
           role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
@@ -302,6 +311,20 @@ export class UserSyncService {
   updateUser(id: string, userData: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}`, userData).pipe(
       tap(() => this.loadUsers()) // Refresh users list after update
+    );
+  }
+
+  getFunctionsByDepartmentId(departmentId: string): Observable<string[]> {
+    if (!departmentId) {
+      return of([]);
+    }
+
+    return this.http.get<string[]>(`${environment.apiUrl}/DepartmentFunction/${departmentId}`).pipe(
+      map(functions => (functions || []).filter(f => !!f?.trim())),
+      catchError(error => {
+        console.error('Error loading department functions:', error);
+        return of([]);
+      })
     );
   }
 

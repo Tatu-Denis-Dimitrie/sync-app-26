@@ -1,6 +1,7 @@
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace SyncApp26.Infrastructure.Repositories
 {
@@ -55,6 +56,20 @@ namespace SyncApp26.Infrastructure.Repositories
                 .ToList();
 
             return Task.FromResult(functionNames.AsEnumerable());
+        }
+
+        public async Task<Function?> GetByNameAsync(string functionName)
+        {
+            if (string.IsNullOrWhiteSpace(functionName))
+            {
+                return null;
+            }
+
+            var normalizedName = functionName.Trim();
+
+            return await _context.Functions
+                .Where(f => f.DeletedAt == null)
+                .FirstOrDefaultAsync(f => f.Name.ToLower() == normalizedName.ToLower());
         }
     }
 }

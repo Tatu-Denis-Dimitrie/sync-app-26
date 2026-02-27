@@ -1,4 +1,5 @@
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.IRepositories;
 
 namespace SyncApp26.Application.Services
@@ -30,6 +31,11 @@ namespace SyncApp26.Application.Services
         public Task<IEnumerable<string>> GetFunctionByIdAsync(Guid functionId)
         {
             return _functionRepository.GetFunctionByIdAsync(functionId);
+        }
+
+        public Task<Function?> GetByNameAsync(string functionName)
+        {
+            return _functionRepository.GetByNameAsync(functionName);
         }
     }
 }

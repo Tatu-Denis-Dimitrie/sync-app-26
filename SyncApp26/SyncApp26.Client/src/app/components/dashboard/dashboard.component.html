@@ -310,6 +310,15 @@
               </option>
             </select>
 
+            <select [(ngModel)]="selectedFunction" (ngModelChange)="onFunctionFilterChange()"
+              [disabled]="selectedDepartment === 'all'"
+              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+              <option value="all">Select Function</option>
+              <option *ngFor="let fn of availableDepartmentFunctions" [value]="fn">
+                {{ fn }}
+              </option>
+            </select>
+
             <select [(ngModel)]="selectedRole" (ngModelChange)="onRoleFilterChange()"
               class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
               <option value="all">All Roles</option>
@@ -359,6 +368,9 @@
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Department
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Function
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Line Manager
@@ -422,6 +434,9 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {{ user.departmentName }}
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                  {{ user.function || "unknown" }}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {{ user.assignedToName || "—" }}
                 </td>
@@ -450,7 +465,7 @@
                 </td>
               </tr>
               <tr *ngIf="totalItems === 0">
-                <td colspan="6" class="px-6 py-12 text-center">
+                <td colspan="7" class="px-6 py-12 text-center">
                   <div class="flex flex-col items-center justify-center">
                     <svg class="w-12 h-12 text-muted-foreground mb-3" fill="none" stroke="currentColor"
                       viewBox="0 0 24 24">

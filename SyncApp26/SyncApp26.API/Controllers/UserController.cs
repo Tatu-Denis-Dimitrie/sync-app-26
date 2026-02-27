@@ -13,11 +13,13 @@ namespace SyncApp26.API.Controllers
     {
         private readonly IUserService _userService;
         private readonly IDepartmentService _departmentService;
+        private readonly IFunctionService _functionService;
 
-        public UserController(IUserService userService, IDepartmentService departmentService)
+        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService)
         {
             _userService = userService;
             _departmentService = departmentService;
+            _functionService = functionService;
         }
 
         [HttpGet("{id}")]
@@ -40,6 +42,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -65,6 +68,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -85,6 +89,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -118,6 +123,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -146,6 +152,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = $"{lineManager.FirstName} {lineManager.LastName}",
+                Function = user.Function?.Name ?? "unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -211,6 +218,7 @@ namespace SyncApp26.API.Controllers
                 Email = userRequestDTO.Email,
                 DepartmentId = userRequestDTO.DepartmentId,
                 AssignedToId = userRequestDTO.AssignedToId,
+                FunctionId = await ResolveFunctionIdAsync(userRequestDTO.Function),
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -307,6 +315,7 @@ namespace SyncApp26.API.Controllers
             existingUser.Email = userRequestDTO.Email;
             existingUser.DepartmentId = userRequestDTO.DepartmentId;
             existingUser.AssignedToId = userRequestDTO.AssignedToId;
+            existingUser.FunctionId = await ResolveFunctionIdAsync(userRequestDTO.Function);
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(existingUser);
@@ -441,6 +450,21 @@ namespace SyncApp26.API.Controllers
                 Success = true,
                 Message = "SSM/SU form updated successfully"
             });
+        }
+
+        private async Task<Guid?> ResolveFunctionIdAsync(string? requestedFunction)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedFunction))
+            {
+                var existingFunction = await _functionService.GetByNameAsync(requestedFunction);
+                if (existingFunction != null)
+                {
+                    return existingFunction.Id;
+                }
+            }
+
+            var unknownFunction = await _functionService.GetByNameAsync("unknown");
+            return unknownFunction?.Id;
         }
     }
 }

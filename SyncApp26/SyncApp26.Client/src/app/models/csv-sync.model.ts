@@ -22,6 +22,7 @@ export interface User {
   assignedToId?: string;
   assignedToPersonalId?: string;
   assignedToName?: string;
+  function?: string;
   createdAt: Date;
   updatedAt?: Date;
   // Computed properties

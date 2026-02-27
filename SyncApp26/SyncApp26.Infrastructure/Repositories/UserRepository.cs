@@ -18,6 +18,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Id == id);
@@ -27,6 +28,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .ToListAsync();
@@ -38,6 +40,7 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .AsNoTracking()
                 .Include(u => u.Department)
+                .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .ToListAsync();
@@ -61,6 +64,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null)
                 .ToListAsync();
@@ -70,6 +74,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null)
                 .ToListAsync();
@@ -107,6 +112,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Function)
                 .Include(u => u.Role)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
@@ -117,6 +123,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.PersonalId == personalId);

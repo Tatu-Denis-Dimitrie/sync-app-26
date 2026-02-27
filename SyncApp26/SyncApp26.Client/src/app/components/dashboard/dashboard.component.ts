@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subject, combineLatest, BehaviorSubject } from 'rxjs';
-import { map, takeUntil } from 'rxjs/operators';
+import { map, take, takeUntil } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { CSVDepartmentComparisonDTO } from '../../models/csv-department-sync.model';
@@ -38,6 +38,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private searchQuery$ = new BehaviorSubject<string>('');
   private selectedDepartment$ = new BehaviorSubject<string>('all');
+  private selectedFunction$ = new BehaviorSubject<string>('all');
   private selectedRole$ = new BehaviorSubject<UserRole | 'all'>('all');
   private sortField$ = new BehaviorSubject<'createdAt' | 'updatedAt'>('updatedAt');
   private sortDirection$ = new BehaviorSubject<'asc' | 'desc'>('desc');
@@ -47,6 +48,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get selectedDepartment(): string { return this.selectedDepartment$.value; }
   set selectedDepartment(value: string) { this.selectedDepartment$.next(value); }
+
+  get selectedFunction(): string { return this.selectedFunction$.value; }
+  set selectedFunction(value: string) { this.selectedFunction$.next(value); }
 
   get selectedRole(): UserRole | 'all' { return this.selectedRole$.value; }
   set selectedRole(value: UserRole | 'all') { this.selectedRole$.next(value); }
@@ -81,6 +85,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   syncStartTime: number = 0;
   successMessage: string = '';
   serverTimingInfo: { validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null = null;
+  availableDepartmentFunctions: string[] = [];
 
   UserRole = UserRole;
   fileName = '';
@@ -123,12 +128,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.stats$,
       this.searchQuery$,
       this.selectedDepartment$,
+      this.selectedFunction$,
       this.selectedRole$,
       this.currentPage$,
       this.sortField$,
       this.sortDirection$
     ]).pipe(
-      map(([users, stats, searchQuery, selectedDepartment, selectedRole, currentPage, sortField, sortDirection]) => {
+      map(([users, stats, searchQuery, selectedDepartment, selectedFunction, selectedRole, currentPage, sortField, sortDirection]) => {
         // Filter users
         let filtered = users.filter(user => {
           const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
@@ -137,9 +143,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             user.email.toLowerCase().includes(searchQuery.toLowerCase());
           const matchesDepartment = selectedDepartment === 'all' ||
             user.departmentName === selectedDepartment;
+          const matchesFunction = selectedFunction === 'all' ||
+            (user.function || '').trim().toLowerCase() === selectedFunction.trim().toLowerCase();
           const matchesRole = selectedRole === 'all' ||
             user.role === selectedRole;
-          return matchesSearch && matchesDepartment && matchesRole;
+          return matchesSearch && matchesDepartment && matchesFunction && matchesRole;
         });
 
         // Sort users
@@ -518,6 +526,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onDepartmentFilterChange(): void {
+    this.currentPage = 1;
+
+    if (this.selectedDepartment === 'all') {
+      this.availableDepartmentFunctions = [];
+      this.selectedFunction = 'all';
+      return;
+    }
+
+    this.selectedFunction = 'all';
+    this.departments$.pipe(take(1)).subscribe(departments => {
+      const selectedDept = departments.find(d => d.name === this.selectedDepartment);
+
+      if (!selectedDept) {
+        this.availableDepartmentFunctions = [];
+        return;
+      }
+
+      this.userSyncService.getFunctionsByDepartmentId(selectedDept.id)
+        .pipe(take(1))
+        .subscribe(functions => {
+          this.availableDepartmentFunctions = functions;
+        });
+    });
+  }
+
+  onFunctionFilterChange(): void {
     this.currentPage = 1;
   }
 

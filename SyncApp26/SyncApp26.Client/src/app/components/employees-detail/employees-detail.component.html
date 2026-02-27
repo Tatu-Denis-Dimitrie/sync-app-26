@@ -400,6 +400,15 @@
                 </p>
               </div>
 
+              <div>
+                <label class="text-sm font-medium text-muted-foreground"
+                  >Function</label
+                >
+                <p class="text-foreground font-medium mt-1">
+                    {{ selectedUser.function?.trim() || "unknown" }}
+                </p>
+              </div>
+
               <div *ngIf="selectedUser.assignedToPersonalId">
                 <label class="text-sm font-medium text-muted-foreground"
                   >Manager ID</label
@@ -696,12 +705,27 @@
           <label class="text-sm font-medium text-foreground">Department</label>
           <select
             [(ngModel)]="editForm.departmentId"
+            (ngModelChange)="onDepartmentChange($event)"
             name="departmentId"
             required
             class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
           >
             <option *ngFor="let dept of departments$ | async" [value]="dept.id">
               {{ dept.name }}
+            </option>
+          </select>
+        </div>
+        <div class="space-y-2">
+          <label class="text-sm font-medium text-foreground">Function</label>
+          <select
+            [(ngModel)]="editForm.function"
+            name="function"
+            required
+            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+          >
+            <option value="" disabled>Select Function</option>
+            <option *ngFor="let fn of availableFunctions" [value]="fn">
+              {{ fn }}
             </option>
           </select>
         </div>
