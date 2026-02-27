@@ -47,6 +47,7 @@ builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IImportConflictRepository, ImportConflictRepository>();
 builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
+builder.Services.AddScoped<IFunctionRepository, FunctionRepository>();
 
 
 // Services
@@ -61,6 +62,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>();
+builder.Services.AddScoped<IFunctionService, FunctionService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();
