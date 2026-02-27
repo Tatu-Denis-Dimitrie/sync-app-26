@@ -42,7 +42,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "unknown",
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -68,7 +68,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "unknown",
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -89,7 +89,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "unknown",
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -123,7 +123,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "unknown",
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -152,7 +152,7 @@ namespace SyncApp26.API.Controllers
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = $"{lineManager.FirstName} {lineManager.LastName}",
-                Function = user.Function?.Name ?? "unknown",
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -475,7 +475,7 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
-            var unknownFunction = await _functionService.GetByNameAsync("unknown");
+            var unknownFunction = await _functionService.GetByNameAsync("Unknown");
             return unknownFunction?.Id;
         }
     }

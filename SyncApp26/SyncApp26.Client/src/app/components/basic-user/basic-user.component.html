@@ -1,0 +1,104 @@
+<div class="basic-user-page bg-background">
+	<header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+		<div class="container mx-auto px-4 py-4">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-xl font-semibold text-foreground">My Profile</h1>
+					<p class="text-sm text-muted-foreground">Personal and work information</p>
+				</div>
+				<button
+					(click)="logout()"
+					class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+				>
+					Logout
+				</button>
+			</div>
+		</div>
+	</header>
+
+	<div class="container mx-auto px-4 py-8">
+		<div *ngIf="isLoading" class="text-muted-foreground text-sm">Loading profile...</div>
+		<div *ngIf="!isLoading && errorMessage" class="text-red-600 text-sm">{{ errorMessage }}</div>
+
+		<div *ngIf="!isLoading && user" class="bg-card border border-border rounded-lg p-6">
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<div class="space-y-4">
+					<h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Personal Information</h3>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">First Name</label>
+						<p class="text-foreground font-medium mt-1">{{ user.firstName }}</p>
+					</div>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Last Name</label>
+						<p class="text-foreground font-medium mt-1">{{ user.lastName }}</p>
+					</div>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Email</label>
+						<p class="text-foreground font-medium mt-1">{{ user.email }}</p>
+					</div>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Personal ID</label>
+						<p class="text-foreground font-medium mt-1">{{ user.personalId }}</p>
+					</div>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Role</label>
+						<div class="mt-1">
+							<span
+								[class]="'inline-block px-3 py-1 rounded border font-medium ' + getRoleBadgeColor(user.role)"
+							>
+								{{ user.role === UserRole.LineManager ? 'Line Manager' : 'Employee' }}
+							</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="space-y-4">
+					<h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Work Information</h3>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Department</label>
+						<p class="text-foreground font-medium mt-1">{{ user.departmentName }}</p>
+					</div>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Function</label>
+						<p class="text-foreground font-medium mt-1">{{ user.function?.trim() || 'unknown' }}</p>
+					</div>
+
+					<div *ngIf="user.assignedToName">
+						<label class="text-sm font-medium text-muted-foreground">Line Manager</label>
+						<p class="text-foreground font-medium mt-1">{{ user.assignedToName }}</p>
+					</div>
+
+					<div *ngIf="user.assignedToPersonalId">
+						<label class="text-sm font-medium text-muted-foreground">Manager ID</label>
+						<p class="text-foreground font-medium mt-1">{{ user.assignedToPersonalId }}</p>
+					</div>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Created</label>
+						<p class="text-foreground font-medium mt-1">{{ formatDate(user.createdAt) }}</p>
+					</div>
+
+					<div>
+						<label class="text-sm font-medium text-muted-foreground">Last Updated</label>
+						<p class="text-foreground font-medium mt-1">{{ user.updatedAt ? formatDate(user.updatedAt) : 'N/A' }}</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
+				<h4 class="text-sm font-semibold text-foreground mb-2">Summary</h4>
+				<p class="text-sm text-muted-foreground">
+					{{ user.role === UserRole.LineManager ? 'Manager' : 'Employee' }} in {{ user.departmentName }} •
+					{{ getRelativeTime(user.updatedAt || user.createdAt) }}
+				</p>
+			</div>
+		</div>
+	</div>
+</div>

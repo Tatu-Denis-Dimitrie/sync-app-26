@@ -53,7 +53,7 @@ export class LoadingScreenComponent implements OnInit {
             return;
           }
 
-          this.router.navigate(['/access-restricted']);
+          this.router.navigate(['/basic-user']);
         }, 300);
       }
     }, 500);

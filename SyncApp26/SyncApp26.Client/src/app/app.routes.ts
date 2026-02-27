@@ -15,6 +15,7 @@ import { TestSignatureComponent } from './pages/test-signature/test-signature.co
 import { AdminGuard } from './guards/admin.guard';
 import { AuthGuard } from './guards/auth.guard';
 import { SsmSuFormComponent } from './components/ssm-su-form/ssm-su-form.component';
+import { BasicUserComponent } from './components/basic-user/basic-user.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -28,6 +29,7 @@ export const routes: Routes = [
   { path: 'sign/:token', component: DocumentSignatureComponent },
   
   // Authenticated routes (login required)
+  { path: 'basic-user', component: BasicUserComponent, canActivate: [AuthGuard] },
   { path: 'access-restricted', component: AccessRestrictedComponent, canActivate: [AuthGuard] },
   
   // Admin only routes
