@@ -1,21 +1,21 @@
-PersonalId,FirstName,LastName,Email,DepartmentName,AssignedToPersonalId
-d14f9969-df8e-4f68-9a0b-adc84a813100,John,Smith,john.smith@example.com,Engineering,dfac5f42-2ad3-4cf0-a0d5-e23f6bfaa726
-98d745fe-a734-4086-9401-1734ba8c5162,Emily,Brown,emilyy.brown@example.com,Engineering,dfac5f42-2ad3-4cf0-a0d5-e23f6bfaa726
-5b5828ba-7de3-4ec5-ba6a-2aae1e33eaa5,Michael,Williams,michael.williams@example.com,Engineering,dfac5f42-2ad3-4cf0-a0d5-e23f6bfaa726
-f6e463b0-ec33-42a4-bfbc-9436a1bbefdf,Sarah,Johnson,sarah.johnson@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea
-1e79570f-5c09-4e24-be2f-8b6b54bdb72b,Robert,Davis,robert.davis@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea
-36bf09a3-b572-4f1f-b12c-af962b858b8d,Jessica,Martinez,jessica.martinez@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea
-8d054c85-e2f7-43eb-9923-2d1b810ce2fd,David,Anderson,david.anderson@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea
-de97df8b-01c9-4b18-9e70-6a378e2fa0ba,James,Wilson,james.wilson@example.com,Engineering,
-99f000fe-ec12-4f41-89a5-d875def7220e,Lisa,Taylor,lisa.taylor@example.com,HR,fc68b9cb-7fe9-4d66-96e2-4c68a32a472f
-0cbf9267-71d4-4a09-b3af-fd8a053fb380,Thomas,Moore,thomas.moore@example.com,HR,
-3f67dfea-6d62-41e8-b34b-c2755757e889,Jennifer,Garcia,jennifer.garcia@example.com,HR,fc68b9cb-7fe9-4d66-96e2-4c68a32a472f
-ded16640-21d7-483a-b737-b03333e25eac,Chris,Rodriguez,chris.rodriguez@example.com,Sales,1cd48cd7-91e7-4ad9-9cb0-6649aec39c1f
-6c169680-1180-477d-9632-42c772868d6d,Amanda,White,amanda.white@example.com,Sales,ed14e355-d0de-4b75-a000-6aa2e42e8676
-37a173a4-448c-43c5-a16c-50cfb5665441,Brian,Miller,brian.miller@example.com,Sales,1cd48cd7-91e7-4ad9-9cb0-6649aec39c1f
-fde29e1f-cccb-4a23-8f83-3c6410b32351,Daniel,Lee,daniel.lee@example.com,Sales,
-19815af5-c65a-4f3c-9c00-3bf64376ba32,Michelle,Thompson,michelle.thompson@example.com,Marketing,80fe699b-4264-42ae-82f6-f0cd641832e4
-d8a4476c-e16c-44d5-b06e-44583e2fe5f1,Karen,Jackson,karen.jackson@example.com,Marketing,
-7a04d834-1c5d-4533-ba76-79bc29113886,Matthew,Harris,matthew.harris@example.com,Marketing,80fe699b-4264-42ae-82f6-f0cd641832e4
-91e30241-6f45-4d18-b080-6e4923d9b901,William,Martin,william.martin@example.com,Finance,1cd48cd7-91e7-4ad9-9cb0-6649aec39c1f
-b6bd144b-e5fd-4fbb-96fb-083af9327f8b,Steven,Clark,steven.clark@example.com,Finance,
+PersonalId,FirstName,LastName,Email,DepartmentName,AssignedToPersonalId,Function
+d14f9969-df8e-4f68-9a0b-adc84a813100,John,Smith,john.smith@example.com,Engineering,dfac5f42-2ad3-4cf0-a0d5-e23f6bfaa726,Software Engineer
+98d745fe-a734-4086-9401-1734ba8c5162,Emily,Brown,emilyy.brown@example.com,Engineering,dfac5f42-2ad3-4cf0-a0d5-e23f6bfaa726,Software Engineer
+5b5828ba-7de3-4ec5-ba6a-2aae1e33eaa5,Michael,Williams,michael.williams@example.com,Engineering,dfac5f42-2ad3-4cf0-a0d5-e23f6bfaa726,QA Engineer
+f6e463b0-ec33-42a4-bfbc-9436a1bbefdf,Sarah,Johnson,sarah.johnson@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea,QA Engineer
+1e79570f-5c09-4e24-be2f-8b6b54bdb72b,Robert,Davis,robert.davis@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea,QA Engineer
+36bf09a3-b572-4f1f-b12c-af962b858b8d,Jessica,Martinez,jessica.martinez@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea,QA Engineer
+8d054c85-e2f7-43eb-9923-2d1b810ce2fd,David,Anderson,david.anderson@example.com,Engineering,ccdddeea-c7ec-415c-9cf6-57f6717074ea,QA Engineer
+de97df8b-01c9-4b18-9e70-6a378e2fa0ba,James,Wilson,james.wilson@example.com,Engineering,,QA Engineer
+99f000fe-ec12-4f41-89a5-d875def7220e,Lisa,Taylor,lisa.taylor@example.com,HR,fc68b9cb-7fe9-4d66-96e2-4c68a32a472f,HR Specialist
+0cbf9267-71d4-4a09-b3af-fd8a053fb380,Thomas,Moore,thomas.moore@example.com,HR,,HR Specialist
+3f67dfea-6d62-41e8-b34b-c2755757e889,Jennifer,Garcia,jennifer.garcia@example.com,HR,fc68b9cb-7fe9-4d66-96e2-4c68a32a472f,HR Specialist
+ded16640-21d7-483a-b737-b03333e25eac,Chris,Rodriguez,chris.rodriguez@example.com,Sales,1cd48cd7-91e7-4ad9-9cb0-6649aec39c1f,Sales Representative
+6c169680-1180-477d-9632-42c772868d6d,Amanda,White,amanda.white@example.com,Sales,ed14e355-d0de-4b75-a000-6aa2e42e8676,Sales Representative
+37a173a4-448c-43c5-a16c-50cfb5665441,Brian,Miller,brian.miller@example.com,Sales,1cd48cd7-91e7-4ad9-9cb0-6649aec39c1f,Sales Representative
+fde29e1f-cccb-4a23-8f83-3c6410b32351,Daniel,Lee,daniel.lee@example.com,Sales,,Sales Director
+19815af5-c65a-4f3c-9c00-3bf64376ba32,Michelle,Thompson,michelle.thompson@example.com,Marketing,80fe699b-4264-42ae-82f6-f0cd641832e4,Marketing Director
+d8a4476c-e16c-44d5-b06e-44583e2fe5f1,Karen,Jackson,karen.jackson@example.com,Marketing,,Marketing Director
+7a04d834-1c5d-4533-ba76-79bc29113886,Matthew,Harris,matthew.harris@example.com,Marketing,80fe699b-4264-42ae-82f6-f0cd641832e4,Marketing Director
+91e30241-6f45-4d18-b080-6e4923d9b901,William,Martin,william.martin@example.com,Finance,1cd48cd7-91e7-4ad9-9cb0-6649aec39c1f,Accountant
+b6bd144b-e5fd-4fbb-96fb-083af9327f8b,Steven,Clark,steven.clark@example.com,Finance,,Accountant
