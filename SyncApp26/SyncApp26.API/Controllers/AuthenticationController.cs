@@ -3,6 +3,8 @@ using SyncApp26.Domain.Entities;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.API.Services;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -30,6 +32,36 @@ namespace SyncApp26.API.Controllers
             _configuration = configuration;
         }
 
+        private async Task<IActionResult> VerifyPasswordFormat(string password)
+        {
+            if(password.Length < 8)
+            {
+                return BadRequest(new { message = "Password must be at least 8 characters long." });
+            }
+
+            if(!Regex.IsMatch(password, @"[A-Z]"))
+            {
+                return BadRequest(new { message = "Password must contain at least one uppercase letter." });
+            }
+
+            if (!Regex.IsMatch(password, @"[a-z]"))
+            {
+                return BadRequest(new { message = "Password must contain at least one lowercase letter." });
+            }
+
+            if (!Regex.IsMatch(password, @"[0-9]"))
+            {
+                return BadRequest(new { message = "Password must contain at least one digit." });
+            }
+
+            if(!Regex.IsMatch(password, @"[!#$%&*.,/?;_-]"))
+            {
+                return BadRequest(new { message = "Password must contain at least one special character."});
+            }
+
+            return Ok();
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserRequestDTO request)
         {
@@ -46,6 +78,22 @@ namespace SyncApp26.API.Controllers
 
                 // Normalize email to lowercase for consistent checking
                 var normalizedEmail = request.Email.ToLowerInvariant().Trim();
+
+                if (!Regex.IsMatch(normalizedEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                {
+                    return BadRequest(new { message = "Invalid email format." });
+                }
+
+                if (!normalizedEmail.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { message = "Email must be a @gmail.com address." });
+                }
+
+                var result = await VerifyPasswordFormat(request.Password);
+                if(result is BadRequestObjectResult badRequest)
+                {
+                    return badRequest;
+                }
 
                 var existingUser = await _userService.GetUserByEmailAsync(normalizedEmail);
                 if (existingUser != null)
@@ -176,6 +224,93 @@ namespace SyncApp26.API.Controllers
             }
         }
 
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest(new { message = "Email is required." });
+            }
+
+            var normalizedEmail = request.Email.ToLowerInvariant().Trim();
+            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
+
+            if(user == null)
+            {
+                return BadRequest(new { message = "This email doesn't have an account." });
+            }
+
+            if (user != null)
+            {
+                var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+                user.PasswordResetToken = token;
+                user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(30);
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await _userService.UpdateUserAsync(user);
+
+                var resetUrl = BuildResetPasswordUrl(user.Email, token);
+
+                await _emailService.SendPasswordResetEmailAsync(
+                    user.Email,
+                    user.FirstName,
+                    resetUrl,
+                    30);
+            }
+
+            return Ok(new { message = "A password reset link has been sent." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordWithTokenRequestDTO request)
+        {
+            if (request == null ||
+                string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Token) ||
+                string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return BadRequest(new { message = "Email, token and new password are required." });
+            }
+
+            var result = await VerifyPasswordFormat(request.NewPassword);
+            if(result is BadRequestObjectResult badRequest)
+            {
+                return badRequest;
+            }
+
+            var normalizedEmail = request.Email.ToLowerInvariant().Trim();
+
+            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
+            if (user == null)
+            {
+                return BadRequest(new { message = "Invalid or expired token." });
+            }
+
+            var verifyPassword = await _authenticationService.VerifyPasswordAsync(request.NewPassword, user.PasswordHash!);
+            if (verifyPassword)            
+            {
+                return BadRequest(new { message = "New password cannot be the same as the old password." });
+            }
+
+            var providedToken = request.Token.Trim();
+            if (string.IsNullOrWhiteSpace(user.PasswordResetToken) ||
+                user.PasswordResetTokenExpiresAt == null ||
+                user.PasswordResetTokenExpiresAt < DateTime.UtcNow ||
+                !string.Equals(user.PasswordResetToken, providedToken, StringComparison.Ordinal))
+            {
+                return BadRequest(new { message = "Invalid or expired token." });
+            }
+
+            user.PasswordHash = await _authenticationService.HashPasswordAsync(request.NewPassword);
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiresAt = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            return Ok(new { message = "Password reset successfully." });
+        }
+
         private string GetLoginRedirectUrl()
         {
             var loginUrl = _configuration["Frontend:LoginUrl"];
@@ -185,6 +320,17 @@ namespace SyncApp26.API.Controllers
             }
 
             return loginUrl;
+        }
+
+        private string BuildResetPasswordUrl(string email, string token)
+        {
+            var configuredResetUrl = _configuration["Frontend:ResetPasswordUrl"];
+            var resetBaseUrl = string.IsNullOrWhiteSpace(configuredResetUrl)
+                ? "http://localhost:4200/reset-password"
+                : configuredResetUrl;
+
+            var separator = resetBaseUrl.Contains('?') ? "&" : "?";
+            return $"{resetBaseUrl}{separator}email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
         }
     }
 }

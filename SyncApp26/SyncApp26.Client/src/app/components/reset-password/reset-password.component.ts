@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { AuthenticationService } from '../../services/authentication.service';
 
 @Component({
   selector: 'app-reset-password',
@@ -12,29 +13,36 @@ import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 })
 export class ResetPasswordComponent implements OnInit {
   email: string = '';
-  verificationCode: string = '';
+  token: string = '';
   newPassword: string = '';
   confirmPassword: string = '';
   errorMessage: string = '';
   successMessage: string = '';
+  isLoading: boolean = false;
 
   constructor(
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private authService: AuthenticationService
   ) {}
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       this.email = params['email'] || '';
+      this.token = params['token'] || '';
     });
   }
 
   onSubmit(): void {
     this.errorMessage = '';
 
-    // Validate verification code
-    if (!this.verificationCode || this.verificationCode.length !== 6) {
-      this.errorMessage = 'Please enter a valid 6-digit verification code';
+    if (!this.email) {
+      this.errorMessage = 'Email is required.';
+      return;
+    }
+
+    if (!this.token) {
+      this.errorMessage = 'Invalid or missing reset token.';
       return;
     }
 
@@ -50,17 +58,25 @@ export class ResetPasswordComponent implements OnInit {
       return;
     }
 
-    // For now, just show success and navigate to login
-    this.successMessage = 'Password reset successfully!';
-    setTimeout(() => {
-      this.router.navigate(['/login']);
-    }, 2000);
-  }
+    this.isLoading = true;
 
-  onCodeInput(event: any): void {
-    // Only allow digits
-    const value = event.target.value;
-    this.verificationCode = value.replace(/\D/g, '').slice(0, 6);
+    this.authService.resetPassword({
+      email: this.email.trim(),
+      token: this.token.trim(),
+      newPassword: this.newPassword
+    }).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        this.successMessage = response.message || 'Password reset successfully!';
+        setTimeout(() => {
+          this.router.navigate(['/login']);
+        }, 1200);
+      },
+      error: (error) => {
+        this.isLoading = false;
+        this.errorMessage = error.error?.message || 'Password reset failed. Please try again.';
+      }
+    });
   }
 
   onKeyPress(event: KeyboardEvent): void {

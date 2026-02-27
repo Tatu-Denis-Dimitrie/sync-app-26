@@ -21,6 +21,16 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  token: string;
+  newPassword: string;
+}
+
 export interface User {
     id: string;
     email: string;
@@ -36,6 +46,10 @@ export interface LoginResponse {
 }
 
 export interface ErrorResponse {
+  message: string;
+}
+
+export interface MessageResponse {
   message: string;
 }
 
@@ -66,6 +80,14 @@ export class AuthenticationService {
           }
         })
       );
+  }
+
+  forgotPassword(request: ForgotPasswordRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.apiUrl}/forgot-password`, request);
+  }
+
+  resetPassword(request: ResetPasswordRequest): Observable<MessageResponse> {
+    return this.http.post<MessageResponse>(`${this.apiUrl}/reset-password`, request);
   }
 
   logout(): void {
