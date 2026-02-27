@@ -35,6 +35,8 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -61,6 +63,8 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -82,6 +86,8 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -116,6 +122,8 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -145,6 +153,8 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -320,6 +330,8 @@ namespace SyncApp26.API.Controllers
                         Message = "Circular assignment detected: Cannot assign a user to someone who reports to them"
                     });
                 }
+
+                existingUser.RoleId = await _userService.GetRoleIdByNameAsync("Line Manager") ?? existingUser.RoleId;
             }
 
             existingUser.FirstName = userRequestDTO.FirstName;

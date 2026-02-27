@@ -10,6 +10,8 @@ import { from, combineLatest } from 'rxjs';
 interface BackendUser {
   id: string;
   personalId: string;
+  roleId?: string;
+  roleName?: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -62,6 +64,21 @@ export class UserSyncService {
     return value ? value : 'unknown';
   }
 
+  private mapBackendRole(backendUser: BackendUser): UserRole {
+    const normalizedRoleName = backendUser.roleName?.trim().toLowerCase();
+
+    if (normalizedRoleName === 'line manager') {
+      return UserRole.LineManager;
+    }
+
+    if (normalizedRoleName === 'basic user') {
+      return UserRole.Employee;
+    }
+
+    const isEmployee = !!backendUser.assignedToId || !!backendUser.assignedToPersonalId;
+    return isEmployee ? UserRole.Employee : UserRole.LineManager;
+  }
+
   /**
    * Load users from API
    */
@@ -108,11 +125,7 @@ export class UserSyncService {
   /**
    * Map backend user to frontend user and calculate role
    */
-  private mapBackendUser(backendUser: BackendUser, allUsers: BackendUser[]): User {
-    // Determine role: if user has an assigned manager, they are an Employee.
-    // Otherwise, they are a Line Manager.
-    const isEmployee = !!backendUser.assignedToId || !!backendUser.assignedToPersonalId;
-
+  private mapBackendUser(backendUser: BackendUser): User {
     return {
       id: backendUser.id,
       personalId: backendUser.personalId,
@@ -127,7 +140,7 @@ export class UserSyncService {
       function: this.normalizeFunction(backendUser.function),
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-      role: isEmployee ? UserRole.Employee : UserRole.LineManager
+      role: this.mapBackendRole(backendUser)
     };
   }
 
@@ -138,7 +151,7 @@ export class UserSyncService {
     return this.http.get<BackendUser[]>(this.apiUrl).pipe(
       map(backendUsers => {
         // Map all users and calculate their roles
-        return backendUsers.map(user => this.mapBackendUser(user, backendUsers));
+        return backendUsers.map(user => this.mapBackendUser(user));
       }),
       catchError(error => {
         console.error('Error fetching users:', error);
@@ -153,10 +166,6 @@ export class UserSyncService {
   getUserById(id: string): Observable<User | null> {
     return this.http.get<BackendUser>(`${this.apiUrl}/${id}`).pipe(
       map(backendUser => {
-        // We need all users to calculate role, so we'll use the cached users
-        const allUsers = this.usersSubject.value;
-        const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
-
         return {
           id: backendUser.id,
           personalId: backendUser.personalId,
@@ -171,7 +180,7 @@ export class UserSyncService {
           function: this.normalizeFunction(backendUser.function),
           createdAt: new Date(backendUser.createdAt),
           updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-          role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
+          role: this.mapBackendRole(backendUser)
         };
       }),
       catchError(error => {
@@ -184,8 +193,6 @@ export class UserSyncService {
   getByPersonalId(personalId: string): Observable<User | null> {
     return this.http.get<BackendUser>(`${this.apiUrl}/personalId/${personalId}`).pipe(
       map(backendUser => {
-        const allUsers = this.usersSubject.value;
-        const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
         return {
           id: backendUser.id,
           personalId: backendUser.personalId,
@@ -200,7 +207,7 @@ export class UserSyncService {
           function: this.normalizeFunction(backendUser.function),
           createdAt: new Date(backendUser.createdAt),
           updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-          role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
+          role: this.mapBackendRole(backendUser)
         };
       }),
       catchError(error => {
