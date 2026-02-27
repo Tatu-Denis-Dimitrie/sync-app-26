@@ -9,6 +9,7 @@ import { UsersListComponent } from './components/users-list/users-list.component
 import { EmployeesDetailComponent } from './components/employees-detail/employees-detail.component';
 import { ImportHistoryComponent } from './components/import-history/import-history.component';
 import { RegisterComponent } from './components/register/register.component';
+import { LoadingScreenComponent } from './components/loading-screen/loading-screen.component';
 import { DocumentSignatureComponent } from './pages/document-signature/document-signature.component';
 import { TestSignatureComponent } from './pages/test-signature/test-signature.component';
 import { AdminGuard } from './guards/admin.guard';
@@ -20,6 +21,7 @@ export const routes: Routes = [
   
   // Public routes (no authentication required)
   { path: 'login', component: LoginComponent },
+  { path: 'loading', component: LoadingScreenComponent, canActivate: [AuthGuard] },
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },

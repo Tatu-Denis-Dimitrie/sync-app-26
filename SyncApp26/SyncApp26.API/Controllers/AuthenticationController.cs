@@ -53,10 +53,17 @@ namespace SyncApp26.API.Controllers
                     return BadRequest(new { message = "Email is already registered." });
                 }
 
+                var basicUserRoleId = await _userService.GetRoleIdByNameAsync("Basic User");
+                if (basicUserRoleId == null)
+                {
+                    return StatusCode(500, new { message = "Required role 'Basic User' is missing." });
+                }
+
                 var user = new User
                 {
                     Id = Guid.NewGuid(),
                     PersonalId = Guid.NewGuid().ToString(),
+                    RoleId = basicUserRoleId.Value,
                     FirstName = request.FirstName,
                     LastName = request.LastName,
                     Email = normalizedEmail,

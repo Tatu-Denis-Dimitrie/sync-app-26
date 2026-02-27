@@ -209,10 +209,22 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
+            var roleName = userRequestDTO.AssignedToId.HasValue ? "Line Manager" : "Basic User";
+            var roleId = await _userService.GetRoleIdByNameAsync(roleName);
+            if (roleId == null)
+            {
+                return BadRequest(new UserResponseDTO
+                {
+                    Success = false,
+                    Message = $"Role '{roleName}' not found"
+                });
+            }
+
             var user = new User
             {
                 Id = Guid.NewGuid(),
                 PersonalId = Guid.NewGuid().ToString(),
+                RoleId = roleId.Value,
                 FirstName = userRequestDTO.FirstName,
                 LastName = userRequestDTO.LastName,
                 Email = userRequestDTO.Email,

@@ -128,5 +128,20 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.PersonalId == personalId);
         }
+
+        public async Task<Guid?> GetRoleIdByNameAsync(string roleName)
+        {
+            if (string.IsNullOrWhiteSpace(roleName))
+            {
+                return null;
+            }
+
+            var normalizedRoleName = roleName.Trim();
+
+            return await _context.Roles
+                .Where(r => r.Name.ToLower() == normalizedRoleName.ToLower())
+                .Select(r => (Guid?)r.Id)
+                .FirstOrDefaultAsync();
+        }
     }
 }

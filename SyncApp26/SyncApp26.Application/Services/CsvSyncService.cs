@@ -215,6 +215,8 @@ public class CsvSyncService : ICsvSyncService
             .Where(d => d.IsActive) // Only consider active departments
             .ToList();
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
+        var lineManagerRoleId = await _userRepository.GetRoleIdByNameAsync("Line Manager");
+        var basicUserRoleId = await _userRepository.GetRoleIdByNameAsync("Basic User");
 
         // Batch collections for bulk operations
         var usersToAdd = new List<User>();
@@ -261,10 +263,19 @@ public class CsvSyncService : ICsvSyncService
                     }
 
                     var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
+                    var roleId = assignedManager != null ? basicUserRoleId : lineManagerRoleId;
+
+                    if (roleId == null)
+                    {
+                        result.RecordsFailed++;
+                        result.Errors.Add($"User {item.CsvData.Email}: Required role not found for creation.");
+                        continue;
+                    }
 
                     var newUser = new User
                     {
                         Id = Guid.NewGuid(),
+                        RoleId = roleId.Value,
                         FirstName = item.CsvData.FirstName.Trim(),
                         LastName = item.CsvData.LastName.Trim(),
                         Email = item.CsvData.Email.Trim(),

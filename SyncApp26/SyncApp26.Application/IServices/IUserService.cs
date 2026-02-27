@@ -13,5 +13,6 @@ namespace SyncApp26.Application.IServices
         Task DeleteUserAsync(Guid userId);
         Task<User?> GetUserByPersonalIdAsync(string personalId);
         Task<User?> GetUserByEmailAsync(string email);
+        Task<Guid?> GetRoleIdByNameAsync(string roleName);
     }
 }
