@@ -27,11 +27,6 @@ namespace SyncApp26.Application.Services
             return _functionRepository.GetAllFunctionNamesAsync();
         }
 
-        public Task<IEnumerable<string>> GetFunctionByDepartmentIdAsync(Guid departmentId)
-        {
-            return _functionRepository.GetFunctionByDepartmentIdAsync(departmentId);
-        }
-
         public Task<IEnumerable<string>> GetFunctionByIdAsync(Guid functionId)
         {
             return _functionRepository.GetFunctionByIdAsync(functionId);

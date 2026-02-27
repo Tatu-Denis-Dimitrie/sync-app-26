@@ -28,13 +28,6 @@ namespace SyncApp26.API.Controllers
             return Ok(functions);
         }
 
-        [HttpGet("department/{departmentId}")]
-        public async Task<IActionResult> GetFunctionsByDepartment(Guid departmentId)
-        {
-            var functions = await _functionService.GetFunctionByDepartmentIdAsync(departmentId);
-            return Ok(functions);
-        }
-
         [HttpPost]
         public async Task<IActionResult> AddFunction([FromBody] string functionName)
         {

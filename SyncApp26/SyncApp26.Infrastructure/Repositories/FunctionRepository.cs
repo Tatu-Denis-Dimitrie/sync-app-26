@@ -47,16 +47,6 @@ namespace SyncApp26.Infrastructure.Repositories
             return Task.FromResult(functionNames.AsEnumerable());
         }
 
-        public Task<IEnumerable<string>> GetFunctionByDepartmentIdAsync(Guid departmentId)
-        {
-            var functionNames = _context.DepartmentFunctions
-                .Where(df => df.DepartmentId == departmentId && df.Function.DeletedAt == null)
-                .Select(df => df.Function.Name)
-                .ToList();
-
-            return Task.FromResult(functionNames.AsEnumerable());
-        }
-
         public Task<IEnumerable<string>> GetFunctionByIdAsync(Guid functionId)
         {
             var functionNames = _context.Functions
