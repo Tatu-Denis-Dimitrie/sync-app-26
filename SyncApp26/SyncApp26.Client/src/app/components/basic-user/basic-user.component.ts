@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserSyncService } from '../../services/user-sync.service';
 import { User, UserRole } from '../../models/csv-sync.model';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-basic-user',
@@ -17,13 +19,19 @@ export class BasicUserComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
 
+  pendingUserSignatures: any[] = [];
+  pendingManagerSignatures: any[] = [];
+  signedUserSignatures: any[] = [];
+  signedManagerSignatures: any[] = [];
+
   UserRole = UserRole;
 
   constructor(
     private authService: AuthenticationService,
     private userSyncService: UserSyncService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private http: HttpClient
+  ) { }
 
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
@@ -44,6 +52,61 @@ export class BasicUserComponent implements OnInit {
       error: () => {
         this.errorMessage = 'Could not load user details.';
         this.isLoading = false;
+      }
+    });
+
+    this.loadPendingSignatures();
+  }
+
+  loadPendingSignatures(): void {
+    // 1. Fetch documents where the user is an employee and needs to sign
+    this.http.get<any[]>(`${environment.apiUrl}/Document/my-pending-signatures`).subscribe({
+      next: (docs) => {
+        this.pendingUserSignatures = docs;
+      },
+      error: (err) => console.error('Failed to load pending user signatures', err)
+    });
+
+    // 2. Fetch documents where the user is a manager and needs to sign
+    this.http.get<any[]>(`${environment.apiUrl}/Document/manager-pending-signatures`).subscribe({
+      next: (docs) => {
+        this.pendingManagerSignatures = docs;
+      },
+      error: (err) => console.error('Failed to load pending manager signatures', err)
+    });
+
+    // 3. Fetch documents completed by user
+    this.http.get<any[]>(`${environment.apiUrl}/Document/my-signed-documents`).subscribe({
+      next: (docs) => {
+        this.signedUserSignatures = docs;
+      },
+      error: (err) => console.error('Failed to load signed user documents', err)
+    });
+
+    // 4. Fetch documents completed by manager
+    if (this.user?.role === UserRole.LineManager || true) {
+      this.http.get<any[]>(`${environment.apiUrl}/Document/manager-signed-documents`).subscribe({
+        next: (docs) => {
+          this.signedManagerSignatures = docs;
+        },
+        error: (err) => console.error('Failed to load signed manager documents', err)
+      });
+    }
+  }
+
+  signDocument(documentId: string): void {
+    if (!documentId) return;
+
+    // Call backend to generate a valid token for this user for this document
+    this.http.get<any>(`${environment.apiUrl}/Document/token-for-document/${documentId}`).subscribe({
+      next: (res) => {
+        if (res.token) {
+          this.router.navigate(['/sign', res.token]);
+        }
+      },
+      error: (err) => {
+        console.error('Error generating token', err);
+        alert(err.error?.message || 'Could not initiate signature block.');
       }
     });
   }

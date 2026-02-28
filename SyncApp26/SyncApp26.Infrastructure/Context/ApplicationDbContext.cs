@@ -18,6 +18,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<DocumentSignatureToken> DocumentSignatureTokens { get; set; }
         public DbSet<Function> Functions { get; set; }
         public DbSet<DepartmentFunction> DepartmentFunctions { get; set; }
+        public DbSet<UserDocument> UserDocuments { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -187,6 +188,29 @@ namespace SyncApp26.Infrastructure.Context
                     .WithMany(f => f.DepartmentFunctions)
                     .HasForeignKey(df => df.FunctionId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure UserDocument entity
+            modelBuilder.Entity<UserDocument>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DocumentType)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Status)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                
+                // Configure relationship with User
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.Status);
             });
         }
     }

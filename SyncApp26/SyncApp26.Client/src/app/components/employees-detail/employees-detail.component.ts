@@ -8,6 +8,8 @@ import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
 import { User, UserRole, Department, ImportConflictHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-employees-detail',
@@ -24,6 +26,10 @@ export class EmployeesDetailComponent implements OnInit {
   importConflicts: ImportConflictHistory[] = [];
   conflictsLoading = false;
   conflictsError = '';
+
+  userDocuments: any[] = [];
+  documentsLoading = false;
+  documentsError = '';
 
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 10;
@@ -47,7 +53,8 @@ export class EmployeesDetailComponent implements OnInit {
     private userSyncService: UserSyncService,
     private authService: AuthenticationService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private http: HttpClient
   ) { }
 
   logout(): void {
@@ -101,12 +108,15 @@ export class EmployeesDetailComponent implements OnInit {
   selectUser(user: User): void {
     this.selectedUser = user;
     this.loadUserConflicts(user.id);
+    this.loadUserDocuments(user.id);
   }
 
   closeDetails(): void {
     this.selectedUser = null;
     this.importConflicts = [];
     this.conflictsError = '';
+    this.userDocuments = [];
+    this.documentsError = '';
     this.router.navigate(['/employees']);
   }
 
@@ -143,6 +153,22 @@ export class EmployeesDetailComponent implements OnInit {
         this.conflictsLoading = false;
         this.conflictsError = 'Failed to load conflict history.';
         this.importConflicts = [];
+      }
+    });
+  }
+
+  loadUserDocuments(userId: string): void {
+    this.documentsLoading = true;
+    this.documentsError = '';
+    this.http.get<any[]>(`${environment.apiUrl}/Document/user/${userId}`).subscribe({
+      next: docs => {
+        this.userDocuments = docs;
+        this.documentsLoading = false;
+      },
+      error: () => {
+        this.documentsLoading = false;
+        this.documentsError = 'Failed to load documents.';
+        this.userDocuments = [];
       }
     });
   }

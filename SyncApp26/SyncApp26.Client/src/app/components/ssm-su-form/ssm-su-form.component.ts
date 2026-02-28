@@ -58,6 +58,7 @@ export class SsmSuFormComponent implements OnInit {
   saving = false;
   selectedTab: 'ssm' | 'su' = 'ssm';
   editMode = false;
+  generatingDoc = false;
 
   // Editable form data
   formData = {
@@ -181,6 +182,30 @@ export class SsmSuFormComponent implements OnInit {
           alert('Error saving form. Please try again.');
         }
       });
+  }
+
+  generateDocument() {
+    if (!this.userId) return;
+
+    const type = this.selectedTab === 'ssm' ? 'SSM' : 'SU';
+
+    if (confirm(`Are you sure you want to generate the ${type} document and request signatures? Make sure all data is saved first.`)) {
+      this.generatingDoc = true;
+      this.http.post(`${environment.apiUrl}/Document/generate`, {
+        userId: this.userId,
+        documentType: type
+      }).subscribe({
+        next: () => {
+          this.generatingDoc = false;
+          alert(`${type} Document generated successfully! An email signature request has been sent to the user.`);
+        },
+        error: (err) => {
+          console.error('Error generating document:', err);
+          this.generatingDoc = false;
+          alert('Error generating document. Please try again.');
+        }
+      });
+    }
   }
 
   goBack() {

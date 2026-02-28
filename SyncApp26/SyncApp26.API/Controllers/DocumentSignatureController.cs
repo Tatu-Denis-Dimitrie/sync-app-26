@@ -12,17 +12,20 @@ namespace SyncApp26.API.Controllers
         private readonly IDocumentSignatureService _documentSignatureService;
         private readonly IUserService _userService;
         private readonly IEmailService _emailService;
+        private readonly IDocumentService _documentService;
         private readonly IConfiguration _configuration;
 
         public DocumentSignatureController(
             IDocumentSignatureService documentSignatureService,
             IUserService userService,
             IEmailService emailService,
+            IDocumentService documentService,
             IConfiguration configuration)
         {
             _documentSignatureService = documentSignatureService;
             _userService = userService;
             _emailService = emailService;
+            _documentService = documentService;
             _configuration = configuration;
         }
 
@@ -93,9 +96,8 @@ namespace SyncApp26.API.Controllers
         public class ConsumeTokenDto
         {
             public string Token { get; set; } = string.Empty;
-            // The actual payload containing form data (like checkmarks, base64 signature, etc)
-            // will be added here once the SSM/SU documents are fully modeled.
-            // public DocumentSignaturePayload Payload { get; set; }
+            public string SignatureMethod { get; set; } = string.Empty; // Draw, Type
+            public string SignatureData { get; set; } = string.Empty; // Base64
         }
 
         [HttpPost("consume-token")]
@@ -106,14 +108,53 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Token is required." });
             }
 
-            var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
-
-            if (!isValidAndConsumed)
+            var tokenEntity = await _documentSignatureService.ValidateTokenAsync(request.Token);
+            if (tokenEntity == null)
             {
-                return BadRequest(new { message = "Token is invalid, expired, or already used." });
+                return BadRequest(new { message = "Token is invalid or expired." });
             }
 
-            // Future logic to save the document form answers/signature to the DB using the request payload
+            var document = await _documentService.GetDocumentByIdAsync(tokenEntity.DocumentId);
+            if (document == null)
+            {
+                return BadRequest(new { message = "Document not found." });
+            }
+
+            var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
+            if (!isValidAndConsumed)
+            {
+                return BadRequest(new { message = "Token could not be consumed." });
+            }
+
+            // Record signature
+            var isUserSignature = document.Status == "PendingUser";
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+            await _documentService.UpdateDocumentSignatureAsync(
+                document.Id,
+                isUserSignature,
+                request.SignatureMethod,
+                request.SignatureData,
+                ipAddress
+            );
+
+            // If user signed, generate link for the manager and send email
+            if (isUserSignature && document.User?.AssignedTo != null)
+            {
+                var manager = document.User.AssignedTo;
+                var managerToken = await _documentSignatureService.GenerateSignatureTokenAsync(
+                    manager.Email, 
+                    document.Id, 
+                    $"{document.DocumentType} Document (Manager Approval)");
+
+                var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+                var managerSecureLink = $"{frontendUrl}/sign/{managerToken}";
+
+                await _emailService.SendDocumentSignatureEmailWithLinkAsync(
+                    manager.Email, 
+                    $"{document.DocumentType} Document (Manager Approval)", 
+                    managerSecureLink);
+            }
             
             return Ok(new { message = "Document successfully signed using secure link." });
         }

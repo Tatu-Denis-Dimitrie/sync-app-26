@@ -65,6 +65,8 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>();
 builder.Services.AddScoped<IFunctionService, FunctionService>();
 builder.Services.AddScoped<IDepartmentFunctionService, DepartmentFunctionService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();

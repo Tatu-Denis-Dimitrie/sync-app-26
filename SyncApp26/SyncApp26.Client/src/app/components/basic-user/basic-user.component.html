@@ -6,10 +6,8 @@
 					<h1 class="text-xl font-semibold text-foreground">My Profile</h1>
 					<p class="text-sm text-muted-foreground">Personal and work information</p>
 				</div>
-				<button
-					(click)="logout()"
-					class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-				>
+				<button (click)="logout()"
+					class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
 					Logout
 				</button>
 			</div>
@@ -23,7 +21,8 @@
 		<div *ngIf="!isLoading && user" class="bg-card border border-border rounded-lg p-6">
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 				<div class="space-y-4">
-					<h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Personal Information</h3>
+					<h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Personal Information
+					</h3>
 
 					<div>
 						<label class="text-sm font-medium text-muted-foreground">First Name</label>
@@ -49,8 +48,7 @@
 						<label class="text-sm font-medium text-muted-foreground">Role</label>
 						<div class="mt-1">
 							<span
-								[class]="'inline-block px-3 py-1 rounded border font-medium ' + getRoleBadgeColor(user.role)"
-							>
+								[class]="'inline-block px-3 py-1 rounded border font-medium ' + getRoleBadgeColor(user.role)">
 								{{ user.role === UserRole.LineManager ? 'Line Manager' : 'Employee' }}
 							</span>
 						</div>
@@ -87,7 +85,8 @@
 
 					<div>
 						<label class="text-sm font-medium text-muted-foreground">Last Updated</label>
-						<p class="text-foreground font-medium mt-1">{{ user.updatedAt ? formatDate(user.updatedAt) : 'N/A' }}</p>
+						<p class="text-foreground font-medium mt-1">{{ user.updatedAt ? formatDate(user.updatedAt) :
+							'N/A' }}</p>
 					</div>
 				</div>
 			</div>
@@ -98,6 +97,88 @@
 					{{ user.role === UserRole.LineManager ? 'Manager' : 'Employee' }} in {{ user.departmentName }} •
 					{{ getRelativeTime(user.updatedAt || user.createdAt) }}
 				</p>
+			</div>
+
+			<div *ngIf="pendingUserSignatures.length > 0 || pendingManagerSignatures.length > 0"
+				class="mt-8 border-t border-border pt-6">
+				<h3 class="text-xl font-bold text-foreground mb-4">Pending Signatures</h3>
+
+				<div class="space-y-4">
+					<div *ngFor="let doc of pendingUserSignatures"
+						class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg shadow-sm">
+						<div>
+							<h4 class="font-semibold text-yellow-900">{{ doc.documentType }} Form</h4>
+							<p class="text-sm text-yellow-700">Needs your signature as Employee</p>
+							<p class="text-xs text-yellow-600 mt-1">Generated: {{ formatDate(doc.generatedAt) }}</p>
+						</div>
+						<button (click)="signDocument(doc.id)"
+							class="mt-3 sm:mt-0 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+							Sign Document
+						</button>
+					</div>
+
+					<div *ngFor="let doc of pendingManagerSignatures"
+						class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-blue-200 bg-blue-50 rounded-lg shadow-sm">
+						<div>
+							<h4 class="font-semibold text-blue-900">{{ doc.documentType }} Form (Team Member)</h4>
+							<p class="text-sm text-blue-700">Needs your counter-signature as Line Manager</p>
+							<p class="text-xs text-blue-600 mt-1">Employee signed: {{ formatDate(doc.userSignedAt) }}
+							</p>
+						</div>
+						<button (click)="signDocument(doc.id)"
+							class="mt-3 sm:mt-0 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+							Sign Document
+					</div>
+				</div>
+			</div>
+
+			<!-- COMPLETED SIGNATURES -->
+			<div *ngIf="signedUserSignatures.length > 0 || signedManagerSignatures.length > 0"
+				class="mt-8 border-t border-border pt-6">
+				<h3 class="text-xl font-bold text-foreground mb-4">Completed Documents</h3>
+
+				<div class="space-y-4">
+					<div *ngFor="let doc of signedUserSignatures"
+						class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+						<div>
+							<h4 class="font-semibold text-green-900">{{ doc.documentType }} Form</h4>
+							<p class="text-sm text-green-700">Signed by you on {{ formatDate(doc.userSignedAt) }}</p>
+							<div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+								<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+									</path>
+								</svg>
+								<span>Secured &amp; Verified</span>
+							</div>
+						</div>
+						<span
+							class="mt-3 sm:mt-0 px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+							{{ doc.status === 'Completed' ? 'Fully Executed' : 'Awaiting Manager' }}
+						</span>
+					</div>
+
+					<div *ngFor="let doc of signedManagerSignatures"
+						class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+						<div>
+							<h4 class="font-semibold text-green-900">{{ doc.documentType }} Form (Team Member)</h4>
+							<p class="text-sm text-green-700">Counter-signed by you on {{
+								formatDate(doc.managerSignedAt) }}</p>
+							<div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+								<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+									</path>
+								</svg>
+								<span>Secured &amp; Verified</span>
+							</div>
+						</div>
+						<span
+							class="mt-3 sm:mt-0 px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+							Fully Executed
+						</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
