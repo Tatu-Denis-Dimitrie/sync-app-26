@@ -51,7 +51,7 @@ namespace SyncApp26.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateUserChangeHistory([FromBody] UserChangeHistoryRequestDTO userChangeHistoryRequestDTO)
         {
-            if(userChangeHistoryRequestDTO == null || userChangeHistoryRequestDTO.UserId == Guid.Empty || userChangeHistoryRequestDTO.ImportHistoryId == Guid.Empty || string.IsNullOrEmpty(userChangeHistoryRequestDTO.FieldName))
+            if(userChangeHistoryRequestDTO == null || userChangeHistoryRequestDTO.UserId == Guid.Empty || string.IsNullOrEmpty(userChangeHistoryRequestDTO.FieldName))
             {
                 return BadRequest("Invalid user change history data.");
             }
@@ -64,7 +64,8 @@ namespace SyncApp26.API.Controllers
                 FieldName = userChangeHistoryRequestDTO.FieldName,
                 OldValue = userChangeHistoryRequestDTO.OldValue,
                 NewValue = userChangeHistoryRequestDTO.NewValue,
-                Status = userChangeHistoryRequestDTO.Status
+                Status = userChangeHistoryRequestDTO.Status,
+                CreatedAt = DateTime.UtcNow
             };
 
             await _userChangeHistoryService.AddUserChangeHistoryAsync(userChangeHistory);

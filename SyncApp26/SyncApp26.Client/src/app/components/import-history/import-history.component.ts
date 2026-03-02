@@ -2,10 +2,22 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
 import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
-import { ImportConflictHistory, ImportHistoryItem, User } from '../../models/csv-sync.model';
+import { UserChangeHistory, User } from '../../models/csv-sync.model';
+
+interface ImportHistoryGroup {
+  importHistoryId: string;
+  importDate?: string;
+  importFileName?: string;
+  conflicts: UserChangeHistory[];
+}
+
+interface ManualDayGroup {
+  dayKey: string;
+  dayDate?: string;
+  changes: UserChangeHistory[];
+}
 
 @Component({
   selector: 'app-import-history',
@@ -15,9 +27,11 @@ import { ImportConflictHistory, ImportHistoryItem, User } from '../../models/csv
   styleUrl: './import-history.component.css'
 })
 export class ImportHistoryComponent implements OnInit {
-  histories: ImportHistoryItem[] = [];
-  conflictsByHistory = new Map<string, ImportConflictHistory[]>();
-  expandedHistory = new Set<string>();
+  private readonly emptyGuid = '00000000-0000-0000-0000-000000000000';
+
+  allChanges: UserChangeHistory[] = [];
+  expandedImportHistory = new Set<string>();
+  expandedManualDays = new Set<string>();
   usersById = new Map<string, User>();
   loading = false;
   error = '';
@@ -36,7 +50,7 @@ export class ImportHistoryComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadUsers();
-    this.loadImportHistory();
+    this.loadUserChangeHistory();
   }
 
   loadUsers(): void {
@@ -47,71 +61,177 @@ export class ImportHistoryComponent implements OnInit {
     });
   }
 
-  loadImportHistory(): void {
+  loadUserChangeHistory(): void {
     this.loading = true;
     this.error = '';
-    this.userSyncService.getImportHistories().subscribe({
-      next: histories => {
-        this.histories = histories;
-        this.loadConflictsForHistories(this.histories);
+    this.userSyncService.getAllUserChangeHistories().subscribe({
+      next: changes => {
+        this.allChanges = changes ?? [];
+        this.loading = false;
       },
       error: () => {
         this.loading = false;
-        this.error = 'Failed to load import history.';
+        this.error = 'Failed to load user change history.';
       }
     });
   }
 
-  loadConflictsForHistories(histories: ImportHistoryItem[]): void {
-    if (histories.length === 0) {
-      this.loading = false;
-      return;
+  private hasRealImportHistoryId(change: UserChangeHistory): boolean {
+    const importHistoryId = (change.importHistoryId || '').trim();
+    return !!importHistoryId && importHistoryId !== this.emptyGuid;
+  }
+
+  private getChangeDate(change: UserChangeHistory): string | undefined {
+    return change.createdAt || change.importDate;
+  }
+
+  private getChangeTime(change: UserChangeHistory): number {
+    const date = this.getChangeDate(change);
+    return date ? new Date(date).getTime() : 0;
+  }
+
+  private getDayKey(date?: string): string {
+    if (!date) {
+      return 'unknown';
     }
 
-    const requests = histories.map(history =>
-      this.userSyncService.getImportConflictsByImportHistoryId(history.id)
-    );
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) {
+      return 'unknown';
+    }
 
-    forkJoin(requests).subscribe({
-      next: results => {
-        results.forEach((conflicts, index) => {
-          this.conflictsByHistory.set(histories[index].id, conflicts);
-        });
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.error = 'Failed to load import conflicts.';
-      }
-    });
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
-  toggleHistory(historyId: string): void {
-    if (this.expandedHistory.has(historyId)) {
-      this.expandedHistory.delete(historyId);
+  isImportConflict(change: UserChangeHistory): boolean {
+    return this.hasRealImportHistoryId(change) && !!change.status;
+  }
+
+  isManualChange(change: UserChangeHistory): boolean {
+    return !this.hasRealImportHistoryId(change) && !change.status;
+  }
+
+  toggleImportGroup(historyId: string): void {
+    if (this.expandedImportHistory.has(historyId)) {
+      this.expandedImportHistory.delete(historyId);
     } else {
-      this.expandedHistory.add(historyId);
+      this.expandedImportHistory.add(historyId);
     }
   }
 
-  isExpanded(historyId: string): boolean {
-    return this.expandedHistory.has(historyId);
+  isImportGroupExpanded(historyId: string): boolean {
+    return this.expandedImportHistory.has(historyId);
   }
 
-  getConflicts(historyId: string): ImportConflictHistory[] {
-    return this.conflictsByHistory.get(historyId) ?? [];
+  toggleManualDay(dayKey: string): void {
+    if (this.expandedManualDays.has(dayKey)) {
+      this.expandedManualDays.delete(dayKey);
+    } else {
+      this.expandedManualDays.add(dayKey);
+    }
   }
 
-  getFilteredHistories(): ImportHistoryItem[] {
+  isManualDayExpanded(dayKey: string): boolean {
+    return this.expandedManualDays.has(dayKey);
+  }
+
+  getUserName(userId: string): string {
+    const user = this.usersById.get(userId);
+    return user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
+  }
+
+  getFilteredImportGroups(): ImportHistoryGroup[] {
     const query = this.searchQuery.trim().toLowerCase();
-    const filtered = query
-      ? this.histories.filter(history =>
-          (history.fileName || '').toLowerCase().includes(query))
-      : this.histories.slice();
+    const groups = new Map<string, ImportHistoryGroup>();
 
-    return filtered.sort((a, b) => {
+    this.allChanges
+      .filter(change => this.isImportConflict(change))
+      .forEach(change => {
+        const key = change.importHistoryId!;
+        if (!groups.has(key)) {
+          groups.set(key, {
+            importHistoryId: key,
+            importDate: change.importDate,
+            importFileName: change.importFileName,
+            conflicts: []
+          });
+        }
+
+        const group = groups.get(key)!;
+        group.conflicts.push(change);
+
+        if (!group.importDate && change.importDate) {
+          group.importDate = change.importDate;
+        }
+        if (!group.importFileName && change.importFileName) {
+          group.importFileName = change.importFileName;
+        }
+      });
+
+    let result = Array.from(groups.values());
+
+    if (query) {
+      result = result.filter(group =>
+        (group.importFileName || '').toLowerCase().includes(query)
+      );
+    }
+
+    return result.sort((a, b) => {
       const aTime = a.importDate ? new Date(a.importDate).getTime() : 0;
       const bTime = b.importDate ? new Date(b.importDate).getTime() : 0;
+      return this.sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
+    });
+  }
+
+  getFilteredManualDayGroups(): ManualDayGroup[] {
+    const query = this.searchQuery.trim().toLowerCase();
+    const groups = new Map<string, ManualDayGroup>();
+
+    this.allChanges
+      .filter(change => this.isManualChange(change))
+      .forEach(change => {
+        const date = this.getChangeDate(change);
+        const dayKey = this.getDayKey(date);
+
+        if (!groups.has(dayKey)) {
+          groups.set(dayKey, {
+            dayKey,
+            dayDate: date,
+            changes: []
+          });
+        }
+
+        const group = groups.get(dayKey)!;
+        group.changes.push(change);
+
+        if (date && (!group.dayDate || this.getChangeTime(change) > new Date(group.dayDate).getTime())) {
+          group.dayDate = date;
+        }
+      });
+
+    let result = Array.from(groups.values()).map(group => ({
+      ...group,
+      changes: group.changes.slice().sort((a, b) => this.getChangeTime(b) - this.getChangeTime(a))
+    }));
+
+    if (query) {
+      result = result.filter(group => {
+        const dateLabel = this.formatDate(group.dayDate).toLowerCase();
+        const hasMatchingDate = dateLabel.includes(query);
+        const hasMatchingChange = group.changes.some(change =>
+          this.getUserName(change.userId).toLowerCase().includes(query) ||
+          this.formatConflictField(change.fieldName).toLowerCase().includes(query)
+        );
+        return hasMatchingDate || hasMatchingChange;
+      });
+    }
+
+    return result.sort((a, b) => {
+      const aTime = a.dayDate ? new Date(a.dayDate).getTime() : 0;
+      const bTime = b.dayDate ? new Date(b.dayDate).getTime() : 0;
       return this.sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
     });
   }
@@ -120,10 +240,8 @@ export class ImportHistoryComponent implements OnInit {
     this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
   }
 
-  getConflictGroups(historyId: string): Array<{ userId: string; userName: string; conflicts: ImportConflictHistory[] }>
-  {
-    const conflicts = this.getConflicts(historyId);
-    const groups = new Map<string, ImportConflictHistory[]>();
+  getConflictGroups(conflicts: UserChangeHistory[]): Array<{ userId: string; userName: string; conflicts: UserChangeHistory[] }> {
+    const groups = new Map<string, UserChangeHistory[]>();
 
     conflicts.forEach(conflict => {
       if (!groups.has(conflict.userId)) {
@@ -133,18 +251,22 @@ export class ImportHistoryComponent implements OnInit {
     });
 
     return Array.from(groups.entries()).map(([userId, userConflicts]) => {
-      const user = this.usersById.get(userId);
-      const userName = user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
+      const userName = this.getUserName(userId);
       return { userId, userName, conflicts: userConflicts };
     });
   }
 
-  formatDate(date: string): string {
+  formatDate(date?: string): string {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('ro-RO');
   }
 
-  getStatusColor(status: string): string {
+  formatDateTime(date?: string): string {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString('ro-RO');
+  }
+
+  getStatusColor(status?: string | null): string {
     return status === 'accepted'
       ? 'bg-green-500/10 text-green-700 border-green-500/20'
       : 'bg-red-500/10 text-red-700 border-red-500/20';

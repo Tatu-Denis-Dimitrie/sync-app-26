@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, UserChangeHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
 import { from, combineLatest } from 'rxjs';
@@ -220,10 +220,10 @@ export class UserSyncService {
   /**
    * Get import conflict history for a user
    */
-  getImportConflictsByUserId(userId: string): Observable<ImportConflictHistory[]> {
-    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byUser/${userId}`).pipe(
+  getImportConflictsByUserId(userId: string): Observable<UserChangeHistory[]> {
+    return this.http.get<UserChangeHistory[]>(`${environment.apiUrl}/UserChangeHistory/byUser/${userId}`).pipe(
       catchError(error => {
-        console.error('Error fetching import conflicts:', error);
+        console.error('Error fetching user change history:', error);
         return of([]);
       })
     );
@@ -244,10 +244,22 @@ export class UserSyncService {
   /**
    * Get import conflicts by import history id
    */
-  getImportConflictsByImportHistoryId(importHistoryId: string): Observable<ImportConflictHistory[]> {
-    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byImportHistory/${importHistoryId}`).pipe(
+  getImportConflictsByImportHistoryId(importHistoryId: string): Observable<UserChangeHistory[]> {
+    return this.http.get<UserChangeHistory[]>(`${environment.apiUrl}/UserChangeHistory/byImportHistory/${importHistoryId}`).pipe(
       catchError(error => {
-        console.error('Error fetching import conflicts by history:', error);
+        console.error('Error fetching user change history by import history:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get all user change history entries (import conflicts + manual edits)
+   */
+  getAllUserChangeHistories(): Observable<UserChangeHistory[]> {
+    return this.http.get<UserChangeHistory[]>(`${environment.apiUrl}/UserChangeHistory`).pipe(
+      catchError(error => {
+        console.error('Error fetching user change history:', error);
         return of([]);
       })
     );

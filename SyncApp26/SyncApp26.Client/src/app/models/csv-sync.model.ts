@@ -114,14 +114,15 @@ export interface ImportHistoryItem {
   fileName: string;
 }
 
-export interface ImportConflictHistory {
+export interface UserChangeHistory {
   id: string;
-  importHistoryId: string;
+  importHistoryId?: string;
   importDate?: string;
   importFileName?: string;
   userId: string;
   fieldName: string;
   oldValue: string;
   newValue: string;
-  status: string; // 'accepted' | 'rejected'
+  status?: string | null; // 'accepted' | 'rejected' | null (manual change)
+  createdAt?: string;
 }

@@ -6,7 +6,7 @@ import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
-import { User, UserRole, Department, ImportConflictHistory } from '../../models/csv-sync.model';
+import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -23,7 +23,7 @@ export class EmployeesDetailComponent implements OnInit {
   paginatedUsers$!: Observable<User[]>;
   departments$!: Observable<Department[]>;
   selectedUser: User | null = null;
-  importConflicts: ImportConflictHistory[] = [];
+  importConflicts: UserChangeHistory[] = [];
   conflictsLoading = false;
   conflictsError = '';
 
@@ -173,9 +173,10 @@ export class EmployeesDetailComponent implements OnInit {
     });
   }
 
-  getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: ImportConflictHistory[] }> {
-    const groups = new Map<string, { importHistoryId: string; importDate?: string; importFileName?: string; conflicts: ImportConflictHistory[] }>();
+  getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }> {
+    const groups = new Map<string, { importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }>();
     const sorted = this.importConflicts
+      .filter(conflict => !!conflict.importHistoryId)
       .slice()
       .sort((a, b) => {
         const aTime = a.importDate ? new Date(a.importDate).getTime() : 0;
@@ -184,10 +185,10 @@ export class EmployeesDetailComponent implements OnInit {
       });
 
     sorted.forEach(conflict => {
-      const key = conflict.importHistoryId;
+      const key = conflict.importHistoryId ?? '';
       if (!groups.has(key)) {
         groups.set(key, {
-          importHistoryId: conflict.importHistoryId,
+          importHistoryId: key,
           importDate: conflict.importDate,
           importFileName: conflict.importFileName,
           conflicts: []
@@ -203,7 +204,7 @@ export class EmployeesDetailComponent implements OnInit {
     });
   }
 
-  getConflictStatusColor(status: string): string {
+  getConflictStatusColor(status?: string | null): string {
     return status === 'accepted'
       ? 'bg-green-500/10 text-green-700 border-green-500/20'
       : 'bg-red-500/10 text-red-700 border-red-500/20';

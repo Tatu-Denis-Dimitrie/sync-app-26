@@ -26,14 +26,15 @@ namespace SyncApp26.Application.Services
             return userChangeHistories.Select(c => new UserChangeHistoryResponseDTO
             {
                 Id = c.Id,
-                ImportHistoryId = c.ImportHistoryId != null ? c.ImportHistoryId.Value : Guid.Empty,
+                ImportHistoryId = c.ImportHistoryId,
                 ImportDate = c.ImportHistory?.ImportDate,
                 ImportFileName = c.ImportHistory?.FileName,
                 UserId = c.UserId,
                 FieldName = c.FieldName,
                 OldValue = c.OldValue,
                 NewValue = c.NewValue,
-                Status = c.Status
+                Status = c.Status,
+                CreatedAt = c.CreatedAt
             });
         }
 
@@ -49,14 +50,15 @@ namespace SyncApp26.Application.Services
             return new UserChangeHistoryResponseDTO
             {
                 Id = userChangeHistory.Id,
-                ImportHistoryId = userChangeHistory.ImportHistoryId != null ? userChangeHistory.ImportHistoryId.Value : Guid.Empty,
+                ImportHistoryId = userChangeHistory.ImportHistoryId,
                 ImportDate = userChangeHistory.ImportHistory?.ImportDate,
                 ImportFileName = userChangeHistory.ImportHistory?.FileName,
                 UserId = userChangeHistory.UserId,
                 FieldName = userChangeHistory.FieldName,
                 OldValue = userChangeHistory.OldValue,
                 NewValue = userChangeHistory.NewValue,
-                Status = userChangeHistory.Status
+                Status = userChangeHistory.Status,
+                CreatedAt = userChangeHistory.CreatedAt
             };
         }
 
@@ -72,14 +74,15 @@ namespace SyncApp26.Application.Services
             return userChangeHistories.Select(c => new UserChangeHistoryResponseDTO
             {
                 Id = c.Id,
-                ImportHistoryId = c.ImportHistoryId != null ? c.ImportHistoryId.Value : Guid.Empty,
+                ImportHistoryId = c.ImportHistoryId,
                 ImportDate = c.ImportHistory?.ImportDate,
                 ImportFileName = c.ImportHistory?.FileName,
                 UserId = c.UserId,
                 FieldName = c.FieldName,
                 OldValue = c.OldValue,
                 NewValue = c.NewValue,
-                Status = c.Status
+                Status = c.Status,
+                CreatedAt = c.CreatedAt
             });
         }
 
@@ -95,14 +98,15 @@ namespace SyncApp26.Application.Services
             return userChangeHistories.Select(c => new UserChangeHistoryResponseDTO
             {
                 Id = c.Id,
-                ImportHistoryId = c.ImportHistoryId != null ? c.ImportHistoryId.Value : Guid.Empty,
+                ImportHistoryId = c.ImportHistoryId,
                 ImportDate = c.ImportHistory?.ImportDate,
                 ImportFileName = c.ImportHistory?.FileName,
                 UserId = c.UserId,
                 FieldName = c.FieldName,
                 OldValue = c.OldValue,
                 NewValue = c.NewValue,
-                Status = c.Status
+                Status = c.Status,
+                CreatedAt = c.CreatedAt
             });
         }
 
@@ -112,11 +116,12 @@ namespace SyncApp26.Application.Services
             {
                 Id = Guid.NewGuid(),
                 UserId = userChangeHistory.UserId,
-                ImportHistoryId = userChangeHistory.ImportHistoryId != null ? userChangeHistory.ImportHistoryId.Value : Guid.Empty,
+                ImportHistoryId = userChangeHistory.ImportHistoryId,
                 FieldName = userChangeHistory.FieldName,
                 OldValue = userChangeHistory.OldValue,
                 NewValue = userChangeHistory.NewValue,
-                Status = userChangeHistory.Status
+                Status = userChangeHistory.Status,
+                CreatedAt = userChangeHistory.CreatedAt == default ? DateTime.UtcNow : userChangeHistory.CreatedAt
             };
 
             await _userChangeHistoryRepository.AddAsync(conflict);

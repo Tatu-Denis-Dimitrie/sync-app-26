@@ -14,12 +14,14 @@ namespace SyncApp26.API.Controllers
         private readonly IUserService _userService;
         private readonly IDepartmentService _departmentService;
         private readonly IFunctionService _functionService;
+        private readonly IUserChangeHistoryService _userChangeHistoryService;
 
-        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService)
+        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService)
         {
             _userService = userService;
             _departmentService = departmentService;
             _functionService = functionService;
+            _userChangeHistoryService = userChangeHistoryService;
         }
 
         [HttpGet("{id}")]
@@ -308,6 +310,21 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
+            var oldFirstName = existingUser.FirstName;
+            var oldLastName = existingUser.LastName;
+            var oldEmail = existingUser.Email;
+            var oldDepartmentId = existingUser.DepartmentId;
+            var oldDepartmentName = existingUser.Department?.Name ?? string.Empty;
+            var oldAssignedToId = existingUser.AssignedToId;
+            var oldAssignedToName = existingUser.AssignedTo != null
+                ? $"{existingUser.AssignedTo.FirstName} {existingUser.AssignedTo.LastName}".Trim()
+                : string.Empty;
+            var oldFunctionId = existingUser.FunctionId;
+            var oldFunctionName = existingUser.Function?.Name ?? "Unknown";
+
+            var newDepartmentName = department.Name;
+            User? assignedToUser = null;
+
             // Verify assigned to user exists if provided
             if (userRequestDTO.AssignedToId != null)
             {
@@ -320,6 +337,8 @@ namespace SyncApp26.API.Controllers
                         Message = "Assigned to user not found"
                     });
                 }
+
+                assignedToUser = assignedTo;
 
                 // Check for circular reference: ensure the assignedTo user is not already managed by this user
                 if (assignedTo.AssignedToId == existingUser.Id)
@@ -334,15 +353,121 @@ namespace SyncApp26.API.Controllers
                 existingUser.RoleId = await _userService.GetRoleIdByNameAsync("Line Manager") ?? existingUser.RoleId;
             }
 
+            var resolvedFunctionId = await ResolveFunctionIdAsync(userRequestDTO.Function);
+            var newFunctionName = string.IsNullOrWhiteSpace(userRequestDTO.Function)
+                ? "Unknown"
+                : userRequestDTO.Function.Trim();
+            var newAssignedToName = assignedToUser != null
+                ? $"{assignedToUser.FirstName} {assignedToUser.LastName}".Trim()
+                : string.Empty;
+
             existingUser.FirstName = userRequestDTO.FirstName;
             existingUser.LastName = userRequestDTO.LastName;
             existingUser.Email = userRequestDTO.Email;
             existingUser.DepartmentId = userRequestDTO.DepartmentId;
             existingUser.AssignedToId = userRequestDTO.AssignedToId;
-            existingUser.FunctionId = await ResolveFunctionIdAsync(userRequestDTO.Function);
+            existingUser.FunctionId = resolvedFunctionId;
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(existingUser);
+
+            var now = DateTime.UtcNow;
+            var manualChanges = new List<UserChangeHistory>();
+
+            if (!string.Equals(oldFirstName, existingUser.FirstName, StringComparison.Ordinal))
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "FirstName",
+                    OldValue = oldFirstName,
+                    NewValue = existingUser.FirstName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (!string.Equals(oldLastName, existingUser.LastName, StringComparison.Ordinal))
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "LastName",
+                    OldValue = oldLastName,
+                    NewValue = existingUser.LastName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (!string.Equals(oldEmail, existingUser.Email, StringComparison.Ordinal))
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "Email",
+                    OldValue = oldEmail,
+                    NewValue = existingUser.Email,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (oldDepartmentId != existingUser.DepartmentId)
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "DepartmentName",
+                    OldValue = oldDepartmentName,
+                    NewValue = newDepartmentName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (oldAssignedToId != existingUser.AssignedToId)
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "AssignedToName",
+                    OldValue = oldAssignedToName,
+                    NewValue = newAssignedToName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (oldFunctionId != existingUser.FunctionId)
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "FunctionName",
+                    OldValue = oldFunctionName,
+                    NewValue = newFunctionName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            foreach (var change in manualChanges)
+            {
+                await _userChangeHistoryService.AddUserChangeHistoryAsync(change);
+            }
 
             return Ok(new UserResponseDTO
             {

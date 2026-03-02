@@ -129,7 +129,6 @@ namespace SyncApp26.Infrastructure.Context
                     .HasMaxLength(500);
 
                 entity.Property(e => e.Status)
-                    .IsRequired()
                     .HasMaxLength(50);
 
                 // Configure relationships
