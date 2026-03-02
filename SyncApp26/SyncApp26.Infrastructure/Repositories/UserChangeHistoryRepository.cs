@@ -5,57 +5,57 @@ using SyncApp26.Infrastructure.Context;
 
 namespace SyncApp26.Infrastructure.Repositories
 {
-    public class ImportConflictRepository : IImportConflictRepository
+    public class UserChangeHistoryRepository : IUserChangeHistoryRepository
     {
         private readonly ApplicationDbContext _context;
 
-        public ImportConflictRepository(ApplicationDbContext context)
+        public UserChangeHistoryRepository(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        public async Task<IEnumerable<ImportConflict>> GetAllAsync()
+        public async Task<IEnumerable<UserChangeHistory>> GetAllAsync()
         {
-            return await _context.ImportConflicts
+            return await _context.UserChangeHistories
                 .Include(c => c.ImportHistory)
                 .ToListAsync();
         }
 
-        public async Task<ImportConflict?> GetByIdAsync(Guid id)
+        public async Task<UserChangeHistory?> GetByIdAsync(Guid id)
         {
-            return await _context.ImportConflicts
+            return await _context.UserChangeHistories
                 .Include(c => c.ImportHistory)
                 .FirstOrDefaultAsync(c => c.Id == id);
         }
 
-        public async Task<IEnumerable<ImportConflict>> GetByImportHistoryIdAsync(Guid importHistoryId)
+        public async Task<IEnumerable<UserChangeHistory>> GetByImportHistoryIdAsync(Guid importHistoryId)
         {
-            return await _context.ImportConflicts
+            return await _context.UserChangeHistories
                 .Include(c => c.ImportHistory)
                 .Where(c => c.ImportHistoryId == importHistoryId)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<ImportConflict>> GetByUserIdAsync(Guid userId)
+        public async Task<IEnumerable<UserChangeHistory>> GetByUserIdAsync(Guid userId)
         {
-            return await _context.ImportConflicts
+            return await _context.UserChangeHistories
                 .Include(c => c.ImportHistory)
                 .Where(c => c.UserId == userId)
                 .ToListAsync();
         }
 
-        public async Task AddAsync(ImportConflict importConflict)
+        public async Task AddAsync(UserChangeHistory userChangeHistory)
         {
-            await _context.ImportConflicts.AddAsync(importConflict);
+            await _context.UserChangeHistories.AddAsync(userChangeHistory);
             await _context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(Guid id)
         {
-            var conflict = await _context.ImportConflicts.FindAsync(id);
+            var conflict = await _context.UserChangeHistories.FindAsync(id);
             if (conflict != null)
             {
-                _context.ImportConflicts.Remove(conflict);
+                _context.UserChangeHistories.Remove(conflict);
                 await _context.SaveChangesAsync();
             }
         }

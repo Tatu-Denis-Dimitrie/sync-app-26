@@ -1,6 +1,6 @@
 namespace SyncApp26.Shared.DTOs.CSV.History
 {
-    public class ImportConflictResponseDTO
+    public class UserChangeHistoryResponseDTO
     {
         public Guid Id { get; set; }
         public Guid ImportHistoryId { get; set; }

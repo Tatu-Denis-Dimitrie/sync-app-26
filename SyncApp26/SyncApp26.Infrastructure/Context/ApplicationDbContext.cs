@@ -13,7 +13,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<Role> Roles { get; set; }
-        public DbSet<ImportConflict> ImportConflicts { get; set; }
+        public DbSet<UserChangeHistory> UserChangeHistories { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
         public DbSet<DocumentSignatureToken> DocumentSignatureTokens { get; set; }
         public DbSet<Function> Functions { get; set; }
@@ -113,8 +113,8 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasIndex(e => e.Name).IsUnique();
             });
 
-            // Configure ImportConflict entity
-            modelBuilder.Entity<ImportConflict>(entity =>
+            // Configure UserChangeHistory entity
+            modelBuilder.Entity<UserChangeHistory>(entity =>
             {
                 entity.HasKey(e => e.Id);
 

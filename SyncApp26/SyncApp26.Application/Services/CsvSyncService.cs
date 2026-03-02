@@ -17,16 +17,16 @@ public class CsvSyncService : ICsvSyncService
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IFunctionRepository _functionRepository;
     private readonly IImportHistoryRepository _importHistoryRepository;
-    private readonly IImportConflictRepository _importConflictRepository;
+    private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IImportConflictRepository importConflictRepository)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
         _functionRepository = functionRepository;
         _notificationService = notificationService;
         _importHistoryRepository = importHistoryRepository;
-        _importConflictRepository = importConflictRepository;
+        _userChangeHistoryRepository = userChangeHistoryRepositoryRepository;
     }
 
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
@@ -341,7 +341,7 @@ public class CsvSyncService : ICsvSyncService
                                 var normalizedField = conflict.Field.Trim().ToLower();
                                 var historyField = normalizedField == "assignedtoname" ? "linemanager" : normalizedField;
 
-                                var rejectedConflict = new ImportConflict
+                                var rejectedConflict = new UserChangeHistory
                                 {
                                     Id = Guid.NewGuid(),
                                     ImportHistoryId = importHistory.Id,
@@ -352,7 +352,7 @@ public class CsvSyncService : ICsvSyncService
                                     Status = "rejected"
                                 };
 
-                                await _importConflictRepository.AddAsync(rejectedConflict);
+                                await _userChangeHistoryRepository.AddAsync(rejectedConflict);
                             }
                         }
 
@@ -373,7 +373,7 @@ public class CsvSyncService : ICsvSyncService
                                         case "firstname":
                                             if (existingUser.FirstName != item.CsvData.FirstName)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var importConflict = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -386,13 +386,13 @@ public class CsvSyncService : ICsvSyncService
 
                                                 existingUser.FirstName = item.CsvData.FirstName.Trim();
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "lastname":
                                             if (existingUser.LastName != item.CsvData.LastName)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var importConflict = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -404,13 +404,13 @@ public class CsvSyncService : ICsvSyncService
                                                 };
                                                 existingUser.LastName = item.CsvData.LastName.Trim();
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "email":
                                             if (existingUser.Email != item.CsvData.Email)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var importConflict = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -422,7 +422,7 @@ public class CsvSyncService : ICsvSyncService
                                                 };
                                                 existingUser.Email = item.CsvData.Email;
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "departmentname":
@@ -435,7 +435,7 @@ public class CsvSyncService : ICsvSyncService
                                             }
                                             if (existingUser.DepartmentId != department.Id)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var userChangeHistory = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -447,7 +447,7 @@ public class CsvSyncService : ICsvSyncService
                                                 };
                                                 existingUser.DepartmentId = department.Id;
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
                                             }
                                             break;
                                         case "assignedtoname":
@@ -456,7 +456,7 @@ public class CsvSyncService : ICsvSyncService
 
                                             if (existingUser.AssignedToId != newAssignedToId)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var userChangeHistory = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -468,7 +468,7 @@ public class CsvSyncService : ICsvSyncService
                                                 };
                                                 existingUser.AssignedToId = newAssignedToId;
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
                                             }
                                             break;
                                         case "function":
@@ -477,7 +477,7 @@ public class CsvSyncService : ICsvSyncService
 
                                             if (existingUser.FunctionId != selectedCsvFunction?.Id)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var userChangeHistory = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -490,7 +490,7 @@ public class CsvSyncService : ICsvSyncService
                                                 existingUser.FunctionId = selectedCsvFunction?.Id;
                                                 existingUser.Function = selectedCsvFunction;
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
                                             }
                                             break;
                                     }

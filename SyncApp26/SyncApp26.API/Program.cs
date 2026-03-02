@@ -45,7 +45,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IImportConflictRepository, ImportConflictRepository>();
+builder.Services.AddScoped<IUserChangeHistoryRepository, UserChangeHistoryRepository>();
 builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
 builder.Services.AddScoped<IFunctionRepository, FunctionRepository>();
 builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepository>();
@@ -58,7 +58,7 @@ builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
 builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
 builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
 builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
-builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
+builder.Services.AddScoped<IUserChangeHistoryService, UserChangeHistoryService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
