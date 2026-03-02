@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.API.Services;
@@ -8,6 +9,7 @@ namespace SyncApp26.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class DocumentController : ControllerBase
     {
         private readonly IDocumentService _documentService;
@@ -178,6 +180,49 @@ namespace SyncApp26.API.Controllers
             var token = await _documentSignatureService.GenerateSignatureTokenAsync(user.Email, document.Id, $"{document.DocumentType} Document");
 
             return Ok(new { token });
+        }
+
+        /// <summary>
+        /// Generates and streams the PDF for a document on-the-fly (includes embedded
+        /// digital signatures if already signed). Accessible by the document owner,
+        /// their line manager, or an admin.
+        /// </summary>
+        [HttpGet("{documentId}/view-pdf")]
+        public async Task<IActionResult> ViewPdf(Guid documentId)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+                return Unauthorized();
+
+            var document = await _documentService.GetDocumentByIdAsync(documentId);
+            if (document == null) return NotFound(new { message = "Document not found." });
+
+            bool isDocOwner  = document.UserId == userId;
+            bool isManager   = document.User?.AssignedToId == userId;
+            bool isAdmin     = User.IsInRole("Admin");
+
+            if (!isDocOwner && !isManager && !isAdmin)
+                return Forbid();
+
+            var docUser = document.User;
+            if (docUser == null) return NotFound(new { message = "Associated user not found." });
+
+            var safeFirst = string.Concat(docUser.FirstName.Where(char.IsLetterOrDigit));
+            var safeLast  = string.Concat(docUser.LastName.Where(char.IsLetterOrDigit));
+            var fileName  = $"{document.DocumentType}_{safeFirst}_{safeLast}.pdf";
+
+            // If a saved PDF exists on disk and is valid, serve it directly
+            if (!string.IsNullOrEmpty(document.PdfFilePath) && System.IO.File.Exists(document.PdfFilePath))
+            {
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(document.PdfFilePath);
+                // Validate it starts with the PDF magic bytes %PDF
+                if (fileBytes.Length > 4 && fileBytes[0] == 0x25 && fileBytes[1] == 0x50 && fileBytes[2] == 0x44 && fileBytes[3] == 0x46)
+                    return File(fileBytes, "application/pdf", fileName);
+            }
+
+            // Fallback: generate on-the-fly
+            var pdfBytes = await _documentService.GeneratePdfBytesAsync(docUser, document);
+            return File(pdfBytes, "application/pdf", fileName);
         }
     }
 }

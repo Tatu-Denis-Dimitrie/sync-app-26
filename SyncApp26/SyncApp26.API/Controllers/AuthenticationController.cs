@@ -201,7 +201,8 @@ namespace SyncApp26.API.Controllers
                     return Unauthorized(new { message = "Email is not verified. Please check your email for verification instructions." });
                 }
 
-                var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email);
+                var roleName = user.Role?.Name ?? "Employee";
+                var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleName);
 
                 return Ok(new
                 {

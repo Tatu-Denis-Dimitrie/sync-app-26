@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/components/footer/footer.component.css"],
+  "sourcesContent": ["footer {\r\n  box-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.1);\r\n}\r\n"],
+  "mappings": ";AAAA;AACE,cAAY,EAAE,KAAK,IAAI,EAAE,KAAK,CAAC,EAAE,CAAC,EAAE,CAAC,EAAE;AACzC;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/app.component.css"],
+  "sourcesContent": ["/* App root styles */\r\n\r\n@media print {\r\n\tapp-footer {\r\n\t\tdisplay: none !important;\r\n\t}\r\n}"],
+  "mappings": ";AAEA,OAAO;AACN;AACC,aAAS;AACV;AACD;",
+  "names": []
+}

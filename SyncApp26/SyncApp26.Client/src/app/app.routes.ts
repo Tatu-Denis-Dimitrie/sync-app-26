@@ -14,6 +14,7 @@ import { DocumentSignatureComponent } from './pages/document-signature/document-
 import { TestSignatureComponent } from './pages/test-signature/test-signature.component';
 import { AdminGuard } from './guards/admin.guard';
 import { AuthGuard } from './guards/auth.guard';
+import { LineManagerGuard } from './guards/line-manager.guard';
 import { SsmSuFormComponent } from './components/ssm-su-form/ssm-su-form.component';
 import { BasicUserComponent } from './components/basic-user/basic-user.component';
 import { LineManagerComponent } from './components/line-manager/line-manager.component';
@@ -31,7 +32,7 @@ export const routes: Routes = [
   
   // Authenticated routes (login required)
   { path: 'basic-user', component: BasicUserComponent, canActivate: [AuthGuard] },
-  { path: 'line-manager', component: LineManagerComponent, canActivate: [AuthGuard] },
+  { path: 'line-manager', component: LineManagerComponent, canActivate: [LineManagerGuard] },
   { path: 'access-restricted', component: AccessRestrictedComponent, canActivate: [AuthGuard] },
   
   // Admin only routes

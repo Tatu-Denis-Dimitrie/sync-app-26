@@ -138,6 +138,21 @@ export class LineManagerComponent implements OnInit {
     });
   }
 
+  viewDocument(documentId: string): void {
+    if (!documentId) return;
+    this.http.get(`${environment.apiUrl}/Document/${documentId}/view-pdf`, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      },
+      error: (err) => {
+        console.error('Error fetching PDF', err);
+        alert('Could not open document. Please try again.');
+      }
+    });
+  }
+
   private setupAssignedUsersStream(manager: User): void {
     this.assignedUsers$ = this.userSyncService.users$.pipe(
       map(users => users.filter(u =>

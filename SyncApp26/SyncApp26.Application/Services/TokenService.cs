@@ -16,7 +16,7 @@ namespace SyncApp26.Application.Services
             _configuration = configuration;
         }
 
-        public Task<string> GenerateTokenAsync(Guid userId, string email)
+        public Task<string> GenerateTokenAsync(Guid userId, string email, string role = "Employee")
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -38,9 +38,10 @@ namespace SyncApp26.Application.Services
                 Subject = new ClaimsIdentity(new[]
                 {
                     new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                    new Claim(ClaimTypes.Email, email)
+                    new Claim(ClaimTypes.Email, email),
+                    new Claim(ClaimTypes.Role, role)
                 }),
-                Expires = DateTime.UtcNow.AddHours(1),
+                Expires = DateTime.UtcNow.AddHours(8),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);

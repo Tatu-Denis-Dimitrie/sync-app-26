@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/components/basic-user/basic-user.component.css"],
+  "sourcesContent": [":host {\r\n\tdisplay: block;\r\n}\r\n\r\n.basic-user-page {\r\n\tmin-height: calc(100vh - 50px);\r\n\tmin-height: calc(100dvh - 50px);\r\n}\r\n"],
+  "mappings": ";AAAA;AACC,WAAS;AACV;AAEA,CAAC;AACA,cAAY,KAAK,MAAM,EAAE;AACzB,cAAY,KAAK,OAAO,EAAE;AAC3B;",
+  "names": []
+}

@@ -12,5 +12,6 @@ namespace SyncApp26.Application.IServices
         Task<UserDocument?> GetDocumentByIdAsync(Guid documentId);
         Task<bool> UpdateDocumentSignatureAsync(Guid documentId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress);
         Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document);
+        Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document);
     }
 }
