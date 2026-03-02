@@ -19,6 +19,8 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./employees-detail.component.css']
 })
 export class EmployeesDetailComponent implements OnInit {
+  private readonly emptyGuid = '00000000-0000-0000-0000-000000000000';
+
   users$!: Observable<User[]>;
   paginatedUsers$!: Observable<User[]>;
   departments$!: Observable<Department[]>;
@@ -176,11 +178,11 @@ export class EmployeesDetailComponent implements OnInit {
   getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }> {
     const groups = new Map<string, { importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }>();
     const sorted = this.importConflicts
-      .filter(conflict => !!conflict.importHistoryId)
+      .filter(conflict => this.isImportHistoryEntry(conflict))
       .slice()
       .sort((a, b) => {
-        const aTime = a.importDate ? new Date(a.importDate).getTime() : 0;
-        const bTime = b.importDate ? new Date(b.importDate).getTime() : 0;
+        const aTime = this.getEntryTimestamp(a);
+        const bTime = this.getEntryTimestamp(b);
         return bTime - aTime;
       });
 
@@ -202,6 +204,33 @@ export class EmployeesDetailComponent implements OnInit {
       const bTime = b.importDate ? new Date(b.importDate).getTime() : 0;
       return bTime - aTime;
     });
+  }
+
+  getManualChanges(): UserChangeHistory[] {
+    return this.importConflicts
+      .filter(conflict => this.isManualEntry(conflict))
+      .slice()
+      .sort((a, b) => this.getEntryTimestamp(b) - this.getEntryTimestamp(a));
+  }
+
+  private isImportHistoryEntry(entry: UserChangeHistory): boolean {
+    const importHistoryId = (entry.importHistoryId || '').trim();
+    return !!entry.status && !!importHistoryId && importHistoryId !== this.emptyGuid;
+  }
+
+  private isManualEntry(entry: UserChangeHistory): boolean {
+    const importHistoryId = (entry.importHistoryId || '').trim();
+    return !entry.status && (!importHistoryId || importHistoryId === this.emptyGuid);
+  }
+
+  private getEntryTimestamp(entry: UserChangeHistory): number {
+    const sourceDate = entry.createdAt || entry.importDate;
+    return sourceDate ? new Date(sourceDate).getTime() : 0;
+  }
+
+  formatDateTime(date: Date | string | undefined): string {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString('ro-RO');
   }
 
   getConflictStatusColor(status?: string | null): string {

@@ -1,13 +1,36 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using SyncApp26.Domain.Entities;
 
 namespace SyncApp26.Infrastructure.Context
 {
     public class ApplicationDbContext : DbContext
     {
+        private const int MaxSaveRetries = 5;
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
+        }
+
+        public override int SaveChanges()
+        {
+            return ExecuteWithSqliteRetry(() => base.SaveChanges());
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            return ExecuteWithSqliteRetry(() => base.SaveChanges(acceptAllChangesOnSuccess));
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return await ExecuteWithSqliteRetryAsync(() => base.SaveChangesAsync(cancellationToken));
+        }
+
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            return await ExecuteWithSqliteRetryAsync(() => base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken));
         }
 
         public DbSet<User> Users { get; set; }
@@ -211,6 +234,56 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => e.Status);
             });
+        }
+
+        private static bool IsSqliteLockException(Exception exception)
+        {
+            if (exception is not DbUpdateException dbUpdateException || dbUpdateException.InnerException is not SqliteException sqliteException)
+            {
+                return false;
+            }
+
+            return sqliteException.SqliteErrorCode == 5 || sqliteException.SqliteErrorCode == 6;
+        }
+
+        private static TimeSpan GetRetryDelay(int attempt)
+        {
+            var delayMs = Math.Min(1000, 100 * attempt);
+            return TimeSpan.FromMilliseconds(delayMs);
+        }
+
+        private static int ExecuteWithSqliteRetry(Func<int> action)
+        {
+            for (var attempt = 1; attempt <= MaxSaveRetries; attempt++)
+            {
+                try
+                {
+                    return action();
+                }
+                catch (Exception ex) when (attempt < MaxSaveRetries && IsSqliteLockException(ex))
+                {
+                    Thread.Sleep(GetRetryDelay(attempt));
+                }
+            }
+
+            return action();
+        }
+
+        private static async Task<int> ExecuteWithSqliteRetryAsync(Func<Task<int>> action)
+        {
+            for (var attempt = 1; attempt <= MaxSaveRetries; attempt++)
+            {
+                try
+                {
+                    return await action();
+                }
+                catch (Exception ex) when (attempt < MaxSaveRetries && IsSqliteLockException(ex))
+                {
+                    await Task.Delay(GetRetryDelay(attempt));
+                }
+            }
+
+            return await action();
         }
     }
 }

@@ -39,8 +39,12 @@ if (!Path.IsPathRooted(sqliteBuilder.DataSource))
     var basePath = builder.Environment.ContentRootPath;
     sqliteBuilder.DataSource = Path.GetFullPath(Path.Combine(basePath, sqliteBuilder.DataSource));
 }
+sqliteBuilder.Mode = SqliteOpenMode.ReadWriteCreate;
+sqliteBuilder.Cache = SqliteCacheMode.Shared;
+sqliteBuilder.Pooling = true;
+sqliteBuilder.DefaultTimeout = 60;
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(sqliteBuilder.ToString()));
+    options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60)));
 
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
