@@ -242,7 +242,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             }
           });
 
-          setTimeout(() => this.successMessage = '', 10000);
+          setTimeout(() => this.successMessage = '', 5000);
         },
         error: (error) => {
           console.error('Upload failed:', error);
@@ -406,7 +406,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             }
           });
 
-          setTimeout(() => this.successMessage = '', 10000);
+          setTimeout(() => this.successMessage = '', 5000);
         },
         error: (error) => {
           console.error('Upload with valid rows failed:', error);
@@ -443,7 +443,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.successMessage = `Sync completed in ${this.formatDuration(duration)}`;
           }
 
-          setTimeout(() => this.successMessage = '', 10000);
+          setTimeout(() => this.successMessage = '', 5000);
 
           this.userSyncService.refreshUsers();
         },
