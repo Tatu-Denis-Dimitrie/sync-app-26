@@ -63,6 +63,70 @@ namespace SyncApp26.API.Controllers
             public string DocumentType { get; set; } = string.Empty;
         }
 
+        public class BulkGenerateDocumentDto
+        {
+            /// <summary>"SSM", "SU", or "Both"</summary>
+            public string DocumentType { get; set; } = string.Empty;
+        }
+
+        [HttpPost("bulk-generate")]
+        public async Task<IActionResult> BulkGenerateDocuments([FromBody] BulkGenerateDocumentDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.DocumentType))
+                return BadRequest(new { message = "DocumentType is required (SSM, SU, or Both)." });
+
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@syncapp26.com";
+            var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+
+            var types = request.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
+                ? new[] { "SSM", "SU" }
+                : new[] { request.DocumentType.ToUpper() };
+
+            int totalGenerated = 0, totalSkipped = 0;
+
+            foreach (var type in types)
+            {
+                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail);
+                totalGenerated += generated;
+                totalSkipped += skipped;
+            }
+
+            // Send signature emails for all newly-pending documents
+            // (fire-and-forget style — failures are non-fatal)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    foreach (var type in types)
+                    {
+                        var allDocuments = await _documentService.GetAllPendingUserDocumentsAsync(type);
+                        foreach (var doc in allDocuments)
+                        {
+                            if (doc.User?.Email is { Length: > 0 } email)
+                            {
+                                try
+                                {
+                                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(
+                                        email, doc.Id, $"{type} Document");
+                                    var link = $"{frontendUrl}/sign/{token}";
+                                    await _emailService.SendDocumentSignatureEmailWithLinkAsync(email, $"{type} Document", link);
+                                }
+                                catch { /* non-fatal per user */ }
+                            }
+                        }
+                    }
+                }
+                catch { /* non-fatal */ }
+            });
+
+            return Ok(new
+            {
+                message = $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped.",
+                generated = totalGenerated,
+                skipped = totalSkipped
+            });
+        }
+
         [HttpPost("generate")]
         public async Task<IActionResult> GenerateDocument([FromBody] GenerateDocumentDto request)
         {

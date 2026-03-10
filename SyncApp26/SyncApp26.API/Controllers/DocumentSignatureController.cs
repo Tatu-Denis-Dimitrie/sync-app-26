@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
@@ -98,6 +99,8 @@ namespace SyncApp26.API.Controllers
             public string Token { get; set; } = string.Empty;
             public string SignatureMethod { get; set; } = string.Empty; // Draw, Type
             public string SignatureData { get; set; } = string.Empty; // Base64
+            /// <summary>When true the same signature is applied to all other pending documents the signer is responsible for.</summary>
+            public bool BulkSign { get; set; }
         }
 
         [HttpPost("consume-token")]
@@ -155,8 +158,62 @@ namespace SyncApp26.API.Controllers
                     $"{document.DocumentType} Document (Manager Approval)", 
                     managerSecureLink);
             }
-            
-            return Ok(new { message = "Document successfully signed using secure link." });
+
+            // Bulk sign: apply the same signature to all other pending docs this signer is responsible for
+            int bulkCount = 0;
+            if (request.BulkSign && !isUserSignature)
+            {
+                var signerUser = await _userService.GetUserByEmailAsync(tokenEntity.Email);
+                if (signerUser != null)
+                {
+                    bool signerIsAdmin = signerUser.Role?.Name == "Admin";
+                    var ipAddress2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+                    bulkCount = await _documentService.BulkSignDocumentsAsync(
+                        signerIsAdmin, signerUser.Id,
+                        request.SignatureMethod, request.SignatureData, ipAddress2);
+                }
+            }
+
+            var msg = bulkCount > 0
+                ? $"Document successfully signed. {bulkCount} additional document(s) were signed with the same signature."
+                : "Document successfully signed using secure link.";
+            return Ok(new { message = msg });
+        }
+
+        public class BulkSignDto
+        {
+            public string SignatureMethod { get; set; } = string.Empty;
+            public string SignatureData { get; set; } = string.Empty;
+        }
+
+        /// <summary>
+        /// Applies a manager/instructor signature to all documents that are currently
+        /// awaiting the caller's countersignature (Status == "PendingManager").
+        /// Admins sign all pending documents; Line Managers sign only their employees' documents.
+        /// </summary>
+        [HttpPost("bulk-sign")]
+        [Authorize]
+        public async Task<IActionResult> BulkSign([FromBody] BulkSignDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.SignatureData))
+                return BadRequest(new { message = "Signature data is required." });
+
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+                return Unauthorized();
+
+            bool isAdmin = User.IsInRole("Admin");
+            bool isLineManager = User.IsInRole("Line Manager");
+
+            if (!isAdmin && !isLineManager)
+                return Forbid();
+
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+            var count = await _documentService.BulkSignDocumentsAsync(
+                isAdmin, userId, request.SignatureMethod, request.SignatureData, ipAddress);
+
+            return Ok(new { message = $"Successfully signed {count} document(s).", count });
         }
     }
 }

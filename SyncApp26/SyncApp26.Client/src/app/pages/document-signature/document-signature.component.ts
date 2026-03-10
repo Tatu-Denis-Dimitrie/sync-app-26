@@ -16,6 +16,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class DocumentSignatureComponent implements OnInit {
   token: string | null = null;
+  isBulkMode = false;
   isLoading = true;
   isValidating = true;
   errorMessage = '';
@@ -41,6 +42,7 @@ export class DocumentSignatureComponent implements OnInit {
 
   ngOnInit(): void {
     this.token = this.route.snapshot.paramMap.get('token');
+    this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
     if (!this.token) {
       this.errorMessage = 'Invalid link. No token provided.';
       this.isValidating = false;
@@ -156,7 +158,8 @@ export class DocumentSignatureComponent implements OnInit {
     const payload = {
       token: this.token,
       signatureMethod: this.signatureMethod === 'draw' ? 'Draw' : 'Type',
-      signatureData: this.signatureMethod === 'draw' ? this.canvasRef?.nativeElement.toDataURL('image/png') : this.typedSignature
+      signatureData: this.signatureMethod === 'draw' ? this.canvasRef?.nativeElement.toDataURL('image/png') : this.typedSignature,
+      bulkSign: this.isBulkMode
     };
 
     if (this.signatureMethod === 'type' && !this.typedSignature.trim()) {

@@ -449,4 +449,42 @@ export class EmployeesDetailComponent implements OnInit {
       }
     });
   }
+
+  // ── Bulk Generate ──────────────────────────────────────────────────────────
+  showBulkGenerateModal = false;
+  bulkGenerateType: 'SSM' | 'SU' | 'Both' = 'Both';
+  isBulkGenerating = false;
+  bulkGenerateResult: { message: string; generated: number; skipped: number } | null = null;
+
+  openBulkGenerateModal(): void {
+    this.showBulkGenerateModal = true;
+    this.bulkGenerateType = 'Both';
+    this.bulkGenerateResult = null;
+  }
+
+  closeBulkGenerateModal(): void {
+    this.showBulkGenerateModal = false;
+    this.bulkGenerateResult = null;
+  }
+
+  confirmBulkGenerate(): void {
+    this.isBulkGenerating = true;
+    this.bulkGenerateResult = null;
+    this.http.post<any>(`${environment.apiUrl}/Document/bulk-generate`, {
+      documentType: this.bulkGenerateType
+    }).subscribe({
+      next: (res) => {
+        this.isBulkGenerating = false;
+        this.bulkGenerateResult = res;
+      },
+      error: (err) => {
+        this.isBulkGenerating = false;
+        this.bulkGenerateResult = {
+          message: err.error?.message || 'Bulk generation failed.',
+          generated: 0,
+          skipped: 0
+        };
+      }
+    });
+  }
 }

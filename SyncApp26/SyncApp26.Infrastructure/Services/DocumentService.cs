@@ -95,20 +95,28 @@ namespace SyncApp26.Infrastructure.Services
         private static string FDate(DateTime? dt) => dt.HasValue ? dt.Value.ToString("dd.MM.yyyy") : "___________";
         private static string FUnderline(string? val) => val?.Trim() is { Length: > 0 } v ? v : "___________";
 
-        private static void SignatureRow(ColumnDescriptor col, bool isSsm)
+        private static void SignatureRow(ColumnDescriptor col, bool isSsm,
+            string? userSigMethod = null, string? userSigData = null,
+            string? instructorSigMethod = null, string? instructorSigData = null)
         {
             col.Item().PaddingTop(6).Row(row =>
             {
                 row.RelativeItem().Column(c =>
                 {
                     c.Item().Text(isSsm ? "Semnătura celui instruit:" : "Semnătura persoanei instruite:").FontSize(8);
-                    c.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
+                    if (!string.IsNullOrWhiteSpace(userSigData))
+                        RenderSignature(c, userSigMethod, userSigData);
+                    else
+                        c.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
                 });
                 row.ConstantItem(10);
                 row.RelativeItem().Column(c =>
                 {
                     c.Item().Text("Semnătura celui care a efectuat instruirea:").FontSize(8);
-                    c.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
+                    if (!string.IsNullOrWhiteSpace(instructorSigData))
+                        RenderSignature(c, instructorSigMethod, instructorSigData);
+                    else
+                        c.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
                 });
                 if (isSsm)
                 {
@@ -313,7 +321,9 @@ namespace SyncApp26.Infrastructure.Services
                         col.Item().Text("Conținutul instruirii:").Bold();
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(user.IntroductoryTrainingContent) ? " " : user.IntroductoryTrainingContent).FontSize(10);
-                        SignatureRow(col, isSsm);
+                        SignatureRow(col, isSsm,
+                            document.UserSignatureMethod, document.UserSignatureData,
+                            document.ManagerSignatureMethod, document.ManagerSignatureData);
 
                         col.Item().Height(8);
 
@@ -339,7 +349,9 @@ namespace SyncApp26.Infrastructure.Services
                         col.Item().Text("Conținutul instruirii:").Bold();
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(user.WorkplaceTrainingContent) ? " " : user.WorkplaceTrainingContent).FontSize(10);
-                        SignatureRow(col, isSsm);
+                        SignatureRow(col, isSsm,
+                            document.UserSignatureMethod, document.UserSignatureData,
+                            document.ManagerSignatureMethod, document.ManagerSignatureData);
 
                         col.Item().Height(10);
 
@@ -517,6 +529,14 @@ namespace SyncApp26.Infrastructure.Services
             return Task.FromResult(bytes);
         }
 
+        public async Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType)
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                .Where(d => d.DocumentType == documentType && d.Status == "PendingUser")
+                .ToListAsync();
+        }
+
         public async Task<UserDocument?> GetDocumentByIdAsync(Guid documentId)
         {
             return await _context.UserDocuments
@@ -609,6 +629,150 @@ namespace SyncApp26.Infrastructure.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+        public async Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
+        {
+            var query = _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                        .ThenInclude(m => m!.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
+                .Where(d => d.Status == "PendingManager");
+
+            if (!isAdmin)
+                query = query.Where(d => d.User != null && d.User.AssignedToId == signerUserId);
+
+            var docs = await query.ToListAsync();
+            if (docs.Count == 0) return 0;
+
+            var timestamp = DateTime.UtcNow;
+
+            foreach (var doc in docs)
+            {
+                var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
+                var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
+
+                doc.ManagerSignatureMethod = signatureMethod;
+                doc.ManagerSignatureData = signatureData;
+                doc.ManagerSignatureIpAddress = ipAddress;
+                doc.ManagerSignedAt = timestamp;
+                doc.ManagerCryptographicSignature = cryptoSignature;
+                doc.Status = "Completed";
+
+                var latestTraining = doc.User?.PeriodicTrainings
+                    ?.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
+                    .LastOrDefault();
+                if (latestTraining != null)
+                {
+                    latestTraining.InstructorSignature = signatureData;
+                    latestTraining.InstructorSignatureMethod = signatureMethod;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Regenerate PDFs after committing signatures
+            foreach (var doc in docs)
+            {
+                if (doc.User != null)
+                {
+                    try { await GeneratePdfSnapshotAsync(doc.User, doc); }
+                    catch { /* non-fatal */ }
+                }
+            }
+            await _context.SaveChangesAsync();
+
+            return docs.Count;
+        }
+
+        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail)
+        {
+            var users = await _context.Users
+                .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
+                .Include(u => u.Department)
+                .Include(u => u.Function)
+                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
+                .ToListAsync();
+
+            int generated = 0;
+            int skipped = 0;
+
+            foreach (var user in users)
+            {
+                try
+                {
+                    // Add a new PeriodicTraining row
+                    var newTraining = new PeriodicTraining
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user.Id,
+                        TrainingDate = DateTime.UtcNow,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.PeriodicTrainings.Add(newTraining);
+
+                    // Reuse or create the UserDocument
+                    var doc = await _context.UserDocuments
+                        .FirstOrDefaultAsync(d => d.UserId == user.Id && d.DocumentType == documentType);
+
+                    if (doc != null)
+                    {
+                        doc.Status = "PendingUser";
+                        doc.GeneratedAt = DateTime.UtcNow;
+                        doc.UserSignatureMethod = null;
+                        doc.UserSignatureData = null;
+                        doc.UserSignatureIpAddress = null;
+                        doc.UserSignedAt = null;
+                        doc.UserCryptographicSignature = null;
+                        doc.ManagerSignatureMethod = null;
+                        doc.ManagerSignatureData = null;
+                        doc.ManagerSignatureIpAddress = null;
+                        doc.ManagerSignedAt = null;
+                        doc.ManagerCryptographicSignature = null;
+                    }
+                    else
+                    {
+                        doc = new UserDocument
+                        {
+                            UserId = user.Id,
+                            DocumentType = documentType,
+                            Status = "PendingUser",
+                            GeneratedAt = DateTime.UtcNow
+                        };
+                        _context.UserDocuments.Add(doc);
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    // Reload user with updated PeriodicTrainings
+                    var fullUser = await _context.Users
+                        .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
+                        .Include(u => u.Department)
+                        .Include(u => u.Function)
+                        .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
+                        .FirstOrDefaultAsync(u => u.Id == user.Id);
+
+                    if (fullUser != null)
+                    {
+                        var pdfPath = await GeneratePdfSnapshotAsync(fullUser, doc);
+                        doc.PdfFilePath = pdfPath;
+                        await _context.SaveChangesAsync();
+                    }
+
+                    generated++;
+                }
+                catch
+                {
+                    skipped++;
+                }
+            }
+
+            return (generated, skipped);
         }
     }
 }

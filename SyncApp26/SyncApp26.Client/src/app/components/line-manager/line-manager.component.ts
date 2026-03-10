@@ -244,4 +244,20 @@ export class LineManagerComponent implements OnInit {
       : 'bg-blue-500/10 text-blue-700 border-blue-500/20';
   }
 
+  signAllDocuments(): void {
+    const firstDoc = this.pendingManagerSignatures[0];
+    if (!firstDoc?.id) return;
+    this.http.get<any>(`${environment.apiUrl}/Document/token-for-document/${firstDoc.id}`).subscribe({
+      next: (res) => {
+        if (res.token) {
+          this.router.navigate(['/sign', res.token], { queryParams: { bulk: 'true' } });
+        }
+      },
+      error: (err) => {
+        console.error('Error generating token for bulk sign', err);
+        alert(err.error?.message || 'Could not initiate bulk signing.');
+      }
+    });
+  }
+
 }
