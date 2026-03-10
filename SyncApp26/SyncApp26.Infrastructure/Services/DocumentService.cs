@@ -27,15 +27,27 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
-            // Each generate call adds a new PeriodicTraining row for this user
-            var newTraining = new PeriodicTraining
+            // Check if there's already an unsigned PeriodicTraining row for this user
+            var existingUnsignedTraining = await _context.PeriodicTrainings
+                .Where(pt => pt.UserId == userId 
+                    && string.IsNullOrEmpty(pt.UserSignatureData) 
+                    && string.IsNullOrEmpty(pt.InstructorSignature))
+                .OrderByDescending(pt => pt.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (existingUnsignedTraining == null)
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                TrainingDate = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.PeriodicTrainings.Add(newTraining);
+                // No unsigned row exists, create a new one
+                var newTraining = new PeriodicTraining
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    TrainingDate = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.PeriodicTrainings.Add(newTraining);
+            }
+            // If unsigned row exists, we'll reuse it for signatures (no need to create a new one)
 
             // Look for an existing document for this user+type; if found, reuse it
             var doc = await _context.UserDocuments

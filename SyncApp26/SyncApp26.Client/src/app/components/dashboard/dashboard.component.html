@@ -1,14 +1,26 @@
 <div class="min-h-screen bg-background">
   <!-- Header -->
-  <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+  <header
+    class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40"
+  >
     <div class="container mx-auto px-4 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-3">
-          <div class="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-            <svg class="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-              </path>
+          <div
+            class="w-8 h-8 bg-primary rounded-md flex items-center justify-center"
+          >
+            <svg
+              class="w-5 h-5 text-primary-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              ></path>
             </svg>
           </div>
           <div>
@@ -19,28 +31,54 @@
           </div>
         </div>
         <div class="flex gap-2">
-          <button (click)="navigateToDepartments()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+          <button
+            (click)="navigateToDepartments()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
             Departments
           </button>
-          <button (click)="navigateToImportHistory()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+          <button
+            (click)="openBulkTrainingModal()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-300 transition-colors"
+            title="Add Periodic Training for All Users"
+          >
+            <svg
+              class="w-4 h-4 inline-block mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              ></path>
+            </svg>
+            Bulk Training
+          </button>
+          <button
+            (click)="navigateToImportHistory()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
             User History
           </button>
-          <a routerLink="/test-signature"
-            class="px-4 py-2 border border-teal-500 text-teal-600 rounded-md text-sm font-medium bg-background hover:bg-teal-50 transition-colors inline-block">
-            Test Links
-          </a>
-          <button (click)="navigateToUsers()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+          <button
+            (click)="navigateToUsers()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
             Users
           </button>
-          <button (click)="navigateToEmployees()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+          <button
+            (click)="navigateToEmployees()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
             Employees
           </button>
-          <button (click)="logout()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+          <button
+            (click)="logout()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
             Logout
           </button>
         </div>
@@ -55,23 +93,31 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-2xl font-bold text-foreground">CSV Comparison</h2>
           <div class="flex gap-3">
-            <button (click)="cancelComparison()"
-              class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            <button
+              (click)="cancelComparison()"
+              class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+            >
               Cancel
             </button>
-            <button (click)="syncSelectedUsers()" [disabled]="isSyncing || getSelectedSyncCount() === 0"
-              class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            <button
+              (click)="syncSelectedUsers()"
+              [disabled]="isSyncing || getSelectedSyncCount() === 0"
+              class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
               {{
-              isSyncing
-              ? "Synchronizing..."
-              : `Synchronize ${getSelectedSyncCount()} selected users`
+                isSyncing
+                  ? "Synchronizing..."
+                  : `Synchronize ${getSelectedSyncCount()} selected users`
               }}
             </button>
           </div>
         </div>
 
-        <app-comparison-view [comparisons]="currentComparisons" (selectionChange)="onComparisonSelectionChange($event)"
-          (fieldConflictResolved)="onFieldConflictResolved($event)"></app-comparison-view>
+        <app-comparison-view
+          [comparisons]="currentComparisons"
+          (selectionChange)="onComparisonSelectionChange($event)"
+          (fieldConflictResolved)="onFieldConflictResolved($event)"
+        ></app-comparison-view>
       </div>
     </div>
 
@@ -95,12 +141,18 @@
               </div>
             </div>
             <div class="flex gap-2">
-              <button (click)="toggleAllDepartmentSelections(true)" [disabled]="!hasDepartmentChanges()"
-                class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <button
+                (click)="toggleAllDepartmentSelections(true)"
+                [disabled]="!hasDepartmentChanges()"
+                class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Select All
               </button>
-              <button (click)="toggleAllDepartmentSelections(false)" [disabled]="!hasDepartmentChanges()"
-                class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <button
+                (click)="toggleAllDepartmentSelections(false)"
+                [disabled]="!hasDepartmentChanges()"
+                class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Deselect All
               </button>
             </div>
@@ -113,62 +165,87 @@
           </h2>
           <div class="flex gap-3">
             <div class="relative flex-1 max-w-xs">
-              <input type="text" [(ngModel)]="departmentSearchQuery" placeholder="Search departments..."
-                class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-              <svg class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              <input
+                type="text"
+                [(ngModel)]="departmentSearchQuery"
+                placeholder="Search departments..."
+                class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+              />
+              <svg
+                class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
               </svg>
             </div>
-            <button (click)="cancelDepartmentComparison()"
-              class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            <button
+              (click)="cancelDepartmentComparison()"
+              class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+            >
               Cancel
             </button>
-            <button (click)="syncSelectedDepartments()" [disabled]="
+            <button
+              (click)="syncSelectedDepartments()"
+              [disabled]="
                 isSyncing ||
                 !hasDepartmentChanges() ||
                 getSelectedDepartmentSyncCount() === 0
               "
-              class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
               {{
-              !hasDepartmentChanges()
-              ? "No new departments to import"
-              : isSyncing
-              ? "Synchronizing..."
-              : `Synchronize ${getSelectedDepartmentSyncCount()} selected departments`
+                !hasDepartmentChanges()
+                  ? "No new departments to import"
+                  : isSyncing
+                    ? "Synchronizing..."
+                    : `Synchronize ${getSelectedDepartmentSyncCount()} selected departments`
               }}
             </button>
           </div>
         </div>
 
         <div class="space-y-6">
-          <div *ngFor="let comparison of getFilteredDepartmentComparisons()"
-            class="bg-card border border-border rounded-lg overflow-hidden">
+          <div
+            *ngFor="let comparison of getFilteredDepartmentComparisons()"
+            class="bg-card border border-border rounded-lg overflow-hidden"
+          >
             <div class="px-6 py-4 bg-muted/30 border-b border-border">
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                  <input type="checkbox" [checked]="comparison.selected" [disabled]="comparison.status === 'unchanged'"
+                  <input
+                    type="checkbox"
+                    [checked]="comparison.selected"
+                    [disabled]="comparison.status === 'unchanged'"
                     (change)="toggleDepartmentSelection(comparison)"
-                    class="w-4 h-4 rounded border-border disabled:opacity-50" />
+                    class="w-4 h-4 rounded border-border disabled:opacity-50"
+                  />
                   <div>
                     <h3 class="text-lg font-semibold text-foreground">
                       {{
-                      comparison.csvDepartment?.name ||
-                      comparison.dbDepartment?.name ||
-                      "Unknown Department"
+                        comparison.csvDepartment?.name ||
+                          comparison.dbDepartment?.name ||
+                          "Unknown Department"
                       }}
                     </h3>
                     <p class="text-sm text-muted-foreground">Department</p>
                   </div>
                 </div>
-                <span [ngClass]="{
+                <span
+                  [ngClass]="{
                     'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border': true,
                     'bg-green-500/10 text-green-700 border-green-500/20':
                       comparison.status === 'new',
                     'bg-gray-500/10 text-gray-700 border-gray-500/20':
                       comparison.status === 'unchanged',
-                  }">
+                  }"
+                >
                   {{ comparison.status }}
                 </span>
               </div>
@@ -177,7 +254,10 @@
             <div class="grid grid-cols-[1fr,auto,1fr]">
               <div class="p-4 bg-red-50/30">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-medium text-muted-foreground uppercase">Department (Database)</span>
+                  <span
+                    class="text-xs font-medium text-muted-foreground uppercase"
+                    >Department (Database)</span
+                  >
                 </div>
                 <p class="font-mono text-sm">
                   {{ comparison.dbDepartment?.name || "N/A" }}
@@ -188,11 +268,21 @@
               </div>
               <div class="p-4 bg-green-50/30">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-medium text-muted-foreground uppercase">Department (CSV)</span>
-                  <span *ngIf="comparison.status === 'new'" class="text-xs text-green-600">+ added</span>
+                  <span
+                    class="text-xs font-medium text-muted-foreground uppercase"
+                    >Department (CSV)</span
+                  >
+                  <span
+                    *ngIf="comparison.status === 'new'"
+                    class="text-xs text-green-600"
+                    >+ added</span
+                  >
                 </div>
-                <p class="font-mono text-sm" [class.font-semibold]="comparison.status === 'new'"
-                  [class.text-green-700]="comparison.status === 'new'">
+                <p
+                  class="font-mono text-sm"
+                  [class.font-semibold]="comparison.status === 'new'"
+                  [class.text-green-700]="comparison.status === 'new'"
+                >
                   {{ comparison.csvDepartment?.name || "N/A" }}
                 </p>
               </div>
@@ -205,8 +295,13 @@
     <!-- Normal User List View -->
     <div *ngIf="!showComparison && !showDepartmentComparison">
       <!-- Stats Cards -->
-      <div *ngIf="stats$ | async as stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div
+        *ngIf="stats$ | async as stats"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+      >
+        <div
+          class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+        >
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-muted-foreground">
@@ -216,17 +311,29 @@
                 {{ stats.total }}
               </p>
             </div>
-            <div class="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
-                </path>
+            <div
+              class="w-10 h-10 bg-muted rounded-lg flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-muted-foreground"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                ></path>
               </svg>
             </div>
           </div>
         </div>
 
-        <div class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+        <div
+          class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+        >
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-muted-foreground">
@@ -236,10 +343,21 @@
                 {{ stats.lineManagers }}
               </p>
             </div>
-            <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                class="text-purple-600">
+            <div
+              class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-purple-600"
+              >
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -249,7 +367,9 @@
           </div>
         </div>
 
-        <div class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+        <div
+          class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+        >
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-muted-foreground">Employees</p>
@@ -257,10 +377,21 @@
                 {{ stats.employees }}
               </p>
             </div>
-            <div class="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                class="text-blue-600">
+            <div
+              class="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-blue-600"
+              >
                 <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -268,7 +399,9 @@
           </div>
         </div>
 
-        <div class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+        <div
+          class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+        >
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-muted-foreground">
@@ -278,11 +411,21 @@
                 {{ stats.departments }}
               </p>
             </div>
-            <div class="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-                </path>
+            <div
+              class="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                ></path>
               </svg>
             </div>
           </div>
@@ -291,40 +434,69 @@
 
       <!-- Actions Bar -->
       <div class="bg-card border border-border rounded-lg p-4 mb-6">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div
+          class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        >
           <div class="flex flex-col sm:flex-row gap-3">
             <div class="relative">
-              <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
+              <input
+                type="text"
+                [(ngModel)]="searchQuery"
+                (ngModelChange)="onSearchChange()"
                 placeholder="Search users..."
-                class="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all w-full sm:w-64" />
-              <svg class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                class="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all w-full sm:w-64"
+              />
+              <svg
+                class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
               </svg>
             </div>
 
-            <select [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentFilterChange()"
-              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+            <select
+              [(ngModel)]="selectedDepartment"
+              (ngModelChange)="onDepartmentFilterChange()"
+              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            >
               <option value="all">All Departments</option>
-              <option *ngFor="let dept of departments$ | async" [value]="dept.name">
+              <option
+                *ngFor="let dept of departments$ | async"
+                [value]="dept.name"
+              >
                 {{ dept.name }} ({{
-                dept.lineManagerCount + dept.employeeCount
+                  dept.lineManagerCount + dept.employeeCount
                 }})
               </option>
             </select>
 
-            <select [(ngModel)]="selectedFunction" (ngModelChange)="onFunctionFilterChange()"
+            <select
+              [(ngModel)]="selectedFunction"
+              (ngModelChange)="onFunctionFilterChange()"
               [disabled]="selectedDepartment === 'all'"
-              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
               <option value="all">Select Function</option>
-              <option *ngFor="let fn of availableDepartmentFunctions" [value]="fn">
+              <option
+                *ngFor="let fn of availableDepartmentFunctions"
+                [value]="fn"
+              >
                 {{ fn }}
               </option>
             </select>
 
-            <select [(ngModel)]="selectedRole" (ngModelChange)="onRoleFilterChange()"
-              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+            <select
+              [(ngModel)]="selectedRole"
+              (ngModelChange)="onRoleFilterChange()"
+              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            >
               <option value="all">All Roles</option>
               <option [value]="UserRole.LineManager">Line Managers</option>
               <option [value]="UserRole.Employee">Employees</option>
@@ -333,26 +505,55 @@
 
           <div class="flex gap-3">
             <label
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 cursor-pointer transition-colors">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 cursor-pointer transition-colors"
+            >
+              <svg
+                class="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
               </svg>
               {{ isUploading ? "Loading..." : "Import CSV" }}
-              <input type="file" accept=".csv" (change)="onFileSelected($event)" [disabled]="isUploading"
-                class="hidden" />
+              <input
+                type="file"
+                accept=".csv"
+                (change)="onFileSelected($event)"
+                [disabled]="isUploading"
+                class="hidden"
+              />
             </label>
 
             <label
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-green-600 hover:bg-green-700 cursor-pointer transition-colors">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-                </path>
+              class="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-green-600 hover:bg-green-700 cursor-pointer transition-colors"
+            >
+              <svg
+                class="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                ></path>
               </svg>
               {{ isUploading ? "Loading..." : "Import Departments" }}
-              <input type="file" accept=".csv" (change)="onDepartmentFileSelected($event)" [disabled]="isUploading"
-                class="hidden" />
+              <input
+                type="file"
+                accept=".csv"
+                (change)="onDepartmentFileSelected($event)"
+                [disabled]="isUploading"
+                class="hidden"
+              />
             </label>
           </div>
         </div>
@@ -364,53 +565,96 @@
           <table class="w-full">
             <thead class="bg-muted/50 border-b border-border">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
                   User
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
                   Role
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
                   Department
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
                   Function
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
                   Line Manager
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  <button (click)="toggleSort('createdAt')"
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  <button
+                    (click)="toggleSort('createdAt')"
                     class="hover:text-foreground transition-colors flex items-center gap-1"
-                    title="Sort by created date">
+                    title="Sort by created date"
+                  >
                     Created {{ getSortIcon("createdAt") }}
                   </button>
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  <button (click)="toggleSort('updatedAt')"
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  <button
+                    (click)="toggleSort('updatedAt')"
                     class="hover:text-foreground transition-colors flex items-center gap-1"
-                    title="Sort by updated date">
+                    title="Sort by updated date"
+                  >
                     Updated {{ getSortIcon("updatedAt") }}
                   </button>
                 </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-border">
-              <tr *ngFor="let user of paginatedUsers$ | async" class="hover:bg-muted/30 transition-colors">
+              <tr
+                *ngFor="let user of paginatedUsers$ | async"
+                class="hover:bg-muted/30 transition-colors"
+              >
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
-                    <div class="flex-shrink-0 w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                      <svg *ngIf="user.role === UserRole.LineManager" xmlns="http://www.w3.org/2000/svg" width="18"
-                        height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" class="text-purple-600">
+                    <div
+                      class="flex-shrink-0 w-10 h-10 bg-muted rounded-full flex items-center justify-center"
+                    >
+                      <svg
+                        *ngIf="user.role === UserRole.LineManager"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="text-purple-600"
+                      >
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                       </svg>
-                      <svg *ngIf="user.role === UserRole.Employee" xmlns="http://www.w3.org/2000/svg" width="18"
-                        height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" class="text-blue-600">
+                      <svg
+                        *ngIf="user.role === UserRole.Employee"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="text-blue-600"
+                      >
                         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
@@ -426,12 +670,14 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span [ngClass]="getRoleBadgeColor(user.role!)"
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border">
+                  <span
+                    [ngClass]="getRoleBadgeColor(user.role!)"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                  >
                     {{
-                    user.role === UserRole.LineManager
-                    ? "Line Manager"
-                    : "Employee"
+                      user.role === UserRole.LineManager
+                        ? "Line Manager"
+                        : "Employee"
                     }}
                   </span>
                 </td>
@@ -441,41 +687,55 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {{ user.function || "unknown" }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground"
+                >
                   {{ user.assignedToName || "—" }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground"
-                  [title]="'Created: ' + formatDate(user.createdAt)">
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground"
+                  [title]="'Created: ' + formatDate(user.createdAt)"
+                >
                   <div class="flex flex-col">
                     <span>{{ formatDate(user.createdAt) }}</span>
                     <span class="text-xs opacity-60">{{
                       getRelativeTime(user.createdAt)
-                      }}</span>
+                    }}</span>
                   </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground" [title]="
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground"
+                  [title]="
                     user.updatedAt
                       ? 'Updated: ' + formatDate(user.updatedAt)
                       : 'Not yet updated'
-                  ">
+                  "
+                >
                   <div class="flex flex-col">
                     <span>{{
                       user.updatedAt ? formatDate(user.updatedAt) : "—"
-                      }}</span>
+                    }}</span>
                     <span class="text-xs opacity-60" *ngIf="user.updatedAt">{{
                       getRelativeTime(user.updatedAt)
-                      }}</span>
+                    }}</span>
                   </div>
                 </td>
               </tr>
               <tr *ngIf="totalItems === 0">
                 <td colspan="7" class="px-6 py-12 text-center">
                   <div class="flex flex-col items-center justify-center">
-                    <svg class="w-12 h-12 text-muted-foreground mb-3" fill="none" stroke="currentColor"
-                      viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
-                      </path>
+                    <svg
+                      class="w-12 h-12 text-muted-foreground mb-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                      ></path>
                     </svg>
                     <p class="text-muted-foreground text-sm">
                       Users not found.
@@ -491,32 +751,66 @@
         </div>
 
         <!-- Pagination -->
-        <app-pagination *ngIf="totalItems > pageSize" [currentPage]="currentPage" [totalItems]="totalItems"
-          [pageSize]="pageSize" (pageChange)="onPageChange($event)"></app-pagination>
+        <app-pagination
+          *ngIf="totalItems > pageSize"
+          [currentPage]="currentPage"
+          [totalItems]="totalItems"
+          [pageSize]="pageSize"
+          (pageChange)="onPageChange($event)"
+        ></app-pagination>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Error Modal -->
-<div *ngIf="showErrorModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-  <div class="bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
+<div
+  *ngIf="showErrorModal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+>
+  <div
+    class="bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col"
+  >
     <!-- Modal Header -->
     <div class="flex items-center justify-between p-6 border-b border-border">
       <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center">
-          <svg class="w-6 h-6 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        <div
+          class="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center"
+        >
+          <svg
+            class="w-6 h-6 text-destructive"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
           </svg>
         </div>
         <h3 class="text-lg font-semibold text-foreground">
           {{ errorModalTitle }}
         </h3>
       </div>
-      <button (click)="closeErrorModal()" class="text-muted-foreground hover:text-foreground transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      <button
+        (click)="closeErrorModal()"
+        class="text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          ></path>
         </svg>
       </button>
     </div>
@@ -526,11 +820,22 @@
       <!-- Errors -->
       <div *ngIf="errorModalErrors.length > 0" class="space-y-2">
         <h4 class="font-medium text-foreground mb-3">Errors:</h4>
-        <div *ngFor="let error of errorModalErrors"
-          class="flex items-start space-x-2 p-3 bg-destructive/5 border border-destructive/20 rounded-md">
-          <svg class="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" fill="none" stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        <div
+          *ngFor="let error of errorModalErrors"
+          class="flex items-start space-x-2 p-3 bg-destructive/5 border border-destructive/20 rounded-md"
+        >
+          <svg
+            class="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
           </svg>
           <span class="text-sm text-foreground">{{ error }}</span>
         </div>
@@ -539,20 +844,32 @@
       <!-- Warnings -->
       <div *ngIf="errorModalWarnings.length > 0" class="mt-6 space-y-2">
         <h4 class="font-medium text-foreground mb-3">Warnings:</h4>
-        <div *ngFor="let warning of errorModalWarnings"
-          class="flex items-start space-x-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-md">
-          <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
-            </path>
+        <div
+          *ngFor="let warning of errorModalWarnings"
+          class="flex items-start space-x-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-md"
+        >
+          <svg
+            class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            ></path>
           </svg>
           <span class="text-sm text-foreground">{{ warning }}</span>
         </div>
       </div>
 
       <!-- Stats -->
-      <div *ngIf="errorModalStats.totalRows > 0" class="mt-6 p-4 bg-muted/50 rounded-md border border-border">
+      <div
+        *ngIf="errorModalStats.totalRows > 0"
+        class="mt-6 p-4 bg-muted/50 rounded-md border border-border"
+      >
         <h4 class="font-medium text-foreground mb-3">Statistics:</h4>
         <div class="grid grid-cols-3 gap-4 text-center">
           <div>
@@ -579,18 +896,27 @@
 
     <!-- Modal Footer -->
     <div class="p-6 border-t border-border flex justify-end gap-3">
-      <button *ngIf="!canProceedWithValidRows" (click)="closeErrorModal()"
-        class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium">
+      <button
+        *ngIf="!canProceedWithValidRows"
+        (click)="closeErrorModal()"
+        class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+      >
         OK
       </button>
 
-      <button *ngIf="canProceedWithValidRows" (click)="closeErrorModal()"
-        class="px-6 py-2 bg-secondary text-secondary-foreground border border-border rounded-md hover:bg-secondary/90 transition-colors font-medium">
+      <button
+        *ngIf="canProceedWithValidRows"
+        (click)="closeErrorModal()"
+        class="px-6 py-2 bg-secondary text-secondary-foreground border border-border rounded-md hover:bg-secondary/90 transition-colors font-medium"
+      >
         Cancel
       </button>
 
-      <button *ngIf="canProceedWithValidRows" (click)="proceedWithValidRows()"
-        class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium">
+      <button
+        *ngIf="canProceedWithValidRows"
+        (click)="proceedWithValidRows()"
+        class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+      >
         Proceed with {{ errorModalStats.validRows }} Valid Rows
       </button>
     </div>
@@ -598,15 +924,33 @@
 </div>
 
 <!-- Success Toast -->
-<div *ngIf="successMessage" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-  <div class="bg-green-100 border border-green-200 text-green-800 px-6 py-4 rounded-lg shadow-lg max-w-md">
+<div
+  *ngIf="successMessage"
+  class="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300"
+>
+  <div
+    class="bg-green-100 border border-green-200 text-green-800 px-6 py-4 rounded-lg shadow-lg max-w-md"
+  >
     <div class="flex items-start space-x-3">
-      <svg class="w-6 h-6 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      <svg
+        class="w-6 h-6 text-green-600 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M5 13l4 4L19 7"
+        ></path>
       </svg>
       <div class="flex-1">
         <span class="font-medium">{{ successMessage }}</span>
-        <div *ngIf="serverTimingInfo" class="mt-2 text-xs text-green-700 space-y-1">
+        <div
+          *ngIf="serverTimingInfo"
+          class="mt-2 text-xs text-green-700 space-y-1"
+        >
           <div>
             Validation: {{ formatDuration(serverTimingInfo.validationTimeMs) }}
           </div>
@@ -621,3 +965,10 @@
     </div>
   </div>
 </div>
+
+<!-- Bulk Training Modal -->
+<app-bulk-training-modal
+  (close)="onBulkTrainingSuccess()"
+  (success)="onBulkTrainingSuccess()"
+>
+</app-bulk-training-modal>
