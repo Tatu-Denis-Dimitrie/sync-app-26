@@ -38,26 +38,6 @@
             Departments
           </button>
           <button
-            (click)="openBulkTrainingModal()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-300 transition-colors"
-            title="Add Periodic Training for All Users"
-          >
-            <svg
-              class="w-4 h-4 inline-block mr-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              ></path>
-            </svg>
-            Bulk Training
-          </button>
-          <button
             (click)="navigateToImportHistory()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
@@ -74,6 +54,12 @@
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
             Employees
+          </button>
+          <button
+            (click)="openBulkTrainingModal()"
+            class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
+          >
+            Bulk Training
           </button>
           <button
             (click)="logout()"
@@ -1005,7 +991,5 @@
 
 <!-- Bulk Training Modal -->
 <app-bulk-training-modal
-  (close)="onBulkTrainingSuccess()"
   (success)="onBulkTrainingSuccess()"
->
-</app-bulk-training-modal>
+></app-bulk-training-modal>
