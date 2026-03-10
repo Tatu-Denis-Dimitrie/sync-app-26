@@ -123,6 +123,20 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Document not found." });
             }
 
+            bool isManagerSigning = document.User?.AssignedTo != null &&
+                string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase);
+            bool isUserSignature = !isManagerSigning;
+
+            if (isUserSignature && document.UserSignedAt != null)
+            {
+                return BadRequest(new { message = "User already signed this document." });
+            }
+
+            if (!isUserSignature && document.ManagerSignedAt != null)
+            {
+                return BadRequest(new { message = "Manager already signed this document." });
+            }
+
             var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
             if (!isValidAndConsumed)
             {
@@ -130,7 +144,7 @@ namespace SyncApp26.API.Controllers
             }
 
             // Record signature
-            var isUserSignature = document.Status == "PendingUser";
+            // A line manager can sign their employee's document regardless of whether the employee has signed yet.
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
             await _documentService.UpdateDocumentSignatureAsync(
@@ -142,7 +156,7 @@ namespace SyncApp26.API.Controllers
             );
 
             // If user signed, generate link for the manager and send email
-            if (isUserSignature && document.User?.AssignedTo != null)
+            if (isUserSignature && document.User?.AssignedTo != null && document.ManagerSignedAt == null)
             {
                 var manager = document.User.AssignedTo;
                 var managerToken = await _documentSignatureService.GenerateSignatureTokenAsync(

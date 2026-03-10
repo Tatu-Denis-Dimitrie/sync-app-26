@@ -186,7 +186,8 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
                 return Unauthorized();
 
-            // Fetch documents where the current user is the manager and status is PendingManager
+            // Fetch documents where the current user is the manager and signature is still pending.
+            // Managers can sign even before employee signature, so include both PendingUser and PendingManager.
             // Since IDocumentService doesn't have this, we can get all users where AssignedToId is this user, then their documents
             // This would be better handled in IDocumentService, but we can do a quick implementation here
             var allManagedUsers = await _userService.GetAllUsersAsync();
@@ -196,7 +197,9 @@ namespace SyncApp26.API.Controllers
             foreach (var empId in myEmployees)
             {
                 var empDocs = await _documentService.GetUserDocumentsAsync(empId);
-                pendingAsManager.AddRange(empDocs.Where(d => d.Status == "PendingManager"));
+                pendingAsManager.AddRange(empDocs.Where(d =>
+                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
+                    d.ManagerSignedAt == null));
             }
 
             return Ok(pendingAsManager.Select(MapDocument));
@@ -254,10 +257,16 @@ namespace SyncApp26.API.Controllers
             if (!isUser && !isManager)
                 return Forbid();
 
+            if (isUser && document.UserSignedAt != null)
+                return BadRequest(new { message = "User already signed this document." });
+            
+            if (isManager && document.ManagerSignedAt != null)
+                return BadRequest(new { message = "Manager already signed this document." });
+
             if (isUser && document.Status != "PendingUser")
                 return BadRequest(new { message = "User signature not required at this time." });
-            
-            if (isManager && document.Status != "PendingManager")
+
+            if (isManager && document.Status != "PendingManager" && document.Status != "PendingUser")
                 return BadRequest(new { message = "Manager signature not required at this time." });
 
             var token = await _documentSignatureService.GenerateSignatureTokenAsync(user.Email, document.Id, $"{document.DocumentType} Document");

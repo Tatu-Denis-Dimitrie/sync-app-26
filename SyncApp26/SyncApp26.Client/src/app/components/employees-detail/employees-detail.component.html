@@ -822,6 +822,91 @@
     </div>
   </div>
 
+  <!-- Bulk Generate Documents Modal -->
+  <div
+    *ngIf="showBulkGenerateModal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+    (click)="closeBulkGenerateModal()"
+  >
+    <div
+      class="bg-card w-full max-w-lg rounded-lg shadow-lg border border-border p-6"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex items-start justify-between mb-4 gap-4">
+        <div>
+          <h2 class="text-lg font-semibold text-foreground">Generate All Documents</h2>
+          <p class="text-sm text-muted-foreground mt-1">
+            Generate documents for all the users for the selected type.
+          </p>
+        </div>
+        <button
+          type="button"
+          (click)="closeBulkGenerateModal()"
+          class="text-muted-foreground hover:text-foreground"
+          [disabled]="isBulkGenerating"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-foreground">Document Type</label>
+          <select
+            [(ngModel)]="bulkGenerateType"
+            class="mt-2 w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+            [disabled]="isBulkGenerating"
+          >
+            <option value="Both">Both (SSM + SU)</option>
+            <option value="SSM">SSM</option>
+            <option value="SU">SU</option>
+          </select>
+        </div>
+
+        <div
+          *ngIf="bulkGenerateResult"
+          class="rounded-md border border-border bg-muted/50 p-3 text-sm"
+        >
+          <p class="font-medium text-foreground">{{ bulkGenerateResult.message }}</p>
+          <p class="text-muted-foreground mt-1">
+            Generated: {{ bulkGenerateResult.generated }} | Skipped: {{ bulkGenerateResult.skipped }}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button
+          type="button"
+          (click)="closeBulkGenerateModal()"
+          class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
+          [disabled]="isBulkGenerating"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="confirmBulkGenerate()"
+          class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          [disabled]="isBulkGenerating"
+        >
+          {{ isBulkGenerating ? 'Generating...' : 'Generate' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Edit User Modal -->
   <div
     *ngIf="isEditModalOpen"

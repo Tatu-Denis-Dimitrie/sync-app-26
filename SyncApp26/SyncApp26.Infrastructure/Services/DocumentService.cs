@@ -610,7 +610,7 @@ namespace SyncApp26.Infrastructure.Services
                 doc.UserSignatureIpAddress = ipAddress;
                 doc.UserSignedAt = timestamp;
                 doc.UserCryptographicSignature = cryptoSignature;
-                doc.Status = "PendingManager";
+                doc.Status = doc.ManagerSignedAt != null ? "Completed" : "PendingManager";
             }
             else
             {
@@ -619,7 +619,7 @@ namespace SyncApp26.Infrastructure.Services
                 doc.ManagerSignatureIpAddress = ipAddress;
                 doc.ManagerSignedAt = timestamp;
                 doc.ManagerCryptographicSignature = cryptoSignature;
-                doc.Status = "Completed";
+                doc.Status = doc.UserSignedAt != null ? "Completed" : "PendingUser";
             }
 
             // Also persist to the most recent PeriodicTraining row so it is permanently visible
@@ -655,7 +655,7 @@ namespace SyncApp26.Infrastructure.Services
         }
         public async Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
-            var query = _context.UserDocuments
+            var baseQuery = _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
@@ -664,11 +664,16 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
-                .Where(d => d.Status == "PendingManager");
+                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate));
 
-            if (!isAdmin)
-                query = query.Where(d => d.User != null && d.User.AssignedToId == signerUserId);
+            // Admins sign only PendingManager documents (existing behaviour).
+            // Line managers can sign all their employees' documents regardless of whether the employee has signed yet.
+            IQueryable<UserDocument> query = isAdmin
+                ? baseQuery.Where(d => d.Status == "PendingManager" && d.ManagerSignedAt == null)
+                : baseQuery.Where(d =>
+                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
+                    d.ManagerSignedAt == null &&
+                    d.User != null && d.User.AssignedToId == signerUserId);
 
             var docs = await query.ToListAsync();
             if (docs.Count == 0) return 0;
@@ -685,7 +690,7 @@ namespace SyncApp26.Infrastructure.Services
                 doc.ManagerSignatureIpAddress = ipAddress;
                 doc.ManagerSignedAt = timestamp;
                 doc.ManagerCryptographicSignature = cryptoSignature;
-                doc.Status = "Completed";
+                doc.Status = doc.UserSignedAt != null ? "Completed" : "PendingUser";
 
                 var latestTraining = doc.User?.PeriodicTrainings
                     ?.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
