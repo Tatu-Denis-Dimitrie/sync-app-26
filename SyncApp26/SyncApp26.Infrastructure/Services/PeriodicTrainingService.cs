@@ -89,6 +89,77 @@ namespace SyncApp26.Infrastructure.Services
             return true;
         }
 
+        public async Task<BulkCreateResultDTO> BulkCreateAsync(BulkCreatePeriodicTrainingDTO dto)
+        {
+            var result = new BulkCreateResultDTO();
+
+            try
+            {
+                // Get list of users to apply training to
+                List<User> users;
+
+                if (dto.ApplyToAllUsers)
+                {
+                    // Get all users
+                    users = await _context.Users
+                        .Include(u => u.Function)
+                        .ToListAsync();
+                }
+                else
+                {
+                    // Get only selected users
+                    users = await _context.Users
+                        .Include(u => u.Function)
+                        .Where(u => dto.SelectedUserIds.Contains(u.Id))
+                        .ToListAsync();
+                }
+
+                if (!users.Any())
+                {
+                    result.Errors.Add("No users found to apply training to");
+                    return result;
+                }
+
+                // Create training record for each user
+                foreach (var user in users)
+                {
+                    try
+                    {
+                        var training = new PeriodicTraining
+                        {
+                            UserId = user.Id,
+                            TrainingDate = dto.TrainingDate ?? DateTime.UtcNow,
+                            DurationHours = dto.DurationHours,
+                            // Use provided occupation or fall back to user's function
+                            Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
+                                ? dto.Occupation
+                                : user.Function?.Name,
+                            MaterialTaught = dto.MaterialTaught,
+                            InstructorName = dto.InstructorName,
+                            VerifierName = dto.VerifierName,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.PeriodicTrainings.Add(training);
+                        result.SuccessCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        result.FailedCount++;
+                        result.Errors.Add($"Failed for user {user.Email}: {ex.Message}");
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add($"Bulk operation failed: {ex.Message}");
+            }
+
+            return result;
+        }
+
         private static PeriodicTrainingResponseDTO MapToDTO(PeriodicTraining training)
         {
             return new PeriodicTrainingResponseDTO

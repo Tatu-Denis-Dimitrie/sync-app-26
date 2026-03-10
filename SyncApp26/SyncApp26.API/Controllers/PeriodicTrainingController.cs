@@ -92,5 +92,33 @@ namespace SyncApp26.API.Controllers
 
             return Ok(new { message = "Periodic training deleted successfully" });
         }
+
+        /// <summary>
+        /// Create periodic training records for multiple users at once
+        /// </summary>
+        [HttpPost("bulk")]
+        public async Task<IActionResult> BulkCreate([FromBody] BulkCreatePeriodicTrainingDTO dto)
+        {
+            try
+            {
+                var result = await _periodicTrainingService.BulkCreateAsync(dto);
+
+                if (result.FailedCount > 0 && result.SuccessCount == 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "All bulk creations failed",
+                        errors = result.Errors,
+                        result
+                    });
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

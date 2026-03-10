@@ -1,0 +1,156 @@
+<div *ngIf="isVisible" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">Add Bulk Periodic Training</h2>
+      <button class="close-button" (click)="closeModal()" aria-label="Close">
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          ></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-description">
+        Add periodic training records with the same data for all users. This
+        will create a new training entry in each user's SSM/SU document.
+      </p>
+
+      <form class="training-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="trainingDate" class="form-label">
+              Training Date <span class="required">*</span>
+            </label>
+            <input
+              type="date"
+              id="trainingDate"
+              [(ngModel)]="formData.trainingDate"
+              name="trainingDate"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="durationHours" class="form-label">
+              Duration (hours)
+            </label>
+            <input
+              type="number"
+              id="durationHours"
+              [(ngModel)]="formData.durationHours"
+              name="durationHours"
+              class="form-input"
+              min="0"
+              step="0.5"
+              placeholder="e.g., 2.5"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="occupation" class="form-label">
+            Occupation / Specialty
+          </label>
+          <input
+            type="text"
+            id="occupation"
+            [(ngModel)]="formData.occupation"
+            name="occupation"
+            class="form-input"
+            placeholder="Leave empty to use user's function"
+          />
+          <p class="form-hint">
+            If left empty, each user's function will be used automatically
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="materialTaught" class="form-label">
+            Material Taught
+          </label>
+          <textarea
+            id="materialTaught"
+            [(ngModel)]="formData.materialTaught"
+            name="materialTaught"
+            class="form-textarea"
+            rows="3"
+            placeholder="Enter the training material covered..."
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="instructorName" class="form-label">
+              Instructor Name
+            </label>
+            <input
+              type="text"
+              id="instructorName"
+              [(ngModel)]="formData.instructorName"
+              name="instructorName"
+              class="form-input"
+              placeholder="Name of the instructor"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="verifierName" class="form-label">
+              Verifier Name (SSM only)
+            </label>
+            <input
+              type="text"
+              id="verifierName"
+              [(ngModel)]="formData.verifierName"
+              name="verifierName"
+              class="form-input"
+              placeholder="Name of the verifier"
+            />
+          </div>
+        </div>
+
+        <div class="form-group-checkbox">
+          <input
+            type="checkbox"
+            id="applyToAllUsers"
+            [(ngModel)]="formData.applyToAllUsers"
+            name="applyToAllUsers"
+            class="form-checkbox"
+          />
+          <label for="applyToAllUsers" class="checkbox-label">
+            Apply to all active users
+          </label>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="closeModal()"
+        [disabled]="isSubmitting"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="submitBulkTraining()"
+        [disabled]="isSubmitting || !formData.trainingDate"
+      >
+        {{ isSubmitting ? "Adding..." : "Add Training Records" }}
+      </button>
+    </div>
+  </div>
+</div>

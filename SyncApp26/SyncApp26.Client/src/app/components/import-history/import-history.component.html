@@ -42,12 +42,6 @@
           >
             User History
           </button>
-          <a
-            routerLink="/test-signature"
-            class="px-4 py-2 border border-teal-500 text-teal-600 rounded-md text-sm font-medium bg-background hover:bg-teal-50 transition-colors inline-block"
-          >
-            Test Links
-          </a>
           <button
             (click)="navigateToUsers()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
@@ -109,128 +103,141 @@
       {{ error }}
     </div>
     <div
-      *ngIf="!loading && !error && getFilteredImportGroups().length === 0 && getFilteredManualDayGroups().length === 0"
+      *ngIf="
+        !loading &&
+        !error &&
+        getFilteredImportGroups().length === 0 &&
+        getFilteredManualDayGroups().length === 0
+      "
       class="text-sm text-muted-foreground"
     >
       No change history available.
     </div>
 
-    <div
-      class="space-y-6"
-      *ngIf="!loading && !error"
-    >
+    <div class="space-y-6" *ngIf="!loading && !error">
       <div *ngIf="getFilteredImportGroups().length > 0" class="space-y-6">
-        <div class="text-sm font-semibold text-foreground uppercase tracking-wide">
+        <div
+          class="text-sm font-semibold text-foreground uppercase tracking-wide"
+        >
           Import Conflicts
         </div>
 
-      <div
-        *ngFor="let group of getFilteredImportGroups()"
-        class="bg-card border border-border rounded-lg overflow-hidden"
-      >
         <div
-          class="px-6 py-4 bg-muted/30 border-b border-border flex items-center justify-between cursor-pointer"
-          (click)="toggleImportGroup(group.importHistoryId)"
+          *ngFor="let group of getFilteredImportGroups()"
+          class="bg-card border border-border rounded-lg overflow-hidden"
         >
-          <div>
-            <h3 class="text-lg font-semibold text-foreground">
-              {{ group.importFileName || "Import" }}
-            </h3>
-            <p class="text-xs text-muted-foreground">ID: {{ group.importHistoryId }}</p>
-            <p class="text-xs text-muted-foreground">
-              Date: {{ formatDate(group.importDate) }}
-            </p>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-muted-foreground">
-              {{ group.conflicts.length }} conflicts
-            </span>
-          </div>
-        </div>
-
-        <div *ngIf="isImportGroupExpanded(group.importHistoryId)" class="divide-y divide-border">
           <div
-            *ngIf="group.conflicts.length === 0"
-            class="p-6 text-sm text-muted-foreground"
+            class="px-6 py-4 bg-muted/30 border-b border-border flex items-center justify-between cursor-pointer"
+            (click)="toggleImportGroup(group.importHistoryId)"
           >
-            No conflicts for this import.
-          </div>
-
-          <div
-            *ngFor="let userGroup of getConflictGroups(group.conflicts)"
-            class="border-t border-border"
-          >
-            <div class="px-6 py-4 bg-muted/20 border-b border-border">
-              <p class="text-sm font-semibold text-foreground">
-                {{ userGroup.userName }}
+            <div>
+              <h3 class="text-lg font-semibold text-foreground">
+                {{ group.importFileName || "Import" }}
+              </h3>
+              <p class="text-xs text-muted-foreground">
+                ID: {{ group.importHistoryId }}
               </p>
               <p class="text-xs text-muted-foreground">
-                ID: {{ userGroup.userId }}
+                Date: {{ formatDate(group.importDate) }}
               </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-muted-foreground">
+                {{ group.conflicts.length }} conflicts
+              </span>
+            </div>
+          </div>
+
+          <div
+            *ngIf="isImportGroupExpanded(group.importHistoryId)"
+            class="divide-y divide-border"
+          >
+            <div
+              *ngIf="group.conflicts.length === 0"
+              class="p-6 text-sm text-muted-foreground"
+            >
+              No conflicts for this import.
             </div>
 
             <div
-              *ngFor="let conflict of userGroup.conflicts"
+              *ngFor="let userGroup of getConflictGroups(group.conflicts)"
               class="border-t border-border"
             >
-              <div class="px-6 py-3 flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-semibold text-foreground">
-                    {{ formatConflictField(conflict.fieldName) }}
-                  </p>
-                </div>
-                <span
-                  [ngClass]="getStatusColor(conflict.status)"
-                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
-                >
-                  {{ conflict.status || 'N/A' }}
-                </span>
+              <div class="px-6 py-4 bg-muted/20 border-b border-border">
+                <p class="text-sm font-semibold text-foreground">
+                  {{ userGroup.userName }}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  ID: {{ userGroup.userId }}
+                </p>
               </div>
-              <div class="grid grid-cols-[1fr,auto,1fr]">
-                <div class="p-4 bg-red-50/30">
-                  <div
-                    class="text-xs font-medium text-muted-foreground uppercase mb-2"
-                  >
-                    Database
+
+              <div
+                *ngFor="let conflict of userGroup.conflicts"
+                class="border-t border-border"
+              >
+                <div class="px-6 py-3 flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-foreground">
+                      {{ formatConflictField(conflict.fieldName) }}
+                    </p>
                   </div>
-                  <p class="font-mono text-sm text-foreground">
-                    {{ conflict.oldValue || "N/A" }}
-                  </p>
-                </div>
-                <div class="flex items-center justify-center bg-muted/20 px-2">
-                  <svg
-                    class="w-4 h-4 text-muted-foreground"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                  <span
+                    [ngClass]="getStatusColor(conflict.status)"
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5l7 7-7 7"
-                    ></path>
-                  </svg>
+                    {{ conflict.status || "N/A" }}
+                  </span>
                 </div>
-                <div class="p-4 bg-green-50/30">
-                  <div
-                    class="text-xs font-medium text-muted-foreground uppercase mb-2"
-                  >
-                    CSV
+                <div class="grid grid-cols-[1fr,auto,1fr]">
+                  <div class="p-4 bg-red-50/30">
+                    <div
+                      class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                    >
+                      Database
+                    </div>
+                    <p class="font-mono text-sm text-foreground">
+                      {{ conflict.oldValue || "N/A" }}
+                    </p>
                   </div>
-                  <p class="font-mono text-sm text-foreground">
-                    {{ conflict.newValue || "N/A" }}
-                  </p>
+                  <div
+                    class="flex items-center justify-center bg-muted/20 px-2"
+                  >
+                    <svg
+                      class="w-4 h-4 text-muted-foreground"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5l7 7-7 7"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div class="p-4 bg-green-50/30">
+                    <div
+                      class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                    >
+                      CSV
+                    </div>
+                    <p class="font-mono text-sm text-foreground">
+                      {{ conflict.newValue || "N/A" }}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      </div>
 
       <div *ngIf="getFilteredManualDayGroups().length > 0" class="space-y-6">
-        <div class="text-sm font-semibold text-foreground uppercase tracking-wide">
+        <div
+          class="text-sm font-semibold text-foreground uppercase tracking-wide"
+        >
           Manual Changes
         </div>
 
@@ -252,7 +259,10 @@
             </div>
           </div>
 
-          <div *ngIf="isManualDayExpanded(dayGroup.dayKey)" class="divide-y divide-border">
+          <div
+            *ngIf="isManualDayExpanded(dayGroup.dayKey)"
+            class="divide-y divide-border"
+          >
             <div
               *ngFor="let change of dayGroup.changes"
               class="border-t border-border"
@@ -260,13 +270,16 @@
               <div class="px-6 py-3 flex items-center justify-between">
                 <div>
                   <p class="text-sm font-semibold text-foreground">
-                    {{ getUserName(change.userId) }} · {{ formatConflictField(change.fieldName) }}
+                    {{ getUserName(change.userId) }} ·
+                    {{ formatConflictField(change.fieldName) }}
                   </p>
                   <p class="text-xs text-muted-foreground">
                     {{ formatDateTime(change.createdAt || change.importDate) }}
                   </p>
                 </div>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/10 text-blue-700 border-blue-500/20">
+                <span
+                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/10 text-blue-700 border-blue-500/20"
+                >
                   manual
                 </span>
               </div>

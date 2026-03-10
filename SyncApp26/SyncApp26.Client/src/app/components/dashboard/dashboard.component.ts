@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,17 +11,20 @@ import { CSVDepartmentComparisonDTO } from '../../models/csv-department-sync.mod
 import { User, UserComparison, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { ComparisonViewComponent } from '../comparison-view/comparison-view.component';
+import { BulkTrainingModalComponent } from '../bulk-training-modal/bulk-training-modal.component';
 import { UploadProgress, SyncProgressUpdate } from '../../services/user-sync.signalr.service';
 import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule],
+  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, BulkTrainingModalComponent, RouterModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  @ViewChild(BulkTrainingModalComponent) bulkTrainingModal!: BulkTrainingModalComponent;
+  
   private destroy$ = new Subject<void>();
 
   users$!: Observable<User[]>;
@@ -628,6 +631,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   navigateToImportHistory(): void {
     this.router.navigate(['/import-history']);
+  }
+
+  openBulkTrainingModal(): void {
+    if (this.bulkTrainingModal) {
+      this.bulkTrainingModal.open();
+    }
+  }
+
+  onBulkTrainingSuccess(): void {
+    // Optionally reload users data
+    console.log('Bulk training records added successfully');
   }
 
   getFilteredDepartmentComparisons(): CSVDepartmentComparisonDTO[] {
