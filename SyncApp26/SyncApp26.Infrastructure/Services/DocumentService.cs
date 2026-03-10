@@ -27,6 +27,51 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
+            // Each generate call adds a new PeriodicTraining row for this user
+            var newTraining = new PeriodicTraining
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                TrainingDate = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.PeriodicTrainings.Add(newTraining);
+
+            // Look for an existing document for this user+type; if found, reuse it
+            var doc = await _context.UserDocuments
+                .FirstOrDefaultAsync(d => d.UserId == userId && d.DocumentType == documentType);
+
+            if (doc != null)
+            {
+                // Reset for re-signing on the new row
+                doc.Status = "PendingUser";
+                doc.GeneratedAt = DateTime.UtcNow;
+                doc.UserSignatureMethod = null;
+                doc.UserSignatureData = null;
+                doc.UserSignatureIpAddress = null;
+                doc.UserSignedAt = null;
+                doc.UserCryptographicSignature = null;
+                doc.ManagerSignatureMethod = null;
+                doc.ManagerSignatureData = null;
+                doc.ManagerSignatureIpAddress = null;
+                doc.ManagerSignedAt = null;
+                doc.ManagerCryptographicSignature = null;
+            }
+            else
+            {
+                doc = new UserDocument
+                {
+                    UserId = userId,
+                    DocumentType = documentType,
+                    Status = "PendingUser",
+                    GeneratedAt = DateTime.UtcNow
+                };
+                _context.UserDocuments.Add(doc);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Reload user with all PeriodicTrainings (including the one just added)
             var user = await _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
@@ -37,18 +82,8 @@ namespace SyncApp26.Infrastructure.Services
             if (user == null)
                 throw new ArgumentException("User not found.");
 
-            var doc = new UserDocument
-            {
-                UserId = userId,
-                DocumentType = documentType,
-                Status = "PendingUser",
-                GeneratedAt = DateTime.UtcNow
-            };
-
             var pdfPath = await GeneratePdfSnapshotAsync(user, doc);
             doc.PdfFilePath = pdfPath;
-
-            _context.UserDocuments.Add(doc);
             await _context.SaveChangesAsync();
 
             return doc;
@@ -394,41 +429,34 @@ namespace SyncApp26.Infrastructure.Services
                             for (int i = 0; i < periodicTrainings.Count; i++)
                             {
                                 var training = periodicTrainings[i];
+                                bool isLastRow = i == periodicTrainings.Count - 1;
 
-                                if (i == periodicTrainings.Count - 1)
-                                {
-                                    // Last row — show signatures here
-                                    bool missingSignature = string.IsNullOrEmpty(document.UserSignatureData)
-                                        || string.IsNullOrEmpty(document.ManagerSignatureData);
+                                // Use per-row signatures from PeriodicTraining; fall back to document-level for the last row
+                                string? userSigData = !string.IsNullOrEmpty(training.UserSignatureData)
+                                    ? training.UserSignatureData
+                                    : (isLastRow ? document.UserSignatureData : null);
+                                string? userSigMethod = !string.IsNullOrEmpty(training.UserSignatureMethod)
+                                    ? training.UserSignatureMethod
+                                    : (isLastRow ? document.UserSignatureMethod : null);
+                                string? mgrSigData = !string.IsNullOrEmpty(training.InstructorSignature)
+                                    ? training.InstructorSignature
+                                    : (isLastRow ? document.ManagerSignatureData : null);
+                                string? mgrSigMethod = !string.IsNullOrEmpty(training.InstructorSignatureMethod)
+                                    ? training.InstructorSignatureMethod
+                                    : (isLastRow ? document.ManagerSignatureMethod : null);
 
-                                    Func<IContainer, IContainer> rowCell = missingSignature ? HighlightCell : DataCell;
+                                bool missingSignature = string.IsNullOrEmpty(userSigData) || string.IsNullOrEmpty(mgrSigData);
+                                Func<IContainer, IContainer> rowCell = (isLastRow && missingSignature) ? HighlightCell : DataCell;
 
-                                    table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
-                                    table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
-                                    table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
-                                    table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(7);
+                                table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
+                                table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
+                                table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
+                                table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(7);
 
-                                    // Semnătură instruit (angajat)
-                                    table.Cell().Element(rowCell).Column(c =>
-                                        RenderSignature(c, document.UserSignatureMethod, document.UserSignatureData));
+                                table.Cell().Element(rowCell).Column(c => RenderSignature(c, userSigMethod, userSigData));
+                                table.Cell().Element(rowCell).Column(c => RenderSignature(c, mgrSigMethod, mgrSigData));
 
-                                    // Semnătură instructor (manager)
-                                    table.Cell().Element(rowCell).Column(c =>
-                                        RenderSignature(c, document.ManagerSignatureMethod, document.ManagerSignatureData));
-
-                                    if (isSsm) table.Cell().Element(rowCell).Text("");
-                                }
-                                else
-                                {
-                                    // Previous rows — no signatures
-                                    table.Cell().Element(DataCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
-                                    table.Cell().Element(DataCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
-                                    table.Cell().Element(DataCell).Text(training.Occupation ?? occupation).FontSize(7);
-                                    table.Cell().Element(DataCell).Text(training.MaterialTaught ?? "").FontSize(7);
-                                    table.Cell().Element(DataCell).Text("").FontSize(7);
-                                    table.Cell().Element(DataCell).Text(training.InstructorName ?? "").FontSize(7);
-                                    if (isSsm) table.Cell().Element(DataCell).Text("");
-                                }
+                                if (isSsm) table.Cell().Element(rowCell).Text("");
                             }
 
                             // Fallback: if no periodic trainings exist, still render the signature row
@@ -549,6 +577,24 @@ namespace SyncApp26.Infrastructure.Services
                 doc.ManagerSignedAt = timestamp;
                 doc.ManagerCryptographicSignature = cryptoSignature;
                 doc.Status = "Completed";
+            }
+
+            // Also persist to the most recent PeriodicTraining row so it is permanently visible
+            var latestTraining = doc.User?.PeriodicTrainings
+                ?.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
+                .LastOrDefault();
+            if (latestTraining != null)
+            {
+                if (isUserSignature)
+                {
+                    latestTraining.UserSignatureData = signatureData;
+                    latestTraining.UserSignatureMethod = signatureMethod;
+                }
+                else
+                {
+                    latestTraining.InstructorSignature = signatureData;
+                    latestTraining.InstructorSignatureMethod = signatureMethod;
+                }
             }
 
             // Regenerate PDF with embedded signature image

@@ -37,9 +37,26 @@ namespace SyncApp26.Domain.Entities
         public string? MaterialTaught { get; set; }
 
         /// <summary>
-        /// Instructor signature data (base64 or identifier)
+        /// Employee (trainee) signature data — base64 image or typed text
+        /// </summary>
+        public string? UserSignatureData { get; set; }
+
+        /// <summary>
+        /// Employee signature method: "Draw" or "Type"
+        /// </summary>
+        [MaxLength(50)]
+        public string? UserSignatureMethod { get; set; }
+
+        /// <summary>
+        /// Instructor/manager signature data (base64 or identifier)
         /// </summary>
         public string? InstructorSignature { get; set; }
+
+        /// <summary>
+        /// Instructor/manager signature method: "Draw" or "Type"
+        /// </summary>
+        [MaxLength(50)]
+        public string? InstructorSignatureMethod { get; set; }
 
         /// <summary>
         /// Verifier signature (for SSM only)
