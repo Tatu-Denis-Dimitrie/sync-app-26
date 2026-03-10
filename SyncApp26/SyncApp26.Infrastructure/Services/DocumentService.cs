@@ -366,19 +366,64 @@ namespace SyncApp26.Infrastructure.Services
                             static IContainer DataCell(IContainer c) =>
                                 c.Border(0.5f).Padding(2).MinHeight(14);
 
+                            static IContainer HighlightCell(IContainer c) =>
+                                c.Background("#FFF9C4").Border(0.5f).Padding(3).MinHeight(16);
+
                             // Show existing periodic training records only (no empty rows)
                             var periodicTrainings = user.PeriodicTrainings?.OrderBy(pt => pt.TrainingDate).ToList() ?? new List<PeriodicTraining>();
+                            string occupation = user.Function?.Name ?? "";
 
-                            foreach (var training in periodicTrainings)
+                            for (int i = 0; i < periodicTrainings.Count; i++)
                             {
-                                table.Cell().Element(DataCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
-                                table.Cell().Element(DataCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
-                                table.Cell().Element(DataCell).Text(training.Occupation ?? user.Function?.Name ?? "").FontSize(7);
-                                table.Cell().Element(DataCell).Text(training.MaterialTaught ?? "").FontSize(7);
-                                table.Cell().Element(DataCell).Text("").FontSize(7); // Trainee signature placeholder
-                                table.Cell().Element(DataCell).Text(training.InstructorName ?? "").FontSize(7);
-                                if (isSsm)
-                                    table.Cell().Element(DataCell).Text(training.VerifierName ?? "").FontSize(7);
+                                var training = periodicTrainings[i];
+
+                                if (i == periodicTrainings.Count - 1)
+                                {
+                                    // Last row - check if signatures are missing and highlight if needed
+                                    bool missingSignature = string.IsNullOrEmpty(document.UserSignatureData)
+                                        || string.IsNullOrEmpty(document.ManagerSignatureData);
+
+                                    Func<IContainer, IContainer> rowCell = missingSignature ? HighlightCell : DataCell;
+
+                                    // Last row with actual signature data
+                                    table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
+                                    table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
+                                    table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
+                                    table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(7);
+
+                                    // Semnătură instruit (angajat)
+                                    table.Cell().Element(rowCell).Column(c =>
+                                    {
+                                        var empSig = TryDecodeSignature(document.UserSignatureData);
+                                        if (empSig != null)
+                                        {
+                                            c.Item().Image(empSig).FitWidth();
+                                        }
+                                    });
+
+                                    // Semnătură instructor (manager)
+                                    table.Cell().Element(rowCell).Column(c =>
+                                    {
+                                        var mgrSig = TryDecodeSignature(document.ManagerSignatureData);
+                                        if (mgrSig != null)
+                                        {
+                                            c.Item().Image(mgrSig).FitWidth();
+                                        }
+                                    });
+
+                                    if (isSsm) table.Cell().Element(rowCell).Text("");
+                                }
+                                else
+                                {
+                                    // Previous rows - regular data without signatures
+                                    table.Cell().Element(DataCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
+                                    table.Cell().Element(DataCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
+                                    table.Cell().Element(DataCell).Text(training.Occupation ?? occupation).FontSize(7);
+                                    table.Cell().Element(DataCell).Text(training.MaterialTaught ?? "").FontSize(7);
+                                    table.Cell().Element(DataCell).Text("").FontSize(7); // Trainee signature placeholder
+                                    table.Cell().Element(DataCell).Text(training.InstructorName ?? "").FontSize(7);
+                                    if (isSsm) table.Cell().Element(DataCell).Text("");
+                                }
                             }
                         });
                     });

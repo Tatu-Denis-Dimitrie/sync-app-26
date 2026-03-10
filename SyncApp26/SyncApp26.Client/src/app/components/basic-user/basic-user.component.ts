@@ -84,7 +84,7 @@ export class BasicUserComponent implements OnInit {
     });
 
     // 4. Fetch documents completed by manager
-    if (this.user?.role === UserRole.LineManager || true) {
+    if (this.user?.role === UserRole.LineManager) {
       this.http.get<any[]>(`${environment.apiUrl}/Document/manager-signed-documents`).subscribe({
         next: (docs) => {
           this.signedManagerSignatures = docs;

@@ -282,9 +282,8 @@ public class CsvSyncService : ICsvSyncService
 
                     var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
                     var csvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
-                    var roleId = assignedManager != null ? basicUserRoleId : lineManagerRoleId;
 
-                    if (roleId == null)
+                    if (basicUserRoleId == null)
                     {
                         result.RecordsFailed++;
                         result.Errors.Add($"User {item.CsvData.Email}: Required role not found for creation.");
@@ -294,7 +293,7 @@ public class CsvSyncService : ICsvSyncService
                     var newUser = new User
                     {
                         Id = Guid.NewGuid(),
-                        RoleId = roleId.Value,
+                        RoleId = basicUserRoleId.Value, // Everyone starts as Basic User
                         FirstName = item.CsvData.FirstName.Trim(),
                         LastName = item.CsvData.LastName.Trim(),
                         Email = item.CsvData.Email.Trim(),
@@ -607,6 +606,30 @@ public class CsvSyncService : ICsvSyncService
             if (usersToDelete.Any())
             {
                 await _userRepository.UpdateUsersAsync(usersToDelete);
+            }
+
+            // Promote to Line Manager anyone who is referenced as a manager by another user
+            if (lineManagerRoleId != null && basicUserRoleId != null)
+            {
+                var allUsers = (await _userRepository.GetAllUsersAsync()).ToList();
+                var managerIds = allUsers
+                    .Where(u => u.AssignedToId.HasValue)
+                    .Select(u => u.AssignedToId!.Value)
+                    .ToHashSet();
+
+                var usersToPromote = allUsers
+                    .Where(u => managerIds.Contains(u.Id) && u.RoleId != lineManagerRoleId.Value)
+                    .ToList();
+                var usersToDemote = allUsers
+                    .Where(u => !managerIds.Contains(u.Id) && u.RoleId == lineManagerRoleId.Value)
+                    .ToList();
+
+                foreach (var u in usersToPromote) u.RoleId = lineManagerRoleId.Value;
+                foreach (var u in usersToDemote)  u.RoleId = basicUserRoleId.Value;
+
+                var roleUpdates = usersToPromote.Concat(usersToDemote).ToList();
+                if (roleUpdates.Any())
+                    await _userRepository.UpdateUsersAsync(roleUpdates);
             }
         }
         catch (Exception ex)
