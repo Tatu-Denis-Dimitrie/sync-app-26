@@ -107,6 +107,22 @@ namespace SyncApp26.Infrastructure.Services
             catch { return null; }
         }
 
+        // Renders a signature into a column descriptor item — image for Draw, text for Type.
+        private static void RenderSignature(ColumnDescriptor c, string? method, string? data)
+        {
+            if (string.IsNullOrWhiteSpace(data)) return;
+
+            if (string.Equals(method, "Type", StringComparison.OrdinalIgnoreCase))
+            {
+                c.Item().PaddingTop(2).AlignCenter().Text(data).FontSize(9).Italic();
+            }
+            else
+            {
+                var imgBytes = TryDecodeSignature(data);
+                if (imgBytes != null) c.Item().Image(imgBytes).FitWidth();
+            }
+        }
+
         // ─── Core PDF builder ────────────────────────────────────────────────────
 
         private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document)
@@ -373,19 +389,20 @@ namespace SyncApp26.Infrastructure.Services
                             var periodicTrainings = user.PeriodicTrainings?.OrderBy(pt => pt.TrainingDate).ToList() ?? new List<PeriodicTraining>();
                             string occupation = user.Function?.Name ?? "";
 
+                            bool hasTrainings = periodicTrainings.Count > 0;
+
                             for (int i = 0; i < periodicTrainings.Count; i++)
                             {
                                 var training = periodicTrainings[i];
 
                                 if (i == periodicTrainings.Count - 1)
                                 {
-                                    // Last row - check if signatures are missing and highlight if needed
+                                    // Last row — show signatures here
                                     bool missingSignature = string.IsNullOrEmpty(document.UserSignatureData)
                                         || string.IsNullOrEmpty(document.ManagerSignatureData);
 
                                     Func<IContainer, IContainer> rowCell = missingSignature ? HighlightCell : DataCell;
 
-                                    // Last row with actual signature data
                                     table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
                                     table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
                                     table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
@@ -393,37 +410,46 @@ namespace SyncApp26.Infrastructure.Services
 
                                     // Semnătură instruit (angajat)
                                     table.Cell().Element(rowCell).Column(c =>
-                                    {
-                                        var empSig = TryDecodeSignature(document.UserSignatureData);
-                                        if (empSig != null)
-                                        {
-                                            c.Item().Image(empSig).FitWidth();
-                                        }
-                                    });
+                                        RenderSignature(c, document.UserSignatureMethod, document.UserSignatureData));
 
                                     // Semnătură instructor (manager)
                                     table.Cell().Element(rowCell).Column(c =>
-                                    {
-                                        var mgrSig = TryDecodeSignature(document.ManagerSignatureData);
-                                        if (mgrSig != null)
-                                        {
-                                            c.Item().Image(mgrSig).FitWidth();
-                                        }
-                                    });
+                                        RenderSignature(c, document.ManagerSignatureMethod, document.ManagerSignatureData));
 
                                     if (isSsm) table.Cell().Element(rowCell).Text("");
                                 }
                                 else
                                 {
-                                    // Previous rows - regular data without signatures
+                                    // Previous rows — no signatures
                                     table.Cell().Element(DataCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
                                     table.Cell().Element(DataCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
                                     table.Cell().Element(DataCell).Text(training.Occupation ?? occupation).FontSize(7);
                                     table.Cell().Element(DataCell).Text(training.MaterialTaught ?? "").FontSize(7);
-                                    table.Cell().Element(DataCell).Text("").FontSize(7); // Trainee signature placeholder
+                                    table.Cell().Element(DataCell).Text("").FontSize(7);
                                     table.Cell().Element(DataCell).Text(training.InstructorName ?? "").FontSize(7);
                                     if (isSsm) table.Cell().Element(DataCell).Text("");
                                 }
+                            }
+
+                            // Fallback: if no periodic trainings exist, still render the signature row
+                            if (!hasTrainings)
+                            {
+                                bool missingSignature = string.IsNullOrEmpty(document.UserSignatureData)
+                                    || string.IsNullOrEmpty(document.ManagerSignatureData);
+                                Func<IContainer, IContainer> rowCell = missingSignature ? HighlightCell : DataCell;
+
+                                table.Cell().Element(rowCell).Text(document.GeneratedAt.ToString("dd.MM.yyyy")).FontSize(7);
+                                table.Cell().Element(rowCell).Text("").FontSize(7);
+                                table.Cell().Element(rowCell).Text(occupation).FontSize(7);
+                                table.Cell().Element(rowCell).Text("").FontSize(7);
+
+                                table.Cell().Element(rowCell).Column(c =>
+                                    RenderSignature(c, document.UserSignatureMethod, document.UserSignatureData));
+
+                                table.Cell().Element(rowCell).Column(c =>
+                                    RenderSignature(c, document.ManagerSignatureMethod, document.ManagerSignatureData));
+
+                                if (isSsm) table.Cell().Element(rowCell).Text("");
                             }
                         });
                     });
@@ -433,90 +459,6 @@ namespace SyncApp26.Infrastructure.Services
                         x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
                     });
                 });
-
-                // ══════════════════════════════════════════════════════
-                // PAGE 4 — SEMNĂTURI DIGITALE
-                // ══════════════════════════════════════════════════════
-                if (document.UserSignedAt.HasValue || document.ManagerSignedAt.HasValue)
-                    container.Page(page =>
-                    {
-                        page.Size(PageSizes.A4);
-                        page.Margin(2, Unit.Centimetre);
-                        page.PageColor(Colors.White);
-                        page.DefaultTextStyle(x => x.FontSize(10));
-
-                        page.Content().Column(col =>
-                        {
-                            col.Item().Background(Colors.Grey.Lighten3).Padding(6)
-                                .Text("SEMNĂTURI DIGITALE").Bold().FontSize(12);
-                            col.Item().Height(16);
-
-                            // Employee signature block
-                            col.Item().Column(c =>
-                            {
-                                c.Item().Text("Semnătura angajat:").Bold().FontSize(10);
-                                c.Item().Height(6);
-                                var empSig = TryDecodeSignature(document.UserSignatureData);
-                                if (empSig != null)
-                                {
-                                    c.Item().Width(200).Image(empSig).FitWidth();
-                                    c.Item().Height(4);
-                                    c.Item().Text($"Semnat: {document.UserSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                        .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                    if (!string.IsNullOrEmpty(document.UserSignatureIpAddress))
-                                        c.Item().Text($"IP: {document.UserSignatureIpAddress}")
-                                            .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                }
-                                else
-                                {
-                                    c.Item().PaddingTop(50).BorderBottom(0.5f).Width(200).Text("");
-                                    if (document.UserSignedAt.HasValue)
-                                        c.Item().Text($"Semnat: {document.UserSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                            .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                }
-                            });
-
-                            col.Item().Height(20);
-
-                            // Manager signature block
-                            col.Item().Column(c =>
-                            {
-                                c.Item().Text("Semnătura manager:").Bold().FontSize(10);
-                                c.Item().Height(6);
-                                var mgrSig = TryDecodeSignature(document.ManagerSignatureData);
-                                if (mgrSig != null)
-                                {
-                                    c.Item().Width(200).Image(mgrSig).FitWidth();
-                                    c.Item().Height(4);
-                                    c.Item().Text($"Semnat: {document.ManagerSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                        .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                    if (!string.IsNullOrEmpty(document.ManagerSignatureIpAddress))
-                                        c.Item().Text($"IP: {document.ManagerSignatureIpAddress}")
-                                            .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                }
-                                else
-                                {
-                                    c.Item().PaddingTop(50).BorderBottom(0.5f).Width(200).Text("");
-                                    if (document.ManagerSignedAt.HasValue)
-                                        c.Item().Text($"Semnat: {document.ManagerSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                            .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                }
-                            });
-
-                            // Cryptographic audit line
-                            if (!string.IsNullOrEmpty(document.DocumentHash))
-                            {
-                                col.Item().Height(20);
-                                col.Item().Text($"SHA-256: {document.DocumentHash}")
-                                    .FontSize(8).FontColor(Colors.Grey.Darken1);
-                            }
-                        });
-
-                        page.Footer().AlignCenter().Text(x =>
-                        {
-                            x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                        });
-                    });
             });
         }
 
@@ -580,6 +522,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
 
             if (doc == null) return false;
