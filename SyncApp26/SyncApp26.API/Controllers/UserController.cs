@@ -15,13 +15,15 @@ namespace SyncApp26.API.Controllers
         private readonly IDepartmentService _departmentService;
         private readonly IFunctionService _functionService;
         private readonly IUserChangeHistoryService _userChangeHistoryService;
+        private readonly IDocumentService _documentService;
 
-        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService)
+        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService, IDocumentService documentService)
         {
             _userService = userService;
             _departmentService = departmentService;
             _functionService = functionService;
             _userChangeHistoryService = userChangeHistoryService;
+            _documentService = documentService;
         }
 
         [HttpGet("{id}")]
@@ -84,6 +86,8 @@ namespace SyncApp26.API.Controllers
         public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetAllUsers()
         {
             var users = await _userService.GetAllUsersAsync();
+            var ssmIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SSM");
+            var suIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SU");
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
@@ -99,7 +103,9 @@ namespace SyncApp26.API.Controllers
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
                 Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
+                UpdatedAt = user.UpdatedAt,
+                HasSignedSsm = ssmIds.Contains(user.Id),
+                HasSignedSu = suIds.Contains(user.Id)
             }).ToList();
 
             return Ok(responseList);

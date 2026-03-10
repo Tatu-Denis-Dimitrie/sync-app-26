@@ -8,6 +8,7 @@ namespace SyncApp26.Application.IServices
     public interface IDocumentService
     {
         Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail);
+        Task<HashSet<Guid>> GetUserIdsWithDocumentTypeAsync(string documentType);
         Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(Guid userId);
         Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType);
         Task<UserDocument?> GetDocumentByIdAsync(Guid documentId);

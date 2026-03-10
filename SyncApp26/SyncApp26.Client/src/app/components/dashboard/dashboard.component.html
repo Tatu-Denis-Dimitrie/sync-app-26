@@ -566,31 +566,43 @@
             <thead class="bg-muted/50 border-b border-border">
               <tr>
                 <th
+                  rowspan="2"
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   User
                 </th>
                 <th
+                  rowspan="2"
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   Role
                 </th>
                 <th
+                  rowspan="2"
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   Department
                 </th>
                 <th
+                  rowspan="2"
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   Function
                 </th>
                 <th
+                  rowspan="2"
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   Line Manager
                 </th>
                 <th
+                  colspan="2"
+                  class="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border"
+                >
+                  Has Signed
+                </th>
+                <th
+                  rowspan="2"
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   <button
@@ -602,6 +614,7 @@
                   </button>
                 </th>
                 <th
+                  rowspan="2"
                   class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   <button
@@ -611,6 +624,14 @@
                   >
                     Updated {{ getSortIcon("updatedAt") }}
                   </button>
+                </th>
+              </tr>
+              <tr class="bg-muted/50">
+                <th class="px-6 py-2 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  SSM
+                </th>
+                <th class="px-6 py-2 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  SU
                 </th>
               </tr>
             </thead>
@@ -692,6 +713,22 @@
                 >
                   {{ user.assignedToName || "—" }}
                 </td>
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <span
+                    [ngClass]="user.hasSignedSsm ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-700 bg-red-50 border-red-300'"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                  >
+                    {{ user.hasSignedSsm ? 'Yes' : 'No' }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <span
+                    [ngClass]="user.hasSignedSu ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-700 bg-red-50 border-red-300'"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                  >
+                    {{ user.hasSignedSu ? 'Yes' : 'No' }}
+                  </span>
+                </td>
                 <td
                   class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground"
                   [title]="'Created: ' + formatDate(user.createdAt)"
@@ -722,7 +759,7 @@
                 </td>
               </tr>
               <tr *ngIf="totalItems === 0">
-                <td colspan="7" class="px-6 py-12 text-center">
+                <td colspan="9" class="px-6 py-12 text-center">
                   <div class="flex flex-col items-center justify-center">
                     <svg
                       class="w-12 h-12 text-muted-foreground mb-3"

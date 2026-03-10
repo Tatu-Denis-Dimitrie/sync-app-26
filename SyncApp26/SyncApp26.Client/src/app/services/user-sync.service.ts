@@ -23,6 +23,8 @@ interface BackendUser {
   function?: string;
   createdAt: string;
   updatedAt?: string;
+  hasSignedSsm?: boolean;
+  hasSignedSu?: boolean;
 }
 
 @Injectable({
@@ -140,7 +142,9 @@ export class UserSyncService {
       function: this.normalizeFunction(backendUser.function),
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-      role: this.mapBackendRole(backendUser)
+      role: this.mapBackendRole(backendUser),
+      hasSignedSsm: backendUser.hasSignedSsm ?? false,
+      hasSignedSu: backendUser.hasSignedSu ?? false
     };
   }
 
