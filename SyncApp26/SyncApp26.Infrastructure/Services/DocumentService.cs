@@ -132,8 +132,8 @@ namespace SyncApp26.Infrastructure.Services
                 // ══════════════════════════════════════════════════════
                 container.Page(page =>
                 {
-                    page.Size(PageSizes.A5);
-                    page.Margin(1.8f, Unit.Centimetre);
+                    page.Size(PageSizes.A4);
+                    page.Margin(2, Unit.Centimetre);
                     page.PageColor(coverBg);
                     page.DefaultTextStyle(x => x.FontSize(11));
 
@@ -324,7 +324,7 @@ namespace SyncApp26.Infrastructure.Services
                 // ══════════════════════════════════════════════════════
                 container.Page(page =>
                 {
-                    page.Size(PageSizes.A4.Landscape());
+                    page.Size(PageSizes.A4);
                     page.Margin(1.5f, Unit.Centimetre);
                     page.PageColor(Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(9));
@@ -338,39 +338,39 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             table.ColumnsDefinition(c =>
                             {
-                                c.ConstantColumn(72);   // Data
-                                c.ConstantColumn(48);   // Durata
+                                c.ConstantColumn(60);   // Data
+                                c.ConstantColumn(35);   // Durata
                                 c.RelativeColumn(2);    // Ocupatia / Specialitatea
-                                c.RelativeColumn(4);    // Material predat
-                                c.RelativeColumn(2);    // Semnătură instruit
-                                c.RelativeColumn(2);    // Semnătură instructor
-                                if (isSsm) c.RelativeColumn(2); // Semnătură verificator
+                                c.RelativeColumn(3);    // Material predat
+                                c.RelativeColumn(1.5f);    // Semnătură instruit
+                                c.RelativeColumn(1.5f);    // Semnătură instructor
+                                if (isSsm) c.RelativeColumn(1.5f); // Semnătură verificator
                             });
 
                             static IContainer HeaderCell(IContainer c) =>
-                                c.Background(Colors.Grey.Lighten2).Border(0.5f).Padding(4);
+                                c.Background(Colors.Grey.Lighten2).Border(0.5f).Padding(2);
 
                             table.Header(header =>
                             {
-                                header.Cell().Element(HeaderCell).Text("Data instruirii").Bold().FontSize(8);
-                                header.Cell().Element(HeaderCell).Text("Durata (h)").Bold().FontSize(8);
-                                header.Cell().Element(HeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(8);
-                                header.Cell().Element(HeaderCell).Text("Materialul predat").Bold().FontSize(8);
-                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstruit").Bold().FontSize(8);
-                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstructor").Bold().FontSize(8);
+                                header.Cell().Element(HeaderCell).Text("Data instruirii").Bold().FontSize(7);
+                                header.Cell().Element(HeaderCell).Text("Durata (h)").Bold().FontSize(7);
+                                header.Cell().Element(HeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(7);
+                                header.Cell().Element(HeaderCell).Text("Materialul predat").Bold().FontSize(7);
+                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstruit").Bold().FontSize(7);
+                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstructor").Bold().FontSize(7);
                                 if (isSsm)
-                                    header.Cell().Element(HeaderCell).Text("Semnătura\nverificator").Bold().FontSize(8);
+                                    header.Cell().Element(HeaderCell).Text("Semnătura\nverificator").Bold().FontSize(7);
                             });
 
                             string occupation = user.Function?.Name ?? "";
                             for (int i = 0; i < 14; i++)
                             {
                                 static IContainer DataCell(IContainer c) =>
-                                    c.Border(0.5f).Padding(3).MinHeight(16);
+                                    c.Border(0.5f).Padding(2).MinHeight(14);
 
                                 table.Cell().Element(DataCell).Text("");
                                 table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text(occupation).FontSize(8);
+                                table.Cell().Element(DataCell).Text(occupation).FontSize(7);
                                 table.Cell().Element(DataCell).Text("");
                                 table.Cell().Element(DataCell).Text("");
                                 table.Cell().Element(DataCell).Text("");
