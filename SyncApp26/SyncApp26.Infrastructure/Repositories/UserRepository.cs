@@ -32,7 +32,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DeletedAt == null)
+                .Where(u => u.DeletedAt == null && u.Role.Name != "Admin")
                 .ToListAsync();
         }
 
@@ -45,7 +45,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DeletedAt == null)
+                .Where(u => u.DeletedAt == null && u.Role.Name != "Admin")
                 .ToListAsync();
         }
 
@@ -70,7 +70,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Role)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null)
+                .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null && u.Role.Name != "Admin")
                 .ToListAsync();
         }
 
@@ -81,7 +81,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Role)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null)
+                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null && u.Role.Name != "Admin")
                 .ToListAsync();
         }
 
@@ -110,7 +110,7 @@ namespace SyncApp26.Infrastructure.Repositories
 
         public async Task<bool> IsUserLineManagerAsync(Guid userId)
         {
-            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null);
+            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null && u.Role.Name != "Admin");
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -131,7 +131,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Function)
                 .Include(u => u.Role)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DeletedAt == null)
+                .Where(u => u.DeletedAt == null && u.Role.Name != "Admin")
                 .FirstOrDefaultAsync(u => u.PersonalId == personalId);
         }
 
