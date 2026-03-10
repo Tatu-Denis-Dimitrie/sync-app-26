@@ -278,3 +278,5 @@ SyncApp26/SyncApp26.Infrastructure/SyncApp26.db-shm
 SyncApp26/SyncApp26.Infrastructure/SyncApp26.db-wal
 SyncApp26/SyncApp26.API/appsetting.Development.json
 SyncApp26/SyncApp26.API/appsetting.json
+
+SyncApp26/SyncApp26.API/GeneratedDocuments

@@ -368,99 +368,56 @@ namespace SyncApp26.Infrastructure.Services
                                 static IContainer DataCell(IContainer c) =>
                                     c.Border(0.5f).Padding(3).MinHeight(16);
 
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text(occupation).FontSize(8);
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text("");
-                                if (isSsm) table.Cell().Element(DataCell).Text("");
+                                static IContainer HighlightCell(IContainer c) =>
+                                    c.Background("#FFF9C4").Border(0.5f).Padding(3).MinHeight(16);
+
+                                if (i == 0)
+                                {
+                                    bool missingSignature = string.IsNullOrEmpty(document.UserSignatureData)
+                                        || string.IsNullOrEmpty(document.ManagerSignatureData);
+
+                                    Func<IContainer, IContainer> rowCell = missingSignature ? HighlightCell : DataCell;
+
+                                    // First row — filled with actual signature data
+                                    table.Cell().Element(rowCell).Text(document.UserSignedAt?.ToString("dd.MM.yyyy") ?? "");
+                                    table.Cell().Element(rowCell).Text("");
+                                    table.Cell().Element(rowCell).Text(occupation).FontSize(8);
+                                    table.Cell().Element(rowCell).Text("");
+
+                                    // Semnătură instruit (angajat)
+                                    table.Cell().Element(rowCell).Column(c =>
+                                    {
+                                        var empSig = TryDecodeSignature(document.UserSignatureData);
+                                        if (empSig != null)
+                                        {
+                                            c.Item().Image(empSig).FitWidth();
+                                        }
+                                    });
+
+                                    // Semnătură instructor (manager)
+                                    table.Cell().Element(rowCell).Column(c =>
+                                    {
+                                        var mgrSig = TryDecodeSignature(document.ManagerSignatureData);
+                                        if (mgrSig != null)
+                                        {
+                                            c.Item().Image(mgrSig).FitWidth();
+                                        }
+                                    });
+
+                                    if (isSsm) table.Cell().Element(rowCell).Text("");
+                                }
+                                else
+                                {
+                                    table.Cell().Element(DataCell).Text("");
+                                    table.Cell().Element(DataCell).Text("");
+                                    table.Cell().Element(DataCell).Text(occupation).FontSize(8);
+                                    table.Cell().Element(DataCell).Text("");
+                                    table.Cell().Element(DataCell).Text("");
+                                    table.Cell().Element(DataCell).Text("");
+                                    if (isSsm) table.Cell().Element(DataCell).Text("");
+                                }
                             }
                         });
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                    });
-                });
-
-                // ══════════════════════════════════════════════════════
-                // PAGE 4 — SEMNĂTURI DIGITALE
-                // ══════════════════════════════════════════════════════
-                if (document.UserSignedAt.HasValue || document.ManagerSignedAt.HasValue)
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(2, Unit.Centimetre);
-                    page.PageColor(Colors.White);
-                    page.DefaultTextStyle(x => x.FontSize(10));
-
-                    page.Content().Column(col =>
-                    {
-                        col.Item().Background(Colors.Grey.Lighten3).Padding(6)
-                            .Text("SEMNĂTURI DIGITALE").Bold().FontSize(12);
-                        col.Item().Height(16);
-
-                        // Employee signature block
-                        col.Item().Column(c =>
-                        {
-                            c.Item().Text("Semnătura angajat:").Bold().FontSize(10);
-                            c.Item().Height(6);
-                            var empSig = TryDecodeSignature(document.UserSignatureData);
-                            if (empSig != null)
-                            {
-                                c.Item().Width(200).Image(empSig).FitWidth();
-                                c.Item().Height(4);
-                                c.Item().Text($"Semnat: {document.UserSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                    .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                if (!string.IsNullOrEmpty(document.UserSignatureIpAddress))
-                                    c.Item().Text($"IP: {document.UserSignatureIpAddress}")
-                                        .FontSize(8).FontColor(Colors.Grey.Darken1);
-                            }
-                            else
-                            {
-                                c.Item().PaddingTop(50).BorderBottom(0.5f).Width(200).Text("");
-                                if (document.UserSignedAt.HasValue)
-                                    c.Item().Text($"Semnat: {document.UserSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                        .FontSize(8).FontColor(Colors.Grey.Darken1);
-                            }
-                        });
-
-                        col.Item().Height(20);
-
-                        // Manager signature block
-                        col.Item().Column(c =>
-                        {
-                            c.Item().Text("Semnătura manager:").Bold().FontSize(10);
-                            c.Item().Height(6);
-                            var mgrSig = TryDecodeSignature(document.ManagerSignatureData);
-                            if (mgrSig != null)
-                            {
-                                c.Item().Width(200).Image(mgrSig).FitWidth();
-                                c.Item().Height(4);
-                                c.Item().Text($"Semnat: {document.ManagerSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                    .FontSize(8).FontColor(Colors.Grey.Darken1);
-                                if (!string.IsNullOrEmpty(document.ManagerSignatureIpAddress))
-                                    c.Item().Text($"IP: {document.ManagerSignatureIpAddress}")
-                                        .FontSize(8).FontColor(Colors.Grey.Darken1);
-                            }
-                            else
-                            {
-                                c.Item().PaddingTop(50).BorderBottom(0.5f).Width(200).Text("");
-                                if (document.ManagerSignedAt.HasValue)
-                                    c.Item().Text($"Semnat: {document.ManagerSignedAt?.ToString("dd.MM.yyyy HH:mm")} UTC")
-                                        .FontSize(8).FontColor(Colors.Grey.Darken1);
-                            }
-                        });
-
-                        // Cryptographic audit line
-                        if (!string.IsNullOrEmpty(document.DocumentHash))
-                        {
-                            col.Item().Height(20);
-                            col.Item().Text($"SHA-256: {document.DocumentHash}")
-                                .FontSize(8).FontColor(Colors.Grey.Darken1);
-                        }
                     });
 
                     page.Footer().AlignCenter().Text(x =>

@@ -221,14 +221,13 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
-            var roleName = userRequestDTO.AssignedToId.HasValue ? "Line Manager" : "Basic User";
-            var roleId = await _userService.GetRoleIdByNameAsync(roleName);
+            var roleId = await _userService.GetRoleIdByNameAsync("Basic User");
             if (roleId == null)
             {
                 return BadRequest(new UserResponseDTO
                 {
                     Success = false,
-                    Message = $"Role '{roleName}' not found"
+                    Message = "Role 'Basic User' not found"
                 });
             }
 
@@ -247,6 +246,21 @@ namespace SyncApp26.API.Controllers
             };
 
             await _userService.AddUserAsync(user);
+
+            // If this new user is assigned to a manager, promote that manager to Line Manager
+            if (userRequestDTO.AssignedToId.HasValue)
+            {
+                var managerToPromote = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
+                if (managerToPromote != null)
+                {
+                    var lineManagerRoleId = await _userService.GetRoleIdByNameAsync("Line Manager");
+                    if (lineManagerRoleId.HasValue && managerToPromote.RoleId != lineManagerRoleId.Value)
+                    {
+                        managerToPromote.RoleId = lineManagerRoleId.Value;
+                        await _userService.UpdateUserAsync(managerToPromote);
+                    }
+                }
+            }
 
             return Ok(new UserResponseDTO
             {
@@ -350,7 +364,6 @@ namespace SyncApp26.API.Controllers
                     });
                 }
 
-                existingUser.RoleId = await _userService.GetRoleIdByNameAsync("Line Manager") ?? existingUser.RoleId;
             }
 
             var resolvedFunctionId = await ResolveFunctionIdAsync(userRequestDTO.Function);
@@ -368,6 +381,14 @@ namespace SyncApp26.API.Controllers
             existingUser.AssignedToId = userRequestDTO.AssignedToId;
             existingUser.FunctionId = resolvedFunctionId;
             existingUser.UpdatedAt = DateTime.UtcNow;
+
+            // Apply role from DTO if provided
+            if (!string.IsNullOrWhiteSpace(userRequestDTO.RoleName))
+            {
+                var requestedRoleId = await _userService.GetRoleIdByNameAsync(userRequestDTO.RoleName);
+                if (requestedRoleId.HasValue)
+                    existingUser.RoleId = requestedRoleId.Value;
+            }
 
             await _userService.UpdateUserAsync(existingUser);
 

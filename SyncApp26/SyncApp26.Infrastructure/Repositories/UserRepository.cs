@@ -17,6 +17,7 @@ namespace SyncApp26.Infrastructure.Repositories
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
             return await _context.Users
+                .Include(u => u.Role)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
@@ -27,6 +28,7 @@ namespace SyncApp26.Infrastructure.Repositories
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
             return await _context.Users
+                .Include(u => u.Role)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
@@ -39,6 +41,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .AsNoTracking()
+                .Include(u => u.Role)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
@@ -64,6 +67,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Role)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null)
@@ -74,6 +78,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
+                .Include(u => u.Role)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null)
@@ -124,6 +129,7 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.Role)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.PersonalId == personalId);

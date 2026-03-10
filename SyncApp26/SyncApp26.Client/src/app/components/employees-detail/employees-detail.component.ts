@@ -391,6 +391,7 @@ export class EmployeesDetailComponent implements OnInit {
       email: this.editForm.email,
       departmentId: this.editForm.departmentId,
       function: this.editForm.function || null,
+      roleName: this.editForm.role === UserRole.LineManager ? 'Line Manager' : 'Basic User',
       assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
     };
 

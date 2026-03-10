@@ -32,6 +32,31 @@ namespace SyncApp26.API.Controllers
             _configuration = configuration;
         }
 
+        // Flat DTO — avoids serializing deep User navigation property chains
+        private static object MapDocument(UserDocument d) => new
+        {
+            d.Id,
+            d.UserId,
+            UserFirstName  = d.User?.FirstName,
+            UserLastName   = d.User?.LastName,
+            UserEmail      = d.User?.Email,
+            UserDepartment = d.User?.Department?.Name,
+            UserFunction   = d.User?.Function?.Name,
+            d.DocumentType,
+            d.Status,
+            d.GeneratedAt,
+            d.PdfFilePath,
+            d.DocumentHash,
+            d.UserSignatureMethod,
+            d.UserSignatureData,
+            d.UserSignatureIpAddress,
+            d.UserSignedAt,
+            d.ManagerSignatureMethod,
+            d.ManagerSignatureData,
+            d.ManagerSignatureIpAddress,
+            d.ManagerSignedAt,
+        };
+
         public class GenerateDocumentDto
         {
             public Guid UserId { get; set; }
@@ -73,7 +98,7 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> GetUserDocuments(Guid userId)
         {
             var documents = await _documentService.GetUserDocumentsAsync(userId);
-            return Ok(documents);
+            return Ok(documents.Select(MapDocument));
         }
 
         [HttpGet("my-pending-signatures")]
@@ -87,10 +112,7 @@ namespace SyncApp26.API.Controllers
             var myDocuments = await _documentService.GetUserDocumentsAsync(userId);
             var pendingAsUser = myDocuments.Where(d => d.Status == "PendingUser");
 
-            var user = await _userService.GetUserByIdAsync(userId);
-            if (user == null) return NotFound();
-
-            return Ok(pendingAsUser);
+            return Ok(pendingAsUser.Select(MapDocument));
         }
 
         [HttpGet("manager-pending-signatures")]
@@ -113,7 +135,7 @@ namespace SyncApp26.API.Controllers
                 pendingAsManager.AddRange(empDocs.Where(d => d.Status == "PendingManager"));
             }
 
-            return Ok(pendingAsManager);
+            return Ok(pendingAsManager.Select(MapDocument));
         }
 
         [HttpGet("my-signed-documents")]
@@ -126,10 +148,7 @@ namespace SyncApp26.API.Controllers
             var myDocuments = await _documentService.GetUserDocumentsAsync(userId);
             var signedAsUser = myDocuments.Where(d => d.UserSignedAt != null);
 
-            var user = await _userService.GetUserByIdAsync(userId);
-            if (user == null) return NotFound();
-
-            return Ok(signedAsUser);
+            return Ok(signedAsUser.Select(MapDocument));
         }
 
         [HttpGet("manager-signed-documents")]
@@ -149,7 +168,7 @@ namespace SyncApp26.API.Controllers
                 signedAsManager.AddRange(empDocs.Where(d => d.ManagerSignedAt != null));
             }
 
-            return Ok(signedAsManager);
+            return Ok(signedAsManager.Select(MapDocument));
         }
 
         [HttpGet("token-for-document/{documentId}")]
