@@ -31,6 +31,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
@@ -362,19 +363,22 @@ namespace SyncApp26.Infrastructure.Services
                                     header.Cell().Element(HeaderCell).Text("Semnătura\nverificator").Bold().FontSize(7);
                             });
 
-                            string occupation = user.Function?.Name ?? "";
-                            for (int i = 0; i < 14; i++)
-                            {
-                                static IContainer DataCell(IContainer c) =>
-                                    c.Border(0.5f).Padding(2).MinHeight(14);
+                            static IContainer DataCell(IContainer c) =>
+                                c.Border(0.5f).Padding(2).MinHeight(14);
 
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text(occupation).FontSize(7);
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text("");
-                                table.Cell().Element(DataCell).Text("");
-                                if (isSsm) table.Cell().Element(DataCell).Text("");
+                            // Show existing periodic training records only (no empty rows)
+                            var periodicTrainings = user.PeriodicTrainings?.OrderBy(pt => pt.TrainingDate).ToList() ?? new List<PeriodicTraining>();
+
+                            foreach (var training in periodicTrainings)
+                            {
+                                table.Cell().Element(DataCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
+                                table.Cell().Element(DataCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
+                                table.Cell().Element(DataCell).Text(training.Occupation ?? user.Function?.Name ?? "").FontSize(7);
+                                table.Cell().Element(DataCell).Text(training.MaterialTaught ?? "").FontSize(7);
+                                table.Cell().Element(DataCell).Text("").FontSize(7); // Trainee signature placeholder
+                                table.Cell().Element(DataCell).Text(training.InstructorName ?? "").FontSize(7);
+                                if (isSsm)
+                                    table.Cell().Element(DataCell).Text(training.VerifierName ?? "").FontSize(7);
                             }
                         });
                     });
@@ -508,6 +512,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
         }
 

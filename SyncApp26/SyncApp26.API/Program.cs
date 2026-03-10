@@ -78,6 +78,7 @@ builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>(
 builder.Services.AddScoped<IFunctionService, FunctionService>();
 builder.Services.AddScoped<IDepartmentFunctionService, DepartmentFunctionService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IPeriodicTrainingService, PeriodicTrainingService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 
 // Background Services
@@ -91,7 +92,7 @@ var key = Encoding.ASCII.GetBytes(jwtSecretKey);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
@@ -100,10 +101,10 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey         = new SymmetricSecurityKey(key),
-        ValidateIssuer           = false,
-        ValidateAudience         = false,
-        ClockSkew                = TimeSpan.Zero
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
     };
 });
 
