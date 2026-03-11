@@ -27,22 +27,69 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
-            // Check if there's already an unsigned PeriodicTraining row for this user
+            // Before anything else, if there's an existing completed document with signatures,
+            // permanently copy those signatures to the correct PeriodicTraining row
+            var existingDoc = await _context.UserDocuments
+                .FirstOrDefaultAsync(d => d.UserId == userId && d.DocumentType == documentType);
+
+            if (existingDoc != null
+                && !string.IsNullOrEmpty(existingDoc.UserSignatureData)
+                && !string.IsNullOrEmpty(existingDoc.ManagerSignatureData))
+            {
+                // Find the PeriodicTraining row that the document was ACTUALLY signed against:
+                // it's the newest row that already has at least one signature saved to it
+                var rowToFinalize = await _context.PeriodicTrainings
+                    .Where(pt => pt.UserId == userId
+                        && (!string.IsNullOrEmpty(pt.UserSignatureData)
+                            || !string.IsNullOrEmpty(pt.InstructorSignature))
+                        && (string.IsNullOrEmpty(pt.UserSignatureData)
+                            || string.IsNullOrEmpty(pt.InstructorSignature)))
+                    .OrderByDescending(pt => pt.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (rowToFinalize != null)
+                {
+                    if (string.IsNullOrEmpty(rowToFinalize.UserSignatureData))
+                    {
+                        rowToFinalize.UserSignatureData = existingDoc.UserSignatureData;
+                        rowToFinalize.UserSignatureMethod = existingDoc.UserSignatureMethod;
+                    }
+                    if (string.IsNullOrEmpty(rowToFinalize.InstructorSignature))
+                    {
+                        rowToFinalize.InstructorSignature = existingDoc.ManagerSignatureData;
+                        rowToFinalize.InstructorSignatureMethod = existingDoc.ManagerSignatureMethod;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // Now check if there's an incomplete PeriodicTraining row (missing at least one signature)
             var existingUnsignedTraining = await _context.PeriodicTrainings
-                .Where(pt => pt.UserId == userId 
-                    && string.IsNullOrEmpty(pt.UserSignatureData) 
-                    && string.IsNullOrEmpty(pt.InstructorSignature))
-                .OrderByDescending(pt => pt.CreatedAt)
+                .Where(pt => pt.UserId == userId
+                    && (string.IsNullOrEmpty(pt.UserSignatureData)
+                        || string.IsNullOrEmpty(pt.InstructorSignature)))
+                .OrderByDescending(pt => pt.DurationHours.HasValue ? 1 : 0)
+                .ThenBy(pt => pt.CreatedAt)
                 .FirstOrDefaultAsync();
 
             if (existingUnsignedTraining == null)
             {
-                // No unsigned row exists, create a new one
+                // All rows are fully signed, create a new one
+                var mostRecentTraining = await _context.PeriodicTrainings
+                    .Where(pt => pt.UserId == userId)
+                    .OrderByDescending(pt => pt.CreatedAt)
+                    .FirstOrDefaultAsync();
+
                 var newTraining = new PeriodicTraining
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
-                    TrainingDate = DateTime.UtcNow,
+                    TrainingDate = mostRecentTraining?.TrainingDate ?? DateTime.UtcNow,
+                    DurationHours = mostRecentTraining?.DurationHours,
+                    Occupation = mostRecentTraining?.Occupation,
+                    MaterialTaught = mostRecentTraining?.MaterialTaught,
+                    InstructorName = mostRecentTraining?.InstructorName,
+                    VerifierName = mostRecentTraining?.VerifierName,
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.PeriodicTrainings.Add(newTraining);
@@ -50,8 +97,7 @@ namespace SyncApp26.Infrastructure.Services
             // If unsigned row exists, we'll reuse it for signatures (no need to create a new one)
 
             // Look for an existing document for this user+type; if found, reuse it
-            var doc = await _context.UserDocuments
-                .FirstOrDefaultAsync(d => d.UserId == userId && d.DocumentType == documentType);
+            var doc = existingDoc;
 
             if (doc != null)
             {
@@ -83,12 +129,12 @@ namespace SyncApp26.Infrastructure.Services
 
             await _context.SaveChangesAsync();
 
-            // Reload user with all PeriodicTrainings (including the one just added)
+            // Reload user with all PeriodicTrainings (deterministic order)
             var user = await _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
-                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
+                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
@@ -433,7 +479,7 @@ namespace SyncApp26.Infrastructure.Services
                                 c.Background("#FFF9C4").Border(0.5f).Padding(3).MinHeight(16);
 
                             // Show existing periodic training records only (no empty rows)
-                            var periodicTrainings = user.PeriodicTrainings?.OrderBy(pt => pt.TrainingDate).ToList() ?? new List<PeriodicTraining>();
+                            var periodicTrainings = user.PeriodicTrainings?.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt).ToList() ?? new List<PeriodicTraining>();
                             string occupation = user.Function?.Name ?? "";
 
                             bool hasTrainings = periodicTrainings.Count > 0;
@@ -540,7 +586,7 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
+                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
         }
 
@@ -563,7 +609,7 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
+                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
 
             if (doc == null) return false;
@@ -591,18 +637,19 @@ namespace SyncApp26.Infrastructure.Services
                 doc.Status = "Completed";
             }
 
-            // Also persist to the most recent PeriodicTraining row so it is permanently visible
+            // Persist signature to the newest PeriodicTraining row (by CreatedAt) that still needs it
             var latestTraining = doc.User?.PeriodicTrainings
-                ?.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
-                .LastOrDefault();
+                ?.OrderByDescending(pt => pt.CreatedAt)
+                .FirstOrDefault();
+
             if (latestTraining != null)
             {
-                if (isUserSignature)
+                if (isUserSignature && string.IsNullOrEmpty(latestTraining.UserSignatureData))
                 {
                     latestTraining.UserSignatureData = signatureData;
                     latestTraining.UserSignatureMethod = signatureMethod;
                 }
-                else
+                else if (!isUserSignature && string.IsNullOrEmpty(latestTraining.InstructorSignature))
                 {
                     latestTraining.InstructorSignature = signatureData;
                     latestTraining.InstructorSignatureMethod = signatureMethod;
