@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/components/line-manager/line-manager.component.css"],
-  "sourcesContent": [":host {\r\n\tdisplay: block;\r\n}\r\n"],
-  "mappings": ";AAAA;AACC,WAAS;AACV;",
-  "names": []
-}

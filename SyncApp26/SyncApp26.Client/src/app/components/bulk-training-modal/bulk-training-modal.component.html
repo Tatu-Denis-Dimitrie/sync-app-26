@@ -22,7 +22,17 @@
     <div class="modal-body">
       <p class="modal-description">
         Add periodic training records with the same data for all users. This
-        will create a new training entry in each user's SSM/SU document.
+        will create a new training entry in each user's
+        <select
+          [(ngModel)]="formData.documentType"
+          name="documentType"
+          class="inline-dropdown"
+        >
+          <option value="Both">SSM & SU</option>
+          <option value="SSM">SSM</option>
+          <option value="SU">SU</option>
+        </select>
+        document.
       </p>
 
       <form class="training-form">

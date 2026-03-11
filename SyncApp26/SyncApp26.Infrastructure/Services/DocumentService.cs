@@ -789,15 +789,34 @@ namespace SyncApp26.Infrastructure.Services
             {
                 try
                 {
-                    // Add a new PeriodicTraining row
-                    var newTraining = new PeriodicTraining
+                    // Only create a new PeriodicTraining row if there's no existing unsigned one
+                    var existingUnsigned = await _context.PeriodicTrainings
+                        .Where(pt => pt.UserId == user.Id
+                            && (string.IsNullOrEmpty(pt.UserSignatureData)
+                                || string.IsNullOrEmpty(pt.InstructorSignature)))
+                        .FirstOrDefaultAsync();
+
+                    if (existingUnsigned == null)
                     {
-                        Id = Guid.NewGuid(),
-                        UserId = user.Id,
-                        TrainingDate = DateTime.UtcNow,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    _context.PeriodicTrainings.Add(newTraining);
+                        var mostRecent = await _context.PeriodicTrainings
+                            .Where(pt => pt.UserId == user.Id)
+                            .OrderByDescending(pt => pt.CreatedAt)
+                            .FirstOrDefaultAsync();
+
+                        var newTraining = new PeriodicTraining
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = user.Id,
+                            TrainingDate = mostRecent?.TrainingDate ?? DateTime.UtcNow,
+                            DurationHours = mostRecent?.DurationHours,
+                            Occupation = mostRecent?.Occupation,
+                            MaterialTaught = mostRecent?.MaterialTaught,
+                            InstructorName = mostRecent?.InstructorName,
+                            VerifierName = mostRecent?.VerifierName,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.PeriodicTrainings.Add(newTraining);
+                    }
 
                     // Reuse or create the UserDocument
                     var doc = await _context.UserDocuments

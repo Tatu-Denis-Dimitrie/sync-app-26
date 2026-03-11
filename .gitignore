@@ -262,6 +262,8 @@ Thumbs.db
 # Angular build artifacts with hashes
 **/dist/**/*.js
 **/dist/**/*.css
+**/dist/**/*.map
+*.css.map
 **/dist/**/index.html
 **/dist/**/favicon.ico
 **/dist/**/3rdpartylicenses.txt

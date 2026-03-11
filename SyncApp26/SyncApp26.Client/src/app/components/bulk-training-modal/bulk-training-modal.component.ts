@@ -11,6 +11,7 @@ interface BulkTrainingData {
   materialTaught: string;
   instructorName: string;
   verifierName: string;
+  documentType: string;
   applyToAllUsers: boolean;
   selectedUserIds: string[];
 }
@@ -36,6 +37,7 @@ export class BulkTrainingModalComponent {
     materialTaught: '',
     instructorName: '',
     verifierName: '',
+    documentType: 'Both',
     applyToAllUsers: true,
     selectedUserIds: []
   };
@@ -62,6 +64,7 @@ export class BulkTrainingModalComponent {
       materialTaught: '',
       instructorName: '',
       verifierName: '',
+      documentType: 'Both',
       applyToAllUsers: true,
       selectedUserIds: []
     };

@@ -60,6 +60,24 @@
   font-size: 0.875rem;
 }
 
+.inline-dropdown {
+  display: inline;
+  padding: 2px 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0d9488;
+  border: 1px solid #99f6e4;
+  border-radius: 4px;
+  background-color: #f0fdfa;
+  cursor: pointer;
+  outline: none;
+}
+
+.inline-dropdown:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+}
+
 .training-form {
   display: flex;
   flex-direction: column;

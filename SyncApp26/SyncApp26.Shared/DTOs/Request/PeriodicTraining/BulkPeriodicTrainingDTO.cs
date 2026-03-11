@@ -11,6 +11,7 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
         public string? MaterialTaught { get; set; }
         public string? InstructorName { get; set; }
         public string? VerifierName { get; set; }
+        public string DocumentType { get; set; } = "Both"; // "SSM", "SU", or "Both"
         public bool ApplyToAllUsers { get; set; } = true;
         public List<Guid> SelectedUserIds { get; set; } = new();
     }
