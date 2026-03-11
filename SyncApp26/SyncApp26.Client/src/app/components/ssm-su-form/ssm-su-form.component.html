@@ -18,45 +18,121 @@
       >
         SU File
       </button>
-      
+
       <div class="button-group">
-        <button *ngIf="!editMode" (click)="generateDocument()" [disabled]="generatingDoc" class="generate-button bg-teal-600 text-white px-3 py-1.5 rounded-md hover:bg-teal-700 flex items-center gap-2 mr-2 border-0 cursor-pointer">
-          <svg *ngIf="!generatingDoc" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        <button
+          *ngIf="!editMode"
+          (click)="generateDocument()"
+          [disabled]="generatingDoc"
+          class="generate-button bg-teal-600 text-white px-3 py-1.5 rounded-md hover:bg-teal-700 flex items-center gap-2 mr-2 border-0 cursor-pointer"
+        >
+          <svg
+            *ngIf="!generatingDoc"
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            ></path>
           </svg>
-          {{ generatingDoc ? 'Generating...' : 'Generate Document' }}
+          {{ generatingDoc ? "Generating..." : "Generate Document" }}
         </button>
-        <button *ngIf="!editMode" (click)="toggleEditMode()" class="edit-button">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
-            </path>
+        <button
+          *ngIf="!editMode"
+          (click)="toggleEditMode()"
+          class="edit-button"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+            ></path>
           </svg>
           Edit
         </button>
-        <button *ngIf="editMode" (click)="saveForm()" [disabled]="saving" class="save-button">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        <button
+          *ngIf="editMode"
+          (click)="saveForm()"
+          [disabled]="saving"
+          class="save-button"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            ></path>
           </svg>
-          {{ saving ? 'Saving...' : 'Save' }}
+          {{ saving ? "Saving..." : "Save" }}
         </button>
         <button *ngIf="!editMode" (click)="print()" class="print-button">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
-            </path>
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+            ></path>
           </svg>
           Print
         </button>
-        <button *ngIf="editMode" (click)="toggleEditMode()" [disabled]="saving" class="cancel-button">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        <button
+          *ngIf="editMode"
+          (click)="toggleEditMode()"
+          [disabled]="saving"
+          class="cancel-button"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
           </svg>
           Cancel
         </button>
         <button (click)="goBack()" class="back-button">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            ></path>
           </svg>
           Back
         </button>
@@ -76,17 +152,35 @@
           <p>
             <strong>Domiciliul:</strong>
             <span *ngIf="!editMode">{{ formData.address || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.address" class="edit-input" placeholder="Adresa" />
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.address"
+              class="edit-input"
+              placeholder="Adresa"
+            />
           </p>
           <p>
             <strong>Grupa sanguină:</strong>
             <span *ngIf="!editMode">{{ formData.bloodGroup || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.bloodGroup" class="edit-input-small" placeholder="Grupa" />
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.bloodGroup"
+              class="edit-input-small"
+              placeholder="Grupa"
+            />
           </p>
           <p>
             <strong>Legitimația/Marca:</strong>
             <span *ngIf="!editMode">{{ formData.badgeNumber || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.badgeNumber" class="edit-input-small" placeholder="Marca" />
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.badgeNumber"
+              class="edit-input-small"
+              placeholder="Marca"
+            />
           </p>
         </div>
       </div>
@@ -99,17 +193,33 @@
           <p>
             <strong>Data și locul nașterii:</strong>
             <span *ngIf="!editMode">
-              {{ formatDate(formData.dateOfBirth) }}{{ formData.placeOfBirth ? ", " + formData.placeOfBirth : "" }}
+              {{ formatDate(formData.dateOfBirth)
+              }}{{ formData.placeOfBirth ? ", " + formData.placeOfBirth : "" }}
             </span>
             <span *ngIf="editMode" class="edit-group">
-              <input type="date" [(ngModel)]="formData.dateOfBirth" class="edit-input-small" />
-              <input type="text" [(ngModel)]="formData.placeOfBirth" class="edit-input" placeholder="Locul nașterii" />
+              <input
+                type="date"
+                [(ngModel)]="formData.dateOfBirth"
+                class="edit-input-small"
+              />
+              <input
+                type="text"
+                [(ngModel)]="formData.placeOfBirth"
+                class="edit-input"
+                placeholder="Locul nașterii"
+              />
             </span>
           </p>
           <p>
             <strong>Calificarea:</strong>
             <span *ngIf="!editMode">{{ formData.education || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.education" class="edit-input" placeholder="Calificarea" />
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.education"
+              class="edit-input"
+              placeholder="Calificarea"
+            />
           </p>
           <p><strong>Funcția:</strong> {{ userForm.functionName || "N/A" }}</p>
           <p>
@@ -118,18 +228,40 @@
           </p>
           <p>
             <strong>Autorizații:</strong>
-            <span *ngIf="!editMode">{{ formData.qualifications || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.qualifications" class="edit-input" placeholder="Autorizații" />
+            <span *ngIf="!editMode">{{
+              formData.qualifications || "N/A"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.qualifications"
+              class="edit-input"
+              placeholder="Autorizații"
+            />
           </p>
           <p>
             <strong>Traseul și durata de deplasare:</strong>
             <span *ngIf="!editMode">
               {{ formData.commuteRoute || "N/A" }}
-              {{ formData.commuteDurationMinutes ? " (" + formData.commuteDurationMinutes + " min)" : "" }}
+              {{
+                formData.commuteDurationMinutes
+                  ? " (" + formData.commuteDurationMinutes + " min)"
+                  : ""
+              }}
             </span>
             <span *ngIf="editMode" class="edit-group">
-              <input type="text" [(ngModel)]="formData.commuteRoute" class="edit-input" placeholder="Traseu" />
-              <input type="number" [(ngModel)]="formData.commuteDurationMinutes" class="edit-input-small" placeholder="Minute" />
+              <input
+                type="text"
+                [(ngModel)]="formData.commuteRoute"
+                class="edit-input"
+                placeholder="Traseu"
+              />
+              <input
+                type="number"
+                [(ngModel)]="formData.commuteDurationMinutes"
+                class="edit-input-small"
+                placeholder="Minute"
+              />
             </span>
           </p>
         </div>
@@ -139,29 +271,74 @@
           <h4>1. Instruirea introductiv generală</h4>
           <p>
             a fost efectuată la data
-            <span *ngIf="!editMode" class="field">{{ formatDate(formData.introductoryTrainingDate) || formatDate(userForm.hireDate) }}</span>
-            <input *ngIf="editMode" type="date" [(ngModel)]="formData.introductoryTrainingDate" class="edit-input" />
+            <span *ngIf="!editMode" class="field">{{
+              formatDate(formData.introductoryTrainingDate) ||
+                formatDate(userForm.hireDate)
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="date"
+              [(ngModel)]="formData.introductoryTrainingDate"
+              class="edit-input"
+            />
           </p>
           <p>
-            timp de 
-            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingHours || '8' }}</span>
-            <input *ngIf="editMode" type="number" [(ngModel)]="formData.introductoryTrainingHours" class="edit-input" style="width: 60px;" />
+            timp de
+            <span *ngIf="!editMode" class="field">{{
+              formData.introductoryTrainingHours || "8"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="number"
+              [(ngModel)]="formData.introductoryTrainingHours"
+              class="edit-input"
+              style="width: 60px"
+            />
             ore de către
           </p>
           <p>
-            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructor || getManagerFullName() }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.introductoryTrainingInstructor || getManagerFullName()
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.introductoryTrainingInstructor"
+              class="edit-input"
+              placeholder="Numele instructorului"
+            />
           </p>
           <p>
             având funcția de
-            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructorFunction || userForm.managerFunctionName || "Manager" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructorFunction" class="edit-input" placeholder="Funcția instructorului" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.introductoryTrainingInstructorFunction ||
+                userForm.managerFunctionName ||
+                "Manager"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.introductoryTrainingInstructorFunction"
+              class="edit-input"
+              placeholder="Funcția instructorului"
+            />
           </p>
           <p><strong>Conținutul instruirii:</strong></p>
           <div class="field-box" *ngIf="!editMode">
-            <p>{{ formData.introductoryTrainingContent || '____________________________________________' }}</p>
+            <p>
+              {{
+                formData.introductoryTrainingContent ||
+                  "____________________________________________"
+              }}
+            </p>
           </div>
-          <textarea *ngIf="editMode" [(ngModel)]="formData.introductoryTrainingContent" class="edit-input" rows="4" placeholder="Descrieți conținutul instruirii..."></textarea>
+          <textarea
+            *ngIf="editMode"
+            [(ngModel)]="formData.introductoryTrainingContent"
+            class="edit-input"
+            rows="4"
+            placeholder="Descrieți conținutul instruirii..."
+          ></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• a celui instruit: ________________</p>
@@ -174,32 +351,87 @@
           <h4>2. Instruirea la locul de muncă</h4>
           <p>
             a fost efectuată la data
-            <span *ngIf="!editMode" class="field">{{ formatDate(formData.workplaceTrainingDate) || formatDate(userForm.hireDate) }}</span>
-            <input *ngIf="editMode" type="date" [(ngModel)]="formData.workplaceTrainingDate" class="edit-input" />
+            <span *ngIf="!editMode" class="field">{{
+              formatDate(formData.workplaceTrainingDate) ||
+                formatDate(userForm.hireDate)
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="date"
+              [(ngModel)]="formData.workplaceTrainingDate"
+              class="edit-input"
+            />
           </p>
           <p>
             loc de muncă/post de lucru
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingLocation || userForm.functionName || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingLocation" class="edit-input" placeholder="Locul de muncă" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingLocation ||
+                userForm.functionName ||
+                "N/A"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.workplaceTrainingLocation"
+              class="edit-input"
+              placeholder="Locul de muncă"
+            />
           </p>
           <p>
-            timp de 
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingHours || '2' }}</span>
-            <input *ngIf="editMode" type="number" [(ngModel)]="formData.workplaceTrainingHours" class="edit-input" style="width: 60px;" />
+            timp de
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingHours || "2"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="number"
+              [(ngModel)]="formData.workplaceTrainingHours"
+              class="edit-input"
+              style="width: 60px"
+            />
             ore de către
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructor || getManagerFullName() }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingInstructor || getManagerFullName()
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.workplaceTrainingInstructor"
+              class="edit-input"
+              placeholder="Numele instructorului"
+            />
           </p>
           <p>
             având funcția de
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructorFunction || userForm.managerFunctionName || "Manager" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructorFunction" class="edit-input" placeholder="Funcția instructorului" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingInstructorFunction ||
+                userForm.managerFunctionName ||
+                "Manager"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.workplaceTrainingInstructorFunction"
+              class="edit-input"
+              placeholder="Funcția instructorului"
+            />
           </p>
           <p><strong>Conținutul instruirii:</strong></p>
           <div class="field-box" *ngIf="!editMode">
-            <p>{{ formData.workplaceTrainingContent || '____________________________________________' }}</p>
+            <p>
+              {{
+                formData.workplaceTrainingContent ||
+                  "____________________________________________"
+              }}
+            </p>
           </div>
-          <textarea *ngIf="editMode" [(ngModel)]="formData.workplaceTrainingContent" class="edit-input" rows="3" placeholder="Descrieți conținutul instruirii..."></textarea>
+          <textarea
+            *ngIf="editMode"
+            [(ngModel)]="formData.workplaceTrainingContent"
+            class="edit-input"
+            rows="3"
+            placeholder="Descrieți conținutul instruirii..."
+          ></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• a celui instruit: ________________</p>
@@ -212,18 +444,43 @@
           <p><strong>Admis la lucru</strong></p>
           <p>
             Numele și prenumele:
-            <span *ngIf="!editMode" class="field">{{ formData.admittedByName || getManagerFullName() }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByName" class="edit-input" placeholder="Numele și prenumele" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.admittedByName || getManagerFullName()
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.admittedByName"
+              class="edit-input"
+              placeholder="Numele și prenumele"
+            />
           </p>
           <p>
             Funcția:
-            <span *ngIf="!editMode" class="field">{{ formData.admittedByFunction || userForm.managerFunctionName || "Manager" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByFunction" class="edit-input" placeholder="Funcția" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.admittedByFunction ||
+                userForm.managerFunctionName ||
+                "Manager"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.admittedByFunction"
+              class="edit-input"
+              placeholder="Funcția"
+            />
           </p>
           <p>
-            Data și semnătura: 
-            <span *ngIf="!editMode">{{ formatDate(formData.admittedDate) || '___________________' }}</span>
-            <input *ngIf="editMode" type="date" [(ngModel)]="formData.admittedDate" class="edit-input" />
+            Data și semnătura:
+            <span *ngIf="!editMode">{{
+              formatDate(formData.admittedDate) || "___________________"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="date"
+              [(ngModel)]="formData.admittedDate"
+              class="edit-input"
+            />
           </p>
         </div>
       </div>
@@ -271,12 +528,24 @@
           <p>
             <strong>Marca:</strong>
             <span *ngIf="!editMode">{{ formData.badgeNumber || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.badgeNumber" class="edit-input-small" placeholder="Marca" />
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.badgeNumber"
+              class="edit-input-small"
+              placeholder="Marca"
+            />
           </p>
           <p>
             <strong>Domiciliul:</strong>
             <span *ngIf="!editMode">{{ formData.address || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.address" class="edit-input" placeholder="Adresa" />
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.address"
+              class="edit-input"
+              placeholder="Adresa"
+            />
           </p>
         </div>
       </div>
@@ -288,17 +557,33 @@
           <p>
             <strong>Data și locul nașterii:</strong>
             <span *ngIf="!editMode">
-              {{ formatDate(formData.dateOfBirth) }}{{ formData.placeOfBirth ? ", " + formData.placeOfBirth : "" }}
+              {{ formatDate(formData.dateOfBirth)
+              }}{{ formData.placeOfBirth ? ", " + formData.placeOfBirth : "" }}
             </span>
             <span *ngIf="editMode" class="edit-group">
-              <input type="date" [(ngModel)]="formData.dateOfBirth" class="edit-input-small" />
-              <input type="text" [(ngModel)]="formData.placeOfBirth" class="edit-input" placeholder="Locul nașterii" />
+              <input
+                type="date"
+                [(ngModel)]="formData.dateOfBirth"
+                class="edit-input-small"
+              />
+              <input
+                type="text"
+                [(ngModel)]="formData.placeOfBirth"
+                class="edit-input"
+                placeholder="Locul nașterii"
+              />
             </span>
           </p>
           <p>
             <strong>Studii:</strong>
             <span *ngIf="!editMode">{{ formData.education || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.education" class="edit-input" placeholder="Studii" />
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.education"
+              class="edit-input"
+              placeholder="Studii"
+            />
           </p>
           <p>
             <strong>Calificarea (specialitatea, meseria):</strong>
@@ -316,27 +601,70 @@
           <h4>1. Instructajul introductiv generală</h4>
           <p>
             a fost efectuat la data de
-            <span *ngIf="!editMode" class="field">{{ formatDate(formData.introductoryTrainingDate) || formatDate(userForm.hireDate) }}</span>
-            <input *ngIf="editMode" type="date" [(ngModel)]="formData.introductoryTrainingDate" class="edit-input" />
+            <span *ngIf="!editMode" class="field">{{
+              formatDate(formData.introductoryTrainingDate) ||
+                formatDate(userForm.hireDate)
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="date"
+              [(ngModel)]="formData.introductoryTrainingDate"
+              class="edit-input"
+            />
           </p>
           <p>
-            timp de 
-            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingHours || '8' }}</span>
-            <input *ngIf="editMode" type="number" [(ngModel)]="formData.introductoryTrainingHours" class="edit-input" style="width: 60px;" />
+            timp de
+            <span *ngIf="!editMode" class="field">{{
+              formData.introductoryTrainingHours || "8"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="number"
+              [(ngModel)]="formData.introductoryTrainingHours"
+              class="edit-input"
+              style="width: 60px"
+            />
             ore de către
-            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructor || getManagerFullName() }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.introductoryTrainingInstructor || getManagerFullName()
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.introductoryTrainingInstructor"
+              class="edit-input"
+              placeholder="Numele instructorului"
+            />
           </p>
           <p>
-            având funcția de 
-            <span *ngIf="!editMode" class="field">{{ formData.introductoryTrainingInstructorFunction || 'Cadru tehnic' }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.introductoryTrainingInstructorFunction" class="edit-input" placeholder="Funcția" />
+            având funcția de
+            <span *ngIf="!editMode" class="field">{{
+              formData.introductoryTrainingInstructorFunction || "Cadru tehnic"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.introductoryTrainingInstructorFunction"
+              class="edit-input"
+              placeholder="Funcția"
+            />
           </p>
           <p><strong>Conținutul instructajului:</strong></p>
           <div class="field-box" *ngIf="!editMode">
-            <p>{{ formData.introductoryTrainingContent || '____________________________________________' }}</p>
+            <p>
+              {{
+                formData.introductoryTrainingContent ||
+                  "____________________________________________"
+              }}
+            </p>
           </div>
-          <textarea *ngIf="editMode" [(ngModel)]="formData.introductoryTrainingContent" class="edit-input" rows="3" placeholder="Descrieți conținutul instructajului..."></textarea>
+          <textarea
+            *ngIf="editMode"
+            [(ngModel)]="formData.introductoryTrainingContent"
+            class="edit-input"
+            rows="3"
+            placeholder="Descrieți conținutul instructajului..."
+          ></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• persoanei instruite: ________________</p>
@@ -348,36 +676,91 @@
           <h4>2. Instructajul la locul de muncă</h4>
           <p>
             a fost efectuat la data de
-            <span *ngIf="!editMode" class="field">{{ formatDate(formData.workplaceTrainingDate) || formatDate(userForm.hireDate) }}</span>
-            <input *ngIf="editMode" type="date" [(ngModel)]="formData.workplaceTrainingDate" class="edit-input" />
+            <span *ngIf="!editMode" class="field">{{
+              formatDate(formData.workplaceTrainingDate) ||
+                formatDate(userForm.hireDate)
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="date"
+              [(ngModel)]="formData.workplaceTrainingDate"
+              class="edit-input"
+            />
           </p>
           <p>
             pentru locul de muncă
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingLocation || userForm.departmentName || "N/A" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingLocation" class="edit-input" placeholder="Locul de muncă" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingLocation ||
+                userForm.departmentName ||
+                "N/A"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.workplaceTrainingLocation"
+              class="edit-input"
+              placeholder="Locul de muncă"
+            />
           </p>
           <p>
             specialitatea (meseria)
             <span class="field">{{ userForm.functionName || "N/A" }}</span>
           </p>
           <p>
-            timp de 
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingHours || '8' }}</span>
-            <input *ngIf="editMode" type="number" [(ngModel)]="formData.workplaceTrainingHours" class="edit-input" style="width: 60px;" />
+            timp de
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingHours || "8"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="number"
+              [(ngModel)]="formData.workplaceTrainingHours"
+              class="edit-input"
+              style="width: 60px"
+            />
             ore, de către
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructor || getManagerFullName() }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructor" class="edit-input" placeholder="Numele instructorului" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingInstructor || getManagerFullName()
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.workplaceTrainingInstructor"
+              class="edit-input"
+              placeholder="Numele instructorului"
+            />
           </p>
           <p>
             având funcția de
-            <span *ngIf="!editMode" class="field">{{ formData.workplaceTrainingInstructorFunction || userForm.managerFunctionName || "Manager" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.workplaceTrainingInstructorFunction" class="edit-input" placeholder="Funcția instructorului" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.workplaceTrainingInstructorFunction ||
+                userForm.managerFunctionName ||
+                "Manager"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.workplaceTrainingInstructorFunction"
+              class="edit-input"
+              placeholder="Funcția instructorului"
+            />
           </p>
           <p><strong>Conținutul instructajului:</strong></p>
           <div class="field-box" *ngIf="!editMode">
-            <p>{{ formData.workplaceTrainingContent || '____________________________________________' }}</p>
+            <p>
+              {{
+                formData.workplaceTrainingContent ||
+                  "____________________________________________"
+              }}
+            </p>
           </div>
-          <textarea *ngIf="editMode" [(ngModel)]="formData.workplaceTrainingContent" class="edit-input" rows="3" placeholder="Descrieți conținutul instructajului..."></textarea>
+          <textarea
+            *ngIf="editMode"
+            [(ngModel)]="formData.workplaceTrainingContent"
+            class="edit-input"
+            rows="3"
+            placeholder="Descrieți conținutul instructajului..."
+          ></textarea>
           <div class="signatures">
             <p><strong>Semnături:</strong></p>
             <p>• persoanei instruite: ________________</p>
@@ -392,18 +775,43 @@
           <h4>3. Admis la lucru</h4>
           <p>
             Numele și prenumele:
-            <span *ngIf="!editMode" class="field">{{ formData.admittedByName || getManagerFullName() }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByName" class="edit-input" placeholder="Numele și prenumele" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.admittedByName || getManagerFullName()
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.admittedByName"
+              class="edit-input"
+              placeholder="Numele și prenumele"
+            />
           </p>
           <p>
             Funcția:
-            <span *ngIf="!editMode" class="field">{{ formData.admittedByFunction || userForm.managerFunctionName || "Manager" }}</span>
-            <input *ngIf="editMode" type="text" [(ngModel)]="formData.admittedByFunction" class="edit-input" placeholder="Funcția" />
+            <span *ngIf="!editMode" class="field">{{
+              formData.admittedByFunction ||
+                userForm.managerFunctionName ||
+                "Manager"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="formData.admittedByFunction"
+              class="edit-input"
+              placeholder="Funcția"
+            />
           </p>
           <p>
-            Data și semnătura: 
-            <span *ngIf="!editMode">{{ formatDate(formData.admittedDate) || '___________________' }}</span>
-            <input *ngIf="editMode" type="date" [(ngModel)]="formData.admittedDate" class="edit-input" />
+            Data și semnătura:
+            <span *ngIf="!editMode">{{
+              formatDate(formData.admittedDate) || "___________________"
+            }}</span>
+            <input
+              *ngIf="editMode"
+              type="date"
+              [(ngModel)]="formData.admittedDate"
+              class="edit-input"
+            />
           </p>
         </div>
       </div>

@@ -243,6 +243,12 @@ namespace SyncApp26.Infrastructure.Services
                 : F(user.AdmittedByName);
             string managerFunction = user.AssignedTo?.Function?.Name ?? F(user.AdmittedByFunction);
 
+            // Get latest periodic training for fallback on training fields
+            var latestPt = user.PeriodicTrainings?
+                .OrderByDescending(pt => pt.TrainingDate)
+                .ThenByDescending(pt => pt.CreatedAt)
+                .FirstOrDefault();
+
             return QuestPDF.Fluent.Document.Create(container =>
             {
                 // ══════════════════════════════════════════════════════
@@ -367,18 +373,19 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             string verb = isSsm ? "efectuată" : "efectuat";
                             text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                            text.Span(FUnderline((user.IntroductoryTrainingDate ?? latestPt?.TrainingDate)?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
                             text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
+                            text.Span(FUnderline((user.IntroductoryTrainingHours ?? (int?)latestPt?.DurationHours)?.ToString())).Underline().FontSize(10);
                             text.Span(" ore de către ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingInstructor ?? managerName)).Underline().FontSize(10);
+                            text.Span(FUnderline(user.IntroductoryTrainingInstructor ?? latestPt?.InstructorName ?? managerName)).Underline().FontSize(10);
                             text.Span(" având funcția de ").FontSize(10);
                             text.Span(FUnderline(user.IntroductoryTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
                         });
                         col.Item().Height(3);
                         col.Item().Text("Conținutul instruirii:").Bold();
+                        var introContent = user.IntroductoryTrainingContent ?? latestPt?.MaterialTaught;
                         col.Item().Border(0.5f).Padding(6)
-                            .Text(string.IsNullOrWhiteSpace(user.IntroductoryTrainingContent) ? " " : user.IntroductoryTrainingContent).FontSize(10);
+                            .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
                         SignatureRow(col, isSsm,
                             document.UserSignatureMethod, document.UserSignatureData,
                             document.ManagerSignatureMethod, document.ManagerSignatureData);
@@ -393,20 +400,21 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             string verb = isSsm ? "efectuată" : "efectuat";
                             text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                            text.Span(FUnderline((user.WorkplaceTrainingDate ?? latestPt?.TrainingDate)?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
                             text.Span(" loc de muncă/post de lucru ").FontSize(10);
                             text.Span(FUnderline(user.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
                             text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
+                            text.Span(FUnderline((user.WorkplaceTrainingHours ?? (int?)latestPt?.DurationHours)?.ToString())).Underline().FontSize(10);
                             text.Span(" ore, de către ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingInstructor ?? managerName)).Underline().FontSize(10);
+                            text.Span(FUnderline(user.WorkplaceTrainingInstructor ?? latestPt?.InstructorName ?? managerName)).Underline().FontSize(10);
                             text.Span(" având funcția de ").FontSize(10);
                             text.Span(FUnderline(user.WorkplaceTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
                         });
                         col.Item().Height(3);
                         col.Item().Text("Conținutul instruirii:").Bold();
+                        var workContent = user.WorkplaceTrainingContent ?? latestPt?.MaterialTaught;
                         col.Item().Border(0.5f).Padding(6)
-                            .Text(string.IsNullOrWhiteSpace(user.WorkplaceTrainingContent) ? " " : user.WorkplaceTrainingContent).FontSize(10);
+                            .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
                         SignatureRow(col, isSsm,
                             document.UserSignatureMethod, document.UserSignatureData,
                             document.ManagerSignatureMethod, document.ManagerSignatureData);

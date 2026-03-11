@@ -16,14 +16,16 @@ namespace SyncApp26.API.Controllers
         private readonly IFunctionService _functionService;
         private readonly IUserChangeHistoryService _userChangeHistoryService;
         private readonly IDocumentService _documentService;
+        private readonly IPeriodicTrainingService _periodicTrainingService;
 
-        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService, IDocumentService documentService)
+        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService, IDocumentService documentService, IPeriodicTrainingService periodicTrainingService)
         {
             _userService = userService;
             _departmentService = departmentService;
             _functionService = functionService;
             _userChangeHistoryService = userChangeHistoryService;
             _documentService = documentService;
+            _periodicTrainingService = periodicTrainingService;
         }
 
         [HttpGet("{id}")]
@@ -534,6 +536,13 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found" });
             }
 
+            // Get the latest periodic training to use as fallback for training fields
+            var periodicTrainings = await _periodicTrainingService.GetByUserIdAsync(id);
+            var latestTraining = periodicTrainings
+                .OrderByDescending(pt => pt.TrainingDate)
+                .ThenByDescending(pt => pt.Id)
+                .FirstOrDefault();
+
             return Ok(new UserSSMSUFormDTO
             {
                 Id = user.Id,
@@ -556,17 +565,17 @@ namespace SyncApp26.API.Controllers
                 Qualifications = user.Qualifications,
                 CommuteRoute = user.CommuteRoute,
                 CommuteDurationMinutes = user.CommuteDurationMinutes,
-                IntroductoryTrainingDate = user.IntroductoryTrainingDate,
-                IntroductoryTrainingHours = user.IntroductoryTrainingHours,
-                IntroductoryTrainingInstructor = user.IntroductoryTrainingInstructor,
+                IntroductoryTrainingDate = user.IntroductoryTrainingDate ?? latestTraining?.TrainingDate,
+                IntroductoryTrainingHours = user.IntroductoryTrainingHours ?? (int?)latestTraining?.DurationHours,
+                IntroductoryTrainingInstructor = user.IntroductoryTrainingInstructor ?? latestTraining?.InstructorName,
                 IntroductoryTrainingInstructorFunction = user.IntroductoryTrainingInstructorFunction,
-                IntroductoryTrainingContent = user.IntroductoryTrainingContent,
-                WorkplaceTrainingDate = user.WorkplaceTrainingDate,
+                IntroductoryTrainingContent = user.IntroductoryTrainingContent ?? latestTraining?.MaterialTaught,
+                WorkplaceTrainingDate = user.WorkplaceTrainingDate ?? latestTraining?.TrainingDate,
                 WorkplaceTrainingLocation = user.WorkplaceTrainingLocation,
-                WorkplaceTrainingHours = user.WorkplaceTrainingHours,
-                WorkplaceTrainingInstructor = user.WorkplaceTrainingInstructor,
+                WorkplaceTrainingHours = user.WorkplaceTrainingHours ?? (int?)latestTraining?.DurationHours,
+                WorkplaceTrainingInstructor = user.WorkplaceTrainingInstructor ?? latestTraining?.InstructorName,
                 WorkplaceTrainingInstructorFunction = user.WorkplaceTrainingInstructorFunction,
-                WorkplaceTrainingContent = user.WorkplaceTrainingContent,
+                WorkplaceTrainingContent = user.WorkplaceTrainingContent ?? latestTraining?.MaterialTaught,
                 AdmittedByName = user.AdmittedByName,
                 AdmittedByFunction = user.AdmittedByFunction,
                 AdmittedDate = user.AdmittedDate,
