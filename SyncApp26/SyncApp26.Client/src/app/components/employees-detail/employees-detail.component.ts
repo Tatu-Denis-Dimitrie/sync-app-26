@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -10,16 +10,18 @@ import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { BulkTrainingModalComponent } from '../bulk-training-modal/bulk-training-modal.component';
 
 @Component({
   selector: 'app-employees-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent],
   templateUrl: './employees-detail.component.html',
   styleUrls: ['./employees-detail.component.css']
 })
 export class EmployeesDetailComponent implements OnInit {
   private readonly emptyGuid = '00000000-0000-0000-0000-000000000000';
+   @ViewChild(BulkTrainingModalComponent) bulkTrainingModal!: BulkTrainingModalComponent;
 
   users$!: Observable<User[]>;
   paginatedUsers$!: Observable<User[]>;
@@ -28,6 +30,8 @@ export class EmployeesDetailComponent implements OnInit {
   importConflicts: UserChangeHistory[] = [];
   conflictsLoading = false;
   conflictsError = '';
+
+  successMessage: string = '';
 
   userDocuments: any[] = [];
   documentsLoading = false;
@@ -486,5 +490,14 @@ export class EmployeesDetailComponent implements OnInit {
         };
       }
     });
+  }
+
+  openBulkTrainingModal(): void {
+    this.bulkTrainingModal.open();
+  }
+
+  onBulkTrainingSuccess(): void {
+    this.successMessage = 'Bulk periodic training created successfully for all users!';
+    setTimeout(() => this.successMessage = '', 5000);
   }
 }

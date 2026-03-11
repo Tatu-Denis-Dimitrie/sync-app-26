@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -13,17 +13,15 @@ import { PaginationComponent } from '../pagination/pagination.component';
 import { ComparisonViewComponent } from '../comparison-view/comparison-view.component';
 import { UploadProgress, SyncProgressUpdate } from '../../services/user-sync.signalr.service';
 import { RouterModule } from '@angular/router';
-import { BulkTrainingModalComponent } from '../bulk-training-modal/bulk-training-modal.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule, BulkTrainingModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  @ViewChild(BulkTrainingModalComponent) bulkTrainingModal!: BulkTrainingModalComponent;
   private destroy$ = new Subject<void>();
 
   users$!: Observable<User[]>;
@@ -663,14 +661,5 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;
     return 'just now';
-  }
-
-  openBulkTrainingModal(): void {
-    this.bulkTrainingModal.open();
-  }
-
-  onBulkTrainingSuccess(): void {
-    this.successMessage = 'Bulk periodic training created successfully for all users!';
-    setTimeout(() => this.successMessage = '', 5000);
   }
 }

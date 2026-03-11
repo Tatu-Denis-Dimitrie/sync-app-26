@@ -56,12 +56,6 @@
             Employees
           </button>
           <button
-            (click)="openBulkTrainingModal()"
-            class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
-          >
-            Bulk Training
-          </button>
-          <button
             (click)="logout()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >
@@ -988,8 +982,3 @@
     </div>
   </div>
 </div>
-
-<!-- Bulk Training Modal -->
-<app-bulk-training-modal
-  (success)="onBulkTrainingSuccess()"
-></app-bulk-training-modal>
