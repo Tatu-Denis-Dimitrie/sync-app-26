@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
@@ -10,6 +10,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
+import { UserSignatureService, UserSignature, UserSignatureHistory } from '../../services/user-signature.service';
 
 @Component({
   selector: 'app-line-manager',
@@ -50,11 +51,29 @@ export class LineManagerComponent implements OnInit {
 
   UserRole = UserRole;
 
+  // ── Signature state ──────────────────────────────────────────────────────
+  savedSignature: UserSignature | null = null;
+  signatureHistory: UserSignatureHistory[] = [];
+  isSigLoading = false;
+  sigSuccessMessage = '';
+  sigErrorMessage = '';
+  showSigHistory = false;
+  sigMode: 'draw' | 'type' = 'draw';
+  typedSig = '';
+  isSigConfirmed = false;
+  private isSigDrawing = false;
+  private sigCtx: CanvasRenderingContext2D | null = null;
+  private sigLastX = 0;
+  private sigLastY = 0;
+  @ViewChild('sigCanvas') sigCanvasRef?: ElementRef<HTMLCanvasElement>;
+  // ─────────────────────────────────────────────────────────────────────────
+
   constructor(
     private authService: AuthenticationService,
     private userSyncService: UserSyncService,
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private userSignatureService: UserSignatureService
   ) { }
 
   ngOnInit(): void {
@@ -85,6 +104,7 @@ export class LineManagerComponent implements OnInit {
     });
 
     this.loadPendingSignatures();
+    this.loadSavedSignature();
   }
 
   loadPendingSignatures(): void {
@@ -207,6 +227,139 @@ export class LineManagerComponent implements OnInit {
   onPageChange(page: number): void {
     this.currentPage = page;
   }
+
+  // ── Saved-signature methods ───────────────────────────────────────────────
+
+  loadSavedSignature(): void {
+    this.userSignatureService.getMySignature().subscribe({
+      next: (sig) => { this.savedSignature = sig; },
+      error: () => { this.savedSignature = null; }
+    });
+  }
+
+  setSigMode(mode: 'draw' | 'type'): void {
+    this.sigMode = mode;
+    this.isSigConfirmed = false;
+    if (mode === 'draw') setTimeout(() => this.initSigCanvas(), 50);
+  }
+
+  initSigCanvas(): void {
+    const canvas = this.sigCanvasRef?.nativeElement;
+    if (!canvas) return;
+    this.sigCtx = canvas.getContext('2d');
+    if (this.sigCtx) {
+      this.sigCtx.lineWidth = 2.5;
+      this.sigCtx.lineCap = 'round';
+      this.sigCtx.lineJoin = 'round';
+      this.sigCtx.strokeStyle = '#0f766e';
+    }
+  }
+
+  sigStartDrawing(e: MouseEvent | TouchEvent): void {
+    if (!this.sigCtx) return;
+    this.isSigDrawing = true;
+    const { x, y } = this.getSigCoords(e);
+    this.sigLastX = x;
+    this.sigLastY = y;
+  }
+
+  sigDraw(e: MouseEvent | TouchEvent): void {
+    if (!this.isSigDrawing || !this.sigCtx) return;
+    e.preventDefault();
+    const { x, y } = this.getSigCoords(e);
+    this.sigCtx.beginPath();
+    this.sigCtx.moveTo(this.sigLastX, this.sigLastY);
+    this.sigCtx.lineTo(x, y);
+    this.sigCtx.stroke();
+    this.sigLastX = x;
+    this.sigLastY = y;
+    this.isSigConfirmed = true;
+  }
+
+  sigStopDrawing(): void {
+    this.isSigDrawing = false;
+  }
+
+  clearSigCanvas(): void {
+    const canvas = this.sigCanvasRef?.nativeElement;
+    if (!canvas || !this.sigCtx) return;
+    this.sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+    this.isSigConfirmed = false;
+  }
+
+  private getSigCoords(e: MouseEvent | TouchEvent): { x: number; y: number } {
+    const canvas = this.sigCanvasRef!.nativeElement;
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width;
+    const sy = canvas.height / rect.height;
+    if (window.TouchEvent && e instanceof TouchEvent) {
+      return { x: (e.touches[0].clientX - rect.left) * sx, y: (e.touches[0].clientY - rect.top) * sy };
+    }
+    const m = e as MouseEvent;
+    return { x: (m.clientX - rect.left) * sx, y: (m.clientY - rect.top) * sy };
+  }
+
+  saveSignature(): void {
+    if (this.sigMode === 'type' && !this.typedSig.trim()) {
+      this.sigErrorMessage = 'Please type your name as your signature.';
+      return;
+    }
+    const data = this.sigMode === 'draw'
+      ? (this.sigCanvasRef?.nativeElement.toDataURL('image/png') ?? '')
+      : this.typedSig;
+    const method = this.sigMode === 'draw' ? 'Draw' : 'Type';
+    this.isSigLoading = true;
+    this.sigErrorMessage = '';
+    this.sigSuccessMessage = '';
+    this.userSignatureService.saveMySignature({ signatureData: data, signatureMethod: method }).subscribe({
+      next: (res) => {
+        this.isSigLoading = false;
+        this.savedSignature = res.signature;
+        this.sigSuccessMessage = 'Signature saved successfully!';
+        this.isSigConfirmed = false;
+        this.typedSig = '';
+        if (this.sigMode === 'draw') this.clearSigCanvas();
+      },
+      error: (err) => {
+        this.isSigLoading = false;
+        this.sigErrorMessage = err.error?.message || 'Failed to save signature. Please try again.';
+      }
+    });
+  }
+
+  revokeSignature(): void {
+    if (!confirm('Are you sure you want to remove your saved signature? This will be recorded in the audit log.')) return;
+    this.isSigLoading = true;
+    this.sigErrorMessage = '';
+    this.sigSuccessMessage = '';
+    this.userSignatureService.revokeMySignature().subscribe({
+      next: (res) => {
+        this.isSigLoading = false;
+        this.savedSignature = null;
+        this.sigSuccessMessage = res.message;
+      },
+      error: (err) => {
+        this.isSigLoading = false;
+        this.sigErrorMessage = err.error?.message || 'Failed to revoke signature.';
+      }
+    });
+  }
+
+  loadSignatureHistory(): void {
+    this.showSigHistory = !this.showSigHistory;
+    if (this.showSigHistory && this.signatureHistory.length === 0) {
+      this.userSignatureService.getMyHistory().subscribe({
+        next: (h) => { this.signatureHistory = h; },
+        error: () => {}
+      });
+    }
+  }
+
+  formatDateTime(d: string): string {
+    return new Date(d).toLocaleString();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   logout(): void {
     this.authService.logout();

@@ -85,12 +85,18 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Invalid or expired token." });
             }
 
+            // Determine whether the signer is acting as the employee or the manager.
+            var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
+            bool isManagerSigning = document?.User?.AssignedTo != null &&
+                string.Equals(document.User.AssignedTo.Email, signatureToken.Email, StringComparison.OrdinalIgnoreCase);
+
             // Return the necessary document info for the frontend to render the signing UI
             return Ok(new
             {
                 documentId = signatureToken.DocumentId,
                 documentName = signatureToken.DocumentName,
-                email = signatureToken.Email
+                email = signatureToken.Email,
+                isManagerSigning = isManagerSigning
             });
         }
 

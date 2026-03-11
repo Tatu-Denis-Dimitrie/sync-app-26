@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -6,6 +6,8 @@ import { environment } from '../../../environments/environment';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
+import { AuthenticationService } from '../../services/authentication.service';
+import { UserSignatureService, UserSignature } from '../../services/user-signature.service';
 
 @Component({
   selector: 'app-document-signature',
@@ -24,9 +26,16 @@ export class DocumentSignatureComponent implements OnInit {
   signatureConfirmed = false;
   successMessage = '';
 
-  signatureMethod: 'draw' | 'type' = 'draw';
+  // Auth state
+  isLoggedIn = false;
+
+  // Saved signature
+  savedSignature: UserSignature | null = null;
+  isSavedSignatureLoaded = false;
+  isUsingSavedSignature = false;
+
+  signatureMethod: 'draw' | 'type' | 'saved' = 'draw';
   typedSignature: string = '';
-  drawnSignatureData: string = '';
 
   @ViewChild('signatureCanvas') canvasRef?: ElementRef<HTMLCanvasElement>;
   private isDrawing = false;
@@ -37,12 +46,17 @@ export class DocumentSignatureComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private authService: AuthenticationService,
+    private userSignatureService: UserSignatureService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
+    this.isLoggedIn = this.authService.isLoggedIn();
     this.token = this.route.snapshot.paramMap.get('token');
     this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
+
     if (!this.token) {
       this.errorMessage = 'Invalid link. No token provided.';
       this.isValidating = false;
@@ -51,6 +65,27 @@ export class DocumentSignatureComponent implements OnInit {
     }
 
     this.validateToken();
+
+    if (this.isLoggedIn) {
+      this.loadSavedSignature();
+    }
+  }
+
+  loadSavedSignature(): void {
+    this.userSignatureService.getMySignature().subscribe({
+      next: (sig) => {
+        this.savedSignature = sig;
+        this.isSavedSignatureLoaded = true;
+        // Default to saved signature if available
+        if (sig?.isActive) {
+          this.setSignatureMethod('saved');
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isSavedSignatureLoaded = true; // 404 means no saved sig — that's fine
+      }
+    });
   }
 
   validateToken(): void {
@@ -73,10 +108,13 @@ export class DocumentSignatureComponent implements OnInit {
       });
   }
 
-  setSignatureMethod(method: 'draw' | 'type') {
+  setSignatureMethod(method: 'draw' | 'type' | 'saved') {
     this.signatureMethod = method;
+    this.signatureConfirmed = false;
     if (method === 'draw') {
       setTimeout(() => this.initCanvas(), 100);
+    } else if (method === 'saved' && this.savedSignature?.isActive) {
+      this.signatureConfirmed = true;
     }
   }
 
@@ -85,9 +123,10 @@ export class DocumentSignatureComponent implements OnInit {
       const canvas = this.canvasRef.nativeElement;
       this.ctx = canvas.getContext('2d');
       if (this.ctx) {
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 2.5;
         this.ctx.lineCap = 'round';
-        this.ctx.strokeStyle = '#0f766e'; // teal color matching UI
+        this.ctx.lineJoin = 'round';
+        this.ctx.strokeStyle = '#0f766e';
       }
     }
   }
@@ -102,7 +141,7 @@ export class DocumentSignatureComponent implements OnInit {
 
   draw(e: MouseEvent | TouchEvent): void {
     if (!this.isDrawing || !this.ctx) return;
-    e.preventDefault(); // prevent scrolling while drawing
+    e.preventDefault();
     const { x, y } = this.getCoordinates(e);
 
     this.ctx.beginPath();
@@ -112,17 +151,14 @@ export class DocumentSignatureComponent implements OnInit {
 
     this.lastX = x;
     this.lastY = y;
-
-    if (!this.signatureConfirmed) {
-      this.signatureConfirmed = true;
-    }
+    this.signatureConfirmed = true;
   }
 
   stopDrawing(): void {
     this.isDrawing = false;
   }
 
-  clearSignature(): void {
+  clearCanvas(): void {
     if (!this.ctx || !this.canvasRef) return;
     const canvas = this.canvasRef.nativeElement;
     this.ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -132,41 +168,52 @@ export class DocumentSignatureComponent implements OnInit {
   private getCoordinates(e: MouseEvent | TouchEvent): { x: number; y: number } {
     const canvas = this.canvasRef!.nativeElement;
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     if (window.TouchEvent && e instanceof TouchEvent) {
       return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top
-      };
-    } else {
-      const mouseEvent = e as MouseEvent;
-      return {
-        x: mouseEvent.clientX - rect.left,
-        y: mouseEvent.clientY - rect.top
+        x: (e.touches[0].clientX - rect.left) * scaleX,
+        y: (e.touches[0].clientY - rect.top) * scaleY
       };
     }
+    const m = e as MouseEvent;
+    return {
+      x: (m.clientX - rect.left) * scaleX,
+      y: (m.clientY - rect.top) * scaleY
+    };
+  }
+
+  getSignaturePayload(): { method: string; data: string } {
+    if (this.signatureMethod === 'saved' && this.savedSignature) {
+      return { method: this.savedSignature.signatureMethod, data: this.savedSignature.signatureData };
+    }
+    if (this.signatureMethod === 'type') {
+      return { method: 'Type', data: this.typedSignature };
+    }
+    return { method: 'Draw', data: this.canvasRef?.nativeElement.toDataURL('image/png') ?? '' };
   }
 
   signDocument(): void {
-    if (!this.signatureConfirmed) {
-      this.errorMessage = 'You must confirm your signature first.';
+    if (this.signatureMethod === 'type' && !this.typedSignature.trim()) {
+      this.errorMessage = 'Please type your full name as your signature.';
       return;
     }
+    if (!this.signatureConfirmed) {
+      this.errorMessage = 'You must confirm your signature before signing.';
+      return;
+    }
+
+    const { method, data } = this.getSignaturePayload();
 
     this.isLoading = true;
     this.errorMessage = '';
 
     const payload = {
       token: this.token,
-      signatureMethod: this.signatureMethod === 'draw' ? 'Draw' : 'Type',
-      signatureData: this.signatureMethod === 'draw' ? this.canvasRef?.nativeElement.toDataURL('image/png') : this.typedSignature,
+      signatureMethod: method,
+      signatureData: data,
       bulkSign: this.isBulkMode
     };
-
-    if (this.signatureMethod === 'type' && !this.typedSignature.trim()) {
-      this.errorMessage = 'Please type your signature before confirming.';
-      this.isLoading = false;
-      return;
-    }
 
     this.http.post<any>(`${environment.apiUrl}${environment.endpoints.documentSignature}/consume-token`, payload)
       .pipe(
@@ -179,12 +226,20 @@ export class DocumentSignatureComponent implements OnInit {
       .subscribe(res => {
         if (res) {
           this.successMessage = res.message || 'Document successfully signed!';
-          this.documentData = null; // Hide the form
+          this.documentData = null;
         }
       });
   }
 
-  goToRegister(): void {
-    this.router.navigate(['/register']);
+  goToDashboard(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user) { this.router.navigate(['/login']); return; }
+    if (user.role === 'Admin') this.router.navigate(['/dashboard']);
+    else if (user.role === 'Line Manager') this.router.navigate(['/line-manager']);
+    else this.router.navigate(['/basic-user']);
+  }
+
+  goToLogin(): void {
+    this.router.navigate(['/login']);
   }
 }

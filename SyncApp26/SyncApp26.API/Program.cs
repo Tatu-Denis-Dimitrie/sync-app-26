@@ -62,6 +62,7 @@ builder.Services.AddScoped<IUserChangeHistoryRepository, UserChangeHistoryReposi
 builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
 builder.Services.AddScoped<IFunctionRepository, FunctionRepository>();
 builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepository>();
+builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
 
 
 // Services
@@ -80,6 +81,7 @@ builder.Services.AddScoped<IFunctionService, FunctionService>();
 builder.Services.AddScoped<IDepartmentFunctionService, DepartmentFunctionService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IPeriodicTrainingService, PeriodicTrainingService>();
+builder.Services.AddScoped<IUserSignatureService, UserSignatureService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 
 // Background Services

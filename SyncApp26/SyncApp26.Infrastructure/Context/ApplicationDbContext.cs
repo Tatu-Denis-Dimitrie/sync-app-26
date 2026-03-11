@@ -43,6 +43,8 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<DepartmentFunction> DepartmentFunctions { get; set; }
         public DbSet<UserDocument> UserDocuments { get; set; }
         public DbSet<PeriodicTraining> PeriodicTrainings { get; set; }
+        public DbSet<UserSignature> UserSignatures { get; set; }
+        public DbSet<UserSignatureHistory> UserSignatureHistories { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -234,6 +236,44 @@ namespace SyncApp26.Infrastructure.Context
 
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => e.Status);
+            });
+
+            // Configure UserSignature entity
+            modelBuilder.Entity<UserSignature>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.SignatureData).IsRequired();
+                entity.Property(e => e.SignatureMethod).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.SignatureHash).IsRequired().HasMaxLength(64);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // One active signature row per user
+                entity.HasIndex(e => e.UserId).HasDatabaseName("IX_UserSignatures_UserId");
+            });
+
+            // Configure UserSignatureHistory entity (immutable audit log)
+            modelBuilder.Entity<UserSignatureHistory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.SignatureData).IsRequired();
+                entity.Property(e => e.SignatureMethod).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.SignatureHash).IsRequired().HasMaxLength(64);
+                entity.Property(e => e.Action).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.PerformedByEmail).IsRequired().HasMaxLength(255);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.UserId).HasDatabaseName("IX_UserSignatureHistories_UserId");
+                entity.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_UserSignatureHistories_CreatedAt");
             });
         }
 
