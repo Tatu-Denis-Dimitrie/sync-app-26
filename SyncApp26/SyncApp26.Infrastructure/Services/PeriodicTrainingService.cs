@@ -125,22 +125,45 @@ namespace SyncApp26.Infrastructure.Services
                 {
                     try
                     {
-                        var training = new PeriodicTraining
-                        {
-                            UserId = user.Id,
-                            TrainingDate = dto.TrainingDate ?? DateTime.UtcNow,
-                            DurationHours = dto.DurationHours,
-                            // Use provided occupation or fall back to user's function
-                            Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
-                                ? dto.Occupation
-                                : user.Function?.Name,
-                            MaterialTaught = dto.MaterialTaught,
-                            InstructorName = dto.InstructorName,
-                            VerifierName = dto.VerifierName,
-                            CreatedAt = DateTime.UtcNow
-                        };
+                        // Check if there's already an unsigned row for this user — reuse it instead of creating a duplicate
+                        var existingUnsigned = await _context.PeriodicTrainings
+                            .Where(pt => pt.UserId == user.Id
+                                && string.IsNullOrEmpty(pt.UserSignatureData)
+                                && string.IsNullOrEmpty(pt.InstructorSignature))
+                            .OrderByDescending(pt => pt.CreatedAt)
+                            .FirstOrDefaultAsync();
 
-                        _context.PeriodicTrainings.Add(training);
+                        if (existingUnsigned != null)
+                        {
+                            // Update the existing unsigned row with new bulk training data
+                            existingUnsigned.TrainingDate = dto.TrainingDate ?? DateTime.UtcNow;
+                            existingUnsigned.DurationHours = dto.DurationHours;
+                            existingUnsigned.Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
+                                ? dto.Occupation
+                                : user.Function?.Name;
+                            existingUnsigned.MaterialTaught = dto.MaterialTaught;
+                            existingUnsigned.InstructorName = dto.InstructorName;
+                            existingUnsigned.VerifierName = dto.VerifierName;
+                            existingUnsigned.UpdatedAt = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            var training = new PeriodicTraining
+                            {
+                                UserId = user.Id,
+                                TrainingDate = dto.TrainingDate ?? DateTime.UtcNow,
+                                DurationHours = dto.DurationHours,
+                                Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
+                                    ? dto.Occupation
+                                    : user.Function?.Name,
+                                MaterialTaught = dto.MaterialTaught,
+                                InstructorName = dto.InstructorName,
+                                VerifierName = dto.VerifierName,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            _context.PeriodicTrainings.Add(training);
+                        }
+
                         result.SuccessCount++;
                     }
                     catch (Exception ex)
