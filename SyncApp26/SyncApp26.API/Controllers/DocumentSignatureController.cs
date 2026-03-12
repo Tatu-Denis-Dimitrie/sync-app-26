@@ -87,8 +87,10 @@ namespace SyncApp26.API.Controllers
 
             // Determine whether the signer is acting as the employee or the manager.
             var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
-            bool isManagerSigning = document?.User?.AssignedTo != null &&
-                string.Equals(document.User.AssignedTo.Email, signatureToken.Email, StringComparison.OrdinalIgnoreCase);
+            var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
+            bool signerIsAdmin = signerUser?.Role?.Name == "Admin";
+            bool isManagerSigning = signerIsAdmin || (document?.User?.AssignedTo != null &&
+                string.Equals(document.User.AssignedTo.Email, signatureToken.Email, StringComparison.OrdinalIgnoreCase));
 
             // Return the necessary document info for the frontend to render the signing UI
             return Ok(new
@@ -129,8 +131,10 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Document not found." });
             }
 
-            bool isManagerSigning = document.User?.AssignedTo != null &&
-                string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase);
+            var signerUserFromToken = await _userService.GetUserByEmailAsync(tokenEntity.Email);
+            bool signerIsAdmin = signerUserFromToken?.Role?.Name == "Admin";
+            bool isManagerSigning = signerIsAdmin || (document.User?.AssignedTo != null &&
+                string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase));
             bool isUserSignature = !isManagerSigning;
 
             if (isUserSignature && document.UserSignedAt != null)
@@ -158,7 +162,8 @@ namespace SyncApp26.API.Controllers
                 isUserSignature,
                 request.SignatureMethod,
                 request.SignatureData,
-                ipAddress
+                ipAddress,
+                signerIsAdmin
             );
 
             // If user signed, generate link for the manager and send email
@@ -183,14 +188,38 @@ namespace SyncApp26.API.Controllers
             int bulkCount = 0;
             if (request.BulkSign && !isUserSignature)
             {
-                var signerUser = await _userService.GetUserByEmailAsync(tokenEntity.Email);
-                if (signerUser != null)
+                if (signerUserFromToken != null)
                 {
-                    bool signerIsAdmin = signerUser.Role?.Name == "Admin";
+                    bool bulkSignerIsAdmin = signerUserFromToken.Role?.Name == "Admin";
                     var ipAddress2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
                     bulkCount = await _documentService.BulkSignDocumentsAsync(
-                        signerIsAdmin, signerUser.Id,
+                        bulkSignerIsAdmin, signerUserFromToken.Id,
                         request.SignatureMethod, request.SignatureData, ipAddress2);
+
+                    // For admin bulk-sign flow, send user signature links after admin countersigns.
+                    if (bulkSignerIsAdmin)
+                    {
+                        var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+                        var types = new[] { "SSM", "SU" };
+                        foreach (var type in types)
+                        {
+                            var pendingDocs = await _documentService.GetAllPendingUserDocumentsAsync(type);
+                            foreach (var pendingDoc in pendingDocs)
+                            {
+                                if (pendingDoc.User?.Email is { Length: > 0 } userEmail && pendingDoc.UserSignedAt == null)
+                                {
+                                    try
+                                    {
+                                        var userToken = await _documentSignatureService.GenerateSignatureTokenAsync(
+                                            userEmail, pendingDoc.Id, $"{type} Document");
+                                        var userLink = $"{frontendUrl}/sign/{userToken}";
+                                        await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", userLink);
+                                    }
+                                    catch { /* non-fatal per user */ }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -234,6 +263,78 @@ namespace SyncApp26.API.Controllers
                 isAdmin, userId, request.SignatureMethod, request.SignatureData, ipAddress);
 
             return Ok(new { message = $"Successfully signed {count} document(s).", count });
+        }
+
+        public class AdminSignAndSendDto
+        {
+            public string DocumentType { get; set; } = string.Empty; // "SSM", "SU", "Both"
+            public string SignatureMethod { get; set; } = string.Empty; // "Draw" or "Type"
+            public string SignatureData { get; set; } = string.Empty; // Base64 signature
+        }
+
+        /// <summary>
+        /// Admin signs all recently generated documents and sends signature links to employees.
+        /// This endpoint streamlines the workflow: generate → admin signs → send to employees.
+        /// </summary>
+        [HttpPost("admin-sign-and-send-generated-documents")]
+        [Authorize]
+        public async Task<IActionResult> AdminSignAndSendGeneratedDocuments([FromBody] AdminSignAndSendDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.DocumentType))
+                return BadRequest(new { message = "DocumentType is required (SSM, SU, or Both)." });
+
+            if (string.IsNullOrWhiteSpace(request.SignatureData))
+                return BadRequest(new { message = "SignatureData is required." });
+
+            var types = request.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
+                ? new[] { "SSM", "SU" }
+                : new[] { request.DocumentType.ToUpperInvariant() };
+
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+                return Unauthorized();
+
+            if (!User.IsInRole("Admin"))
+                return Forbid();
+
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+            var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+
+            int signedCount = 0;
+            int emailsSent = 0;
+
+            foreach (var type in types)
+            {
+                signedCount += await _documentService.BulkSignAndSendGeneratedDocumentsAsync(
+                    type,
+                    request.SignatureMethod,
+                    request.SignatureData,
+                    ipAddress);
+
+                var pendingDocuments = await _documentService.GetAllPendingUserDocumentsAsync(type);
+                foreach (var doc in pendingDocuments)
+                {
+                    if (doc.User?.Email is { Length: > 0 } userEmail && doc.UserSignedAt == null)
+                    {
+                        try
+                        {
+                            var token = await _documentSignatureService.GenerateSignatureTokenAsync(
+                                userEmail, doc.Id, $"{type} Document");
+                            var link = $"{frontendUrl}/sign/{token}";
+                            await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", link);
+                            emailsSent++;
+                        }
+                        catch { /* non-fatal per user */ }
+                    }
+                }
+            }
+
+            return Ok(new
+            {
+                message = $"Successfully signed {signedCount} document(s) and sent {emailsSent} signature request(s).",
+                documentsSigned = signedCount,
+                emailsSent = emailsSent
+            });
         }
     }
 }

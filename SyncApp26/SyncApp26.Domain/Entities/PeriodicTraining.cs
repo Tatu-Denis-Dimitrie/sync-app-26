@@ -15,6 +15,14 @@ namespace SyncApp26.Domain.Entities
         public virtual User? User { get; set; }
 
         /// <summary>
+        /// Document this periodic training belongs to (links signatures to correct document type)
+        /// </summary>
+        public Guid? UserDocumentId { get; set; }
+
+        [ForeignKey("UserDocumentId")]
+        public virtual UserDocument? Document { get; set; }
+
+        /// <summary>
         /// Date of the training session
         /// </summary>
         public DateTime? TrainingDate { get; set; }

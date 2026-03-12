@@ -56,7 +56,7 @@ namespace SyncApp26.API.Controllers
 
         // ── GET my own signature ──────────────────────────────────────────────────────────
 
-        /// <summary>Returns the current active signature of the authenticated user.</summary>
+        /// <summary>Returns the current active signature of the authenticated user, or null if none exists.</summary>
         [HttpGet("my")]
         public async Task<IActionResult> GetMySignature()
         {
@@ -65,7 +65,7 @@ namespace SyncApp26.API.Controllers
 
             var sig = await _signatureService.GetUserSignatureAsync(callerId);
             if (sig == null)
-                return NotFound(new { message = "No active signature found." });
+                return Ok((object?)null);
 
             return Ok(MapToDto(sig));
         }

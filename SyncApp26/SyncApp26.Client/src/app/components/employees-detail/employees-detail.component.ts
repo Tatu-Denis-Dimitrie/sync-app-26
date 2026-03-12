@@ -458,7 +458,7 @@ export class EmployeesDetailComponent implements OnInit {
   showBulkGenerateModal = false;
   bulkGenerateType: 'SSM' | 'SU' | 'Both' = 'Both';
   isBulkGenerating = false;
-  bulkGenerateResult: { message: string; generated: number; skipped: number } | null = null;
+  bulkGenerateResult: { message: string; generated: number; skipped: number; adminSignLink?: string | null } | null = null;
 
   openBulkGenerateModal(): void {
     this.showBulkGenerateModal = true;
@@ -480,6 +480,11 @@ export class EmployeesDetailComponent implements OnInit {
       next: (res) => {
         this.isBulkGenerating = false;
         this.bulkGenerateResult = res;
+
+        // Continue with the existing signing system used in the app.
+        if (res?.adminSignLink) {
+          window.open(res.adminSignLink, '_blank');
+        }
       },
       error: (err) => {
         this.isBulkGenerating = false;

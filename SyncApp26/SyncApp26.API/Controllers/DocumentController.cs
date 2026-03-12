@@ -57,6 +57,18 @@ namespace SyncApp26.API.Controllers
             d.ManagerSignedAt,
         };
 
+        private static bool IsSsmManagerSignaturePending(UserDocument d)
+        {
+            if (!string.Equals(d.DocumentType, "SSM", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var latestTraining = d.User?.PeriodicTrainings
+                ?.OrderByDescending(pt => pt.CreatedAt)
+                .FirstOrDefault();
+
+            return latestTraining != null && string.IsNullOrEmpty(latestTraining.InstructorSignature);
+        }
+
         public class GenerateDocumentDto
         {
             public Guid UserId { get; set; }
@@ -91,39 +103,33 @@ namespace SyncApp26.API.Controllers
                 totalSkipped += skipped;
             }
 
-            // Send signature emails for all newly-pending documents
-            // (fire-and-forget style — failures are non-fatal)
-            _ = Task.Run(async () =>
+            // Admin signature is only required for SSM documents (verifier column).
+            // For SU documents the admin does not sign.
+            string? adminSignLink = null;
+            if (types.Contains("SSM"))
             {
-                try
+                var ssmPending = await _documentService.GetAllPendingUserDocumentsAsync("SSM");
+                var firstPending = ssmPending.FirstOrDefault(d => d.ManagerSignedAt == null);
+                if (firstPending != null)
                 {
-                    foreach (var type in types)
-                    {
-                        var allDocuments = await _documentService.GetAllPendingUserDocumentsAsync(type);
-                        foreach (var doc in allDocuments)
-                        {
-                            if (doc.User?.Email is { Length: > 0 } email)
-                            {
-                                try
-                                {
-                                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(
-                                        email, doc.Id, $"{type} Document");
-                                    var link = $"{frontendUrl}/sign/{token}";
-                                    await _emailService.SendDocumentSignatureEmailWithLinkAsync(email, $"{type} Document", link);
-                                }
-                                catch { /* non-fatal per user */ }
-                            }
-                        }
-                    }
+                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(
+                        adminEmail,
+                        firstPending.Id,
+                        "SSM Document (Admin Bulk Sign)");
+                    adminSignLink = $"{frontendUrl}/sign/{token}?bulk=true";
                 }
-                catch { /* non-fatal */ }
-            });
+            }
+
+            var message = adminSignLink != null
+                ? $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped. Next step: admin must sign SSM documents."
+                : $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped.";
 
             return Ok(new
             {
-                message = $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped.",
+                message,
                 generated = totalGenerated,
-                skipped = totalSkipped
+                skipped = totalSkipped,
+                adminSignLink
             });
         }
 
@@ -199,7 +205,7 @@ namespace SyncApp26.API.Controllers
                 var empDocs = await _documentService.GetUserDocumentsAsync(empId);
                 pendingAsManager.AddRange(empDocs.Where(d =>
                     (d.Status == "PendingManager" || d.Status == "PendingUser") &&
-                    d.ManagerSignedAt == null));
+                    (d.ManagerSignedAt == null || IsSsmManagerSignaturePending(d))));
             }
 
             return Ok(pendingAsManager.Select(MapDocument));
@@ -260,7 +266,7 @@ namespace SyncApp26.API.Controllers
             if (isUser && document.UserSignedAt != null)
                 return BadRequest(new { message = "User already signed this document." });
             
-            if (isManager && document.ManagerSignedAt != null)
+            if (isManager && document.ManagerSignedAt != null && !IsSsmManagerSignaturePending(document))
                 return BadRequest(new { message = "Manager already signed this document." });
 
             if (isUser && document.Status != "PendingUser")
