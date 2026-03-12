@@ -29,6 +29,13 @@ namespace SyncApp26.Infrastructure.Services
         {
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
+            // Check if user is admin (admins should not have documents generated)
+            var userToGenerate = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
+            if (userToGenerate?.Role != null && string.Equals(userToGenerate.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Cannot generate documents for admin users.");
+            }
+
             // Before anything else, if there's an existing completed document with signatures,
             // permanently copy those signatures to the correct PeriodicTraining row
             var existingDoc = await _context.UserDocuments
@@ -892,16 +899,20 @@ namespace SyncApp26.Infrastructure.Services
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
             var users = await _context.Users
+                .Include(u => u.Role)
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .ToListAsync();
 
+            // Filter out admin users on client side (EF doesn't support StringComparison parameter)
+            var nonAdminUsers = users.Where(u => u.Role == null || !string.Equals(u.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase)).ToList();
+
             int generated = 0;
             int skipped = 0;
 
-            foreach (var user in users)
+            foreach (var user in nonAdminUsers)
             {
                 try
                 {

@@ -54,7 +54,7 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Password must contain at least one digit." });
             }
 
-            if(!Regex.IsMatch(password, @"[!#$%&*.,/?;_-]"))
+            if(!Regex.IsMatch(password, @"[!#$%&*^<>.,/?;_-@]"))
             {
                 return BadRequest(new { message = "Password must contain at least one special character."});
             }
@@ -82,11 +82,6 @@ namespace SyncApp26.API.Controllers
                 if (!Regex.IsMatch(normalizedEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
                 {
                     return BadRequest(new { message = "Invalid email format." });
-                }
-
-                if (!normalizedEmail.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
-                {
-                    return BadRequest(new { message = "Email must be a @gmail.com address." });
                 }
 
                 var result = await VerifyPasswordFormat(request.Password);
