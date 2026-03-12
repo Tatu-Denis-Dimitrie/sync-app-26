@@ -718,7 +718,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             var ids = await _context.UserDocuments
                 .Where(d => d.DocumentType == documentType)
-                .Where(d => d.Status != "PendingUser" && d.Status != "PendingManager")
+                .Where(d => d.UserSignedAt != null || !string.IsNullOrEmpty(d.UserSignatureData))
                 .Select(d => d.UserId)
                 .Distinct()
                 .ToListAsync();
@@ -814,6 +814,8 @@ namespace SyncApp26.Infrastructure.Services
         {
             var baseQuery = _context.UserDocuments
                 .Include(d => d.User)
+                    .ThenInclude(u => u.Role)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
@@ -823,10 +825,13 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate));
 
-            // Admins sign all documents awaiting manager countersignature.
+            // Admins sign only SSM documents awaiting verifier signature.
             // Line managers sign all their employees' documents regardless of whether the employee has signed yet.
             IQueryable<UserDocument> query = isAdmin
                 ? baseQuery.Where(d =>
+                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.User != null &&
+                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
                     (d.Status == "PendingManager" || d.Status == "PendingUser") &&
                     d.ManagerSignedAt == null)
                 : baseQuery.Where(d =>
@@ -891,7 +896,8 @@ namespace SyncApp26.Infrastructure.Services
             }
             await _context.SaveChangesAsync();
 
-            return docs.Count;
+            // For admin bulk sign flow, report unique employees, not number of document rows.
+            return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
         }
 
         public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail)
@@ -1032,6 +1038,11 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<int> BulkSignAndSendGeneratedDocumentsAsync(string documentType, string signatureMethod, string signatureData, string ipAddress)
         {
+            if (!string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
             // Fetch all PendingUser documents of the specified type (recently generated)
             var docs = await _context.UserDocuments
                 .Include(d => d.User)

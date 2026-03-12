@@ -88,7 +88,7 @@ namespace SyncApp26.API.Controllers
             // Determine whether the signer is acting as the employee or the manager.
             var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
             var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
-            bool signerIsAdmin = signerUser?.Role?.Name == "Admin";
+            bool signerIsAdmin = string.Equals(signerUser?.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
             bool isManagerSigning = signerIsAdmin || (document?.User?.AssignedTo != null &&
                 string.Equals(document.User.AssignedTo.Email, signatureToken.Email, StringComparison.OrdinalIgnoreCase));
 
@@ -132,7 +132,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var signerUserFromToken = await _userService.GetUserByEmailAsync(tokenEntity.Email);
-            bool signerIsAdmin = signerUserFromToken?.Role?.Name == "Admin";
+            bool signerIsAdmin = string.Equals(signerUserFromToken?.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
             bool isManagerSigning = signerIsAdmin || (document.User?.AssignedTo != null &&
                 string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase));
             bool isUserSignature = !isManagerSigning;
@@ -190,7 +190,7 @@ namespace SyncApp26.API.Controllers
             {
                 if (signerUserFromToken != null)
                 {
-                    bool bulkSignerIsAdmin = signerUserFromToken.Role?.Name == "Admin";
+                    bool bulkSignerIsAdmin = string.Equals(signerUserFromToken.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
                     var ipAddress2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
                     bulkCount = await _documentService.BulkSignDocumentsAsync(
                         bulkSignerIsAdmin, signerUserFromToken.Id,
