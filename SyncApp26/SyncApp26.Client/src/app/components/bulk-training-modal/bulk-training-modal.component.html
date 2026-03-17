@@ -73,6 +73,7 @@
           <select
             id="department"
             [(ngModel)]="formData.selectedDepartmentId"
+            (ngModelChange)="onDepartmentChanged()"
             name="selectedDepartmentId"
             class="form-input"
             [disabled]="isLoadingDepartments"
@@ -153,7 +154,85 @@
             Apply to all active users
           </label>
         </div>
+
+        <div class="selection-panel" *ngIf="!formData.applyToAllUsers">
+          <div class="selection-panel-header">
+            <p class="selection-panel-title">Custom user selection</p>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="openUserPicker()"
+              [disabled]="isLoadingUsers"
+            >
+              {{ isLoadingUsers ? "Loading users..." : "Select users" }}
+            </button>
+          </div>
+          <p class="form-hint">
+            Selected users: {{ selectedUsersCount }}
+          </p>
+        </div>
       </form>
+    </div>
+
+    <div
+      class="user-picker-overlay"
+      *ngIf="isUserPickerVisible"
+      (click)="closeUserPicker()"
+    >
+      <div class="user-picker-modal" (click)="$event.stopPropagation()">
+        <div class="user-picker-header">
+          <h3>Select users for training</h3>
+          <button type="button" class="close-button" (click)="closeUserPicker()" aria-label="Close user selector">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="user-picker-body">
+          <input
+            type="text"
+            class="form-input"
+            [(ngModel)]="userSearchQuery"
+            name="userSearchQuery"
+            placeholder="Search by name, email, or department"
+          />
+
+          <div class="picker-actions">
+            <button type="button" class="btn-secondary" (click)="selectAllFilteredUsers()">
+              Select all shown
+            </button>
+            <button type="button" class="btn-secondary" (click)="deselectAllFilteredUsers()">
+              Deselect all shown
+            </button>
+          </div>
+
+          <div class="users-list" *ngIf="!isLoadingUsers; else loadingUsersTemplate">
+            <label class="user-row" *ngFor="let user of filteredUsers">
+              <input
+                type="checkbox"
+                class="form-checkbox"
+                [checked]="isUserSelected(user.id)"
+                (change)="toggleUserSelection(user.id)"
+              />
+              <div class="user-meta">
+                <span class="user-name">{{ user.firstName }} {{ user.lastName }}</span>
+                <span class="user-email">{{ user.email }} | {{ user.departmentName }}</span>
+              </div>
+            </label>
+            <p class="form-hint" *ngIf="filteredUsers.length === 0">No users found for this filter.</p>
+          </div>
+
+          <ng-template #loadingUsersTemplate>
+            <p class="form-hint">Loading users...</p>
+          </ng-template>
+        </div>
+
+        <div class="user-picker-footer">
+          <span class="form-hint">Selected users: {{ selectedUsersCount }}</span>
+          <button type="button" class="btn-primary" (click)="closeUserPicker()">Done</button>
+        </div>
+      </div>
     </div>
 
     <div class="modal-footer">

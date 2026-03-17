@@ -10,6 +10,15 @@ interface DepartmentOption {
   isActive: boolean;
 }
 
+interface UserOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  departmentId: string;
+  departmentName: string;
+}
+
 interface BulkTrainingData {
   trainingDate: string;
   durationHours: number | null;
@@ -37,6 +46,10 @@ export class BulkTrainingModalComponent implements OnInit {
   isSubmitting = false;
   departments: DepartmentOption[] = [];
   isLoadingDepartments = false;
+  users: UserOption[] = [];
+  isLoadingUsers = false;
+  isUserPickerVisible = false;
+  userSearchQuery = '';
 
   formData: BulkTrainingData = {
     trainingDate: '',
@@ -54,6 +67,7 @@ export class BulkTrainingModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadDepartments();
+    this.loadUsers();
   }
 
   private loadDepartments(): void {
@@ -75,6 +89,96 @@ export class BulkTrainingModalComponent implements OnInit {
       });
   }
 
+  private loadUsers(): void {
+    this.isLoadingUsers = true;
+    this.http
+      .get<UserOption[]>(`${environment.apiUrl}/User`)
+      .subscribe({
+        next: (users) => {
+          this.users = (users || []).sort((a, b) => {
+            const aName = `${a.firstName} ${a.lastName}`.trim();
+            const bName = `${b.firstName} ${b.lastName}`.trim();
+            return aName.localeCompare(bName);
+          });
+          this.isLoadingUsers = false;
+        },
+        error: (err) => {
+          console.error('Error loading users:', err);
+          this.users = [];
+          this.isLoadingUsers = false;
+        }
+      });
+  }
+
+  get filteredUsers(): UserOption[] {
+    const query = this.userSearchQuery.trim().toLowerCase();
+
+    return this.users.filter((user) => {
+      const matchesDepartment = !this.formData.selectedDepartmentId || user.departmentId === this.formData.selectedDepartmentId;
+      if (!matchesDepartment) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      return fullName.includes(query)
+        || user.email.toLowerCase().includes(query)
+        || (user.departmentName || '').toLowerCase().includes(query);
+    });
+  }
+
+  get selectedUsersCount(): number {
+    return this.formData.selectedUserIds.length;
+  }
+
+  onDepartmentChanged(): void {
+    if (!this.formData.applyToAllUsers) {
+      const allowedIds = new Set(this.filteredUsers.map((u) => u.id));
+      this.formData.selectedUserIds = this.formData.selectedUserIds.filter((id) => allowedIds.has(id));
+    }
+  }
+
+  openUserPicker(): void {
+    this.isUserPickerVisible = true;
+    this.userSearchQuery = '';
+
+    if (!this.users.length) {
+      this.loadUsers();
+    }
+  }
+
+  closeUserPicker(): void {
+    this.isUserPickerVisible = false;
+  }
+
+  isUserSelected(userId: string): boolean {
+    return this.formData.selectedUserIds.includes(userId);
+  }
+
+  toggleUserSelection(userId: string): void {
+    if (this.isUserSelected(userId)) {
+      this.formData.selectedUserIds = this.formData.selectedUserIds.filter((id) => id !== userId);
+      return;
+    }
+
+    this.formData.selectedUserIds = [...this.formData.selectedUserIds, userId];
+  }
+
+  selectAllFilteredUsers(): void {
+    const filteredIds = this.filteredUsers.map((u) => u.id);
+    const selected = new Set(this.formData.selectedUserIds);
+    filteredIds.forEach((id) => selected.add(id));
+    this.formData.selectedUserIds = [...selected];
+  }
+
+  deselectAllFilteredUsers(): void {
+    const filteredIds = new Set(this.filteredUsers.map((u) => u.id));
+    this.formData.selectedUserIds = this.formData.selectedUserIds.filter((id) => !filteredIds.has(id));
+  }
+
   open() {
     this.isVisible = true;
     // Set default date to today
@@ -84,10 +188,15 @@ export class BulkTrainingModalComponent implements OnInit {
     if (!this.departments.length) {
       this.loadDepartments();
     }
+
+    if (!this.users.length) {
+      this.loadUsers();
+    }
   }
 
   closeModal() {
     this.isVisible = false;
+    this.isUserPickerVisible = false;
     this.resetForm();
     this.close.emit();
   }
@@ -104,6 +213,7 @@ export class BulkTrainingModalComponent implements OnInit {
       applyToAllUsers: true,
       selectedUserIds: []
     };
+    this.userSearchQuery = '';
   }
 
   submitBulkTraining() {
@@ -112,9 +222,14 @@ export class BulkTrainingModalComponent implements OnInit {
       return;
     }
 
-    const targetText = this.formData.selectedDepartmentId
-      ? 'users in the selected department'
-      : 'all users';
+    if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {
+      alert('Please select at least one user for this training.');
+      return;
+    }
+
+    const targetText = this.formData.applyToAllUsers
+      ? (this.formData.selectedDepartmentId ? 'all users in the selected department' : 'all users')
+      : `${this.formData.selectedUserIds.length} selected user(s)`;
 
     if (confirm(`Are you sure you want to add this periodic training record for ${targetText}?`)) {
       this.isSubmitting = true;
