@@ -21,8 +21,8 @@
 
     <div class="modal-body">
       <p class="modal-description">
-        Add periodic training records with the same data for all users. This
-        will create a new training entry in each user's
+        Add periodic training records with the same data for users in a selected
+        department. This will create a new training entry in each user's
         <select
           [(ngModel)]="formData.documentType"
           name="documentType"
@@ -69,19 +69,31 @@
         </div>
 
         <div class="form-group">
-          <label for="occupation" class="form-label">
-            Occupation / Specialty
-          </label>
-          <input
-            type="text"
-            id="occupation"
-            [(ngModel)]="formData.occupation"
-            name="occupation"
+          <label for="department" class="form-label"> Department </label>
+          <select
+            id="department"
+            [(ngModel)]="formData.selectedDepartmentId"
+            name="selectedDepartmentId"
             class="form-input"
-            placeholder="Leave empty to use user's function"
-          />
+            [disabled]="isLoadingDepartments"
+          >
+            <option [ngValue]="null">
+              {{
+                isLoadingDepartments
+                  ? "Loading departments..."
+                  : "All users (all departments)"
+              }}
+            </option>
+            <option
+              *ngFor="let department of departments"
+              [ngValue]="department.id"
+            >
+              {{ department.name }}
+            </option>
+          </select>
           <p class="form-hint">
-            If left empty, each user's function will be used automatically
+            Leave on "All users" to apply globally, or choose one department to
+            target only that team.
           </p>
         </div>
 
@@ -114,7 +126,7 @@
             />
           </div>
 
-          <div class="form-group">
+          <div class="form-group" *ngIf="formData.documentType !== 'SU'">
             <label for="verifierName" class="form-label">
               Verifier Name (SSM only)
             </label>
@@ -157,7 +169,9 @@
         type="button"
         class="btn-primary"
         (click)="submitBulkTraining()"
-        [disabled]="isSubmitting || !formData.trainingDate"
+        [disabled]="
+          isSubmitting || !formData.trainingDate || isLoadingDepartments
+        "
       >
         {{ isSubmitting ? "Adding..." : "Add Training Records" }}
       </button>
