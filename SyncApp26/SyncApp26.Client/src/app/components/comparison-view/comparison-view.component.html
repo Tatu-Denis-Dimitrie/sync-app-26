@@ -718,6 +718,89 @@
           </div>
         </div>
 
+        <!--- Function --->
+        <div
+            *ngIf="comparison.dbUser || comparison.csvUser"
+            class="grid grid-cols-[1fr,auto,1fr]"
+          >
+            <div class="p-4 bg-red-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Function (Database)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'function')"
+                  class="text-xs text-red-600"
+                  >- removed</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.line-through]="hasFieldConflict(comparison, 'function')"
+                [class.text-muted-foreground]="
+                  hasFieldConflict(comparison, 'function')
+                "
+              >
+                {{ comparison.dbUser?.function || "N/A" }}
+              </p>
+            </div>
+            <div class="flex items-center justify-center bg-muted/20 px-2">
+              <div
+                *ngIf="hasFieldConflict(comparison, 'function')"
+                class="flex flex-col items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="isFieldSelected(comparison, 'function')"
+                  (change)="toggleFieldSelection(comparison.id, 'function')"
+                  class="w-4 h-4 rounded border-border"
+                  title="Select to sync this field"
+                />
+                <svg
+                  class="w-4 h-4 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </div>
+              <span
+                *ngIf="!hasFieldConflict(comparison, 'function')"
+                class="text-muted-foreground"
+                >=</span
+              >
+            </div>
+            <div class="p-4 bg-green-50/30">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-xs font-medium text-muted-foreground uppercase"
+                  >Function (CSV)</span
+                >
+                <span
+                  *ngIf="hasFieldConflict(comparison, 'function')"
+                  class="text-xs text-green-600"
+                  >+ added</span
+                >
+              </div>
+              <p
+                class="font-mono text-sm"
+                [class.font-semibold]="hasFieldConflict(comparison, 'function')"
+                [class.text-green-700]="
+                  hasFieldConflict(comparison, 'function')
+                "
+              >
+                {{ comparison.csvUser?.function || "N/A" }}
+              </p>
+            </div>
+          </div>
+
         <div
           *ngIf="hasConflicts(comparison)"
           class="px-6 py-3 bg-blue-50/30 border-t border-border"

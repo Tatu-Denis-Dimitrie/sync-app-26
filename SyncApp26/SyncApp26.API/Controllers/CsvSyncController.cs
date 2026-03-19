@@ -329,6 +329,7 @@ public sealed class CsvUserMap : ClassMap<CsvUserDTO>
         Map(m => m.Email).Name("Email", "email").Convert(args => args.Row.GetField("Email")?.Trim() ?? string.Empty);
         Map(m => m.DepartmentName).Name("DepartmentName", "Department Name", "Department", "department_name", "department");
         Map(m => m.AssignedToPersonalId).Name("AssignedToPersonalId", "Assigned To Personal ID", "Line Manager Personal ID", "Manager Personal ID", "assigned_to_personal_id", "manager_personal_id").Optional();
+        Map(m => m.Function).Name("Function", "Job Function", "function").Optional();
     }
 }
 

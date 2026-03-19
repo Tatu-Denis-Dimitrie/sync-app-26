@@ -8,12 +8,22 @@ using SyncApp26.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using System.IO;
 using SyncApp26.API.Services;
+using SyncApp26.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddSignalR();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.MaxDepth = 64;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -38,14 +48,21 @@ if (!Path.IsPathRooted(sqliteBuilder.DataSource))
     var basePath = builder.Environment.ContentRootPath;
     sqliteBuilder.DataSource = Path.GetFullPath(Path.Combine(basePath, sqliteBuilder.DataSource));
 }
+sqliteBuilder.Mode = SqliteOpenMode.ReadWriteCreate;
+sqliteBuilder.Cache = SqliteCacheMode.Shared;
+sqliteBuilder.Pooling = true;
+sqliteBuilder.DefaultTimeout = 60;
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(sqliteBuilder.ToString()));
+    options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60)));
 
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IImportConflictRepository, ImportConflictRepository>();
+builder.Services.AddScoped<IUserChangeHistoryRepository, UserChangeHistoryRepository>();
 builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
+builder.Services.AddScoped<IFunctionRepository, FunctionRepository>();
+builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepository>();
+builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
 
 
 // Services
@@ -55,10 +72,46 @@ builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
 builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
 builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
 builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
-builder.Services.AddScoped<IImportConflictService, ImportConflictService>();
+builder.Services.AddScoped<IUserChangeHistoryService, UserChangeHistoryService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>();
+builder.Services.AddScoped<IFunctionService, FunctionService>();
+builder.Services.AddScoped<IDepartmentFunctionService, DepartmentFunctionService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IPeriodicTrainingService, PeriodicTrainingService>();
+builder.Services.AddScoped<IUserSignatureService, UserSignatureService>();
+builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();
+
+// JWT Authentication
+var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
+    ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
+var key = Encoding.ASCII.GetBytes(jwtSecretKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -88,6 +141,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<SyncApp26.API.Hubs.SyncHub>("/hubs/sync");

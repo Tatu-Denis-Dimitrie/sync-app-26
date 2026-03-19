@@ -8,7 +8,7 @@ namespace SyncApp26.Application.Services;
 public class CsvValidationService : ICsvValidationService
 {
     private static readonly string[] RequiredHeaders = { "PersonalId", "FirstName", "LastName", "Email", "DepartmentName" };
-    private static readonly string[] OptionalHeaders = { "AssignedToPersonalId" };
+    private static readonly string[] OptionalHeaders = { "AssignedToPersonalId", "Function" };
     private static readonly Regex EmailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
 
     public async Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName, HashSet<string>? existingDepartments = null)
@@ -275,6 +275,8 @@ public class CsvValidationService : ICsvValidationService
                 map["DepartmentName"] = i;
             else if (normalized == NormalizeHeaderName("AssignedToPersonalId") || normalized == "managerpersonalid" || normalized == "linemanagerpersonalid")
                 map["AssignedToPersonalId"] = i;
+            else if (normalized == NormalizeHeaderName("Function") || normalized == "jobfunction")
+                map["Function"] = i;
         }
 
         return map;
@@ -372,6 +374,16 @@ public class CsvValidationService : ICsvValidationService
             if (!string.IsNullOrWhiteSpace(assignedPersonalId) && !Guid.TryParse(assignedPersonalId, out _))
             {
                 warnings.Add($"Row {rowNumber}: AssignedToPersonalId '{assignedPersonalId}' is not in valid format");
+            }
+        }
+
+        // Validate Function (optional)
+        if (columnMap.TryGetValue("Function", out int functionIdx))
+        {
+            var function = values[functionIdx];
+            if (!string.IsNullOrWhiteSpace(function) && function.Length > 100)
+            {
+                warnings.Add($"Row {rowNumber}: Function is too long (max 100 characters)");
             }
         }
 

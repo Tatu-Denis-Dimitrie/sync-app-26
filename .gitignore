@@ -15,6 +15,10 @@
 # Environment files
 /.env
 
+# Configuration files with sensitive data
+**/appsettings.json
+**/appsettings.Development.json
+
 # Angular CLI and build artefacts
 /.angular-cli.json
 /.ng/
@@ -258,6 +262,8 @@ Thumbs.db
 # Angular build artifacts with hashes
 **/dist/**/*.js
 **/dist/**/*.css
+**/dist/**/*.map
+*.css.map
 **/dist/**/index.html
 **/dist/**/favicon.ico
 **/dist/**/3rdpartylicenses.txt
@@ -270,5 +276,11 @@ styles-*.css
 SyncApp26.Client/dist/
 SyncApp26.Client/.angular/
 SyncApp26.Client/node_modules/
+
+# Secret configuration files
 SyncApp26/SyncApp26.Infrastructure/SyncApp26.db-shm
 SyncApp26/SyncApp26.Infrastructure/SyncApp26.db-wal
+SyncApp26/SyncApp26.API/appsetting.Development.json
+SyncApp26/SyncApp26.API/appsetting.json
+
+SyncApp26/SyncApp26.API/GeneratedDocuments

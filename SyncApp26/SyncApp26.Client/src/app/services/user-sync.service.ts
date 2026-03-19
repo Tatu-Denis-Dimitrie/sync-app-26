@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, ImportConflictHistory, ImportHistoryItem } from '../models/csv-sync.model';
+import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, UserChangeHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
 import { from, combineLatest } from 'rxjs';
@@ -10,6 +10,8 @@ import { from, combineLatest } from 'rxjs';
 interface BackendUser {
   id: string;
   personalId: string;
+  roleId?: string;
+  roleName?: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -18,8 +20,11 @@ interface BackendUser {
   assignedToId?: string;
   assignedToPersonalId?: string;
   assignedToName?: string;
+  function?: string;
   createdAt: string;
   updatedAt?: string;
+  hasSignedSsm?: boolean;
+  hasSignedSu?: boolean;
 }
 
 @Injectable({
@@ -54,6 +59,26 @@ export class UserSyncService {
     this.signalrService.syncProgress$.subscribe(progress => {
       this.syncProgressSubject.next(progress);
     });
+  }
+
+  private normalizeFunction(functionName?: string): string {
+    const value = functionName?.trim();
+    return value ? value : 'unknown';
+  }
+
+  private mapBackendRole(backendUser: BackendUser): UserRole {
+    const normalizedRoleName = backendUser.roleName?.trim().toLowerCase();
+
+    if (normalizedRoleName === 'line manager') {
+      return UserRole.LineManager;
+    }
+
+    if (normalizedRoleName === 'basic user') {
+      return UserRole.Employee;
+    }
+
+    const isEmployee = !!backendUser.assignedToId || !!backendUser.assignedToPersonalId;
+    return isEmployee ? UserRole.Employee : UserRole.LineManager;
   }
 
   /**
@@ -102,11 +127,7 @@ export class UserSyncService {
   /**
    * Map backend user to frontend user and calculate role
    */
-  private mapBackendUser(backendUser: BackendUser, allUsers: BackendUser[]): User {
-    // Determine role: if user has an assigned manager, they are an Employee.
-    // Otherwise, they are a Line Manager.
-    const isEmployee = !!backendUser.assignedToId || !!backendUser.assignedToPersonalId;
-
+  private mapBackendUser(backendUser: BackendUser): User {
     return {
       id: backendUser.id,
       personalId: backendUser.personalId,
@@ -118,9 +139,12 @@ export class UserSyncService {
       assignedToId: backendUser.assignedToId,
       assignedToPersonalId: backendUser.assignedToPersonalId,
       assignedToName: backendUser.assignedToName,
+      function: this.normalizeFunction(backendUser.function),
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-      role: isEmployee ? UserRole.Employee : UserRole.LineManager
+      role: this.mapBackendRole(backendUser),
+      hasSignedSsm: backendUser.hasSignedSsm ?? false,
+      hasSignedSu: backendUser.hasSignedSu ?? false
     };
   }
 
@@ -131,7 +155,7 @@ export class UserSyncService {
     return this.http.get<BackendUser[]>(this.apiUrl).pipe(
       map(backendUsers => {
         // Map all users and calculate their roles
-        return backendUsers.map(user => this.mapBackendUser(user, backendUsers));
+        return backendUsers.map(user => this.mapBackendUser(user));
       }),
       catchError(error => {
         console.error('Error fetching users:', error);
@@ -146,10 +170,6 @@ export class UserSyncService {
   getUserById(id: string): Observable<User | null> {
     return this.http.get<BackendUser>(`${this.apiUrl}/${id}`).pipe(
       map(backendUser => {
-        // We need all users to calculate role, so we'll use the cached users
-        const allUsers = this.usersSubject.value;
-        const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
-
         return {
           id: backendUser.id,
           personalId: backendUser.personalId,
@@ -161,9 +181,10 @@ export class UserSyncService {
           assignedToId: backendUser.assignedToId,
           assignedToPersonalId: backendUser.assignedToPersonalId,
           assignedToName: backendUser.assignedToName,
+          function: this.normalizeFunction(backendUser.function),
           createdAt: new Date(backendUser.createdAt),
           updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-          role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
+          role: this.mapBackendRole(backendUser)
         };
       }),
       catchError(error => {
@@ -176,8 +197,6 @@ export class UserSyncService {
   getByPersonalId(personalId: string): Observable<User | null> {
     return this.http.get<BackendUser>(`${this.apiUrl}/personalId/${personalId}`).pipe(
       map(backendUser => {
-        const allUsers = this.usersSubject.value;
-        const hasDirectReports = allUsers.some(u => u.assignedToPersonalId === backendUser.personalId);
         return {
           id: backendUser.id,
           personalId: backendUser.personalId,
@@ -189,9 +208,10 @@ export class UserSyncService {
           assignedToId: backendUser.assignedToId,
           assignedToPersonalId: backendUser.assignedToPersonalId,
           assignedToName: backendUser.assignedToName,
+          function: this.normalizeFunction(backendUser.function),
           createdAt: new Date(backendUser.createdAt),
           updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-          role: hasDirectReports ? UserRole.LineManager : UserRole.Employee
+          role: this.mapBackendRole(backendUser)
         };
       }),
       catchError(error => {
@@ -204,10 +224,10 @@ export class UserSyncService {
   /**
    * Get import conflict history for a user
    */
-  getImportConflictsByUserId(userId: string): Observable<ImportConflictHistory[]> {
-    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byUser/${userId}`).pipe(
+  getImportConflictsByUserId(userId: string): Observable<UserChangeHistory[]> {
+    return this.http.get<UserChangeHistory[]>(`${environment.apiUrl}/UserChangeHistory/byUser/${userId}`).pipe(
       catchError(error => {
-        console.error('Error fetching import conflicts:', error);
+        console.error('Error fetching user change history:', error);
         return of([]);
       })
     );
@@ -228,10 +248,22 @@ export class UserSyncService {
   /**
    * Get import conflicts by import history id
    */
-  getImportConflictsByImportHistoryId(importHistoryId: string): Observable<ImportConflictHistory[]> {
-    return this.http.get<ImportConflictHistory[]>(`${environment.apiUrl}/ImportConflict/byImportHistory/${importHistoryId}`).pipe(
+  getImportConflictsByImportHistoryId(importHistoryId: string): Observable<UserChangeHistory[]> {
+    return this.http.get<UserChangeHistory[]>(`${environment.apiUrl}/UserChangeHistory/byImportHistory/${importHistoryId}`).pipe(
       catchError(error => {
-        console.error('Error fetching import conflicts by history:', error);
+        console.error('Error fetching user change history by import history:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get all user change history entries (import conflicts + manual edits)
+   */
+  getAllUserChangeHistories(): Observable<UserChangeHistory[]> {
+    return this.http.get<UserChangeHistory[]>(`${environment.apiUrl}/UserChangeHistory`).pipe(
+      catchError(error => {
+        console.error('Error fetching user change history:', error);
         return of([]);
       })
     );
@@ -302,6 +334,20 @@ export class UserSyncService {
   updateUser(id: string, userData: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}`, userData).pipe(
       tap(() => this.loadUsers()) // Refresh users list after update
+    );
+  }
+
+  getFunctionsByDepartmentId(departmentId: string): Observable<string[]> {
+    if (!departmentId) {
+      return of([]);
+    }
+
+    return this.http.get<string[]>(`${environment.apiUrl}/DepartmentFunction/${departmentId}`).pipe(
+      map(functions => (functions || []).filter(f => !!f?.trim())),
+      catchError(error => {
+        console.error('Error loading department functions:', error);
+        return of([]);
+      })
     );
   }
 
@@ -433,7 +479,8 @@ export class UserSyncService {
           lastName: c.csvUser.lastName,
           email: c.csvUser.email,
           departmentName: c.csvUser.departmentName,
-          assignedToPersonalId: c.csvUser.assignedToPersonalId || null
+          assignedToPersonalId: c.csvUser.assignedToPersonalId || null,
+          function: c.csvUser.function || null
         } : null,
         conflicts: c.conflicts.map(conflict => ({
           field: conflict.field,

@@ -1,14 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-import { LoadingScreenComponent } from './components/loading-screen/loading-screen.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { LoadingService } from './services/loading.service';
 import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, LoadingScreenComponent, FooterComponent],
+  imports: [CommonModule, RouterOutlet, FooterComponent],
   standalone: true,
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'

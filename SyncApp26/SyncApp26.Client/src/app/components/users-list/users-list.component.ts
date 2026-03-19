@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 
@@ -44,9 +45,14 @@ export class UsersListComponent implements OnInit {
 
   constructor(
     private userSyncService: UserSyncService,
+    private authService: AuthenticationService,
     private router: Router,
     private route: ActivatedRoute
   ) { }
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     this.users$ = this.userSyncService.users$;
@@ -141,11 +147,13 @@ export class UsersListComponent implements OnInit {
     lastName: '',
     email: '',
     departmentId: '',
+    function: '',
     role: UserRole.Employee,
     assignedToId: ''
   };
 
   allUsers: User[] = [];
+  availableFunctions: string[] = [];
 
   openEditModal(user: User, event: Event): void {
     event.stopPropagation();
@@ -155,6 +163,7 @@ export class UsersListComponent implements OnInit {
       lastName: user.lastName,
       email: user.email,
       departmentId: user.departmentId,
+      function: user.function || '',
       role: user.role || UserRole.Employee,
       assignedToId: user.assignedToId || ''
     };
@@ -162,13 +171,38 @@ export class UsersListComponent implements OnInit {
     // Store all users for the Line Manager dropdown
     this.users$.pipe(take(1)).subscribe(users => {
       this.allUsers = users;
-      this.isEditModalOpen = true;
+      this.loadFunctionsForDepartment(this.editForm.departmentId, this.editForm.function);
     });
   }
 
   closeEditModal(): void {
     this.isEditModalOpen = false;
     this.selectedUser = null;
+    this.availableFunctions = [];
+  }
+
+  onDepartmentChange(departmentId: string): void {
+    this.editForm.assignedToId = '';
+    this.loadFunctionsForDepartment(departmentId);
+  }
+
+  private loadFunctionsForDepartment(departmentId: string, preferredFunction?: string): void {
+    this.userSyncService.getFunctionsByDepartmentId(departmentId).subscribe(functions => {
+      this.availableFunctions = functions;
+
+      const preferred = preferredFunction?.trim() || '';
+      const preferredMatch = preferred
+        ? this.availableFunctions.find(fn => fn.trim().toLowerCase() === preferred.toLowerCase())
+        : undefined;
+
+      if (preferredMatch) {
+        this.editForm.function = preferredMatch;
+      } else {
+        this.editForm.function = '';
+      }
+
+      this.isEditModalOpen = true;
+    });
   }
 
   getAvailableLineManagers(): User[] {
@@ -189,6 +223,7 @@ export class UsersListComponent implements OnInit {
       lastName: this.editForm.lastName,
       email: this.editForm.email,
       departmentId: this.editForm.departmentId,
+      function: this.editForm.function || null,
       assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
     };
 

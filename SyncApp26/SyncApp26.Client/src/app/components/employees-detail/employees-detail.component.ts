@@ -1,28 +1,41 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
-import { User, UserRole, Department, ImportConflictHistory } from '../../models/csv-sync.model';
+import { AuthenticationService } from '../../services/authentication.service';
+import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { BulkTrainingModalComponent } from '../bulk-training-modal/bulk-training-modal.component';
 
 @Component({
   selector: 'app-employees-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent],
   templateUrl: './employees-detail.component.html',
   styleUrls: ['./employees-detail.component.css']
 })
 export class EmployeesDetailComponent implements OnInit {
+  private readonly emptyGuid = '00000000-0000-0000-0000-000000000000';
+   @ViewChild(BulkTrainingModalComponent) bulkTrainingModal!: BulkTrainingModalComponent;
+
   users$!: Observable<User[]>;
   paginatedUsers$!: Observable<User[]>;
   departments$!: Observable<Department[]>;
   selectedUser: User | null = null;
-  importConflicts: ImportConflictHistory[] = [];
+  importConflicts: UserChangeHistory[] = [];
   conflictsLoading = false;
   conflictsError = '';
+
+  successMessage: string = '';
+
+  userDocuments: any[] = [];
+  documentsLoading = false;
+  documentsError = '';
 
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 10;
@@ -44,9 +57,15 @@ export class EmployeesDetailComponent implements OnInit {
 
   constructor(
     private userSyncService: UserSyncService,
+    private authService: AuthenticationService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private http: HttpClient
   ) { }
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     this.users$ = this.userSyncService.users$;
@@ -95,12 +114,15 @@ export class EmployeesDetailComponent implements OnInit {
   selectUser(user: User): void {
     this.selectedUser = user;
     this.loadUserConflicts(user.id);
+    this.loadUserDocuments(user.id);
   }
 
   closeDetails(): void {
     this.selectedUser = null;
     this.importConflicts = [];
     this.conflictsError = '';
+    this.userDocuments = [];
+    this.documentsError = '';
     this.router.navigate(['/employees']);
   }
 
@@ -141,21 +163,38 @@ export class EmployeesDetailComponent implements OnInit {
     });
   }
 
-  getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: ImportConflictHistory[] }> {
-    const groups = new Map<string, { importHistoryId: string; importDate?: string; importFileName?: string; conflicts: ImportConflictHistory[] }>();
+  loadUserDocuments(userId: string): void {
+    this.documentsLoading = true;
+    this.documentsError = '';
+    this.http.get<any[]>(`${environment.apiUrl}/Document/user/${userId}`).subscribe({
+      next: docs => {
+        this.userDocuments = docs;
+        this.documentsLoading = false;
+      },
+      error: () => {
+        this.documentsLoading = false;
+        this.documentsError = 'Failed to load documents.';
+        this.userDocuments = [];
+      }
+    });
+  }
+
+  getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }> {
+    const groups = new Map<string, { importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }>();
     const sorted = this.importConflicts
+      .filter(conflict => this.isImportHistoryEntry(conflict))
       .slice()
       .sort((a, b) => {
-        const aTime = a.importDate ? new Date(a.importDate).getTime() : 0;
-        const bTime = b.importDate ? new Date(b.importDate).getTime() : 0;
+        const aTime = this.getEntryTimestamp(a);
+        const bTime = this.getEntryTimestamp(b);
         return bTime - aTime;
       });
 
     sorted.forEach(conflict => {
-      const key = conflict.importHistoryId;
+      const key = conflict.importHistoryId ?? '';
       if (!groups.has(key)) {
         groups.set(key, {
-          importHistoryId: conflict.importHistoryId,
+          importHistoryId: key,
           importDate: conflict.importDate,
           importFileName: conflict.importFileName,
           conflicts: []
@@ -171,7 +210,34 @@ export class EmployeesDetailComponent implements OnInit {
     });
   }
 
-  getConflictStatusColor(status: string): string {
+  getManualChanges(): UserChangeHistory[] {
+    return this.importConflicts
+      .filter(conflict => this.isManualEntry(conflict))
+      .slice()
+      .sort((a, b) => this.getEntryTimestamp(b) - this.getEntryTimestamp(a));
+  }
+
+  private isImportHistoryEntry(entry: UserChangeHistory): boolean {
+    const importHistoryId = (entry.importHistoryId || '').trim();
+    return !!entry.status && !!importHistoryId && importHistoryId !== this.emptyGuid;
+  }
+
+  private isManualEntry(entry: UserChangeHistory): boolean {
+    const importHistoryId = (entry.importHistoryId || '').trim();
+    return !entry.status && (!importHistoryId || importHistoryId === this.emptyGuid);
+  }
+
+  private getEntryTimestamp(entry: UserChangeHistory): number {
+    const sourceDate = entry.createdAt || entry.importDate;
+    return sourceDate ? new Date(sourceDate).getTime() : 0;
+  }
+
+  formatDateTime(date: Date | string | undefined): string {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString('ro-RO');
+  }
+
+  getConflictStatusColor(status?: string | null): string {
     return status === 'accepted'
       ? 'bg-green-500/10 text-green-700 border-green-500/20'
       : 'bg-red-500/10 text-red-700 border-red-500/20';
@@ -237,6 +303,13 @@ export class EmployeesDetailComponent implements OnInit {
     this.router.navigate(['/import-history']);
   }
 
+  viewSSMSUForm(user: User, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.router.navigate(['/employees', user.id, 'ssm-su']);
+  }
+
   // Edit and Delete Modal State and Logic
   isEditModalOpen = false;
   isDeleteModalOpen = false;
@@ -246,11 +319,13 @@ export class EmployeesDetailComponent implements OnInit {
     lastName: '',
     email: '',
     departmentId: '',
+    function: '',
     role: UserRole.Employee,
     assignedToId: ''
   };
 
   allUsers: User[] = [];
+  availableFunctions: string[] = [];
 
   openEditModal(user: User, event: Event): void {
     event.stopPropagation();
@@ -260,6 +335,7 @@ export class EmployeesDetailComponent implements OnInit {
       lastName: user.lastName,
       email: user.email,
       departmentId: user.departmentId,
+      function: user.function || '',
       role: user.role || UserRole.Employee,
       assignedToId: user.assignedToId || ''
     };
@@ -267,12 +343,37 @@ export class EmployeesDetailComponent implements OnInit {
     // Store all users for the Line Manager dropdown
     this.users$.pipe(take(1)).subscribe(users => {
       this.allUsers = users;
-      this.isEditModalOpen = true;
+      this.loadFunctionsForDepartment(this.editForm.departmentId, this.editForm.function);
     });
   }
 
   closeEditModal(): void {
     this.isEditModalOpen = false;
+    this.availableFunctions = [];
+  }
+
+  onDepartmentChange(departmentId: string): void {
+    this.editForm.assignedToId = '';
+    this.loadFunctionsForDepartment(departmentId);
+  }
+
+  private loadFunctionsForDepartment(departmentId: string, preferredFunction?: string): void {
+    this.userSyncService.getFunctionsByDepartmentId(departmentId).subscribe(functions => {
+      this.availableFunctions = functions;
+
+      const preferred = preferredFunction?.trim() || '';
+      const preferredMatch = preferred
+        ? this.availableFunctions.find(fn => fn.trim().toLowerCase() === preferred.toLowerCase())
+        : undefined;
+
+      if (preferredMatch) {
+        this.editForm.function = preferredMatch;
+      } else {
+        this.editForm.function = '';
+      }
+
+      this.isEditModalOpen = true;
+    });
   }
 
   getAvailableLineManagers(): User[] {
@@ -293,6 +394,8 @@ export class EmployeesDetailComponent implements OnInit {
       lastName: this.editForm.lastName,
       email: this.editForm.email,
       departmentId: this.editForm.departmentId,
+      function: this.editForm.function || null,
+      roleName: this.editForm.role === UserRole.LineManager ? 'Line Manager' : 'Basic User',
       assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
     };
 
@@ -311,6 +414,7 @@ export class EmployeesDetailComponent implements OnInit {
           this.selectedUser.lastName = payload.lastName;
           this.selectedUser.email = payload.email;
           this.selectedUser.departmentId = payload.departmentId;
+          this.selectedUser.function = payload.function || 'unknown';
           // The re-evaluation of Role/DepartmentName will happen when users$ emits automatically in selectUser trigger
           this.users$.pipe(take(1)).subscribe(users => {
             const updated = users.find(u => u.id === this.selectedUser?.id);
@@ -348,5 +452,57 @@ export class EmployeesDetailComponent implements OnInit {
         alert(err.error?.message || 'Error deleting user');
       }
     });
+  }
+
+  // ── Bulk Generate ──────────────────────────────────────────────────────────
+  showBulkGenerateModal = false;
+  bulkGenerateType: 'SSM' | 'SU' | 'Both' = 'Both';
+  isBulkGenerating = false;
+  bulkGenerateResult: { message: string; generated: number; skipped: number; adminSignLink?: string | null } | null = null;
+
+  openBulkGenerateModal(): void {
+    this.showBulkGenerateModal = true;
+    this.bulkGenerateType = 'Both';
+    this.bulkGenerateResult = null;
+  }
+
+  closeBulkGenerateModal(): void {
+    this.showBulkGenerateModal = false;
+    this.bulkGenerateResult = null;
+  }
+
+  confirmBulkGenerate(): void {
+    this.isBulkGenerating = true;
+    this.bulkGenerateResult = null;
+    this.http.post<any>(`${environment.apiUrl}/Document/bulk-generate`, {
+      documentType: this.bulkGenerateType
+    }).subscribe({
+      next: (res) => {
+        this.isBulkGenerating = false;
+        this.bulkGenerateResult = res;
+
+        // Continue with the existing signing system used in the app.
+        if (res?.adminSignLink) {
+          window.open(res.adminSignLink, '_blank');
+        }
+      },
+      error: (err) => {
+        this.isBulkGenerating = false;
+        this.bulkGenerateResult = {
+          message: err.error?.message || 'Bulk generation failed.',
+          generated: 0,
+          skipped: 0
+        };
+      }
+    });
+  }
+
+  openBulkTrainingModal(): void {
+    this.bulkTrainingModal.open();
+  }
+
+  onBulkTrainingSuccess(): void {
+    this.successMessage = 'Bulk periodic training created successfully for all users!';
+    setTimeout(() => this.successMessage = '', 5000);
   }
 }

@@ -15,16 +15,18 @@ public class CsvSyncService : ICsvSyncService
     private readonly ISyncNotificationService _notificationService;
     private readonly IUserRepository _userRepository;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly IFunctionRepository _functionRepository;
     private readonly IImportHistoryRepository _importHistoryRepository;
-    private readonly IImportConflictRepository _importConflictRepository;
+    private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IImportConflictRepository importConflictRepository)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
+        _functionRepository = functionRepository;
         _notificationService = notificationService;
         _importHistoryRepository = importHistoryRepository;
-        _importConflictRepository = importConflictRepository;
+        _userChangeHistoryRepository = userChangeHistoryRepositoryRepository;
     }
 
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
@@ -67,7 +69,8 @@ public class CsvSyncService : ICsvSyncService
                     Email = csvUser.Email,
                     DepartmentName = csvUser.DepartmentName,
                     AssignedToPersonalId = csvUser.AssignedToPersonalId,
-                    AssignedToName = csvManager != null ? $"{csvManager.FirstName} {csvManager.LastName}" : null
+                    AssignedToName = csvManager != null ? $"{csvManager.FirstName} {csvManager.LastName}" : null,
+                    Function = csvUser.Function != null ? csvUser.Function.Trim() : null
                 };
 
                 // Detect conflicts
@@ -95,12 +98,12 @@ public class CsvSyncService : ICsvSyncService
                     });
                 }
 
-                if (dbUser.Department.Name != csvUser.DepartmentName)
+                if (dbUser.Department?.Name != csvUser.DepartmentName)
                 {
                     conflicts.Add(new FieldConflictDTO
                     {
                         Field = "departmentName",
-                        DbValue = dbUser.Department.Name,
+                        DbValue = dbUser.Department?.Name ?? string.Empty,
                         CsvValue = csvUser.DepartmentName,
                         Selected = false
                     });
@@ -113,6 +116,19 @@ public class CsvSyncService : ICsvSyncService
                         Field = "email",
                         DbValue = dbUser.Email,
                         CsvValue = csvUser.Email,
+                        Selected = false
+                    });
+                }
+
+                var dbFunctionName = dbUser.Function?.Name?.Trim();
+                var csvFunctionName = csvUser.Function?.Trim();
+                if (!string.Equals(dbFunctionName, csvFunctionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    conflicts.Add(new FieldConflictDTO
+                    {
+                        Field = "function",
+                        DbValue = dbFunctionName ?? string.Empty,
+                        CsvValue = csvFunctionName,
                         Selected = false
                     });
                 }
@@ -167,7 +183,8 @@ public class CsvSyncService : ICsvSyncService
                         Email = csvUser.Email,
                         DepartmentName = csvUser.DepartmentName,
                         AssignedToPersonalId = csvUser.AssignedToPersonalId,
-                        AssignedToName = newCsvManager != null ? $"{newCsvManager.FirstName} {newCsvManager.LastName}" : null
+                        AssignedToName = newCsvManager != null ? $"{newCsvManager.FirstName} {newCsvManager.LastName}" : null,
+                        Function = csvUser.Function != null ? csvUser.Function.Trim() : null
                     },
                     Selected = true // Auto-select new records
                 };
@@ -215,6 +232,9 @@ public class CsvSyncService : ICsvSyncService
             .Where(d => d.IsActive) // Only consider active departments
             .ToList();
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
+        var functionCache = new Dictionary<string, Function?>(StringComparer.OrdinalIgnoreCase);
+        var lineManagerRoleId = await _userRepository.GetRoleIdByNameAsync("Line Manager");
+        var basicUserRoleId = await _userRepository.GetRoleIdByNameAsync("Basic User");
 
         // Batch collections for bulk operations
         var usersToAdd = new List<User>();
@@ -261,16 +281,27 @@ public class CsvSyncService : ICsvSyncService
                     }
 
                     var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
+                    var csvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
+
+                    if (basicUserRoleId == null)
+                    {
+                        result.RecordsFailed++;
+                        result.Errors.Add($"User {item.CsvData.Email}: Required role not found for creation.");
+                        continue;
+                    }
 
                     var newUser = new User
                     {
                         Id = Guid.NewGuid(),
+                        RoleId = basicUserRoleId.Value, // Everyone starts as Basic User
                         FirstName = item.CsvData.FirstName.Trim(),
                         LastName = item.CsvData.LastName.Trim(),
                         Email = item.CsvData.Email.Trim(),
                         DepartmentId = department.Id,
                         AssignedToId = assignedManager?.Id,
                         PersonalId = item.CsvData.PersonalId,
+                        FunctionId = csvFunction?.Id,
+                        Function = csvFunction,
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -309,7 +340,7 @@ public class CsvSyncService : ICsvSyncService
                                 var normalizedField = conflict.Field.Trim().ToLower();
                                 var historyField = normalizedField == "assignedtoname" ? "linemanager" : normalizedField;
 
-                                var rejectedConflict = new ImportConflict
+                                var rejectedConflict = new UserChangeHistory
                                 {
                                     Id = Guid.NewGuid(),
                                     ImportHistoryId = importHistory.Id,
@@ -320,7 +351,7 @@ public class CsvSyncService : ICsvSyncService
                                     Status = "rejected"
                                 };
 
-                                await _importConflictRepository.AddAsync(rejectedConflict);
+                                await _userChangeHistoryRepository.AddAsync(rejectedConflict);
                             }
                         }
 
@@ -341,7 +372,7 @@ public class CsvSyncService : ICsvSyncService
                                         case "firstname":
                                             if (existingUser.FirstName != item.CsvData.FirstName)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var importConflict = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -354,13 +385,13 @@ public class CsvSyncService : ICsvSyncService
 
                                                 existingUser.FirstName = item.CsvData.FirstName.Trim();
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "lastname":
                                             if (existingUser.LastName != item.CsvData.LastName)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var importConflict = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -372,13 +403,13 @@ public class CsvSyncService : ICsvSyncService
                                                 };
                                                 existingUser.LastName = item.CsvData.LastName.Trim();
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "email":
                                             if (existingUser.Email != item.CsvData.Email)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var importConflict = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -390,7 +421,7 @@ public class CsvSyncService : ICsvSyncService
                                                 };
                                                 existingUser.Email = item.CsvData.Email;
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(importConflict);
                                             }
                                             break;
                                         case "departmentname":
@@ -403,19 +434,19 @@ public class CsvSyncService : ICsvSyncService
                                             }
                                             if (existingUser.DepartmentId != department.Id)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var userChangeHistory = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
                                                     UserId = existingUser.Id,
                                                     FieldName = "departmentname",
-                                                    OldValue = existingUser.Department.Name,
+                                                    OldValue = existingUser.Department?.Name ?? string.Empty,
                                                     NewValue = department.Name,
                                                     Status = "accepted"
                                                 };
                                                 existingUser.DepartmentId = department.Id;
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
                                             }
                                             break;
                                         case "assignedtoname":
@@ -424,7 +455,7 @@ public class CsvSyncService : ICsvSyncService
 
                                             if (existingUser.AssignedToId != newAssignedToId)
                                             {
-                                                var importConflict = new ImportConflict
+                                                var userChangeHistory = new UserChangeHistory
                                                 {
                                                     Id = Guid.NewGuid(),
                                                     ImportHistoryId = importHistory.Id,
@@ -436,7 +467,29 @@ public class CsvSyncService : ICsvSyncService
                                                 };
                                                 existingUser.AssignedToId = newAssignedToId;
                                                 hasChanges = true;
-                                                await _importConflictRepository.AddAsync(importConflict);
+                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
+                                            }
+                                            break;
+                                        case "function":
+                                            var selectedCsvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
+                                            var selectedCsvFunctionName = item.CsvData.Function?.Trim();
+
+                                            if (existingUser.FunctionId != selectedCsvFunction?.Id)
+                                            {
+                                                var userChangeHistory = new UserChangeHistory
+                                                {
+                                                    Id = Guid.NewGuid(),
+                                                    ImportHistoryId = importHistory.Id,
+                                                    UserId = existingUser.Id,
+                                                    FieldName = "function",
+                                                    OldValue = existingUser.Function?.Name ?? string.Empty,
+                                                    NewValue = selectedCsvFunctionName ?? string.Empty,
+                                                    Status = "accepted"
+                                                };
+                                                existingUser.FunctionId = selectedCsvFunction?.Id;
+                                                existingUser.Function = selectedCsvFunction;
+                                                hasChanges = true;
+                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
                                             }
                                             break;
                                     }
@@ -454,6 +507,13 @@ public class CsvSyncService : ICsvSyncService
                             if (existingUser.LastName != item.CsvData.LastName)
                             {
                                 existingUser.LastName = item.CsvData.LastName.Trim();
+                                hasChanges = true;
+                            }
+                            var csvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
+                            if (existingUser.FunctionId != csvFunction?.Id)
+                            {
+                                existingUser.FunctionId = csvFunction?.Id;
+                                existingUser.Function = csvFunction;
                                 hasChanges = true;
                             }
 
@@ -547,6 +607,30 @@ public class CsvSyncService : ICsvSyncService
             {
                 await _userRepository.UpdateUsersAsync(usersToDelete);
             }
+
+            // Promote to Line Manager anyone who is referenced as a manager by another user
+            if (lineManagerRoleId != null && basicUserRoleId != null)
+            {
+                var allUsers = (await _userRepository.GetAllUsersAsync()).ToList();
+                var managerIds = allUsers
+                    .Where(u => u.AssignedToId.HasValue)
+                    .Select(u => u.AssignedToId!.Value)
+                    .ToHashSet();
+
+                var usersToPromote = allUsers
+                    .Where(u => managerIds.Contains(u.Id) && u.RoleId != lineManagerRoleId.Value)
+                    .ToList();
+                var usersToDemote = allUsers
+                    .Where(u => !managerIds.Contains(u.Id) && u.RoleId == lineManagerRoleId.Value)
+                    .ToList();
+
+                foreach (var u in usersToPromote) u.RoleId = lineManagerRoleId.Value;
+                foreach (var u in usersToDemote)  u.RoleId = basicUserRoleId.Value;
+
+                var roleUpdates = usersToPromote.Concat(usersToDemote).ToList();
+                if (roleUpdates.Any())
+                    await _userRepository.UpdateUsersAsync(roleUpdates);
+            }
         }
         catch (Exception ex)
         {
@@ -579,13 +663,32 @@ public class CsvSyncService : ICsvSyncService
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
-            DepartmentId = user.DepartmentId,
-            DepartmentName = user.Department.Name,
+            DepartmentId = user.DepartmentId ?? Guid.Empty,
+            DepartmentName = user.Department?.Name ?? "No Department",
             AssignedToId = user.AssignedTo?.Id,
             AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+            Function = user.Function?.Name,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
+    }
+
+    private async Task<Function?> ResolveExistingFunctionAsync(string? functionName, Dictionary<string, Function?> functionCache)
+    {
+        if (string.IsNullOrWhiteSpace(functionName))
+        {
+            return null;
+        }
+
+        var normalizedName = functionName.Trim();
+        if (functionCache.TryGetValue(normalizedName, out var cachedFunction))
+        {
+            return cachedFunction;
+        }
+
+        var existingFunction = await _functionRepository.GetByNameAsync(normalizedName);
+        functionCache[normalizedName] = existingFunction;
+        return existingFunction;
     }
 
     private async Task<User?> ResolveLineManagerByPersonalIdAsync(List<User> dbUsers, string? managerPersonalId)

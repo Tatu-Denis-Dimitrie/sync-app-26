@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { AuthenticationService } from '../../services/authentication.service';
 
 @Component({
   selector: 'app-loading-screen',
@@ -12,6 +14,12 @@ export class LoadingScreenComponent implements OnInit {
   loadingProgress = 0;
   loadingText = 'Initialization...';
   isCollapsing = false;
+
+  constructor(
+    private router: Router,
+    private authService: AuthenticationService
+  ) {}
+
   ngOnInit(): void {
     this.simulateLoading();
   }
@@ -39,6 +47,20 @@ export class LoadingScreenComponent implements OnInit {
         currentStep++;
       } else {
         clearInterval(interval);
+        setTimeout(() => {
+          if (this.authService.isAdmin()) {
+            this.router.navigate(['/dashboard']);
+            return;
+          }
+
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser?.role === 'Line Manager') {
+            this.router.navigate(['/line-manager']);
+            return;
+          }
+
+          this.router.navigate(['/basic-user']);
+        }, 300);
       }
     }, 500);
   }

@@ -1,0 +1,426 @@
+<div class="basic-user-page bg-background">
+	<header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+		<div class="container mx-auto px-4 py-4">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-xl font-semibold text-foreground">My Profile</h1>
+					<p class="text-sm text-muted-foreground">Personal and work information</p>
+				</div>
+				<button (click)="logout()"
+					class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+					Logout
+				</button>
+			</div>
+		</div>
+	</header>
+
+	<div class="container mx-auto px-4 py-8">
+		<div *ngIf="isLoading" class="text-muted-foreground text-sm">Loading profile...</div>
+		<div *ngIf="!isLoading && errorMessage" class="text-red-600 text-sm">{{ errorMessage }}</div>
+
+		<div *ngIf="!isLoading && user" class="space-y-6">
+			<div class="bg-card border border-border rounded-lg p-6">
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+					<div class="space-y-4">
+						<h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Personal
+							Information</h3>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">First Name</label>
+							<p class="text-foreground font-medium mt-1">{{ user.firstName }}</p>
+						</div>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Last Name</label>
+							<p class="text-foreground font-medium mt-1">{{ user.lastName }}</p>
+						</div>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Email</label>
+							<p class="text-foreground font-medium mt-1">{{ user.email }}</p>
+						</div>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Personal ID</label>
+							<p class="text-foreground font-medium mt-1">{{ user.personalId }}</p>
+						</div>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Role</label>
+							<div class="mt-1">
+								<span
+									[class]="'inline-block px-3 py-1 rounded border font-medium ' + getRoleBadgeColor(user.role)">
+									{{ 'Line Manager' }}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<div class="space-y-4">
+						<h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Work Information
+						</h3>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Department</label>
+							<p class="text-foreground font-medium mt-1">{{ user.departmentName }}</p>
+						</div>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Function</label>
+							<p class="text-foreground font-medium mt-1">{{ user.function?.trim() || 'unknown' }}</p>
+						</div>
+
+						<div *ngIf="user.assignedToName">
+							<label class="text-sm font-medium text-muted-foreground">Line Manager</label>
+							<p class="text-foreground font-medium mt-1">{{ user.assignedToName }}</p>
+						</div>
+
+						<div *ngIf="user.assignedToPersonalId">
+							<label class="text-sm font-medium text-muted-foreground">Manager ID</label>
+							<p class="text-foreground font-medium mt-1">{{ user.assignedToPersonalId }}</p>
+						</div>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Created</label>
+							<p class="text-foreground font-medium mt-1">{{ formatDate(user.createdAt) }}</p>
+						</div>
+
+						<div>
+							<label class="text-sm font-medium text-muted-foreground">Last Updated</label>
+							<p class="text-foreground font-medium mt-1">{{ user.updatedAt ? formatDate(user.updatedAt) :
+								'N/A' }}</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
+					<h4 class="text-sm font-semibold text-foreground mb-2">Summary</h4>
+					<p class="text-sm text-muted-foreground">
+						{{ user.role === UserRole.LineManager ? 'Manager' : 'Employee' }} in {{ user.departmentName }} •
+						{{ getRelativeTime(user.updatedAt || user.createdAt) }}
+					</p>
+				</div>
+
+				<div *ngIf="pendingUserSignatures.length > 0 || pendingManagerSignatures.length > 0"
+					class="mt-8 border-t border-border pt-6">
+					<div class="flex items-center justify-between mb-4">
+						<h3 class="text-xl font-bold text-foreground">Documents Pending Signature</h3>
+						<button *ngIf="pendingManagerSignatures.length > 0" (click)="signAllDocuments()"
+							class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+									d="M9 12l2 2 4-4M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+							</svg>
+							Sign All Pending ({{ pendingManagerSignatures.length }})
+						</button>
+					</div>
+
+					<div class="space-y-4">
+						<div *ngFor="let doc of pendingUserSignatures"
+							class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg shadow-sm">
+							<div>
+								<h4 class="font-semibold text-yellow-900">{{ doc.documentType }} File</h4>
+								<p class="text-sm text-yellow-700">Requires your signature as employee</p>
+								<p class="text-xs text-yellow-600 mt-1">Generated: {{ formatDate(doc.generatedAt) }}</p>
+							</div>
+							<div class="flex gap-2 mt-3 sm:mt-0">
+								<button (click)="viewDocument(doc.id)"
+									class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+											d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+										</path>
+									</svg>
+									View
+								</button>
+								<button (click)="signDocument(doc.id)"
+									class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+									Sign
+								</button>
+							</div>
+						</div>
+
+						<div *ngFor="let doc of pendingManagerSignatures"
+							class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-blue-200 bg-blue-50 rounded-lg shadow-sm">
+							<div>
+								<h4 class="font-semibold text-blue-900">{{ doc.documentType }} File (Subordinate Employee)</h4>
+								<p class="text-sm text-blue-700">Requires your countersignature as manager</p>
+								<p class="text-xs text-blue-600 mt-1">Employee signed: {{ formatDate(doc.userSignedAt) }}</p>
+							</div>
+							<div class="flex gap-2 mt-3 sm:mt-0">
+								<button (click)="viewDocument(doc.id)"
+									class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+											d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+										</path>
+									</svg>
+									View
+								</button>
+								<button (click)="signDocument(doc.id)"
+									class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+									Countersign
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- COMPLETED SIGNATURES — inside the profile card -->
+				<div *ngIf="signedUserSignatures.length > 0 || signedManagerSignatures.length > 0"
+					class="mt-8 border-t border-border pt-6">
+					<h3 class="text-xl font-bold text-foreground mb-4">Signed Documents</h3>
+
+					<div class="space-y-4">
+						<div *ngFor="let doc of signedUserSignatures"
+							class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+							<div>
+								<h4 class="font-semibold text-green-900">{{ doc.documentType }} File</h4>
+								<p class="text-sm text-green-700">Signed by you on {{ formatDate(doc.userSignedAt) }}</p>
+								<div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+									<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+											d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+										</path>
+									</svg>
+									<span>Secured &amp; Verified</span>
+								</div>
+							</div>
+							<div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
+								<button (click)="viewDocument(doc.id)"
+									class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+											d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+										</path>
+									</svg>
+									View PDF
+								</button>
+								<span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+									{{ doc.status === 'Completed' ? 'Completed' : 'Awaiting manager' }}
+								</span>
+							</div>
+						</div>
+
+						<div *ngFor="let doc of signedManagerSignatures"
+							class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+							<div>
+								<h4 class="font-semibold text-green-900">{{ doc.documentType }} File (Subordinate Employee)</h4>
+								<p class="text-sm text-green-700">Countersigned by you on {{ formatDate(doc.managerSignedAt) }}</p>
+								<div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+									<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+											d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+										</path>
+									</svg>
+									<span>Secured &amp; Verified</span>
+								</div>
+							</div>
+							<div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
+								<button (click)="viewDocument(doc.id)"
+									class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+											d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+										</path>
+									</svg>
+									View PDF
+								</button>
+								<span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+									Completed
+								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div> <!-- /profile card -->
+
+		<!-- ── MY SIGNATURE ────────────────────────────────────────── -->
+		<div class="bg-card border border-border rounded-lg p-6">
+			<div class="flex items-center gap-2 mb-4">
+				<h3 class="text-xl font-bold text-foreground">My Signature</h3>
+				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-xs font-medium text-teal-700">
+					<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+					</svg>
+					Audited
+				</span>
+			</div>
+
+			<div *ngIf="sigSuccessMessage" class="mb-4 flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+				<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+				{{ sigSuccessMessage }}
+			</div>
+			<div *ngIf="sigErrorMessage" class="mb-4 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+				<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+				{{ sigErrorMessage }}
+			</div>
+
+			<div *ngIf="savedSignature?.isActive; else noSigLM" class="mb-6 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+				<div class="flex items-start justify-between gap-4">
+					<div class="flex-1">
+						<p class="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-2">Saved Signature</p>
+						<div class="bg-white border border-teal-200 rounded-md p-3 inline-block">
+							<img [src]="savedSignature!.signatureData" alt="Your saved signature" class="max-h-16 max-w-xs object-contain" />
+						</div>
+						<p class="text-xs text-teal-600 mt-2">Saved {{formatDateTime(savedSignature!.createdAt)}} &nbsp;·&nbsp; Method: {{ savedSignature!.signatureMethod }}</p>
+					</div>
+					<button (click)="revokeSignature()" [disabled]="isSigLoading"
+						class="px-3 py-2 border border-red-300 text-red-700 text-xs font-semibold rounded-md hover:bg-red-50 transition disabled:opacity-50 shrink-0">Revoke</button>
+				</div>
+			</div>
+			<ng-template #noSigLM>
+				<div class="mb-6 p-4 bg-muted/40 border border-dashed border-border rounded-lg text-sm text-muted-foreground">
+					You do not have a saved signature yet. Create one below and it will be available as a one-click option when signing documents.
+				</div>
+			</ng-template>
+
+			<div class="bg-card border border-border rounded-lg overflow-hidden">
+				<div class="px-5 py-3 border-b border-border bg-muted/30">
+					<p class="text-sm font-semibold text-foreground">{{ savedSignature?.isActive ? 'Update Signature' : 'Create Signature' }}</p>
+				</div>
+				<div class="flex border-b border-border">
+					<button (click)="setSigMode('draw')"
+						[class.border-b-2]="sigMode === 'draw'" [class.border-teal-600]="sigMode === 'draw'"
+						[class.text-teal-700]="sigMode === 'draw'" [class.font-semibold]="sigMode === 'draw'"
+						class="px-5 py-3 text-sm transition text-muted-foreground hover:text-foreground">Draw</button>
+					<button (click)="setSigMode('type')"
+						[class.border-b-2]="sigMode === 'type'" [class.border-teal-600]="sigMode === 'type'"
+						[class.text-teal-700]="sigMode === 'type'" [class.font-semibold]="sigMode === 'type'"
+						class="px-5 py-3 text-sm transition text-muted-foreground hover:text-foreground">Type</button>
+				</div>
+				<div class="p-5 space-y-4">
+					<div *ngIf="sigMode === 'draw'">
+						<p class="text-xs text-muted-foreground mb-2">Draw your signature below using mouse or touch.</p>
+						<div class="relative border border-border rounded-lg bg-white overflow-hidden w-full" style="height:120px">
+							<canvas #sigCanvas width="600" height="120"
+								class="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+								(mousedown)="sigStartDrawing($event)" (mousemove)="sigDraw($event)"
+								(mouseup)="sigStopDrawing()" (mouseleave)="sigStopDrawing()"
+								(touchstart)="sigStartDrawing($event)" (touchmove)="sigDraw($event)"
+								(touchend)="sigStopDrawing()" (touchcancel)="sigStopDrawing()"></canvas>
+						</div>
+						<button (click)="clearSigCanvas()" class="mt-2 text-xs text-muted-foreground hover:text-foreground underline">Clear</button>
+					</div>
+					<div *ngIf="sigMode === 'type'">
+						<p class="text-xs text-muted-foreground mb-2">Type your full name as your legally binding signature.</p>
+						<input [(ngModel)]="typedSig" (input)="isSigConfirmed = typedSig.trim().length > 0"
+							type="text" placeholder="Your full name"
+							class="w-full px-4 py-3 border border-border rounded-lg text-2xl bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+							style="font-family: 'Dancing Script', 'Brush Script MT', cursive;" />
+					</div>
+					<label class="flex items-start gap-3 cursor-pointer select-none">
+						<input type="checkbox" [(ngModel)]="isSigConfirmed"
+							class="mt-0.5 h-4 w-4 rounded border-border text-teal-600 focus:ring-teal-500" />
+						<span class="text-sm text-muted-foreground">I confirm this is my intended signature and I authorise its use on documents.</span>
+					</label>
+					<button (click)="saveSignature()" [disabled]="!isSigConfirmed || isSigLoading"
+						class="px-5 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+						<svg *ngIf="isSigLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+						</svg>
+						{{ isSigLoading ? 'Saving…' : (savedSignature?.isActive ? 'Update Signature' : 'Save Signature') }}
+					</button>
+				</div>
+			</div>
+
+			<div class="mt-4">
+				<button (click)="loadSignatureHistory()" class="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition">
+					<svg class="w-4 h-4 transition-transform" [class.rotate-90]="showSigHistory" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+					</svg>
+					Signature History
+				</button>
+				<div *ngIf="showSigHistory" class="mt-3 border border-border rounded-lg overflow-hidden text-sm">
+					<div *ngIf="signatureHistory.length === 0" class="px-4 py-3 text-muted-foreground">No history found.</div>
+					<table *ngIf="signatureHistory.length > 0" class="w-full text-left">
+						<thead class="bg-muted/40">
+							<tr>
+								<th class="px-4 py-2 font-semibold text-muted-foreground">Date</th>
+								<th class="px-4 py-2 font-semibold text-muted-foreground">Action</th>
+								<th class="px-4 py-2 font-semibold text-muted-foreground">Method</th>
+								<th class="px-4 py-2 font-semibold text-muted-foreground hidden md:table-cell">By</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-border">
+							<tr *ngFor="let h of signatureHistory" class="hover:bg-muted/20">
+								<td class="px-4 py-2 text-foreground">{{ formatDateTime(h.createdAt) }}</td>
+								<td class="px-4 py-2">
+									<span [ngClass]="{'bg-green-100 text-green-800': h.action === 'Created', 'bg-blue-100 text-blue-800': h.action === 'Updated', 'bg-red-100 text-red-800': h.action === 'Revoked'}" class="px-2 py-0.5 rounded-full text-xs font-semibold">{{ h.action }}</span>
+								</td>
+								<td class="px-4 py-2 text-muted-foreground">{{ h.signatureMethod }}</td>
+								<td class="px-4 py-2 text-muted-foreground hidden md:table-cell">{{ h.performedByEmail }}</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<!-- ── END MY SIGNATURE ──────────────────────────────────────── -->
+
+		</div> <!-- /space-y-6 ngIf user -->
+
+		<!-- Assigned Users Table -->
+		<div *ngIf="!isLoading && user" class="mt-6 bg-card border border-border rounded-lg overflow-hidden">
+			<div class="p-4 border-b border-border">
+				<h3 class="text-lg font-semibold text-foreground mb-3">Assigned Employees</h3>
+			<div class="flex flex-col md:flex-row gap-3">
+				<div class="relative flex-1">
+					<input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
+						placeholder="Search by first name or last name..."
+						class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+					<svg class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" fill="none"
+						stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+					</svg>
+				</div>
+
+				<select [(ngModel)]="selectedFunction" (ngModelChange)="onFunctionFilterChange()"
+					class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+					<option value="all">All Functions</option>
+					<option *ngFor="let fn of availableFunctions" [value]="fn">{{ fn }}</option>
+				</select>
+			</div>
+		</div>
+
+		<div class="overflow-x-auto">
+			<table class="w-full">
+				<thead class="bg-muted/50 border-b border-border">
+					<tr>
+						<th
+							class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+							First Name</th>
+						<th
+							class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+							Last Name</th>
+						<th
+							class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+							Function</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-border">
+					<tr *ngFor="let assignedUser of paginatedAssignedUsers$ | async"
+						class="hover:bg-muted/30 transition-colors">
+						<td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">{{
+							assignedUser.firstName }}</td>
+						<td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">{{ assignedUser.lastName
+							}}</td>
+						<td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">{{ assignedUser.function
+							|| 'unknown' }}</td>
+					</tr>
+					<tr *ngIf="totalItems === 0">
+						<td colspan="3" class="px-6 py-10 text-center text-sm text-muted-foreground">
+							No assigned users found.
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<app-pagination *ngIf="totalItems > pageSize" [currentPage]="currentPage" [totalItems]="totalItems"
+			[pageSize]="pageSize" (pageChange)="onPageChange($event)"></app-pagination>
+		</div> <!-- /mt-6 assigned users bg-card -->
+	</div> <!-- /container -->
+</div> <!-- /basic-user-page -->

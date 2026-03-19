@@ -13,11 +13,19 @@ namespace SyncApp26.API.Controllers
     {
         private readonly IUserService _userService;
         private readonly IDepartmentService _departmentService;
+        private readonly IFunctionService _functionService;
+        private readonly IUserChangeHistoryService _userChangeHistoryService;
+        private readonly IDocumentService _documentService;
+        private readonly IPeriodicTrainingService _periodicTrainingService;
 
-        public UserController(IUserService userService, IDepartmentService departmentService)
+        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService, IDocumentService documentService, IPeriodicTrainingService periodicTrainingService)
         {
             _userService = userService;
             _departmentService = departmentService;
+            _functionService = functionService;
+            _userChangeHistoryService = userChangeHistoryService;
+            _documentService = documentService;
+            _periodicTrainingService = periodicTrainingService;
         }
 
         [HttpGet("{id}")]
@@ -33,13 +41,16 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                DepartmentId = user.DepartmentId,
+                DepartmentId = user.DepartmentId ?? Guid.Empty,
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -58,13 +69,16 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                DepartmentId = user.DepartmentId,
+                DepartmentId = user.DepartmentId ?? Guid.Empty,
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -74,19 +88,26 @@ namespace SyncApp26.API.Controllers
         public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetAllUsers()
         {
             var users = await _userService.GetAllUsersAsync();
+            var ssmIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SSM");
+            var suIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SU");
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                DepartmentId = user.DepartmentId,
+                DepartmentId = user.DepartmentId ?? Guid.Empty,
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
+                UpdatedAt = user.UpdatedAt,
+                HasSignedSsm = ssmIds.Contains(user.Id),
+                HasSignedSu = suIds.Contains(user.Id)
             }).ToList();
 
             return Ok(responseList);
@@ -111,13 +132,16 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                DepartmentId = user.DepartmentId,
+                DepartmentId = user.DepartmentId ?? Guid.Empty,
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -139,13 +163,16 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.Name,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                DepartmentId = user.DepartmentId,
+                DepartmentId = user.DepartmentId ?? Guid.Empty,
                 DepartmentName = user.Department?.Name ?? "Unknown",
                 AssignedToId = user.AssignedToId,
                 AssignedToName = $"{lineManager.FirstName} {lineManager.LastName}",
+                Function = user.Function?.Name ?? "Unknown",
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             }).ToList();
@@ -202,19 +229,46 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
+            var roleId = await _userService.GetRoleIdByNameAsync("Basic User");
+            if (roleId == null)
+            {
+                return BadRequest(new UserResponseDTO
+                {
+                    Success = false,
+                    Message = "Role 'Basic User' not found"
+                });
+            }
+
             var user = new User
             {
                 Id = Guid.NewGuid(),
                 PersonalId = Guid.NewGuid().ToString(),
+                RoleId = roleId.Value,
                 FirstName = userRequestDTO.FirstName,
                 LastName = userRequestDTO.LastName,
                 Email = userRequestDTO.Email,
                 DepartmentId = userRequestDTO.DepartmentId,
                 AssignedToId = userRequestDTO.AssignedToId,
+                FunctionId = await ResolveFunctionIdAsync(userRequestDTO.Function),
                 CreatedAt = DateTime.UtcNow
             };
 
             await _userService.AddUserAsync(user);
+
+            // If this new user is assigned to a manager, promote that manager to Line Manager
+            if (userRequestDTO.AssignedToId.HasValue)
+            {
+                var managerToPromote = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
+                if (managerToPromote != null)
+                {
+                    var lineManagerRoleId = await _userService.GetRoleIdByNameAsync("Line Manager");
+                    if (lineManagerRoleId.HasValue && managerToPromote.RoleId != lineManagerRoleId.Value)
+                    {
+                        managerToPromote.RoleId = lineManagerRoleId.Value;
+                        await _userService.UpdateUserAsync(managerToPromote);
+                    }
+                }
+            }
 
             return Ok(new UserResponseDTO
             {
@@ -278,6 +332,21 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
+            var oldFirstName = existingUser.FirstName;
+            var oldLastName = existingUser.LastName;
+            var oldEmail = existingUser.Email;
+            var oldDepartmentId = existingUser.DepartmentId;
+            var oldDepartmentName = existingUser.Department?.Name ?? string.Empty;
+            var oldAssignedToId = existingUser.AssignedToId;
+            var oldAssignedToName = existingUser.AssignedTo != null
+                ? $"{existingUser.AssignedTo.FirstName} {existingUser.AssignedTo.LastName}".Trim()
+                : string.Empty;
+            var oldFunctionId = existingUser.FunctionId;
+            var oldFunctionName = existingUser.Function?.Name ?? "Unknown";
+
+            var newDepartmentName = department.Name;
+            User? assignedToUser = null;
+
             // Verify assigned to user exists if provided
             if (userRequestDTO.AssignedToId != null)
             {
@@ -291,6 +360,8 @@ namespace SyncApp26.API.Controllers
                     });
                 }
 
+                assignedToUser = assignedTo;
+
                 // Check for circular reference: ensure the assignedTo user is not already managed by this user
                 if (assignedTo.AssignedToId == existingUser.Id)
                 {
@@ -300,16 +371,132 @@ namespace SyncApp26.API.Controllers
                         Message = "Circular assignment detected: Cannot assign a user to someone who reports to them"
                     });
                 }
+
             }
+
+            var resolvedFunctionId = await ResolveFunctionIdAsync(userRequestDTO.Function);
+            var newFunctionName = string.IsNullOrWhiteSpace(userRequestDTO.Function)
+                ? "Unknown"
+                : userRequestDTO.Function.Trim();
+            var newAssignedToName = assignedToUser != null
+                ? $"{assignedToUser.FirstName} {assignedToUser.LastName}".Trim()
+                : string.Empty;
 
             existingUser.FirstName = userRequestDTO.FirstName;
             existingUser.LastName = userRequestDTO.LastName;
             existingUser.Email = userRequestDTO.Email;
             existingUser.DepartmentId = userRequestDTO.DepartmentId;
             existingUser.AssignedToId = userRequestDTO.AssignedToId;
+            existingUser.FunctionId = resolvedFunctionId;
             existingUser.UpdatedAt = DateTime.UtcNow;
 
+            // Apply role from DTO if provided
+            if (!string.IsNullOrWhiteSpace(userRequestDTO.RoleName))
+            {
+                var requestedRoleId = await _userService.GetRoleIdByNameAsync(userRequestDTO.RoleName);
+                if (requestedRoleId.HasValue)
+                    existingUser.RoleId = requestedRoleId.Value;
+            }
+
             await _userService.UpdateUserAsync(existingUser);
+
+            var now = DateTime.UtcNow;
+            var manualChanges = new List<UserChangeHistory>();
+
+            if (!string.Equals(oldFirstName, existingUser.FirstName, StringComparison.Ordinal))
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "FirstName",
+                    OldValue = oldFirstName,
+                    NewValue = existingUser.FirstName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (!string.Equals(oldLastName, existingUser.LastName, StringComparison.Ordinal))
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "LastName",
+                    OldValue = oldLastName,
+                    NewValue = existingUser.LastName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (!string.Equals(oldEmail, existingUser.Email, StringComparison.Ordinal))
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "Email",
+                    OldValue = oldEmail,
+                    NewValue = existingUser.Email,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (oldDepartmentId != existingUser.DepartmentId)
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "DepartmentName",
+                    OldValue = oldDepartmentName,
+                    NewValue = newDepartmentName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (oldAssignedToId != existingUser.AssignedToId)
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "AssignedToName",
+                    OldValue = oldAssignedToName,
+                    NewValue = newAssignedToName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            if (oldFunctionId != existingUser.FunctionId)
+            {
+                manualChanges.Add(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = existingUser.Id,
+                    FieldName = "FunctionName",
+                    OldValue = oldFunctionName,
+                    NewValue = newFunctionName,
+                    ImportHistoryId = null,
+                    Status = null,
+                    CreatedAt = now
+                });
+            }
+
+            foreach (var change in manualChanges)
+            {
+                await _userChangeHistoryService.AddUserChangeHistoryAsync(change);
+            }
 
             return Ok(new UserResponseDTO
             {
@@ -338,6 +525,131 @@ namespace SyncApp26.API.Controllers
                 Success = true,
                 Message = "User deleted successfully"
             });
+        }
+
+        [HttpGet("{id}/ssm-su-form")]
+        public async Task<ActionResult<UserSSMSUFormDTO>> GetUserSSMSUForm(Guid id)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found" });
+            }
+
+            // Get the latest periodic training to use as fallback for training fields
+            var periodicTrainings = await _periodicTrainingService.GetByUserIdAsync(id);
+            var latestTraining = periodicTrainings
+                .OrderByDescending(pt => pt.TrainingDate)
+                .ThenByDescending(pt => pt.Id)
+                .FirstOrDefault();
+
+            return Ok(new UserSSMSUFormDTO
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PersonalId = user.PersonalId,
+                DepartmentName = user.Department?.Name,
+                FunctionName = user.Function?.Name,
+                RoleName = user.Role?.Name,
+                ManagerFirstName = user.AssignedTo?.FirstName,
+                ManagerLastName = user.AssignedTo?.LastName,
+                ManagerFunctionName = user.AssignedTo?.Function?.Name,
+                DateOfBirth = user.DateOfBirth,
+                PlaceOfBirth = user.PlaceOfBirth,
+                Address = user.Address,
+                BloodGroup = user.BloodGroup,
+                BadgeNumber = user.BadgeNumber,
+                Education = user.Education,
+                Qualifications = user.Qualifications,
+                CommuteRoute = user.CommuteRoute,
+                CommuteDurationMinutes = user.CommuteDurationMinutes,
+                IntroductoryTrainingDate = user.IntroductoryTrainingDate ?? latestTraining?.TrainingDate,
+                IntroductoryTrainingHours = user.IntroductoryTrainingHours ?? (int?)latestTraining?.DurationHours,
+                IntroductoryTrainingInstructor = user.IntroductoryTrainingInstructor ?? latestTraining?.InstructorName,
+                IntroductoryTrainingInstructorFunction = user.IntroductoryTrainingInstructorFunction,
+                IntroductoryTrainingContent = user.IntroductoryTrainingContent ?? latestTraining?.MaterialTaught,
+                WorkplaceTrainingDate = user.WorkplaceTrainingDate ?? latestTraining?.TrainingDate,
+                WorkplaceTrainingLocation = user.WorkplaceTrainingLocation,
+                WorkplaceTrainingHours = user.WorkplaceTrainingHours ?? (int?)latestTraining?.DurationHours,
+                WorkplaceTrainingInstructor = user.WorkplaceTrainingInstructor ?? latestTraining?.InstructorName,
+                WorkplaceTrainingInstructorFunction = user.WorkplaceTrainingInstructorFunction,
+                WorkplaceTrainingContent = user.WorkplaceTrainingContent ?? latestTraining?.MaterialTaught,
+                AdmittedByName = user.AdmittedByName,
+                AdmittedByFunction = user.AdmittedByFunction,
+                AdmittedDate = user.AdmittedDate,
+                HireDate = user.CreatedAt, // Using CreatedAt as HireDate
+                CreatedAt = user.CreatedAt
+            });
+        }
+
+        [HttpPut("{id}/ssm-su-form")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateUserSSMSUForm(Guid id, [FromBody] UpdateUserSSMSUFormDTO dto)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new UserResponseDTO
+                {
+                    Success = false,
+                    Message = "User not found"
+                });
+            }
+
+            // Update SSM/SU fields
+            user.DateOfBirth = dto.DateOfBirth;
+            user.PlaceOfBirth = dto.PlaceOfBirth;
+            user.Address = dto.Address;
+            user.BloodGroup = dto.BloodGroup;
+            user.BadgeNumber = dto.BadgeNumber;
+            user.Education = dto.Education;
+            user.Qualifications = dto.Qualifications;
+            user.CommuteRoute = dto.CommuteRoute;
+            user.CommuteDurationMinutes = dto.CommuteDurationMinutes;
+
+            // Update training fields
+            user.IntroductoryTrainingDate = dto.IntroductoryTrainingDate;
+            user.IntroductoryTrainingHours = dto.IntroductoryTrainingHours;
+            user.IntroductoryTrainingInstructor = dto.IntroductoryTrainingInstructor;
+            user.IntroductoryTrainingInstructorFunction = dto.IntroductoryTrainingInstructorFunction;
+            user.IntroductoryTrainingContent = dto.IntroductoryTrainingContent;
+
+            user.WorkplaceTrainingDate = dto.WorkplaceTrainingDate;
+            user.WorkplaceTrainingLocation = dto.WorkplaceTrainingLocation;
+            user.WorkplaceTrainingHours = dto.WorkplaceTrainingHours;
+            user.WorkplaceTrainingInstructor = dto.WorkplaceTrainingInstructor;
+            user.WorkplaceTrainingInstructorFunction = dto.WorkplaceTrainingInstructorFunction;
+            user.WorkplaceTrainingContent = dto.WorkplaceTrainingContent;
+
+            user.AdmittedByName = dto.AdmittedByName;
+            user.AdmittedByFunction = dto.AdmittedByFunction;
+            user.AdmittedDate = dto.AdmittedDate;
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            return Ok(new UserResponseDTO
+            {
+                Success = true,
+                Message = "SSM/SU form updated successfully"
+            });
+        }
+
+        private async Task<Guid?> ResolveFunctionIdAsync(string? requestedFunction)
+        {
+            if (!string.IsNullOrWhiteSpace(requestedFunction))
+            {
+                var existingFunction = await _functionService.GetByNameAsync(requestedFunction);
+                if (existingFunction != null)
+                {
+                    return existingFunction.Id;
+                }
+            }
+
+            var unknownFunction = await _functionService.GetByNameAsync("Unknown");
+            return unknownFunction?.Id;
         }
     }
 }

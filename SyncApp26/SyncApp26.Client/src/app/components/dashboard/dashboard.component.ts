@@ -3,19 +3,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, Subject, combineLatest, BehaviorSubject } from 'rxjs';
-import { map, takeUntil } from 'rxjs/operators';
+import { map, take, takeUntil } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
-import { DepartmentsSyncService} from '../../services/departments-sync.service';
+import { DepartmentsSyncService } from '../../services/departments-sync.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { CSVDepartmentComparisonDTO } from '../../models/csv-department-sync.model';
 import { User, UserComparison, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { ComparisonViewComponent } from '../comparison-view/comparison-view.component';
 import { UploadProgress, SyncProgressUpdate } from '../../services/user-sync.signalr.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -37,6 +39,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private searchQuery$ = new BehaviorSubject<string>('');
   private selectedDepartment$ = new BehaviorSubject<string>('all');
+  private selectedFunction$ = new BehaviorSubject<string>('all');
   private selectedRole$ = new BehaviorSubject<UserRole | 'all'>('all');
   private sortField$ = new BehaviorSubject<'createdAt' | 'updatedAt'>('updatedAt');
   private sortDirection$ = new BehaviorSubject<'asc' | 'desc'>('desc');
@@ -47,6 +50,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   get selectedDepartment(): string { return this.selectedDepartment$.value; }
   set selectedDepartment(value: string) { this.selectedDepartment$.next(value); }
 
+  get selectedFunction(): string { return this.selectedFunction$.value; }
+  set selectedFunction(value: string) { this.selectedFunction$.next(value); }
+
   get selectedRole(): UserRole | 'all' { return this.selectedRole$.value; }
   set selectedRole(value: UserRole | 'all') { this.selectedRole$.next(value); }
 
@@ -55,7 +61,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get sortDirection(): 'asc' | 'desc' { return this.sortDirection$.value; }
   set sortDirection(value: 'asc' | 'desc') { this.sortDirection$.next(value); }
-  
+
   isUploading = false;
   isSyncing = false;
   showComparison = false;
@@ -80,6 +86,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   syncStartTime: number = 0;
   successMessage: string = '';
   serverTimingInfo: { validationTimeMs: number; comparisonTimeMs: number; totalTimeMs: number } | null = null;
+  availableDepartmentFunctions: string[] = [];
 
   UserRole = UserRole;
   fileName = '';
@@ -87,8 +94,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private userSyncService: UserSyncService,
     private departmentsSyncService: DepartmentsSyncService,
+    private authService: AuthenticationService,
     private router: Router
   ) { }
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     this.users$ = this.userSyncService.users$;
@@ -122,12 +134,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.stats$,
       this.searchQuery$,
       this.selectedDepartment$,
+      this.selectedFunction$,
       this.selectedRole$,
       this.currentPage$,
       this.sortField$,
       this.sortDirection$
     ]).pipe(
-      map(([users, stats, searchQuery, selectedDepartment, selectedRole, currentPage, sortField, sortDirection]) => {
+      map(([users, stats, searchQuery, selectedDepartment, selectedFunction, selectedRole, currentPage, sortField, sortDirection]) => {
         // Filter users
         let filtered = users.filter(user => {
           const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
@@ -136,9 +149,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             user.email.toLowerCase().includes(searchQuery.toLowerCase());
           const matchesDepartment = selectedDepartment === 'all' ||
             user.departmentName === selectedDepartment;
+          const matchesFunction = selectedFunction === 'all' ||
+            (user.function || '').trim().toLowerCase() === selectedFunction.trim().toLowerCase();
           const matchesRole = selectedRole === 'all' ||
             user.role === selectedRole;
-          return matchesSearch && matchesDepartment && matchesRole;
+          return matchesSearch && matchesDepartment && matchesFunction && matchesRole;
         });
 
         // Sort users
@@ -205,7 +220,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isUploading = false;
           this.showComparison = true;
           this.fileName = file.name;
-          
+
           // Get server timing info
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
             this.serverTimingInfo = timing;
@@ -215,7 +230,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
             }
           });
-          
+
           // Check for warnings
           this.userSyncService.warnings$.pipe(takeUntil(this.destroy$)).subscribe(warnings => {
             if (warnings && warnings.length > 0) {
@@ -226,8 +241,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.showErrorModal = true;
             }
           });
-          
-          setTimeout(() => this.successMessage = '', 10000);
+
+          setTimeout(() => this.successMessage = '', 5000);
         },
         error: (error) => {
           console.error('Upload failed:', error);
@@ -240,9 +255,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
             if (errorData.errors && errorData.errors.length > 0) {
               // Check if we can proceed with valid rows only
               this.canProceedWithValidRows = errorData.canProceedWithValidRows === true;
-              
-              this.errorModalTitle = this.canProceedWithValidRows 
-                ? 'CSV Has Invalid Rows - Proceed with Valid Rows?' 
+
+              this.errorModalTitle = this.canProceedWithValidRows
+                ? 'CSV Has Invalid Rows - Proceed with Valid Rows?'
                 : 'CSV Validation Failed';
               this.errorModalErrors = [];
               this.errorModalWarnings = [];
@@ -355,7 +370,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   proceedWithValidRows(): void {
     if (!this.currentUploadFile) return;
-    
+
     this.showErrorModal = false;
     this.canProceedWithValidRows = false;
     this.isUploading = true;
@@ -371,7 +386,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isUploading = false;
           this.showComparison = true;
           this.fileName = this.currentUploadFile?.name || this.fileName;
-          
+
           // Get server timing info
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
             this.serverTimingInfo = timing;
@@ -381,7 +396,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
             }
           });
-          
+
           // Show info about skipped rows if any
           this.userSyncService.errors$.pipe(takeUntil(this.destroy$)).subscribe(errors => {
             if (errors && errors.length > 0) {
@@ -390,8 +405,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.successMessage += ` (${skippedCount} invalid rows skipped)`;
             }
           });
-          
-          setTimeout(() => this.successMessage = '', 10000);
+
+          setTimeout(() => this.successMessage = '', 5000);
         },
         error: (error) => {
           console.error('Upload with valid rows failed:', error);
@@ -421,14 +436,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('Sync successful:', result);
           this.isSyncing = false;
           this.showComparison = false;
-          
+
           if (result.processingTimeMs) {
             this.successMessage = `Sync completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(result.processingTimeMs)}, Network: ${this.formatDuration(duration - result.processingTimeMs)})`;
           } else {
             this.successMessage = `Sync completed in ${this.formatDuration(duration)}`;
           }
-          
-          setTimeout(() => this.successMessage = '', 10000);
+
+          setTimeout(() => this.successMessage = '', 5000);
 
           this.userSyncService.refreshUsers();
         },
@@ -517,6 +532,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onDepartmentFilterChange(): void {
+    this.currentPage = 1;
+
+    if (this.selectedDepartment === 'all') {
+      this.availableDepartmentFunctions = [];
+      this.selectedFunction = 'all';
+      return;
+    }
+
+    this.selectedFunction = 'all';
+    this.departments$.pipe(take(1)).subscribe(departments => {
+      const selectedDept = departments.find(d => d.name === this.selectedDepartment);
+
+      if (!selectedDept) {
+        this.availableDepartmentFunctions = [];
+        return;
+      }
+
+      this.userSyncService.getFunctionsByDepartmentId(selectedDept.id)
+        .pipe(take(1))
+        .subscribe(functions => {
+          this.availableDepartmentFunctions = functions;
+        });
+    });
+  }
+
+  onFunctionFilterChange(): void {
     this.currentPage = 1;
   }
 
@@ -610,12 +651,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const now = new Date().getTime();
     const then = new Date(date).getTime();
     const diff = now - then;
-    
+
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d ago`;
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;

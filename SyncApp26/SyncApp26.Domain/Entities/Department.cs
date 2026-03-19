@@ -11,5 +11,6 @@ namespace SyncApp26.Domain.Entities
 
         // Navigation properties
         public ICollection<User> Users { get; set; } = new List<User>();
+        public ICollection<DepartmentFunction> DepartmentFunctions { get; set; } = new List<DepartmentFunction>();
     }
 }

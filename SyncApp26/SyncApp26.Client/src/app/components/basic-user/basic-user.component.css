@@ -1,0 +1,8 @@
+:host {
+	display: block;
+}
+
+.basic-user-page {
+	min-height: calc(100vh - 50px);
+	min-height: calc(100dvh - 50px);
+}

@@ -10,6 +10,7 @@ public class CsvUserDTO
     public required string Email { get; set; }
     public required string DepartmentName { get; set; }
     public string? AssignedToPersonalId { get; set; } // Line manager personal ID for lookup
+    public string? Function { get; set; }
 }
 
 public class UserComparisonDTO
@@ -31,6 +32,7 @@ public class CsvUserDataDTO
     public required string DepartmentName { get; set; }
     public string? AssignedToPersonalId { get; set; } // Line manager personal ID
     public string? AssignedToName { get; set; } // Line manager display name
+    public string? Function { get; set; }
 }
 
 public class FieldConflictDTO
