@@ -25,6 +25,35 @@ namespace SyncApp26.Infrastructure.Services
             _cryptographyService = cryptographyService;
         }
 
+        // Returnează numărul de documente SSM ce trebuie semnate de admin (verificator)
+        public async Task<int> GetPendingSsmDocumentsForAdminAsync()
+        {
+            var count = await _context.UserDocuments
+                .Include(d => d.User)
+                .Where(d =>
+                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.User != null &&
+                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
+                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
+                    d.ManagerSignedAt == null)
+                .CountAsync();
+            return count;
+        }
+
+        // Returnează lista de documente SSM ce trebuie semnate de admin (pentru bulk progres)
+        public async Task<List<UserDocument>> GetPendingSsmDocumentsForAdminListAsync()
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                .Where(d =>
+                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.User != null &&
+                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
+                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
+                    d.ManagerSignedAt == null)
+                .ToListAsync();
+        }
+
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
@@ -198,6 +227,36 @@ namespace SyncApp26.Infrastructure.Services
             await _context.SaveChangesAsync();
 
             return doc;
+        }
+
+        // Semnează un singur document ca admin (pentru bulk progres)
+        public async Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress)
+        {
+            var timestamp = DateTime.UtcNow;
+            var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
+            var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
+
+            // Doar semnătură ca verifier (admin)
+            doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
+
+            var latestTraining = doc.User?.PeriodicTrainings
+                ?.Where(pt => pt.UserDocumentId == doc.Id)
+                .OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
+                .LastOrDefault();
+            if (latestTraining != null)
+            {
+                latestTraining.VerifierSignature = signatureData;
+            }
+
+            await _context.SaveChangesAsync();
+
+            // PDF
+            if (doc.User != null)
+            {
+                try { await GeneratePdfSnapshotAsync(doc.User, doc); }
+                catch { /* non-fatal */ }
+            }
+            await _context.SaveChangesAsync();
         }
 
         // ─── Helpers ─────────────────────────────────────────────────────────────

@@ -2,7 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
+using System.Collections.Concurrent;
 using System.Security.Claims;
+using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SyncApp26.API.Controllers
 {
@@ -15,19 +18,24 @@ namespace SyncApp26.API.Controllers
         private readonly IEmailService _emailService;
         private readonly IDocumentService _documentService;
         private readonly IConfiguration _configuration;
+        private readonly IServiceScopeFactory _scopeFactory;
+
+        private static readonly ConcurrentDictionary<string, BulkSignProgress> BulkSignJobs = new();
 
         public DocumentSignatureController(
             IDocumentSignatureService documentSignatureService,
             IUserService userService,
             IEmailService emailService,
             IDocumentService documentService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IServiceScopeFactory scopeFactory)
         {
             _documentSignatureService = documentSignatureService;
             _userService = userService;
             _emailService = emailService;
             _documentService = documentService;
             _configuration = configuration;
+            _scopeFactory = scopeFactory;
         }
 
         public class RequestSignatureDto
@@ -265,6 +273,65 @@ namespace SyncApp26.API.Controllers
             return Ok(new { message = $"Successfully signed {count} document(s).", count });
         }
 
+        [HttpPost("bulk-sign-async")]
+        [Authorize(Roles = "Admin,Line Manager")]
+        public async Task<IActionResult> BulkSignAsync([FromBody] BulkSignDto request)
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+                return Unauthorized();
+
+            bool isAdmin = User.IsInRole("Admin");
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+            // Obține totalul documentelor de semnat
+            int total = await _documentService.GetPendingSsmDocumentsForAdminAsync();
+            if (total == 0)
+                return Ok(new { message = "No documents to sign.", jobId = (string?)null });
+
+            string jobId = Guid.NewGuid().ToString();
+            var progress = new BulkSignProgress { Total = total, Signed = 0, Completed = false };
+            BulkSignJobs[jobId] = progress;
+
+            // Rulează semnarea în fundal cu scope nou
+            _ = Task.Run(async () =>
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var docService = scope.ServiceProvider.GetRequiredService<IDocumentService>();
+                try
+                {
+                    var baseQuery = await docService.GetPendingSsmDocumentsForAdminListAsync();
+                    int idx = 0;
+                    foreach (var doc in baseQuery)
+                    {
+                        await docService.SignSingleDocumentAsAdminAsync(doc, request.SignatureMethod, request.SignatureData, ipAddress);
+                        progress.Signed++;
+                        idx++;
+                        await Task.Delay(250); // delay vizibil între semnături
+                    }
+                    progress.Completed = true;
+                }
+                catch (Exception ex)
+                {
+                    progress.Error = ex.Message;
+                    progress.Completed = true;
+                }
+            });
+
+            return Ok(new { jobId, total });
+        }
+
+        [HttpGet("bulk-sign-status/{jobId}")]
+        [Authorize(Roles = "Admin,Line Manager")]
+        public IActionResult GetBulkSignStatus(string jobId)
+        {
+            if (BulkSignJobs.TryGetValue(jobId, out var progress))
+            {
+                return Ok(new { total = progress.Total, signed = progress.Signed, completed = progress.Completed, error = progress.Error });
+            }
+            return NotFound(new { message = "Job not found" });
+        }
+
         public class AdminSignAndSendDto
         {
             public string DocumentType { get; set; } = string.Empty; // "SSM", "SU", "Both"
@@ -336,5 +403,21 @@ namespace SyncApp26.API.Controllers
                 emailsSent = emailsSent
             });
         }
+
+        [HttpGet("pending-ssm-admin-count")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPendingSsmAdminCount()
+        {
+            var count = await _documentService.GetPendingSsmDocumentsForAdminAsync();
+            return Ok(new { count });
+        }
+    }
+
+    public class BulkSignProgress
+    {
+        public int Total { get; set; }
+        public int Signed { get; set; }
+        public bool Completed { get; set; }
+        public string? Error { get; set; }
     }
 }

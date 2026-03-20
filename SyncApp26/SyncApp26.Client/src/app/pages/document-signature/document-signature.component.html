@@ -57,6 +57,20 @@
         </div>
       </div>
 
+      <!-- Bulk signing progress bar (admin SSM) -->
+      <div *ngIf="isBulkMode && isLoading && bulkTotal > 0" class="w-full flex flex-col items-center my-6">
+        <div class="w-full max-w-md">
+          <div class="flex justify-between mb-1">
+            <span class="text-xs font-medium text-teal-700">Bulk signing progress</span>
+            <span class="text-xs font-medium text-teal-700">{{ bulkSigned }} / {{ bulkTotal }}</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" [style.width.%]="(bulkSigned / bulkTotal) * 100"></div>
+          </div>
+        </div>
+        <span class="text-xs text-gray-500 mt-2">Please wait, documents are being signed...</span>
+      </div>
+
       <!-- ========== SUCCESS ========== -->
       <div *ngIf="!isLoading && successMessage" class="p-10 text-center">
         <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-5">
