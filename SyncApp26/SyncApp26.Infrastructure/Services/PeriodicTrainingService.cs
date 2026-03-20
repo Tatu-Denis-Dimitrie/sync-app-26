@@ -96,23 +96,21 @@ namespace SyncApp26.Infrastructure.Services
             try
             {
                 // Get list of users to apply training to
-                List<User> users;
+                var usersQuery = _context.Users
+                    .Include(u => u.Function)
+                    .AsQueryable();
 
-                if (dto.ApplyToAllUsers)
+                if (dto.SelectedDepartmentId.HasValue)
                 {
-                    // Get all users
-                    users = await _context.Users
-                        .Include(u => u.Function)
-                        .ToListAsync();
+                    usersQuery = usersQuery.Where(u => u.DepartmentId == dto.SelectedDepartmentId.Value);
                 }
-                else
+
+                if (!dto.ApplyToAllUsers)
                 {
-                    // Get only selected users
-                    users = await _context.Users
-                        .Include(u => u.Function)
-                        .Where(u => dto.SelectedUserIds.Contains(u.Id))
-                        .ToListAsync();
+                    usersQuery = usersQuery.Where(u => dto.SelectedUserIds.Contains(u.Id));
                 }
+
+                var users = await usersQuery.ToListAsync();
 
                 if (!users.Any())
                 {
