@@ -606,10 +606,20 @@ namespace SyncApp26.Infrastructure.Services
                                         mgrSigMethod = null;
                                 }
 
+
+                                // Evidențiere pentru cazurile:
+                                // 1. Lipsesc ambele semnături (angajat și manager/verificator)
+                                // 2. Există semnătura angajatului, dar lipsește cea a managerului/verificatorului (pentru ca managerul să vadă linia evidențiată)
                                 bool missingSignature = isSsm
                                     ? string.IsNullOrEmpty(userSigData) || (string.IsNullOrEmpty(mgrSigData) && string.IsNullOrEmpty(verifierSigData))
                                     : string.IsNullOrEmpty(userSigData) || string.IsNullOrEmpty(mgrSigData);
-                                Func<IContainer, IContainer> rowCell = (isLastRow && missingSignature) ? HighlightCell : DataCell;
+
+
+                                bool highlightForManager = isSsm
+                                    ? !string.IsNullOrEmpty(userSigData) && (string.IsNullOrEmpty(mgrSigData) || string.IsNullOrEmpty(verifierSigData))
+                                    : !string.IsNullOrEmpty(userSigData) && string.IsNullOrEmpty(mgrSigData);
+
+                                Func<IContainer, IContainer> rowCell = (isLastRow && (missingSignature || highlightForManager)) ? HighlightCell : DataCell;
 
                                 table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
                                 table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
