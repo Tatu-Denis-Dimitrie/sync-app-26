@@ -106,6 +106,7 @@ namespace SyncApp26.API.Controllers
                 documentId = signatureToken.DocumentId,
                 documentName = signatureToken.DocumentName,
                 email = signatureToken.Email,
+                documentType = document?.DocumentType,
                 isManagerSigning = isManagerSigning
             });
         }

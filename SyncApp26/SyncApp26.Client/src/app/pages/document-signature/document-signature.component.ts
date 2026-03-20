@@ -120,6 +120,9 @@ export class DocumentSignatureComponent implements OnInit {
       .subscribe(data => {
         if (data) {
           this.documentData = data;
+          // Adaugă flag pentru semnare ca admin (verificator SSM)
+          const user = this.authService.getCurrentUser();
+          this.documentData.isAdminSigning = !!(user && user.role === 'Admin' && this.documentData.documentType === 'SSM');
           setTimeout(() => { if (this.signatureMethod === 'draw') this.initCanvas(); }, 100);
         }
       });
