@@ -60,12 +60,12 @@ namespace SyncApp26.Infrastructure.Services
             Console.WriteLine($"[GENERATE] Starting document generation for UserId: {userId}, DocumentType: {documentType}, GeneratedBy: {generatedByEmail}");
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
-            // // Check if user is admin (admins should not have documents generated)
-            // var userToGenerate = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
-            // if (userToGenerate?.Role != null && string.Equals(userToGenerate.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
-            // {
-            //     throw new InvalidOperationException("Cannot generate documents for admin users.");
-            // }
+            // Check if user is admin (admins should not have documents generated)
+            var userToGenerate = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
+            if (userToGenerate?.Role != null && string.Equals(userToGenerate.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Cannot generate documents for admin users.");
+            }
 
             // Before anything else, if there's an existing completed document with signatures,
             // permanently copy those signatures to the correct PeriodicTraining row
@@ -250,8 +250,6 @@ namespace SyncApp26.Infrastructure.Services
             {
                 latestTraining.VerifierSignature = signatureData;
                 latestTraining.VerifierSignatureMethod = signatureMethod;
-                Console.WriteLine($"[BULK SIGN] Saved VerifierSignatureMethod: {signatureMethod}");
-                Console.WriteLine($"[BULK SIGN] Saved VerifierSignatureData: {(signatureData != null ? signatureData.Substring(0, Math.Min(100, signatureData.Length)) : "null")}");
             }
 
             await _context.SaveChangesAsync();
@@ -527,8 +525,12 @@ namespace SyncApp26.Infrastructure.Services
                         var introVerifierSigMethod = (isSsm && !string.IsNullOrEmpty(introVerifierSigData))
                             ? latestPt?.VerifierSignatureMethod
                             : null;
-                        var introInstructorSigData = isSsm ? latestPt?.InstructorSignature : document.ManagerSignatureData;
-                        var introInstructorSigMethod = isSsm ? latestPt?.InstructorSignatureMethod : document.ManagerSignatureMethod;
+                        var introInstructorSigData = isSsm
+                            ? (latestPt?.InstructorSignature ?? document.ManagerSignatureData)
+                            : document.ManagerSignatureData;
+                        var introInstructorSigMethod = isSsm
+                            ? (latestPt?.InstructorSignatureMethod ?? document.ManagerSignatureMethod)
+                            : document.ManagerSignatureMethod;
 
                         SignatureRow(col, isSsm,
                             document.UserSignatureMethod, document.UserSignatureData,
@@ -564,8 +566,12 @@ namespace SyncApp26.Infrastructure.Services
                         var workVerifierSigMethod = (isSsm && !string.IsNullOrEmpty(workVerifierSigData))
                             ? latestPt?.VerifierSignatureMethod
                             : null;
-                        var workInstructorSigData = isSsm ? latestPt?.InstructorSignature : document.ManagerSignatureData;
-                        var workInstructorSigMethod = isSsm ? latestPt?.InstructorSignatureMethod : document.ManagerSignatureMethod;
+                        var workInstructorSigData = isSsm
+                            ? (latestPt?.InstructorSignature ?? document.ManagerSignatureData)
+                            : document.ManagerSignatureData;
+                        var workInstructorSigMethod = isSsm
+                            ? (latestPt?.InstructorSignatureMethod ?? document.ManagerSignatureMethod)
+                            : document.ManagerSignatureMethod;
 
                         SignatureRow(col, isSsm,
                             document.UserSignatureMethod, document.UserSignatureData,

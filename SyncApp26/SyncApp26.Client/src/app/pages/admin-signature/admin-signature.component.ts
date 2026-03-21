@@ -36,8 +36,10 @@ export class AdminSignatureComponent {
   private initCanvas() {
     if (this.signatureMethod === 'draw' && this.signaturePad && this.signaturePad.nativeElement) {
       this.ctx = this.signaturePad.nativeElement.getContext('2d')!;
-      this.ctx.strokeStyle = '#222';
-      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = '#0f766e';
+      this.ctx.lineWidth = 2.5;
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
     }
   }
 
