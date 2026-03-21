@@ -192,6 +192,13 @@ namespace SyncApp26.Infrastructure.Services
                 Occupation = training.Occupation,
                 MaterialTaught = training.MaterialTaught,
                 InstructorName = training.InstructorName,
+                // map signature fields
+                UserSignatureData = training.UserSignatureData,
+                UserSignatureMethod = training.UserSignatureMethod,
+                InstructorSignature = training.InstructorSignature,
+                InstructorSignatureMethod = training.InstructorSignatureMethod,
+                VerifierSignature = training.VerifierSignature,
+                VerifierSignatureMethod = training.VerifierSignatureMethod,
                 VerifierName = training.VerifierName,
                 CreatedAt = training.CreatedAt,
                 UpdatedAt = training.UpdatedAt

@@ -581,6 +581,12 @@ namespace SyncApp26.API.Controllers
                 AdmittedDate = user.AdmittedDate,
                 HireDate = user.CreatedAt, // Using CreatedAt as HireDate
                 CreatedAt = user.CreatedAt
+                ,
+                // include latest signatures when available
+                LatestInstructorSignature = latestTraining?.InstructorSignature,
+                LatestInstructorSignatureMethod = latestTraining?.InstructorSignatureMethod,
+                LatestVerifierSignature = latestTraining?.VerifierSignature,
+                LatestVerifierSignatureMethod = latestTraining?.VerifierSignatureMethod
             });
         }
 

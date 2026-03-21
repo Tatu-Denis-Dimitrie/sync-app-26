@@ -50,5 +50,10 @@ namespace SyncApp26.Shared.DTOs.Response.User
         // Employment dates
         public DateTime? HireDate { get; set; }
         public DateTime CreatedAt { get; set; }
+        // Latest training signature snippets to show in SSM/SU form
+        public string? LatestInstructorSignature { get; set; }
+        public string? LatestInstructorSignatureMethod { get; set; }
+        public string? LatestVerifierSignature { get; set; }
+        public string? LatestVerifierSignatureMethod { get; set; }
     }
 }

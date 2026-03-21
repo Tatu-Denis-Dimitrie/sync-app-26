@@ -495,16 +495,47 @@
               <th>Durata (h)</th>
               <th>Ocupația</th>
               <th>Materialul predat</th>
-              <th>Semnături</th>
+              <th>Semnătura instruit (angajat)</th>
+              <th>Semnătura instructor (manager)</th>
+              <th *ngIf="selectedTab === 'ssm'">Semnătura verificator (admin)</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let i of [1, 2, 3, 4, 5]">
-              <td>________</td>
-              <td>____</td>
-              <td>{{ userForm.functionName }}</td>
-              <td>_____________</td>
-              <td>_________</td>
+            <tr *ngFor="let t of displayedTrainings">
+              <td>{{ t.trainingDate ? (t.trainingDate | date:'shortDate') : '________' }}</td>
+              <td>{{ t.durationHours ?? '____' }}</td>
+              <td>{{ t.occupation || userForm.functionName }}</td>
+              <td>{{ t.materialTaught || '_____________' }}</td>
+              <td>
+                <ng-container *ngIf="t.userSignatureData; else dashUser">
+                  <span *ngIf="t.userSignatureMethod?.toLowerCase() === 'type'; else userDrawn" class="sig-typed">{{ t.userSignatureData }}</span>
+                  <ng-template #userDrawn>
+                    <img [src]="getSafeImage(t.userSignatureData)" class="sig-thumb" />
+                  </ng-template>
+                </ng-container>
+                <ng-template #dashUser>—</ng-template>
+              </td>
+              <td>
+                <ng-container *ngIf="t.instructorSignature; else dashInstr">
+                  <span *ngIf="t.instructorSignatureMethod?.toLowerCase() === 'type'; else instrDrawn" class="sig-typed">{{ t.instructorSignature }}</span>
+                  <ng-template #instrDrawn>
+                    <img [src]="getSafeImage(t.instructorSignature)" class="sig-thumb" />
+                  </ng-template>
+                </ng-container>
+                <ng-template #dashInstr>—</ng-template>
+              </td>
+              <td *ngIf="selectedTab === 'ssm'">
+                <ng-container *ngIf="t.verifierSignature; else dashVer">
+                  <span *ngIf="t.verifierSignatureMethod?.toLowerCase() === 'type'; else verifDrawn" class="sig-typed">{{ t.verifierSignature }}</span>
+                  <ng-template #verifDrawn>
+                    <img [src]="getSafeImage(t.verifierSignature)" class="sig-thumb" />
+                  </ng-template>
+                </ng-container>
+                <ng-template #dashVer>—</ng-template>
+              </td>
+            </tr>
+            <tr *ngIf="trainings.length === 0">
+              <td [attr.colspan]="selectedTab === 'ssm' ? 7 : 6">No periodic trainings recorded.</td>
             </tr>
           </tbody>
         </table>
@@ -826,16 +857,37 @@
               <th>Specialitatea</th>
               <th>Materialul predat</th>
               <th>Durata (h)</th>
-              <th>Semnături</th>
+              <th>Semnătura instruit (angajat)</th>
+              <th>Semnătura instructor (manager)</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let i of [1, 2, 3, 4, 5]">
-              <td>________</td>
-              <td>{{ userForm.functionName }}</td>
-              <td>_____________</td>
-              <td>____</td>
-              <td>_________</td>
+            <tr *ngFor="let t of displayedTrainings">
+              <td>{{ t.trainingDate ? (t.trainingDate | date:'shortDate') : '________' }}</td>
+              <td>{{ t.occupation || userForm.functionName }}</td>
+              <td>{{ t.materialTaught || '_____________' }}</td>
+              <td>{{ t.durationHours ?? '____' }}</td>
+              <td>
+                <ng-container *ngIf="t.userSignatureData; else dashUserSu">
+                  <span *ngIf="t.userSignatureMethod?.toLowerCase() === 'type'; else userDrawnSu" class="sig-typed">{{ t.userSignatureData }}</span>
+                  <ng-template #userDrawnSu>
+                    <img [src]="getSafeImage(t.userSignatureData)" class="sig-thumb" />
+                  </ng-template>
+                </ng-container>
+                <ng-template #dashUserSu>—</ng-template>
+              </td>
+              <td>
+                <ng-container *ngIf="t.instructorSignature; else dashInstrSu">
+                  <span *ngIf="t.instructorSignatureMethod?.toLowerCase() === 'type'; else instrDrawnSu" class="sig-typed">{{ t.instructorSignature }}</span>
+                  <ng-template #instrDrawnSu>
+                    <img [src]="getSafeImage(t.instructorSignature)" class="sig-thumb" />
+                  </ng-template>
+                </ng-container>
+                <ng-template #dashInstrSu>—</ng-template>
+              </td>
+            </tr>
+            <tr *ngIf="trainings.length === 0">
+              <td colspan="6">No periodic trainings recorded.</td>
             </tr>
           </tbody>
         </table>

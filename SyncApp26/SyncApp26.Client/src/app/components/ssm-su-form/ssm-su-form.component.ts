@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 interface UserSSMSUForm {
   id: string;
@@ -42,6 +43,10 @@ interface UserSSMSUForm {
   admittedDate?: string;
   hireDate?: string;
   createdAt: string;
+  latestInstructorSignature?: string;
+  latestInstructorSignatureMethod?: string;
+  latestVerifierSignature?: string;
+  latestVerifierSignatureMethod?: string;
 }
 
 @Component({
@@ -91,6 +96,8 @@ export class SsmSuFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private http: HttpClient
+    ,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit() {
@@ -107,6 +114,9 @@ export class SsmSuFormComponent implements OnInit {
         next: (data) => {
           this.userForm = data;
           this.populateFormData();
+          // load periodic trainings for this user (to show signatures per-row)
+          this.http.get<any[]>(`${environment.apiUrl}/PeriodicTraining/user/${this.userId}`)
+            .subscribe({ next: trainings => { this.trainings = trainings || []; }, error: () => { this.trainings = []; } });
           this.loading = false;
         },
         error: (err) => {
@@ -114,6 +124,23 @@ export class SsmSuFormComponent implements OnInit {
           this.loading = false;
         }
       });
+  }
+
+  trainings: any[] = [];
+
+  get latestTraining() {
+    return this.trainings && this.trainings.length ? this.trainings[this.trainings.length - 1] : null;
+  }
+
+  get displayedTrainings(): any[] {
+    const start = Math.max(0, this.trainings.length - 5);
+    return this.trainings.slice(start);
+  }
+
+  getSafeImage(data?: string): SafeUrl | null {
+    if (!data) return null;
+    const prefixed = data.startsWith('data:') ? data : `data:image/png;base64,${data}`;
+    return this.sanitizer.bypassSecurityTrustUrl(prefixed);
   }
 
   populateFormData() {
