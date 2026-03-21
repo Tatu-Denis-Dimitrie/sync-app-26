@@ -97,18 +97,6 @@ namespace SyncApp26.Infrastructure.Services
                         rowToFinalize.UserSignatureData = existingDoc.UserSignatureData;
                         rowToFinalize.UserSignatureMethod = existingDoc.UserSignatureMethod;
                     }
-                    if (string.IsNullOrEmpty(rowToFinalize.InstructorSignature))
-                    {
-                        if (documentType?.ToUpperInvariant() == "SSM" && string.IsNullOrEmpty(rowToFinalize.VerifierSignature))
-                        {
-                            rowToFinalize.VerifierSignature = existingDoc.ManagerSignatureData;
-                        }
-                        else if (documentType?.ToUpperInvariant() != "SSM")
-                        {
-                            rowToFinalize.InstructorSignature = existingDoc.ManagerSignatureData;
-                            rowToFinalize.InstructorSignatureMethod = existingDoc.ManagerSignatureMethod;
-                        }
-                    }
                     await _context.SaveChangesAsync();
                 }
             }
@@ -212,6 +200,34 @@ namespace SyncApp26.Infrastructure.Services
             }
 
             await _context.SaveChangesAsync();
+
+            // ── For SSM: place admin's saved signature as verifier on the latest training row ──
+            if (isSsmDocumentType)
+            {
+                var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == generatedByEmail);
+                if (adminUser != null)
+                {
+                    var adminSig = await _context.UserSignatures
+                        .Where(s => s.UserId == adminUser.Id && s.RevokedAt == null)
+                        .OrderByDescending(s => s.UpdatedAt ?? s.CreatedAt)
+                        .FirstOrDefaultAsync();
+
+                    if (adminSig != null)
+                    {
+                        var trainingRow = await _context.PeriodicTrainings
+                            .Where(pt => pt.UserDocumentId == doc.Id)
+                            .OrderByDescending(pt => pt.CreatedAt)
+                            .FirstOrDefaultAsync();
+
+                        if (trainingRow != null)
+                        {
+                            trainingRow.VerifierSignature = adminSig.SignatureData;
+                            trainingRow.VerifierSignatureMethod = adminSig.SignatureMethod;
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+            }
 
             // Reload user with all PeriodicTrainings (deterministic order)
             var user = await _context.Users
