@@ -782,6 +782,19 @@ namespace SyncApp26.Infrastructure.Services
             return Task.FromResult(bytes);
         }
 
+        public async Task<IEnumerable<UserDocument>> GetAllDocumentsAsync()
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                .OrderByDescending(d => d.GeneratedAt)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType)
         {
             return await _context.UserDocuments

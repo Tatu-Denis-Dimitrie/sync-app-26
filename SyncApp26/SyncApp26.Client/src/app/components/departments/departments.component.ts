@@ -144,6 +144,10 @@ export class DepartmentsComponent implements OnInit {
     this.router.navigate(['/admin-signature']);
   }
 
+  navigateToDocuments(): void {
+    this.router.navigate(['/documents']);
+  }
+
   onPageChange(event: any): void {
     this.currentPage = typeof event === 'number' ? event : event.page;
   }

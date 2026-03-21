@@ -634,6 +634,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin-signature']);
   }
 
+  navigateToDocuments(): void {
+    this.router.navigate(['/documents']);
+  }
+
   getFilteredDepartmentComparisons(): CSVDepartmentComparisonDTO[] {
     // Filter to show only new departments
     let filtered = this.currentDepartmentComparisons.filter((comp: CSVDepartmentComparisonDTO) => comp.status === 'new');

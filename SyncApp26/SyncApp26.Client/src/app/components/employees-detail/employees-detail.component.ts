@@ -10,18 +10,16 @@ import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { BulkTrainingModalComponent } from '../bulk-training-modal/bulk-training-modal.component';
 
 @Component({
   selector: 'app-employees-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   templateUrl: './employees-detail.component.html',
   styleUrls: ['./employees-detail.component.css']
 })
 export class EmployeesDetailComponent implements OnInit {
   private readonly emptyGuid = '00000000-0000-0000-0000-000000000000';
-   @ViewChild(BulkTrainingModalComponent) bulkTrainingModal!: BulkTrainingModalComponent;
 
   users$!: Observable<User[]>;
   paginatedUsers$!: Observable<User[]>;
@@ -307,6 +305,10 @@ export class EmployeesDetailComponent implements OnInit {
     this.router.navigate(['/admin-signature']);
   }
 
+  navigateToDocuments(): void {
+    this.router.navigate(['/documents']);
+  }
+
   viewSSMSUForm(user: User, event?: Event): void {
     if (event) {
       event.stopPropagation();
@@ -456,57 +458,5 @@ export class EmployeesDetailComponent implements OnInit {
         alert(err.error?.message || 'Error deleting user');
       }
     });
-  }
-
-  // ── Bulk Generate ──────────────────────────────────────────────────────────
-  showBulkGenerateModal = false;
-  bulkGenerateType: 'SSM' | 'SU' | 'Both' = 'Both';
-  isBulkGenerating = false;
-  bulkGenerateResult: { message: string; generated: number; skipped: number; adminSignLink?: string | null } | null = null;
-
-  openBulkGenerateModal(): void {
-    this.showBulkGenerateModal = true;
-    this.bulkGenerateType = 'Both';
-    this.bulkGenerateResult = null;
-  }
-
-  closeBulkGenerateModal(): void {
-    this.showBulkGenerateModal = false;
-    this.bulkGenerateResult = null;
-  }
-
-  confirmBulkGenerate(): void {
-    this.isBulkGenerating = true;
-    this.bulkGenerateResult = null;
-    this.http.post<any>(`${environment.apiUrl}/Document/bulk-generate`, {
-      documentType: this.bulkGenerateType
-    }).subscribe({
-      next: (res) => {
-        this.isBulkGenerating = false;
-        this.bulkGenerateResult = res;
-
-        // Continue with the existing signing system used in the app.
-        if (res?.adminSignLink) {
-          window.open(res.adminSignLink, '_blank');
-        }
-      },
-      error: (err) => {
-        this.isBulkGenerating = false;
-        this.bulkGenerateResult = {
-          message: err.error?.message || 'Bulk generation failed.',
-          generated: 0,
-          skipped: 0
-        };
-      }
-    });
-  }
-
-  openBulkTrainingModal(): void {
-    this.bulkTrainingModal.open();
-  }
-
-  onBulkTrainingSuccess(): void {
-    this.successMessage = 'Bulk periodic training created successfully for all users!';
-    setTimeout(() => this.successMessage = '', 5000);
   }
 }

@@ -177,6 +177,10 @@ export class AdminSignatureComponent {
     this.router.navigate(['/admin-signature']);
   }
 
+  navigateToDocuments(): void {
+    this.router.navigate(['/documents']);
+  }
+
   logout(): void {
     this.authService.logout();
   }

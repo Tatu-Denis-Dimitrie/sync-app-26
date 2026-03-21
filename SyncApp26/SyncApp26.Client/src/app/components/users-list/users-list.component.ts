@@ -137,6 +137,14 @@ export class UsersListComponent implements OnInit {
     this.router.navigate(['/import-history']);
   }
 
+  navigateToSignature(): void {
+    this.router.navigate(['/admin-signature']);
+  }
+
+  navigateToDocuments(): void {
+    this.router.navigate(['/documents']);
+  }
+
   // Edit and Delete Modal State and Logic
   isEditModalOpen = false;
   isDeleteModalOpen = false;

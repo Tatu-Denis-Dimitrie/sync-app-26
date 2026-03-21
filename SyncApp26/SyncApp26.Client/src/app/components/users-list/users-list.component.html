@@ -56,6 +56,18 @@
             Employees
           </button>
           <button
+            (click)="navigateToDocuments()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Documents
+          </button>
+          <button
+            (click)="navigateToSignature()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
+          >
+            Signature
+          </button>
+          <button
             (click)="logout()"
             class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
           >

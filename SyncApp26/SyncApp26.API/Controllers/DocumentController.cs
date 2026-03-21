@@ -171,6 +171,14 @@ namespace SyncApp26.API.Controllers
             return Ok(documents.Select(MapDocument));
         }
 
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllDocuments()
+        {
+            var documents = await _documentService.GetAllDocumentsAsync();
+            return Ok(documents.Select(MapDocument));
+        }
+
         [HttpGet("my-pending-signatures")]
         public async Task<IActionResult> GetMyPendingSignatures()
         {
