@@ -18,6 +18,7 @@ import { LineManagerGuard } from './guards/line-manager.guard';
 import { SsmSuFormComponent } from './components/ssm-su-form/ssm-su-form.component';
 import { BasicUserComponent } from './components/basic-user/basic-user.component';
 import { LineManagerComponent } from './components/line-manager/line-manager.component';
+import { AdminSignatureComponent } from './pages/admin-signature/admin-signature.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -44,6 +45,7 @@ export const routes: Routes = [
   { path: 'employees/:id/ssm-su', component: SsmSuFormComponent, canActivate: [AdminGuard] },
   { path: 'import-history', component: ImportHistoryComponent, canActivate: [AdminGuard] },
   { path: 'test-signature', component: TestSignatureComponent, canActivate: [AdminGuard] },
+  { path: 'admin-signature', component: AdminSignatureComponent, canActivate: [AdminGuard] },
   
   { path: '**', redirectTo: '/login' }
 ];

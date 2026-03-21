@@ -218,6 +218,12 @@ export class DocumentSignatureComponent implements OnInit {
       this.errorMessage = 'Please type your full name as your signature.';
       return;
     }
+    if (this.signatureMethod === 'saved') {
+      if (!this.savedSignature || !this.savedSignature.isActive) {
+        this.errorMessage = 'No active saved signature found.';
+        return;
+      }
+    }
     if (!this.signatureConfirmed) {
       this.errorMessage = 'You must confirm your signature before signing.';
       return;
@@ -235,6 +241,8 @@ export class DocumentSignatureComponent implements OnInit {
         signatureMethod: method,
         signatureData: data
       };
+      // DEBUG: log payload trimis la bulk-sign-async
+      console.log('Bulk sign payload:', payload);
       this.http.post<any>(`${environment.apiUrl}${environment.endpoints.documentSignature}/bulk-sign-async`, payload)
         .subscribe(res => {
           if (res && res.jobId) {
@@ -259,6 +267,8 @@ export class DocumentSignatureComponent implements OnInit {
       signatureData: data,
       bulkSign: this.isBulkMode
     };
+    // DEBUG: log payload trimis la consume-token
+    console.log('Sign payload:', payload);
     this.http.post<any>(`${environment.apiUrl}${environment.endpoints.documentSignature}/consume-token`, payload)
       .pipe(
         finalize(() => this.isLoading = false),

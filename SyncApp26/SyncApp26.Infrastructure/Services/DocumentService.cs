@@ -45,6 +45,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             return await _context.UserDocuments
                 .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings)
                 .Where(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
@@ -56,14 +57,15 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
+            Console.WriteLine($"[GENERATE] Starting document generation for UserId: {userId}, DocumentType: {documentType}, GeneratedBy: {generatedByEmail}");
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
-            // Check if user is admin (admins should not have documents generated)
-            var userToGenerate = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
-            if (userToGenerate?.Role != null && string.Equals(userToGenerate.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException("Cannot generate documents for admin users.");
-            }
+            // // Check if user is admin (admins should not have documents generated)
+            // var userToGenerate = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
+            // if (userToGenerate?.Role != null && string.Equals(userToGenerate.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+            // {
+            //     throw new InvalidOperationException("Cannot generate documents for admin users.");
+            // }
 
             // Before anything else, if there's an existing completed document with signatures,
             // permanently copy those signatures to the correct PeriodicTraining row
@@ -239,21 +241,32 @@ namespace SyncApp26.Infrastructure.Services
             // Doar semnătură ca verifier (admin)
             doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
 
+
             var latestTraining = doc.User?.PeriodicTrainings
                 ?.Where(pt => pt.UserDocumentId == doc.Id)
-                .OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
-                .LastOrDefault();
+                .OrderByDescending(pt => pt.CreatedAt)
+                .FirstOrDefault();
             if (latestTraining != null)
             {
                 latestTraining.VerifierSignature = signatureData;
+                latestTraining.VerifierSignatureMethod = signatureMethod;
+                Console.WriteLine($"[BULK SIGN] Saved VerifierSignatureMethod: {signatureMethod}");
+                Console.WriteLine($"[BULK SIGN] Saved VerifierSignatureData: {(signatureData != null ? signatureData.Substring(0, Math.Min(100, signatureData.Length)) : "null")}");
             }
 
             await _context.SaveChangesAsync();
 
-            // PDF
-            if (doc.User != null)
+            // Reîncarcă user fresh cu toate datele după save
+            var freshUser = await _context.Users
+                .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
+                .Include(u => u.Department)
+                .Include(u => u.Function)
+                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
+                .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+
+            if (freshUser != null)
             {
-                try { await GeneratePdfSnapshotAsync(doc.User, doc); }
+                try { await GeneratePdfSnapshotAsync(freshUser, doc); }
                 catch { /* non-fatal */ }
             }
             await _context.SaveChangesAsync();
@@ -295,6 +308,9 @@ namespace SyncApp26.Infrastructure.Services
                     row.RelativeItem().Column(c =>
                     {
                         c.Item().Text("Semnătura celui care a verificat:").FontSize(8);
+                        // DEBUG LOG: Verifier signature info
+                        Console.WriteLine($"[PDF] VerifierSignatureMethod: {verifierSigMethod}");
+                        Console.WriteLine($"[PDF] VerifierSignatureData: {(verifierSigData != null ? verifierSigData.Substring(0, Math.Min(100, verifierSigData.Length)) : "null")}");
                         if (!string.IsNullOrWhiteSpace(verifierSigData))
                             RenderSignature(c, verifierSigMethod, verifierSigData);
                         else
@@ -509,7 +525,7 @@ namespace SyncApp26.Infrastructure.Services
                             .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
                         var introVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
                         var introVerifierSigMethod = (isSsm && !string.IsNullOrEmpty(introVerifierSigData))
-                            ? document.ManagerSignatureMethod
+                            ? latestPt?.VerifierSignatureMethod
                             : null;
                         var introInstructorSigData = isSsm ? latestPt?.InstructorSignature : document.ManagerSignatureData;
                         var introInstructorSigMethod = isSsm ? latestPt?.InstructorSignatureMethod : document.ManagerSignatureMethod;
@@ -546,7 +562,7 @@ namespace SyncApp26.Infrastructure.Services
                             .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
                         var workVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
                         var workVerifierSigMethod = (isSsm && !string.IsNullOrEmpty(workVerifierSigData))
-                            ? document.ManagerSignatureMethod
+                            ? latestPt?.VerifierSignatureMethod
                             : null;
                         var workInstructorSigData = isSsm ? latestPt?.InstructorSignature : document.ManagerSignatureData;
                         var workInstructorSigMethod = isSsm ? latestPt?.InstructorSignatureMethod : document.ManagerSignatureMethod;
@@ -656,7 +672,7 @@ namespace SyncApp26.Infrastructure.Services
                                     string? mgrSigData    = training.InstructorSignature;
                                     string? mgrSigMethod  = training.InstructorSignatureMethod;
                                     string? verifierSigData   = training.VerifierSignature;
-                                    string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? mgrSigMethod : null;
+                                    string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
 
                                     // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
                                 if (isSsm && !string.IsNullOrEmpty(verifierSigData) && string.IsNullOrEmpty(training.InstructorSignature))
@@ -858,6 +874,7 @@ namespace SyncApp26.Infrastructure.Services
                 else if (!isUserSignature && doc.DocumentType?.ToUpperInvariant() == "SSM" && isAdminSignature)
                 {
                     latestTraining.VerifierSignature = signatureData;
+                    latestTraining.VerifierSignatureMethod = signatureMethod;
                 }
                 else if (!isUserSignature && string.IsNullOrEmpty(latestTraining.InstructorSignature))
                 {
@@ -881,7 +898,7 @@ namespace SyncApp26.Infrastructure.Services
         }
         public async Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
-            var baseQuery = _context.UserDocuments
+            var docs = await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Role)
                 .Include(d => d.User)
@@ -892,23 +909,14 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate));
+                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
+                .Where(d =>
+                    (isAdmin
+                        ? d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.User != null && (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") && (d.Status == "PendingManager" || d.Status == "PendingUser") && d.ManagerSignedAt == null
+                        : (d.Status == "PendingManager" || d.Status == "PendingUser") && d.ManagerSignedAt == null && d.User != null && d.User.AssignedToId == signerUserId)
+                )
+                .ToListAsync();
 
-            // Admins sign only SSM documents awaiting verifier signature.
-            // Line managers sign all their employees' documents regardless of whether the employee has signed yet.
-            IQueryable<UserDocument> query = isAdmin
-                ? baseQuery.Where(d =>
-                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
-                    d.User != null &&
-                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
-                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
-                    d.ManagerSignedAt == null)
-                : baseQuery.Where(d =>
-                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
-                    d.ManagerSignedAt == null &&
-                    d.User != null && d.User.AssignedToId == signerUserId);
-
-            var docs = await query.ToListAsync();
             if (docs.Count == 0) return 0;
 
             var timestamp = DateTime.UtcNow;
@@ -921,7 +929,6 @@ namespace SyncApp26.Infrastructure.Services
                 bool isSsmAdminVerifier = isAdmin && doc.DocumentType?.ToUpperInvariant() == "SSM";
                 if (isSsmAdminVerifier)
                 {
-                    // Keep manager fields untouched so line manager can still sign later.
                     doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
                 }
                 else
@@ -934,38 +941,45 @@ namespace SyncApp26.Infrastructure.Services
                     doc.Status = doc.UserSignedAt != null ? "Completed" : "PendingUser";
                 }
 
-                var latestTraining = doc.User?.PeriodicTrainings
-                    ?.Where(pt => pt.UserDocumentId == doc.Id)
-                    .OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
-                    .LastOrDefault();
-                if (latestTraining != null)
+                var trainingForDoc = await _context.PeriodicTrainings
+                    .Where(pt => pt.UserDocumentId == doc.Id)
+                    .OrderByDescending(pt => pt.CreatedAt)
+                    .FirstOrDefaultAsync();
+                if (trainingForDoc != null)
                 {
                     if (isSsmAdminVerifier)
                     {
-                        latestTraining.VerifierSignature = signatureData;
+                        trainingForDoc.VerifierSignature = signatureData;
+                        trainingForDoc.VerifierSignatureMethod = signatureMethod;
                     }
                     else
                     {
-                        latestTraining.InstructorSignature = signatureData;
-                        latestTraining.InstructorSignatureMethod = signatureMethod;
+                        trainingForDoc.InstructorSignature = signatureData;
+                        trainingForDoc.InstructorSignatureMethod = signatureMethod;
                     }
                 }
             }
 
             await _context.SaveChangesAsync();
 
-            // Regenerate PDFs after committing signatures
             foreach (var doc in docs)
             {
-                if (doc.User != null)
+                var freshUser = await _context.Users
+                    .Include(u => u.Role)
+                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
+                    .Include(u => u.Department)
+                    .Include(u => u.Function)
+                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
+                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+
+                if (freshUser != null)
                 {
-                    try { await GeneratePdfSnapshotAsync(doc.User, doc); }
+                    try { await GeneratePdfSnapshotAsync(freshUser, doc); }
                     catch { /* non-fatal */ }
                 }
             }
             await _context.SaveChangesAsync();
 
-            // For admin bulk sign flow, report unique employees, not number of document rows.
             return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
         }
 
@@ -991,109 +1005,7 @@ namespace SyncApp26.Infrastructure.Services
             {
                 try
                 {
-                    // SU must always create a new table row at generation.
-                    // SSM may reuse an entirely empty row.
-                    PeriodicTraining? existingUnsigned = null;
-                    if (isSsmDocumentType)
-                    {
-                        existingUnsigned = await _context.PeriodicTrainings
-                            .Where(pt => pt.UserId == user.Id
-                                && string.IsNullOrEmpty(pt.UserSignatureData)
-                                && string.IsNullOrEmpty(pt.InstructorSignature)
-                                && string.IsNullOrEmpty(pt.VerifierSignature))
-                            .FirstOrDefaultAsync();
-                    }
-
-                    PeriodicTraining? newTrainingCreated = null;
-                    if (existingUnsigned == null)
-                    {
-                        var mostRecent = await _context.PeriodicTrainings
-                            .Where(pt => pt.UserId == user.Id)
-                            .OrderByDescending(pt => pt.CreatedAt)
-                            .FirstOrDefaultAsync();
-
-                        newTrainingCreated = new PeriodicTraining
-                        {
-                            Id = Guid.NewGuid(),
-                            UserId = user.Id,
-                            TrainingDate = mostRecent?.TrainingDate ?? DateTime.UtcNow,
-                            DurationHours = mostRecent?.DurationHours,
-                            Occupation = mostRecent?.Occupation,
-                            MaterialTaught = mostRecent?.MaterialTaught,
-                            InstructorName = mostRecent?.InstructorName,
-                            VerifierName = mostRecent?.VerifierName,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        _context.PeriodicTrainings.Add(newTrainingCreated);
-                    }
-                    else
-                    {
-                        // Clear stale signatures so regeneration starts fresh
-                        existingUnsigned.UserSignatureData = null;
-                        existingUnsigned.UserSignatureMethod = null;
-                        existingUnsigned.InstructorSignature = null;
-                        existingUnsigned.InstructorSignatureMethod = null;
-                        existingUnsigned.VerifierSignature = null;
-                    }
-
-                    // Reuse or create the UserDocument
-                    var doc = await _context.UserDocuments
-                        .FirstOrDefaultAsync(d => d.UserId == user.Id && d.DocumentType == documentType);
-
-                    if (doc != null)
-                    {
-                        doc.Status = "PendingUser";
-                        doc.GeneratedAt = DateTime.UtcNow;
-                        doc.UserSignatureMethod = null;
-                        doc.UserSignatureData = null;
-                        doc.UserSignatureIpAddress = null;
-                        doc.UserSignedAt = null;
-                        doc.UserCryptographicSignature = null;
-                        doc.ManagerSignatureMethod = null;
-                        doc.ManagerSignatureData = null;
-                        doc.ManagerSignatureIpAddress = null;
-                        doc.ManagerSignedAt = null;
-                        doc.ManagerCryptographicSignature = null;
-                    }
-                    else
-                    {
-                        doc = new UserDocument
-                        {
-                            UserId = user.Id,
-                            DocumentType = documentType ?? string.Empty,
-                            Status = "PendingUser",
-                            GeneratedAt = DateTime.UtcNow
-                        };
-                        _context.UserDocuments.Add(doc);
-                    }
-
-                    await _context.SaveChangesAsync();
-
-                    // Now associate periodic training rows with this document
-                    if (newTrainingCreated != null)
-                    {
-                        newTrainingCreated.UserDocumentId = doc.Id;
-                    }
-                    if (existingUnsigned != null)
-                    {
-                        existingUnsigned.UserDocumentId = doc.Id;
-                    }
-
-                    // Reload user with updated PeriodicTrainings
-                    var fullUser = await _context.Users
-                        .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                        .Include(u => u.Department)
-                        .Include(u => u.Function)
-                        .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
-                        .FirstOrDefaultAsync(u => u.Id == user.Id);
-
-                    if (fullUser != null)
-                    {
-                        var pdfPath = await GeneratePdfSnapshotAsync(fullUser, doc);
-                        doc.PdfFilePath = pdfPath;
-                        await _context.SaveChangesAsync();
-                    }
-
+                    await GenerateDocumentAsync(user.Id, documentType, generatedByEmail);
                     generated++;
                 }
                 catch
@@ -1107,13 +1019,9 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<int> BulkSignAndSendGeneratedDocumentsAsync(string documentType, string signatureMethod, string signatureData, string ipAddress)
         {
-            if (!string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase))
-            {
-                return 0;
-            }
-
-            // Fetch all PendingUser documents of the specified type (recently generated)
             var docs = await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Role)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
@@ -1130,7 +1038,6 @@ namespace SyncApp26.Infrastructure.Services
 
             var timestamp = DateTime.UtcNow;
 
-            // Admin signs as manager on all documents
             foreach (var doc in docs)
             {
                 var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
@@ -1139,7 +1046,6 @@ namespace SyncApp26.Infrastructure.Services
                 bool isSsmAdminVerifier = doc.DocumentType?.ToUpperInvariant() == "SSM";
                 if (isSsmAdminVerifier)
                 {
-                    // Admin SSM signature should not consume the line-manager signature slot.
                     doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
                 }
                 else
@@ -1149,36 +1055,43 @@ namespace SyncApp26.Infrastructure.Services
                     doc.ManagerSignatureIpAddress = ipAddress;
                     doc.ManagerSignedAt = timestamp;
                     doc.ManagerCryptographicSignature = cryptoSignature;
-                    // Status remains PendingUser until the employee signs
                     doc.Status = "PendingUser";
                 }
 
-                // Update PeriodicTraining with instructor signature
-                var latestTraining = doc.User?.PeriodicTrainings
-                    ?.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt)
-                    .LastOrDefault();
-                if (latestTraining != null)
+                var trainingForDoc = doc.User?.PeriodicTrainings
+                    ?.Where(pt => pt.UserDocumentId == doc.Id)
+                    .OrderByDescending(pt => pt.CreatedAt)
+                    .FirstOrDefault();
+                if (trainingForDoc != null)
                 {
                     if (isSsmAdminVerifier)
                     {
-                        latestTraining.VerifierSignature = signatureData;
+                        trainingForDoc.VerifierSignature = signatureData;
+                        trainingForDoc.VerifierSignatureMethod = signatureMethod;
                     }
                     else
                     {
-                        latestTraining.InstructorSignature = signatureData;
-                        latestTraining.InstructorSignatureMethod = signatureMethod;
+                        trainingForDoc.InstructorSignature = signatureData;
+                        trainingForDoc.InstructorSignatureMethod = signatureMethod;
                     }
                 }
             }
 
             await _context.SaveChangesAsync();
 
-            // Regenerate PDFs after committing signatures
             foreach (var doc in docs)
             {
-                if (doc.User != null)
+                var freshUser = await _context.Users
+                    .Include(u => u.Role)
+                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
+                    .Include(u => u.Department)
+                    .Include(u => u.Function)
+                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
+                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+
+                if (freshUser != null)
                 {
-                    try { await GeneratePdfSnapshotAsync(doc.User, doc); }
+                    try { await GeneratePdfSnapshotAsync(freshUser, doc); }
                     catch { /* non-fatal */ }
                 }
             }

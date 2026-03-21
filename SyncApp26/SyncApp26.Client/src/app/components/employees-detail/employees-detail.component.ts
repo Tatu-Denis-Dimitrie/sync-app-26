@@ -303,6 +303,10 @@ export class EmployeesDetailComponent implements OnInit {
     this.router.navigate(['/import-history']);
   }
 
+  navigateToSignature(): void {
+    this.router.navigate(['/admin-signature']);
+  }
+
   viewSSMSUForm(user: User, event?: Event): void {
     if (event) {
       event.stopPropagation();

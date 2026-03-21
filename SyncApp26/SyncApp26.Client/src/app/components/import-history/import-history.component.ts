@@ -310,4 +310,7 @@ export class ImportHistoryComponent implements OnInit {
     this.router.navigate(['/import-history']);
   }
 
+  navigateToSignature(): void {
+    this.router.navigate(['/admin-signature']);
+  }
 }

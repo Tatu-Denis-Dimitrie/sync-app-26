@@ -140,6 +140,10 @@ export class DepartmentsComponent implements OnInit {
     this.router.navigate(['/import-history']);
   }
 
+  navigateToSignature(): void {
+    this.router.navigate(['/admin-signature']);
+  }
+
   onPageChange(event: any): void {
     this.currentPage = typeof event === 'number' ? event : event.page;
   }

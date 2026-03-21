@@ -72,6 +72,12 @@ namespace SyncApp26.Domain.Entities
         public string? VerifierSignature { get; set; }
 
         /// <summary>
+        /// Instructor/manager signature method: "Draw" or "Type"
+        /// </summary>
+        [MaxLength(50)]
+        public string? VerifierSignatureMethod { get; set; }
+
+        /// <summary>
         /// Instructor name
         /// </summary>
         [MaxLength(200)]
