@@ -1,0 +1,145 @@
+<div class="min-h-screen bg-background">
+  <!-- Header -->
+  <header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+    <div class="container mx-auto px-4 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <button (click)="navigateToDashboard()"
+            class="w-8 h-8 bg-primary rounded-md flex items-center justify-center hover:bg-primary/90 transition-colors">
+            <svg class="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+              </path>
+            </svg>
+          </button>
+          <div>
+            <h1 class="text-xl font-semibold text-foreground">SyncApp 26</h1>
+            <p class="text-sm text-muted-foreground">Synchronize employee data with CSV import</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button (click)="navigateToDepartments()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            Departments
+          </button>
+          <button (click)="navigateToImportHistory()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            User History
+          </button>
+          <button (click)="navigateToUsers()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            Users
+          </button>
+          <button (click)="navigateToEmployees()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            Employees
+          </button>
+          <button (click)="navigateToDocuments()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            Documents
+          </button>
+          <button (click)="navigateToSignature()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            Signature
+          </button>
+          <button
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-white bg-gray-500 cursor-default">
+            Data Requests
+          </button>
+          <button (click)="logout()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container mx-auto px-4 py-8 min-h-[85vh]">
+    <div class="mb-8 flex justify-between items-center bg-white shadow-sm p-6 rounded-xl border border-slate-200">
+      <div>
+        <h1 class="text-2xl font-bold text-foreground">Data Change Requests</h1>
+        <p class="text-muted-foreground mt-1">Review and approve changes to employee profiles.</p>
+      </div>
+    </div>
+
+    <div *ngIf="success" class="mb-4 p-4 bg-green-50 text-green-800 rounded-lg border border-green-200">
+      {{ success }}
+    </div>
+    <div *ngIf="error" class="mb-4 p-4 bg-red-50 text-red-800 rounded-lg border border-red-200">
+      {{ error }}
+    </div>
+
+    <div *ngIf="isLoading" class="text-muted-foreground">Loading requests...</div>
+
+    <div *ngIf="!isLoading && requests.length === 0"
+      class="p-8 text-center bg-muted/30 border border-dashed border-border rounded-lg text-muted-foreground">
+      No data change requests found.
+    </div>
+
+    <div *ngIf="!isLoading && requests.length > 0" class="space-y-6">
+      <div *ngFor="let req of requests"
+        class="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col">
+        <div class="p-6">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 gap-4">
+            <div>
+              <h3 class="text-xl font-bold text-slate-800">{{ req.userFullName }}</h3>
+              <p class="text-sm text-slate-500 flex items-center mt-1">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                  </path>
+                </svg>
+                {{ req.userEmail }} &bull; Requested on {{ req.createdAt | date:'mediumDate' }}
+              </p>
+            </div>
+            <div>
+              <span [ngClass]="{
+            'bg-yellow-100 text-yellow-800': req.status === 'Pending',
+            'bg-green-100 text-green-800': req.status === 'Approved',
+            'bg-red-100 text-red-800': req.status === 'Rejected'
+          }" class="px-3 py-1 rounded-full text-xs font-semibold">
+                {{ req.status }}
+              </span>
+            </div>
+          </div>
+
+          <div class="px-6 mb-6">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Reason for change</h4>
+            <div class="bg-slate-50 border-l-4 border-teal-500 p-4 rounded-r-md">
+              <p class="text-sm text-slate-700 italic">"{{ req.reason }}"</p>
+            </div>
+          </div>
+
+          <div class="px-6 mb-6">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Requested Changes</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div *ngFor="let change of getParsedChanges(req.requestedChangesJson) | keyvalue"
+                class="bg-white border border-slate-200 p-3 rounded-lg shadow-sm flex flex-col justify-center">
+                <span class="text-xs font-semibold text-teal-600 mb-1 uppercase tracking-wide">{{ change.key }}</span>
+                <span class="text-slate-800 text-sm font-medium">{{ change.value }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="req.status === 'Pending'"
+            class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3 mt-auto">
+            <button (click)="resolveRequest(req.id, 'Rejected')"
+              class="px-5 py-2.5 border border-red-200 text-red-700 bg-white hover:bg-red-50 rounded-lg text-sm font-bold shadow-sm transition-colors duration-200">
+              Reject
+            </button>
+            <button (click)="resolveRequest(req.id, 'Approved')"
+              class="px-5 py-2.5 bg-teal-600 text-white hover:bg-teal-700 rounded-lg text-sm font-bold shadow-md shadow-teal-500/20 transition-colors duration-200">
+              Approve & Apply
+            </button>
+          </div>
+
+          <div *ngIf="req.status !== 'Pending'"
+            class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3 mt-auto">
+            <p class="text-sm font-medium text-slate-500">Resolved on {{ req.resolvedAt | date:'medium' }}</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>

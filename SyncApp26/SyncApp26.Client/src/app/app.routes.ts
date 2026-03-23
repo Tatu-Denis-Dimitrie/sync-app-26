@@ -20,6 +20,8 @@ import { BasicUserComponent } from './components/basic-user/basic-user.component
 import { LineManagerComponent } from './components/line-manager/line-manager.component';
 import { AdminSignatureComponent } from './pages/admin-signature/admin-signature.component';
 import { DocumentsViewComponent } from './pages/documents-view/documents-view.component';
+import { DataChangeRequestsComponent } from './pages/data-change-requests/data-change-requests.component';
+import { ConfirmEmailChangeComponent } from './pages/confirm-email-change/confirm-email-change.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -30,6 +32,7 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
+  { path: 'confirm-email-change', component: ConfirmEmailChangeComponent },
   { path: 'sign/:token', component: DocumentSignatureComponent },
   
   // Authenticated routes (login required)
@@ -48,6 +51,7 @@ export const routes: Routes = [
   { path: 'test-signature', component: TestSignatureComponent, canActivate: [AdminGuard] },
   { path: 'admin-signature', component: AdminSignatureComponent, canActivate: [AdminGuard] },
   { path: 'documents', component: DocumentsViewComponent, canActivate: [AdminGuard] },
+  { path: 'data-requests', component: DataChangeRequestsComponent, canActivate: [AdminGuard] },
   
   { path: '**', redirectTo: '/login' }
 ];

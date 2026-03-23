@@ -5,9 +5,10 @@ import { Router } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserSyncService } from '../../services/user-sync.service';
 import { UserSignatureService, UserSignature, UserSignatureHistory } from '../../services/user-signature.service';
-import { User, UserRole } from '../../models/csv-sync.model';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { DataChangeRequestService } from '../../services/data-change-request.service';
+import { User, UserRole } from '../../models/csv-sync.model';
 
 @Component({
   selector: 'app-basic-user',
@@ -47,10 +48,35 @@ export class BasicUserComponent implements OnInit {
 
   UserRole = UserRole;
 
+  // ── Data Change Request ────────────────────────────────────────────────
+  showDataChangeModal = false;
+  isSubmittingDataChange = false;
+  dataChangeReason = '';
+  dataChangeError = '';
+  dataChangeSuccess = '';
+  
+  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' }[] = [
+    { key: 'LastName', label: 'Last Name', type: 'text' },
+    { key: 'FirstName', label: 'First Name', type: 'text' },
+    { key: 'Email', label: 'Email', type: 'email' },
+    { key: 'Department', label: 'Department (Name)', type: 'text' },
+    { key: 'Function', label: 'Function (Name)', type: 'text' }
+  ];
+  selectedFieldKey = '';
+  newFieldValue = '';
+  requestedChanges: { [key: string]: string } = {};
+
+  get hasRequestedChanges(): boolean {
+    return Object.keys(this.requestedChanges).length > 0;
+  }
+  
+  // ────────────────────────────────────────────────────────────────────────
+
   constructor(
     private authService: AuthenticationService,
     private userSyncService: UserSyncService,
     private userSignatureService: UserSignatureService,
+    private dataChangeRequestService: DataChangeRequestService,
     private router: Router,
     private http: HttpClient
   ) { }
@@ -287,6 +313,79 @@ export class BasicUserComponent implements OnInit {
 
   formatDateTime(d: string): string {
     return new Date(d).toLocaleString();
+  }
+
+  // ── Data Change Requests ──────────────────────────────────────────────────
+
+  openDataChangeModal(): void {
+    this.showDataChangeModal = true;
+    this.dataChangeError = '';
+    this.dataChangeSuccess = '';
+    this.dataChangeReason = '';
+    this.requestedChanges = {};
+  }
+
+  closeDataChangeModal(): void {
+    this.showDataChangeModal = false;
+  }
+
+  submitDataChangeRequest(): void {
+    const actualChanges: { [key: string]: string } = {};
+    for (const key of Object.keys(this.requestedChanges)) {
+      if (this.requestedChanges[key] && this.requestedChanges[key].trim() !== '') {
+        const val = this.requestedChanges[key].trim();
+        actualChanges[key] = val;
+      }
+    }
+
+    // Validation checks
+    if (Object.keys(actualChanges).length === 0) {
+      this.dataChangeError = 'Please fill in at least one field to change.';
+      return;
+    }
+    
+    if (actualChanges['Email']) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(actualChanges['Email'])) {
+        this.dataChangeError = 'Please enter a valid email address.';
+        return;
+      }
+    }
+
+    if (actualChanges['DateOfBirth']) {
+      const dob = new Date(actualChanges['DateOfBirth']);
+      const today = new Date();
+      if (dob > today) {
+        this.dataChangeError = 'Date of Birth cannot be in the future.';
+        return;
+      }
+    }
+    if (!this.dataChangeReason.trim()) {
+      this.dataChangeError = 'Please provide a reason for the change.';
+      return;
+    }
+
+    this.isSubmittingDataChange = true;
+    this.dataChangeError = '';
+
+    const payload = {
+      requestedChangesJson: JSON.stringify(actualChanges),
+      reason: this.dataChangeReason.trim()
+    };
+
+    this.dataChangeRequestService.createRequest(payload).subscribe({
+      next: (res) => {
+        this.isSubmittingDataChange = false;
+        this.dataChangeSuccess = 'Data change request submitted successfully. It is now pending admin approval.';
+        this.requestedChanges = {};
+        this.dataChangeReason = '';
+        setTimeout(() => this.closeDataChangeModal(), 3000);
+      },
+      error: (err) => {
+        this.isSubmittingDataChange = false;
+        this.dataChangeError = err.error?.message || 'Failed to submit request.';
+      }
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────

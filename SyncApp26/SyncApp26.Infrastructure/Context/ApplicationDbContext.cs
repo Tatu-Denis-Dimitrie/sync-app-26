@@ -45,6 +45,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<PeriodicTraining> PeriodicTrainings { get; set; }
         public DbSet<UserSignature> UserSignatures { get; set; }
         public DbSet<UserSignatureHistory> UserSignatureHistories { get; set; }
+        public DbSet<DataChangeRequest> DataChangeRequests { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -274,6 +275,29 @@ namespace SyncApp26.Infrastructure.Context
 
                 entity.HasIndex(e => e.UserId).HasDatabaseName("IX_UserSignatureHistories_UserId");
                 entity.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_UserSignatureHistories_CreatedAt");
+            });
+
+            // Configure DataChangeRequest entity
+            modelBuilder.Entity<DataChangeRequest>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.RequestedChangesJson).IsRequired();
+                entity.Property(e => e.Reason).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ResolvedByAdmin)
+                    .WithMany()
+                    .HasForeignKey(e => e.ResolvedByAdminId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.Status);
             });
         }
 

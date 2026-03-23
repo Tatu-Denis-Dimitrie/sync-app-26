@@ -638,6 +638,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/documents']);
   }
 
+  navigateToDataRequests(): void {
+    this.router.navigate(['/data-requests']);
+  }
+
   getFilteredDepartmentComparisons(): CSVDepartmentComparisonDTO[] {
     // Filter to show only new departments
     let filtered = this.currentDepartmentComparisons.filter((comp: CSVDepartmentComparisonDTO) => comp.status === 'new');

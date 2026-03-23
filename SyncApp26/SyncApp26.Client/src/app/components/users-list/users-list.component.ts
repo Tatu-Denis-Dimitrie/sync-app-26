@@ -141,7 +141,11 @@ export class UsersListComponent implements OnInit {
     this.router.navigate(['/admin-signature']);
   }
 
-  navigateToDocuments(): void {
+  
+  navigateToDataRequests(): void {
+    this.router.navigate(['/data-requests']);
+  }
+navigateToDocuments(): void {
     this.router.navigate(['/documents']);
   }
 
