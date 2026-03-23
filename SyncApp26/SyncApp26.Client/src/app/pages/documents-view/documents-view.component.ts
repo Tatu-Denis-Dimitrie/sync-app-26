@@ -275,7 +275,11 @@ export class DocumentsViewComponent implements OnInit {
   navigateToSignature(): void { 
     this.router.navigate(['/admin-signature']); 
   }
-  navigateToDocuments(): void { 
+  
+  navigateToDataRequests(): void {
+    this.router.navigate(['/data-requests']);
+  }
+navigateToDocuments(): void { 
     this.router.navigate(['/documents']); 
   }
   logout(): void { 
