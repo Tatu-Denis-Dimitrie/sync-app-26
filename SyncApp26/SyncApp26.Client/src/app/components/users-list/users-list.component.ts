@@ -9,6 +9,34 @@ import { AuthenticationService } from '../../services/authentication.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 
+interface SignatureStats {
+  total: number;
+  ssmSigned: number;
+  suSigned: number;
+  bothSigned: number;
+  unsigned: number;
+}
+
+interface DepartmentSignatureStats extends SignatureStats {
+  departmentName: string;
+}
+
+interface LineManagerTeamStats {
+  managerId: string;
+  managerName: string;
+  departmentName: string;
+  totalSubordinates: number;
+  missingSsm: number;
+  missingSu: number;
+  missingAny: number;
+  fullySignedBoth: number;
+}
+
+type UserSignatureFilter = 'all' | 'ssm-signed' | 'su-signed' | 'both-signed' | 'unsigned';
+type SortDirection = 'asc' | 'desc';
+type DepartmentSortKey = keyof DepartmentSignatureStats;
+type ManagerSortKey = keyof LineManagerTeamStats;
+
 @Component({
   selector: 'app-users-list',
   standalone: true,
@@ -18,8 +46,14 @@ import { PaginationComponent } from '../pagination/pagination.component';
 })
 export class UsersListComponent implements OnInit {
   users$!: Observable<User[]>;
+  filteredUsers$!: Observable<User[]>;
   paginatedUsers$!: Observable<User[]>;
   departments$!: Observable<Department[]>;
+  signatureStats$!: Observable<SignatureStats>;
+  departmentSignatureStats$!: Observable<DepartmentSignatureStats[]>;
+  sortedDepartmentSignatureStats$!: Observable<DepartmentSignatureStats[]>;
+  lineManagerTeamStats$!: Observable<LineManagerTeamStats[]>;
+  sortedLineManagerTeamStats$!: Observable<LineManagerTeamStats[]>;
 
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 15;
@@ -31,6 +65,11 @@ export class UsersListComponent implements OnInit {
   private searchQuery$ = new BehaviorSubject<string>('');
   private selectedDepartment$ = new BehaviorSubject<string>('all');
   private selectedRole$ = new BehaviorSubject<UserRole | 'all'>('all');
+  private selectedSignature$ = new BehaviorSubject<UserSignatureFilter>('all');
+  private departmentSortKey$ = new BehaviorSubject<DepartmentSortKey>('departmentName');
+  private departmentSortDirection$ = new BehaviorSubject<SortDirection>('asc');
+  private managerSortKey$ = new BehaviorSubject<ManagerSortKey>('missingAny');
+  private managerSortDirection$ = new BehaviorSubject<SortDirection>('desc');
 
   get searchQuery(): string { return this.searchQuery$.value; }
   set searchQuery(value: string) { this.searchQuery$.next(value); }
@@ -41,7 +80,13 @@ export class UsersListComponent implements OnInit {
   get selectedRole(): UserRole | 'all' { return this.selectedRole$.value; }
   set selectedRole(value: UserRole | 'all') { this.selectedRole$.next(value); }
 
+  get selectedSignature(): UserSignatureFilter { return this.selectedSignature$.value; }
+  set selectedSignature(value: UserSignatureFilter) { this.selectedSignature$.next(value); }
+
   UserRole = UserRole;
+  isPendingUsersModalOpen = false;
+  pendingUsersModalTitle = '';
+  pendingUsersForModal: User[] = [];
 
   constructor(
     private userSyncService: UserSyncService,
@@ -58,23 +103,31 @@ export class UsersListComponent implements OnInit {
     this.users$ = this.userSyncService.users$;
     this.departments$ = this.userSyncService.getDepartments();
 
+    this.users$.subscribe(users => {
+      this.allUsers = users;
+    });
+
     // Check for department filter from query params
     this.route.queryParams.subscribe(params => {
       if (params['department']) {
         this.selectedDepartment = params['department'];
       }
+
+      const signatureParam = params['signature'] as UserSignatureFilter | undefined;
+      if (signatureParam && ['all', 'ssm-signed', 'su-signed', 'both-signed', 'unsigned'].includes(signatureParam)) {
+        this.selectedSignature = signatureParam;
+      }
     });
 
-    this.paginatedUsers$ = combineLatest([
+    this.filteredUsers$ = combineLatest([
       this.users$,
       this.searchQuery$,
       this.selectedDepartment$,
       this.selectedRole$,
-      this.currentPage$
+      this.selectedSignature$
     ]).pipe(
-      map(([users, searchQuery, selectedDepartment, selectedRole, currentPage]) => {
-        // Filter users
-        let filtered = users.filter(user => {
+      map(([users, searchQuery, selectedDepartment, selectedRole, selectedSignature]) => {
+        return users.filter(user => {
           const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
           const matchesSearch = !searchQuery ||
             fullName.includes(searchQuery.toLowerCase()) ||
@@ -83,8 +136,99 @@ export class UsersListComponent implements OnInit {
             user.departmentName === selectedDepartment;
           const matchesRole = selectedRole === 'all' ||
             user.role === selectedRole;
-          return matchesSearch && matchesDepartment && matchesRole;
+
+          const matchesSignature =
+            selectedSignature === 'all' ||
+            (selectedSignature === 'ssm-signed' && !!user.hasSignedSsm) ||
+            (selectedSignature === 'su-signed' && !!user.hasSignedSu) ||
+            (selectedSignature === 'both-signed' && !!user.hasSignedSsm && !!user.hasSignedSu) ||
+            (selectedSignature === 'unsigned' && !user.hasSignedSsm && !user.hasSignedSu);
+
+          return matchesSearch && matchesDepartment && matchesRole && matchesSignature;
         });
+      })
+    );
+
+    this.signatureStats$ = this.filteredUsers$.pipe(
+      map(users => this.computeSignatureStats(users))
+    );
+
+    this.departmentSignatureStats$ = this.filteredUsers$.pipe(
+      map(users => {
+        const grouped = new Map<string, User[]>();
+
+        users.forEach(user => {
+          const key = user.departmentName || 'Unknown';
+          if (!grouped.has(key)) {
+            grouped.set(key, []);
+          }
+          grouped.get(key)!.push(user);
+        });
+
+        return Array.from(grouped.entries())
+          .map(([departmentName, deptUsers]) => ({
+            departmentName,
+            ...this.computeSignatureStats(deptUsers)
+          }))
+          .sort((a, b) => a.departmentName.localeCompare(b.departmentName));
+      })
+    );
+
+    this.sortedDepartmentSignatureStats$ = combineLatest([
+      this.departmentSignatureStats$,
+      this.departmentSortKey$,
+      this.departmentSortDirection$
+    ]).pipe(
+      map(([rows, sortKey, sortDirection]) => this.sortRows(rows, sortKey, sortDirection))
+    );
+
+    this.lineManagerTeamStats$ = combineLatest([
+      this.users$,
+      this.selectedDepartment$
+    ]).pipe(
+      map(([users, selectedDepartment]) => {
+        const scopedUsers = selectedDepartment === 'all'
+          ? users
+          : users.filter(u => u.departmentName === selectedDepartment);
+
+        const lineManagers = scopedUsers.filter(u => u.role === UserRole.LineManager);
+
+        return lineManagers
+          .map(manager => {
+            const subordinates = scopedUsers.filter(u => u.assignedToId === manager.id);
+            const missingSsm = subordinates.filter(u => !u.hasSignedSsm).length;
+            const missingSu = subordinates.filter(u => !u.hasSignedSu).length;
+            const fullySignedBoth = subordinates.filter(u => !!u.hasSignedSsm && !!u.hasSignedSu).length;
+
+            return {
+              managerId: manager.id,
+              managerName: `${manager.firstName} ${manager.lastName}`,
+              departmentName: manager.departmentName,
+              totalSubordinates: subordinates.length,
+              missingSsm,
+              missingSu,
+              missingAny: subordinates.filter(u => !u.hasSignedSsm || !u.hasSignedSu).length,
+              fullySignedBoth
+            };
+          })
+          .filter(row => row.totalSubordinates > 0)
+          .sort((a, b) => b.missingAny - a.missingAny || a.managerName.localeCompare(b.managerName));
+      })
+    );
+
+    this.sortedLineManagerTeamStats$ = combineLatest([
+      this.lineManagerTeamStats$,
+      this.managerSortKey$,
+      this.managerSortDirection$
+    ]).pipe(
+      map(([rows, sortKey, sortDirection]) => this.sortRows(rows, sortKey, sortDirection))
+    );
+
+    this.paginatedUsers$ = combineLatest([
+      this.filteredUsers$,
+      this.currentPage$
+    ]).pipe(
+      map(([filtered, currentPage]) => {
 
         this.totalItems = filtered.length;
 
@@ -93,6 +237,67 @@ export class UsersListComponent implements OnInit {
         return filtered.slice(startIndex, startIndex + this.pageSize);
       })
     );
+  }
+
+  private computeSignatureStats(users: User[]): SignatureStats {
+    return {
+      total: users.length,
+      ssmSigned: users.filter(u => !!u.hasSignedSsm).length,
+      suSigned: users.filter(u => !!u.hasSignedSu).length,
+      bothSigned: users.filter(u => !!u.hasSignedSsm && !!u.hasSignedSu).length,
+      unsigned: users.filter(u => !u.hasSignedSsm && !u.hasSignedSu).length
+    };
+  }
+
+  toggleDepartmentTableSort(key: DepartmentSortKey): void {
+    const currentKey = this.departmentSortKey$.value;
+    const currentDirection = this.departmentSortDirection$.value;
+
+    if (currentKey === key) {
+      this.departmentSortDirection$.next(currentDirection === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    this.departmentSortKey$.next(key);
+    this.departmentSortDirection$.next(key === 'departmentName' ? 'asc' : 'desc');
+  }
+
+  toggleManagerTableSort(key: ManagerSortKey): void {
+    const currentKey = this.managerSortKey$.value;
+    const currentDirection = this.managerSortDirection$.value;
+
+    if (currentKey === key) {
+      this.managerSortDirection$.next(currentDirection === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    this.managerSortKey$.next(key);
+    this.managerSortDirection$.next(key === 'managerName' || key === 'departmentName' ? 'asc' : 'desc');
+  }
+
+  getDepartmentSortIndicator(key: DepartmentSortKey): string {
+    if (this.departmentSortKey$.value !== key) return '';
+    return this.departmentSortDirection$.value === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  getManagerSortIndicator(key: ManagerSortKey): string {
+    if (this.managerSortKey$.value !== key) return '';
+    return this.managerSortDirection$.value === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  private sortRows<T>(rows: T[], sortKey: keyof T, sortDirection: SortDirection): T[] {
+    const sorted = [...rows].sort((a, b) => {
+      const aValue = a[sortKey];
+      const bValue = b[sortKey];
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return aValue - bValue;
+      }
+
+      return String(aValue ?? '').localeCompare(String(bValue ?? ''));
+    });
+
+    return sortDirection === 'asc' ? sorted : sorted.reverse();
   }
 
   onPageChange(page: number): void {
@@ -109,6 +314,28 @@ export class UsersListComponent implements OnInit {
 
   viewUserDetails(userId: string): void {
     this.router.navigate(['/employees', userId]);
+  }
+
+  openPendingUsersForManager(row: LineManagerTeamStats, event?: Event): void {
+    event?.stopPropagation();
+
+    const scopedUsers = this.selectedDepartment === 'all'
+      ? this.allUsers
+      : this.allUsers.filter(u => u.departmentName === this.selectedDepartment);
+
+    this.pendingUsersForModal = scopedUsers
+      .filter(u => u.assignedToId === row.managerId)
+      .filter(u => !u.hasSignedSsm || !u.hasSignedSu)
+      .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+
+    this.pendingUsersModalTitle = `Users with pending signatures for ${row.managerName}`;
+    this.isPendingUsersModalOpen = true;
+  }
+
+  closePendingUsersModal(): void {
+    this.isPendingUsersModalOpen = false;
+    this.pendingUsersModalTitle = '';
+    this.pendingUsersForModal = [];
   }
 
   getRoleBadgeColor(role: UserRole): string {

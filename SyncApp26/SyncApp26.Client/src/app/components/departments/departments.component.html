@@ -189,7 +189,7 @@
 
     <!-- Search and Filters -->
     <div class="bg-card border border-border rounded-lg p-4 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="relative">
           <input
             type="text"
@@ -223,11 +223,26 @@
           <option value="medium">Medium (11-50 people)</option>
           <option value="large">Large (>50 people)</option>
         </select>
+
+        <select
+          [(ngModel)]="signatureFilter"
+          (ngModelChange)="onFilterChange()"
+          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        >
+          <option value="all">All Signature Status</option>
+          <option value="ssm-signed">Has SSM Signed</option>
+          <option value="su-signed">Has SU Signed</option>
+          <option value="both-signed">Has Both Signed</option>
+          <option value="unsigned">Has Not Signed Users</option>
+        </select>
       </div>
     </div>
 
     <!-- Departments Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+    <div
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"
+      *ngIf="signatureStatsByDepartment$ | async as signatureStatsByDepartment"
+    >
       <div
         *ngFor="let dept of paginatedDepartments$ | async"
         [class]="
@@ -407,6 +422,42 @@
             <span class="text-lg font-bold text-foreground">{{
               dept.lineManagerCount + dept.employeeCount
             }}</span>
+          </div>
+
+          <div class="pt-3 border-t border-border">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2"
+            >
+              Document Signatures
+            </p>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div
+                class="rounded-md bg-blue-50 text-blue-700 px-2 py-1 border border-blue-200"
+              >
+                SSM Signed:
+                {{ signatureStatsByDepartment[dept.id].ssmSigned || 0 }}
+              </div>
+              <div
+                class="rounded-md bg-teal-50 text-teal-700 px-2 py-1 border border-teal-200"
+              >
+                SU Signed:
+                {{ signatureStatsByDepartment[dept.id].suSigned || 0 }}
+              </div>
+              <div
+                class="rounded-md bg-emerald-50 text-emerald-700 px-2 py-1 border border-emerald-200"
+              >
+                Both Signed:
+                {{ signatureStatsByDepartment[dept.id].bothSigned || 0 }}
+              </div>
+              <div
+                class="rounded-md bg-rose-50 text-rose-700 px-2 py-1 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                (click)="viewDepartmentUnsignedUsers(dept.name, $event)"
+                title="View users who have not signed SSM and SU"
+              >
+                Not Signed:
+                {{ signatureStatsByDepartment[dept.id].unsigned || 0 }}
+              </div>
+            </div>
           </div>
         </div>
       </div>

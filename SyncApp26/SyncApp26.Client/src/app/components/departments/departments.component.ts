@@ -7,8 +7,17 @@ import { switchMap, map, startWith, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
-import { Department } from '../../models/csv-sync.model';
+import { Department, User } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
+
+interface DepartmentSignatureStats {
+  ssmSigned: number;
+  suSigned: number;
+  bothSigned: number;
+  unsigned: number;
+}
+
+type SignatureFilter = 'all' | 'ssm-signed' | 'su-signed' | 'both-signed' | 'unsigned';
 
 @Component({
   selector: 'app-departments',
@@ -22,6 +31,7 @@ export class DepartmentsComponent implements OnInit {
   deletedDepartments$!: Observable<Department[]>;
   paginatedDepartments$!: Observable<Department[]>;
   stats$!: Observable<any>;
+  signatureStatsByDepartment$!: Observable<Record<string, DepartmentSignatureStats>>;
 
   private currentPage$ = new BehaviorSubject<number>(1);
   private refreshTrigger$ = new Subject<void>();
@@ -33,12 +43,16 @@ export class DepartmentsComponent implements OnInit {
 
   private searchQuery$ = new BehaviorSubject<string>('');
   private sizeFilter$ = new BehaviorSubject<string>('all');
+  private signatureFilter$ = new BehaviorSubject<SignatureFilter>('all');
 
   get searchQuery(): string { return this.searchQuery$.value; }
   set searchQuery(value: string) { this.searchQuery$.next(value); }
 
   get sizeFilter(): string { return this.sizeFilter$.value; }
   set sizeFilter(value: string) { this.sizeFilter$.next(value); }
+
+  get signatureFilter(): SignatureFilter { return this.signatureFilter$.value; }
+  set signatureFilter(value: SignatureFilter) { this.signatureFilter$.next(value); }
 
   constructor(
     private userSyncService: UserSyncService,
@@ -70,17 +84,41 @@ export class DepartmentsComponent implements OnInit {
       switchMap(() => this.userSyncService.getUserStats())
     );
 
+    this.signatureStatsByDepartment$ = combineLatest([
+      this.departments$,
+      this.userSyncService.users$
+    ]).pipe(
+      map(([departments, users]) => {
+        const statsMap: Record<string, DepartmentSignatureStats> = {};
+
+        departments.forEach((department) => {
+          const deptUsers = users.filter((u) => u.departmentId === department.id);
+          statsMap[department.id] = this.computeDepartmentSignatureStats(deptUsers);
+        });
+
+        return statsMap;
+      })
+    );
+
     this.paginatedDepartments$ = combineLatest([
       this.departments$,
       this.searchQuery$,
       this.sizeFilter$,
-      this.currentPage$
+      this.signatureFilter$,
+      this.currentPage$,
+      this.signatureStatsByDepartment$
     ]).pipe(
-      map(([departments, searchQuery, sizeFilter, currentPage]) => {
+      map(([departments, searchQuery, sizeFilter, signatureFilter, currentPage, signatureStats]) => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
 
         const filtered = departments.filter(department => {
           const totalPeople = department.lineManagerCount + department.employeeCount;
+          const departmentStats = signatureStats[department.id] || {
+            ssmSigned: 0,
+            suSigned: 0,
+            bothSigned: 0,
+            unsigned: 0
+          };
           const matchesSearch = !normalizedQuery || department.name.toLowerCase().includes(normalizedQuery);
 
           const matchesSize =
@@ -89,7 +127,14 @@ export class DepartmentsComponent implements OnInit {
             (sizeFilter === 'medium' && totalPeople >= 11 && totalPeople <= 50) ||
             (sizeFilter === 'large' && totalPeople > 50);
 
-          return matchesSearch && matchesSize;
+          const matchesSignature =
+            signatureFilter === 'all' ||
+            (signatureFilter === 'ssm-signed' && departmentStats.ssmSigned > 0) ||
+            (signatureFilter === 'su-signed' && departmentStats.suSigned > 0) ||
+            (signatureFilter === 'both-signed' && departmentStats.bothSigned > 0) ||
+            (signatureFilter === 'unsigned' && departmentStats.unsigned > 0);
+
+          return matchesSearch && matchesSize && matchesSignature;
         });
 
         this.totalItems = filtered.length;
@@ -102,6 +147,16 @@ export class DepartmentsComponent implements OnInit {
 
   viewDepartmentUsers(departmentName: string): void {
     this.router.navigate(['/users'], { queryParams: { department: departmentName } });
+  }
+
+  viewDepartmentUnsignedUsers(departmentName: string, event?: Event): void {
+    event?.stopPropagation();
+    this.router.navigate(['/users'], {
+      queryParams: {
+        department: departmentName,
+        signature: 'unsigned'
+      }
+    });
   }
 
   navigateToDepartments(): void {
@@ -167,6 +222,15 @@ export class DepartmentsComponent implements OnInit {
     const today = new Date();
     const diffTime = Math.max(0, deletionDate.getTime() - today.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  private computeDepartmentSignatureStats(users: User[]): DepartmentSignatureStats {
+    return {
+      ssmSigned: users.filter((u) => !!u.hasSignedSsm).length,
+      suSigned: users.filter((u) => !!u.hasSignedSu).length,
+      bothSigned: users.filter((u) => !!u.hasSignedSsm && !!u.hasSignedSu).length,
+      unsigned: users.filter((u) => !u.hasSignedSsm && !u.hasSignedSu).length
+    };
   }
 
   // Edit and Delete Modals

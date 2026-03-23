@@ -79,6 +79,301 @@
   </header>
 
   <div class="container mx-auto px-4 py-8">
+    <div
+      *ngIf="signatureStats$ | async as signatureStats"
+      class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6"
+    >
+      <div class="bg-card border border-border rounded-lg p-4">
+        <p class="text-xs uppercase tracking-wide text-muted-foreground">
+          Users in View
+        </p>
+        <p class="text-2xl font-bold text-foreground mt-1">
+          {{ signatureStats.total }}
+        </p>
+      </div>
+      <div class="bg-card border border-blue-200 rounded-lg p-4">
+        <p class="text-xs uppercase tracking-wide text-blue-600">SSM Signed</p>
+        <p class="text-2xl font-bold text-blue-700 mt-1">
+          {{ signatureStats.ssmSigned }}
+        </p>
+      </div>
+      <div class="bg-card border border-teal-200 rounded-lg p-4">
+        <p class="text-xs uppercase tracking-wide text-teal-600">SU Signed</p>
+        <p class="text-2xl font-bold text-teal-700 mt-1">
+          {{ signatureStats.suSigned }}
+        </p>
+      </div>
+      <div class="bg-card border border-emerald-200 rounded-lg p-4">
+        <p class="text-xs uppercase tracking-wide text-emerald-600">
+          Both Signed
+        </p>
+        <p class="text-2xl font-bold text-emerald-700 mt-1">
+          {{ signatureStats.bothSigned }}
+        </p>
+      </div>
+      <div class="bg-card border border-rose-200 rounded-lg p-4">
+        <p class="text-xs uppercase tracking-wide text-rose-600">Not Signed</p>
+        <p class="text-2xl font-bold text-rose-700 mt-1">
+          {{ signatureStats.unsigned }}
+        </p>
+      </div>
+    </div>
+
+    <div
+      class="bg-card border border-border rounded-xl p-0 mb-6 overflow-hidden shadow-sm"
+      *ngIf="
+        sortedDepartmentSignatureStats$ | async as departmentSignatureStats
+      "
+    >
+      <div
+        class="px-5 py-4 bg-gradient-to-r from-slate-50 to-sky-50 border-b border-border"
+      >
+        <h3 class="text-sm font-semibold text-foreground">
+          Signature Statistics by Department
+        </h3>
+        <p class="text-xs text-muted-foreground mt-1">
+          Quick overview of signing coverage for each department
+        </p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-muted/40 text-muted-foreground">
+              <th
+                class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleDepartmentTableSort('departmentName')"
+              >
+                Department{{ getDepartmentSortIndicator("departmentName") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleDepartmentTableSort('total')"
+              >
+                Total{{ getDepartmentSortIndicator("total") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleDepartmentTableSort('ssmSigned')"
+              >
+                SSM Signed{{ getDepartmentSortIndicator("ssmSigned") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleDepartmentTableSort('suSigned')"
+              >
+                SU Signed{{ getDepartmentSortIndicator("suSigned") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleDepartmentTableSort('bothSigned')"
+              >
+                Both Signed{{ getDepartmentSortIndicator("bothSigned") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleDepartmentTableSort('unsigned')"
+              >
+                Not Signed{{ getDepartmentSortIndicator("unsigned") }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let row of departmentSignatureStats"
+              class="border-t border-border/40 hover:bg-muted/30 transition-colors"
+            >
+              <td class="py-3 px-4 font-medium text-foreground">
+                {{ row.departmentName }}
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold"
+                  >{{ row.total }}</span
+                >
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 font-semibold"
+                  >{{ row.ssmSigned }}</span
+                >
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-teal-100 text-teal-700 font-semibold"
+                  >{{ row.suSigned }}</span
+                >
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold"
+                  >{{ row.bothSigned }}</span
+                >
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 font-semibold"
+                  >{{ row.unsigned }}</span
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div
+      class="bg-card border border-border rounded-xl p-0 mb-6 overflow-hidden shadow-sm"
+      *ngIf="sortedLineManagerTeamStats$ | async as lineManagerTeamStats"
+    >
+      <div
+        class="px-5 py-4 bg-gradient-to-r from-slate-50 to-rose-50 border-b border-border"
+      >
+        <h3 class="text-sm font-semibold text-foreground">
+          Line Manager Team Signing Status
+        </h3>
+        <p class="text-xs text-muted-foreground mt-1">
+          Teams needing follow-up are highlighted
+        </p>
+      </div>
+
+      <div
+        class="overflow-x-auto"
+        *ngIf="lineManagerTeamStats.length > 0; else noManagerTeams"
+      >
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-muted/40 text-muted-foreground">
+              <th
+                class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleManagerTableSort('managerName')"
+              >
+                Line Manager{{ getManagerSortIndicator("managerName") }}
+              </th>
+              <th
+                class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleManagerTableSort('departmentName')"
+              >
+                Department{{ getManagerSortIndicator("departmentName") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleManagerTableSort('totalSubordinates')"
+              >
+                Subordinates{{ getManagerSortIndicator("totalSubordinates") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleManagerTableSort('missingSsm')"
+              >
+                Missing SSM{{ getManagerSortIndicator("missingSsm") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleManagerTableSort('missingSu')"
+              >
+                Missing SU{{ getManagerSortIndicator("missingSu") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleManagerTableSort('missingAny')"
+              >
+                Missing Any{{ getManagerSortIndicator("missingAny") }}
+              </th>
+              <th
+                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                (click)="toggleManagerTableSort('fullySignedBoth')"
+              >
+                Fully Signed Both
+                {{ getManagerSortIndicator("fullySignedBoth") }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let row of lineManagerTeamStats"
+              class="border-t border-border/40 hover:bg-muted/30 transition-colors"
+              [class.bg-rose-50]="row.missingAny > 0"
+            >
+              <td class="py-3 px-4 font-medium text-foreground">
+                {{ row.managerName }}
+              </td>
+              <td class="py-3 px-4 text-muted-foreground">
+                {{ row.departmentName }}
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold"
+                  >{{ row.totalSubordinates }}</span
+                >
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md"
+                  [class.bg-rose-100]="row.missingSsm > 0"
+                  [class.text-rose-700]="row.missingSsm > 0"
+                  [class.bg-slate-100]="row.missingSsm === 0"
+                  [class.text-slate-600]="row.missingSsm === 0"
+                  >{{ row.missingSsm }}</span
+                >
+              </td>
+              <td class="py-3 px-4 text-right">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md"
+                  [class.bg-rose-100]="row.missingSu > 0"
+                  [class.text-rose-700]="row.missingSu > 0"
+                  [class.bg-slate-100]="row.missingSu === 0"
+                  [class.text-slate-600]="row.missingSu === 0"
+                  >{{ row.missingSu }}</span
+                >
+              </td>
+              <td class="py-3 px-4 text-right">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-semibold transition-colors"
+                  [class.bg-rose-100]="row.missingAny > 0"
+                  [class.text-rose-700]="row.missingAny > 0"
+                  [class.border-rose-300]="row.missingAny > 0"
+                  [class.hover:bg-rose-200]="row.missingAny > 0"
+                  [class.cursor-pointer]="row.missingAny > 0"
+                  [class.bg-emerald-100]="row.missingAny === 0"
+                  [class.text-emerald-700]="row.missingAny === 0"
+                  [class.border-emerald-300]="row.missingAny === 0"
+                  [class.cursor-not-allowed]="row.missingAny === 0"
+                  [disabled]="row.missingAny === 0"
+                  [title]="
+                    row.missingAny > 0
+                      ? 'View pending users for ' +
+                        row.managerName +
+                        ' (' +
+                        row.missingAny +
+                        ' pending)'
+                      : 'All subordinates are fully signed for ' +
+                        row.managerName
+                  "
+                  (click)="openPendingUsersForManager(row, $event)"
+                >
+                  <span>{{ row.missingAny }}</span>
+                  <span *ngIf="row.missingAny > 0">View</span>
+                </button>
+              </td>
+              <td class="py-3 px-4 text-right text-emerald-700">
+                <span
+                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold"
+                  >{{ row.fullySignedBoth }}</span
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noManagerTeams>
+        <p class="text-sm text-muted-foreground p-5">
+          No line managers with assigned subordinates in this filter scope.
+        </p>
+      </ng-template>
+    </div>
+
     <!-- Filters -->
     <div class="bg-card border border-border rounded-lg p-4 mb-6">
       <div class="flex flex-col md:flex-row gap-3">
@@ -124,6 +419,18 @@
           <option value="all">All Roles</option>
           <option [value]="UserRole.LineManager">Line Managers</option>
           <option [value]="UserRole.Employee">Employees</option>
+        </select>
+
+        <select
+          [(ngModel)]="selectedSignature"
+          (ngModelChange)="onFilterChange()"
+          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        >
+          <option value="all">All Signature Status</option>
+          <option value="ssm-signed">SSM Signed</option>
+          <option value="su-signed">SU Signed</option>
+          <option value="both-signed">Both Signed</option>
+          <option value="unsigned">Not Signed (SSM+SU)</option>
         </select>
       </div>
     </div>
@@ -231,6 +538,34 @@
               user.assignedToName
             }}</span>
           </div>
+
+          <div
+            class="pt-2 border-t border-border flex items-center justify-between text-sm"
+          >
+            <span class="text-muted-foreground">SSM</span>
+            <span
+              [class]="
+                user.hasSignedSsm
+                  ? 'text-blue-700 font-semibold'
+                  : 'text-rose-600 font-semibold'
+              "
+            >
+              {{ user.hasSignedSsm ? "Signed" : "Not Signed" }}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-muted-foreground">SU</span>
+            <span
+              [class]="
+                user.hasSignedSu
+                  ? 'text-teal-700 font-semibold'
+                  : 'text-rose-600 font-semibold'
+              "
+            >
+              {{ user.hasSignedSu ? "Signed" : "Not Signed" }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -270,6 +605,85 @@
       [pageSize]="pageSize"
       (pageChange)="onPageChange($event)"
     ></app-pagination>
+  </div>
+
+  <!-- Pending Users Modal -->
+  <div
+    *ngIf="isPendingUsersModalOpen"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+    (click)="closePendingUsersModal()"
+  >
+    <div
+      class="bg-card w-full max-w-2xl rounded-lg shadow-lg border border-border p-6 max-h-[80vh] overflow-y-auto"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-foreground">
+          {{ pendingUsersModalTitle }}
+        </h2>
+        <button
+          (click)="closePendingUsersModal()"
+          class="text-muted-foreground hover:text-foreground"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+
+      <div
+        *ngIf="pendingUsersForModal.length > 0; else noPendingUsersTemplate"
+        class="space-y-2"
+      >
+        <div
+          *ngFor="let user of pendingUsersForModal"
+          class="border border-border rounded-md p-3 flex items-center justify-between"
+        >
+          <div>
+            <p class="font-medium text-foreground">
+              {{ user.firstName }} {{ user.lastName }}
+            </p>
+            <p class="text-sm text-muted-foreground">{{ user.email }}</p>
+          </div>
+          <div class="text-xs text-right">
+            <p
+              [class]="
+                user.hasSignedSsm
+                  ? 'text-blue-700'
+                  : 'text-rose-700 font-semibold'
+              "
+            >
+              SSM: {{ user.hasSignedSsm ? "Signed" : "Not Signed" }}
+            </p>
+            <p
+              [class]="
+                user.hasSignedSu
+                  ? 'text-teal-700'
+                  : 'text-rose-700 font-semibold'
+              "
+            >
+              SU: {{ user.hasSignedSu ? "Signed" : "Not Signed" }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noPendingUsersTemplate>
+        <p class="text-sm text-muted-foreground">
+          All subordinates are fully signed.
+        </p>
+      </ng-template>
+    </div>
   </div>
 
   <!-- Edit Modal -->
