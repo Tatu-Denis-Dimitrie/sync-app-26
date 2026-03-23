@@ -80,27 +80,46 @@
   </header>
 
   <div class="container mx-auto px-4 py-8">
-    
     <!-- Filters -->
     <div class="bg-card border border-border rounded-lg p-4 mb-6">
       <div class="flex flex-col md:flex-row gap-3">
         <div class="relative flex-1">
-          <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange()"
             placeholder="Search by employee name, email, department..."
-            class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-          <svg class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          />
+          <svg
+            class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            ></path>
           </svg>
         </div>
 
-        <select [(ngModel)]="selectedType" (ngModelChange)="onFilterChange()"
-          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+        <select
+          [(ngModel)]="selectedType"
+          (ngModelChange)="onFilterChange()"
+          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        >
           <option value="SSM">SSM</option>
           <option value="SU">SU</option>
         </select>
 
-        <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()"
-          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+        <select
+          [(ngModel)]="selectedStatus"
+          (ngModelChange)="onFilterChange()"
+          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        >
           <option value="all">All statuses</option>
           <option value="PendingUser">Pending User</option>
           <option value="PendingManager">Pending Manager</option>
@@ -113,8 +132,18 @@
             (click)="openBulkGenerateModal()"
             class="px-4 py-2 border border-teal-600 bg-teal-600 text-white rounded-md text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
             Generate All Docs
           </button>
@@ -123,7 +152,14 @@
             (click)="openBulkTrainingModal()"
             class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
           >
-            Bulk Training
+            Bulk Periodic Training
+          </button>
+
+          <button
+            (click)="openBulkInitialTrainingModal()"
+            class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors"
+          >
+            Bulk Initial Training
           </button>
         </div>
       </div>
@@ -131,7 +167,9 @@
 
     <!-- Loading -->
     <div *ngIf="loading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div
+        class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"
+      ></div>
     </div>
 
     <!-- Bulk Generate Documents Modal -->
@@ -159,15 +197,27 @@
             class="text-muted-foreground hover:text-foreground"
             [disabled]="isBulkGenerating"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
             </svg>
           </button>
         </div>
 
         <div class="space-y-4">
           <div>
-            <label class="text-sm font-medium text-foreground">Document Type</label>
+            <label class="text-sm font-medium text-foreground"
+              >Document Type</label
+            >
             <select
               [(ngModel)]="bulkGenerateType"
               class="mt-2 w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -179,24 +229,54 @@
             </select>
           </div>
 
-          <div *ngIf="bulkGenerateResult" class="rounded-md border border-border bg-muted/50 p-3 text-sm">
-            <p class="font-medium text-foreground">{{ bulkGenerateResult.message }}</p>
-            <p class="text-muted-foreground mt-1">Generated: {{ bulkGenerateResult.generated }} | Skipped: {{ bulkGenerateResult.skipped }}</p>
+          <div
+            *ngIf="bulkGenerateResult"
+            class="rounded-md border border-border bg-muted/50 p-3 text-sm"
+          >
+            <p class="font-medium text-foreground">
+              {{ bulkGenerateResult.message }}
+            </p>
+            <p class="text-muted-foreground mt-1">
+              Generated: {{ bulkGenerateResult.generated }} | Skipped:
+              {{ bulkGenerateResult.skipped }}
+            </p>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
-          <button type="button" (click)="closeBulkGenerateModal()" class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent" [disabled]="isBulkGenerating">Cancel</button>
-          <button type="button" (click)="confirmBulkGenerate()" class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed" [disabled]="isBulkGenerating">{{ isBulkGenerating ? 'Generating...' : 'Generate' }}</button>
+          <button
+            type="button"
+            (click)="closeBulkGenerateModal()"
+            class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
+            [disabled]="isBulkGenerating"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            (click)="confirmBulkGenerate()"
+            class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            [disabled]="isBulkGenerating"
+          >
+            {{ isBulkGenerating ? "Generating..." : "Generate" }}
+          </button>
         </div>
       </div>
     </div>
 
     <!-- Bulk Training Modal component -->
-    <app-bulk-training-modal (success)="onBulkTrainingSuccess()"></app-bulk-training-modal>
+    <app-bulk-training-modal
+      (success)="onBulkTrainingSuccess()"
+    ></app-bulk-training-modal>
+    <app-bulk-initial-training-modal
+      (success)="onBulkInitialTrainingSuccess()"
+    ></app-bulk-initial-training-modal>
 
     <!-- Error -->
-    <div *ngIf="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+    <div
+      *ngIf="error"
+      class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6"
+    >
       <p class="text-red-700 text-sm">{{ error }}</p>
     </div>
 
@@ -206,62 +286,149 @@
     </div>
 
     <!-- Table -->
-    <div *ngIf="!loading" class="bg-card border border-border rounded-lg overflow-hidden">
+    <div
+      *ngIf="!loading"
+      class="bg-card border border-border rounded-lg overflow-hidden"
+    >
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
             <tr class="border-b border-border bg-muted/50">
-              <th class="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Employee</th>
-              <th class="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Department</th>
-              <th class="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Function</th>
-              <th class="text-center px-4 py-3 text-sm font-medium text-muted-foreground">Type</th>
-              <th class="text-center px-4 py-3 text-sm font-medium text-muted-foreground">Status</th>
-              <th class="text-center px-4 py-3 text-sm font-medium text-muted-foreground">Generated</th>
-              <th class="text-center px-4 py-3 text-sm font-medium text-muted-foreground">Signed by Employee</th>
-              <th class="text-center px-4 py-3 text-sm font-medium text-muted-foreground">Signed by Manager</th>
-              <th class="text-center px-4 py-3 text-sm font-medium text-muted-foreground">Actions</th>
+              <th
+                class="text-left px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Employee
+              </th>
+              <th
+                class="text-left px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Department
+              </th>
+              <th
+                class="text-left px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Function
+              </th>
+              <th
+                class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Type
+              </th>
+              <th
+                class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Status
+              </th>
+              <th
+                class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Generated
+              </th>
+              <th
+                class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Signed by Employee
+              </th>
+              <th
+                class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Signed by Manager
+              </th>
+              <th
+                class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
+              >
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let doc of paginatedDocuments$ | async"
-              class="border-b border-border hover:bg-muted/30 transition-colors">
+            <tr
+              *ngFor="let doc of paginatedDocuments$ | async"
+              class="border-b border-border hover:bg-muted/30 transition-colors"
+            >
               <td class="px-4 py-3">
                 <div class="flex flex-col">
-                  <button (click)="viewEmployee(doc.userId)" class="text-sm font-medium text-foreground hover:text-primary transition-colors text-left">
+                  <button
+                    (click)="viewEmployee(doc.userId)"
+                    class="text-sm font-medium text-foreground hover:text-primary transition-colors text-left"
+                  >
                     {{ doc.userFirstName }} {{ doc.userLastName }}
                   </button>
-                  <span class="text-xs text-muted-foreground">{{ doc.userEmail }}</span>
+                  <span class="text-xs text-muted-foreground">{{
+                    doc.userEmail
+                  }}</span>
                 </div>
               </td>
-              <td class="px-4 py-3 text-sm text-foreground">{{ doc.userDepartment || '—' }}</td>
-              <td class="px-4 py-3 text-sm text-foreground">{{ doc.userFunction || '—' }}</td>
+              <td class="px-4 py-3 text-sm text-foreground">
+                {{ doc.userDepartment || "—" }}
+              </td>
+              <td class="px-4 py-3 text-sm text-foreground">
+                {{ doc.userFunction || "—" }}
+              </td>
               <td class="px-4 py-3 text-center">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border" [ngClass]="getTypeClass(doc.documentType)">
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
+                  [ngClass]="getTypeClass(doc.documentType)"
+                >
                   {{ doc.documentType }}
                 </span>
               </td>
               <td class="px-4 py-3 text-center">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="getStatusClass(doc.status)">
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  [ngClass]="getStatusClass(doc.status)"
+                >
                   {{ getStatusLabel(doc.status) }}
                 </span>
               </td>
               <td class="px-4 py-3 text-center text-sm text-foreground">
-                {{ doc.generatedAt | date:'dd.MM.yyyy HH:mm' }}
+                {{ doc.generatedAt | date: "dd.MM.yyyy HH:mm" }}
               </td>
               <td class="px-4 py-3 text-center">
-                <span *ngIf="doc.userSignedAt" class="text-green-600 text-sm">{{ doc.userSignedAt | date:'dd.MM.yyyy' }}</span>
-                <span *ngIf="!doc.userSignedAt" class="text-muted-foreground text-sm">—</span>
+                <span *ngIf="doc.userSignedAt" class="text-green-600 text-sm">{{
+                  doc.userSignedAt | date: "dd.MM.yyyy"
+                }}</span>
+                <span
+                  *ngIf="!doc.userSignedAt"
+                  class="text-muted-foreground text-sm"
+                  >—</span
+                >
               </td>
               <td class="px-4 py-3 text-center">
-                <span *ngIf="doc.managerSignedAt" class="text-green-600 text-sm">{{ doc.managerSignedAt | date:'dd.MM.yyyy' }}</span>
-                <span *ngIf="!doc.managerSignedAt" class="text-muted-foreground text-sm">—</span>
+                <span
+                  *ngIf="doc.managerSignedAt"
+                  class="text-green-600 text-sm"
+                  >{{ doc.managerSignedAt | date: "dd.MM.yyyy" }}</span
+                >
+                <span
+                  *ngIf="!doc.managerSignedAt"
+                  class="text-muted-foreground text-sm"
+                  >—</span
+                >
               </td>
               <td class="px-4 py-3 text-center">
-                <button (click)="viewPdf(doc)"
-                  class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                <button
+                  (click)="viewPdf(doc)"
+                  class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    ></path>
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    ></path>
                   </svg>
                   PDF
                 </button>
@@ -272,35 +439,81 @@
       </div>
 
       <!-- Empty state -->
-      <div *ngIf="(((totalItems$ | async) || 0) === 0) && !loading" class="text-center py-12">
-        <svg class="mx-auto h-12 w-12 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+      <div
+        *ngIf="((totalItems$ | async) || 0) === 0 && !loading"
+        class="text-center py-12"
+      >
+        <svg
+          class="mx-auto h-12 w-12 text-muted-foreground/50"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          ></path>
         </svg>
-        <p class="mt-2 text-sm text-muted-foreground">No documents generated.</p>
+        <p class="mt-2 text-sm text-muted-foreground">
+          No documents generated.
+        </p>
       </div>
     </div>
 
     <!-- Pagination -->
-      <div *ngIf="((totalItems$ | async) || 0) > pageSize" class="mt-4">
-      <app-pagination [currentPage]="currentPage" [pageSize]="pageSize" [totalItems]="(totalItems$ | async) || 0"
-        (pageChange)="onPageChange($event)"></app-pagination>
+    <div *ngIf="((totalItems$ | async) || 0) > pageSize" class="mt-4">
+      <app-pagination
+        [currentPage]="currentPage"
+        [pageSize]="pageSize"
+        [totalItems]="(totalItems$ | async) || 0"
+        (pageChange)="onPageChange($event)"
+      ></app-pagination>
     </div>
   </div>
 
   <!-- PDF Modal -->
-  <div *ngIf="showPdfModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" (click)="closePdfModal()">
-    <div class="bg-card rounded-lg shadow-xl w-[90vw] h-[90vh] flex flex-col" (click)="$event.stopPropagation()">
-      <div class="flex items-center justify-between px-4 py-3 border-b border-border">
-        <h3 class="text-sm font-medium text-foreground">{{ pdfDocumentName }}</h3>
-        <button (click)="closePdfModal()" class="text-muted-foreground hover:text-foreground transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+  <div
+    *ngIf="showPdfModal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    (click)="closePdfModal()"
+  >
+    <div
+      class="bg-card rounded-lg shadow-xl w-[90vw] h-[90vh] flex flex-col"
+      (click)="$event.stopPropagation()"
+    >
+      <div
+        class="flex items-center justify-between px-4 py-3 border-b border-border"
+      >
+        <h3 class="text-sm font-medium text-foreground">
+          {{ pdfDocumentName }}
+        </h3>
+        <button
+          (click)="closePdfModal()"
+          class="text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
           </svg>
         </button>
       </div>
       <div class="flex-1 p-2">
-        <iframe *ngIf="pdfUrl" [src]="pdfUrl" class="w-full h-full rounded border border-border"></iframe>
+        <iframe
+          *ngIf="pdfUrl"
+          [src]="pdfUrl"
+          class="w-full h-full rounded border border-border"
+        ></iframe>
       </div>
     </div>
   </div>

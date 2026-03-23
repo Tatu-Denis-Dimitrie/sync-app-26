@@ -524,17 +524,17 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             string verb = isSsm ? "efectuată" : "efectuat";
                             text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline((user.IntroductoryTrainingDate ?? latestPt?.TrainingDate)?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                            text.Span(FUnderline(user.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
                             text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline((user.IntroductoryTrainingHours ?? (int?)latestPt?.DurationHours)?.ToString())).Underline().FontSize(10);
+                            text.Span(FUnderline(user.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
                             text.Span(" ore de către ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingInstructor ?? latestPt?.InstructorName ?? managerName)).Underline().FontSize(10);
+                            text.Span(FUnderline(user.IntroductoryTrainingInstructor ?? managerName)).Underline().FontSize(10);
                             text.Span(" având funcția de ").FontSize(10);
                             text.Span(FUnderline(user.IntroductoryTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
                         });
                         col.Item().Height(3);
                         col.Item().Text("Conținutul instruirii:").Bold();
-                        var introContent = user.IntroductoryTrainingContent ?? latestPt?.MaterialTaught;
+                        var introContent = user.IntroductoryTrainingContent;
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
                         var introVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
@@ -563,19 +563,19 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             string verb = isSsm ? "efectuată" : "efectuat";
                             text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline((user.WorkplaceTrainingDate ?? latestPt?.TrainingDate)?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                            text.Span(FUnderline(user.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
                             text.Span(" loc de muncă/post de lucru ").FontSize(10);
                             text.Span(FUnderline(user.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
                             text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline((user.WorkplaceTrainingHours ?? (int?)latestPt?.DurationHours)?.ToString())).Underline().FontSize(10);
+                            text.Span(FUnderline(user.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
                             text.Span(" ore, de către ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingInstructor ?? latestPt?.InstructorName ?? managerName)).Underline().FontSize(10);
+                            text.Span(FUnderline(user.WorkplaceTrainingInstructor ?? managerName)).Underline().FontSize(10);
                             text.Span(" având funcția de ").FontSize(10);
                             text.Span(FUnderline(user.WorkplaceTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
                         });
                         col.Item().Height(3);
                         col.Item().Text("Conținutul instruirii:").Bold();
-                        var workContent = user.WorkplaceTrainingContent ?? latestPt?.MaterialTaught;
+                        var workContent = user.WorkplaceTrainingContent;
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
                         var workVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
@@ -686,21 +686,21 @@ namespace SyncApp26.Infrastructure.Services
                                 var training = periodicTrainings[i];
                                 bool isLastRow = i == periodicTrainings.Count - 1;
 
-                                    // Use only per-row signatures stored directly on the PeriodicTraining row.
-                                    // No fallback to document-level fields — those are transient; the
-                                    // canonical signature store is always the training row.
-                                    string? userSigData   = training.UserSignatureData;
-                                    string? userSigMethod = training.UserSignatureMethod;
-                                    string? mgrSigData    = training.InstructorSignature;
-                                    string? mgrSigMethod  = training.InstructorSignatureMethod;
-                                    string? verifierSigData   = training.VerifierSignature;
-                                    string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
+                                // Use only per-row signatures stored directly on the PeriodicTraining row.
+                                // No fallback to document-level fields — those are transient; the
+                                // canonical signature store is always the training row.
+                                string? userSigData = training.UserSignatureData;
+                                string? userSigMethod = training.UserSignatureMethod;
+                                string? mgrSigData = training.InstructorSignature;
+                                string? mgrSigMethod = training.InstructorSignatureMethod;
+                                string? verifierSigData = training.VerifierSignature;
+                                string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
 
-                                    // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
+                                // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
                                 if (isSsm && !string.IsNullOrEmpty(verifierSigData) && string.IsNullOrEmpty(training.InstructorSignature))
                                 {
-                                        mgrSigData   = null;
-                                        mgrSigMethod = null;
+                                    mgrSigData = null;
+                                    mgrSigMethod = null;
                                 }
 
 

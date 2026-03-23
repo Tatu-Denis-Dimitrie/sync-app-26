@@ -536,7 +536,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found" });
             }
 
-            // Get the latest periodic training to use as fallback for training fields
+            // Keep first-employment training fields sourced only from user profile data.
             var periodicTrainings = await _periodicTrainingService.GetByUserIdAsync(id);
             var latestTraining = periodicTrainings
                 .OrderByDescending(pt => pt.TrainingDate)
@@ -565,17 +565,17 @@ namespace SyncApp26.API.Controllers
                 Qualifications = user.Qualifications,
                 CommuteRoute = user.CommuteRoute,
                 CommuteDurationMinutes = user.CommuteDurationMinutes,
-                IntroductoryTrainingDate = user.IntroductoryTrainingDate ?? latestTraining?.TrainingDate,
-                IntroductoryTrainingHours = user.IntroductoryTrainingHours ?? (int?)latestTraining?.DurationHours,
-                IntroductoryTrainingInstructor = user.IntroductoryTrainingInstructor ?? latestTraining?.InstructorName,
+                IntroductoryTrainingDate = user.IntroductoryTrainingDate,
+                IntroductoryTrainingHours = user.IntroductoryTrainingHours,
+                IntroductoryTrainingInstructor = user.IntroductoryTrainingInstructor,
                 IntroductoryTrainingInstructorFunction = user.IntroductoryTrainingInstructorFunction,
-                IntroductoryTrainingContent = user.IntroductoryTrainingContent ?? latestTraining?.MaterialTaught,
-                WorkplaceTrainingDate = user.WorkplaceTrainingDate ?? latestTraining?.TrainingDate,
+                IntroductoryTrainingContent = user.IntroductoryTrainingContent,
+                WorkplaceTrainingDate = user.WorkplaceTrainingDate,
                 WorkplaceTrainingLocation = user.WorkplaceTrainingLocation,
-                WorkplaceTrainingHours = user.WorkplaceTrainingHours ?? (int?)latestTraining?.DurationHours,
-                WorkplaceTrainingInstructor = user.WorkplaceTrainingInstructor ?? latestTraining?.InstructorName,
+                WorkplaceTrainingHours = user.WorkplaceTrainingHours,
+                WorkplaceTrainingInstructor = user.WorkplaceTrainingInstructor,
                 WorkplaceTrainingInstructorFunction = user.WorkplaceTrainingInstructorFunction,
-                WorkplaceTrainingContent = user.WorkplaceTrainingContent ?? latestTraining?.MaterialTaught,
+                WorkplaceTrainingContent = user.WorkplaceTrainingContent,
                 AdmittedByName = user.AdmittedByName,
                 AdmittedByFunction = user.AdmittedByFunction,
                 AdmittedDate = user.AdmittedDate,
@@ -643,6 +643,123 @@ namespace SyncApp26.API.Controllers
             });
         }
 
+        [HttpPost("bulk-initial-training")]
+        public async Task<ActionResult<BulkInitialTrainingResultDTO>> BulkInitialTraining([FromBody] BulkInitialTrainingDTO dto)
+        {
+            var result = new BulkInitialTrainingResultDTO();
+
+            var users = await _userService.GetAllUsersAsync();
+            var targetUsers = users.AsQueryable();
+
+            if (dto.SelectedDepartmentId.HasValue)
+            {
+                targetUsers = targetUsers.Where(u => u.DepartmentId == dto.SelectedDepartmentId.Value);
+            }
+
+            if (!dto.ApplyToAllUsers)
+            {
+                var selected = dto.SelectedUserIds?.ToHashSet() ?? new HashSet<Guid>();
+                targetUsers = targetUsers.Where(u => selected.Contains(u.Id));
+            }
+
+            var usersToUpdate = targetUsers.ToList();
+            if (!usersToUpdate.Any())
+            {
+                result.Errors.Add("No users found to apply initial training data.");
+                return BadRequest(result);
+            }
+
+            foreach (var user in usersToUpdate)
+            {
+                try
+                {
+                    var changed = false;
+
+                    if (!user.IntroductoryTrainingDate.HasValue && dto.IntroductoryTrainingDate.HasValue)
+                    {
+                        user.IntroductoryTrainingDate = dto.IntroductoryTrainingDate;
+                        changed = true;
+                    }
+
+                    if (!user.IntroductoryTrainingHours.HasValue && dto.IntroductoryTrainingHours.HasValue)
+                    {
+                        user.IntroductoryTrainingHours = dto.IntroductoryTrainingHours;
+                        changed = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(user.IntroductoryTrainingInstructor) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingInstructor))
+                    {
+                        user.IntroductoryTrainingInstructor = dto.IntroductoryTrainingInstructor.Trim();
+                        changed = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(user.IntroductoryTrainingInstructorFunction) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingInstructorFunction))
+                    {
+                        user.IntroductoryTrainingInstructorFunction = dto.IntroductoryTrainingInstructorFunction.Trim();
+                        changed = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(user.IntroductoryTrainingContent) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingContent))
+                    {
+                        user.IntroductoryTrainingContent = dto.IntroductoryTrainingContent.Trim();
+                        changed = true;
+                    }
+
+                    if (!user.WorkplaceTrainingDate.HasValue && dto.WorkplaceTrainingDate.HasValue)
+                    {
+                        user.WorkplaceTrainingDate = dto.WorkplaceTrainingDate;
+                        changed = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingLocation) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingLocation))
+                    {
+                        user.WorkplaceTrainingLocation = dto.WorkplaceTrainingLocation.Trim();
+                        changed = true;
+                    }
+
+                    if (!user.WorkplaceTrainingHours.HasValue && dto.WorkplaceTrainingHours.HasValue)
+                    {
+                        user.WorkplaceTrainingHours = dto.WorkplaceTrainingHours;
+                        changed = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingInstructor) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingInstructor))
+                    {
+                        user.WorkplaceTrainingInstructor = dto.WorkplaceTrainingInstructor.Trim();
+                        changed = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingInstructorFunction) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingInstructorFunction))
+                    {
+                        user.WorkplaceTrainingInstructorFunction = dto.WorkplaceTrainingInstructorFunction.Trim();
+                        changed = true;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingContent) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingContent))
+                    {
+                        user.WorkplaceTrainingContent = dto.WorkplaceTrainingContent.Trim();
+                        changed = true;
+                    }
+
+                    if (!changed)
+                    {
+                        result.SkippedCount++;
+                        continue;
+                    }
+
+                    user.UpdatedAt = DateTime.UtcNow;
+                    await _userService.UpdateUserAsync(user);
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailedCount++;
+                    result.Errors.Add($"Failed for user {user.Email}: {ex.Message}");
+                }
+            }
+
+            return Ok(result);
+        }
         private async Task<Guid?> ResolveFunctionIdAsync(string? requestedFunction)
         {
             if (!string.IsNullOrWhiteSpace(requestedFunction))

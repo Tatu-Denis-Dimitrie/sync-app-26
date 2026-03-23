@@ -8,6 +8,7 @@ import { map, catchError, shareReplay } from 'rxjs/operators';
 import { AuthenticationService } from '../../services/authentication.service';
 import { PaginationComponent } from '../../components/pagination/pagination.component';
 import { BulkTrainingModalComponent } from '../../components/bulk-training-modal/bulk-training-modal.component';
+import { BulkInitialTrainingModalComponent } from '../../components/bulk-initial-training-modal/bulk-initial-training-modal.component';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
@@ -30,12 +31,13 @@ interface DocumentDto {
 @Component({
   selector: 'app-documents-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent, BulkInitialTrainingModalComponent],
   templateUrl: './documents-view.component.html',
   styleUrl: './documents-view.component.css'
 })
 export class DocumentsViewComponent implements OnInit {
   @ViewChild(BulkTrainingModalComponent) bulkTrainingModal!: BulkTrainingModalComponent;
+  @ViewChild(BulkInitialTrainingModalComponent) bulkInitialTrainingModal!: BulkInitialTrainingModalComponent;
   documents$!: Observable<DocumentDto[]>;
   paginatedDocuments$!: Observable<DocumentDto[]>;
 
@@ -186,8 +188,17 @@ export class DocumentsViewComponent implements OnInit {
     this.bulkTrainingModal.open();
   }
 
+  openBulkInitialTrainingModal(): void {
+    this.bulkInitialTrainingModal.open();
+  }
+
   onBulkTrainingSuccess(): void {
     this.successMessage = 'Bulk periodic training created successfully for all users!';
+    setTimeout(() => this.successMessage = '', 5000);
+  }
+
+  onBulkInitialTrainingSuccess(): void {
+    this.successMessage = 'Bulk initial training applied successfully. Existing initial values were kept unchanged.';
     setTimeout(() => this.successMessage = '', 5000);
   }
 

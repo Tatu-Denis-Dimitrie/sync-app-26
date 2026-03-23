@@ -1,0 +1,343 @@
+<div *ngIf="isVisible" class="modal-overlay" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">Add Bulk Initial Training</h2>
+      <button class="close-button" (click)="closeModal()" aria-label="Close">
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          ></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-description">
+        Fill first-employment training fields for multiple users. Existing
+        values are preserved and will not be overwritten.
+      </p>
+
+      <form class="training-form">
+        <div class="form-group">
+          <label for="department" class="form-label">Department</label>
+          <select
+            id="department"
+            [(ngModel)]="formData.selectedDepartmentId"
+            (ngModelChange)="onDepartmentChanged()"
+            name="selectedDepartmentId"
+            class="form-input"
+            [disabled]="isLoadingDepartments"
+          >
+            <option [ngValue]="null">
+              {{
+                isLoadingDepartments
+                  ? "Loading departments..."
+                  : "All users (all departments)"
+              }}
+            </option>
+            <option
+              *ngFor="let department of departments"
+              [ngValue]="department.id"
+            >
+              {{ department.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group-checkbox">
+          <input
+            type="checkbox"
+            id="applyToAllUsers"
+            [(ngModel)]="formData.applyToAllUsers"
+            name="applyToAllUsers"
+            class="form-checkbox"
+          />
+          <label for="applyToAllUsers" class="checkbox-label"
+            >Apply to all users in selected scope</label
+          >
+        </div>
+
+        <div class="selection-panel" *ngIf="!formData.applyToAllUsers">
+          <div class="selection-panel-header">
+            <p class="selection-panel-title">Custom user selection</p>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="openUserPicker()"
+              [disabled]="isLoadingUsers"
+            >
+              {{ isLoadingUsers ? "Loading users..." : "Select users" }}
+            </button>
+          </div>
+          <p class="form-hint">Selected users: {{ selectedUsersCount }}</p>
+        </div>
+
+        <div class="training-section">
+          <h3 class="section-title">Introductory Training</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="introDate" class="form-label">Date</label>
+              <input
+                type="date"
+                id="introDate"
+                [(ngModel)]="formData.introductoryTrainingDate"
+                name="introductoryTrainingDate"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="introHours" class="form-label">Hours</label>
+              <input
+                type="number"
+                id="introHours"
+                [(ngModel)]="formData.introductoryTrainingHours"
+                name="introductoryTrainingHours"
+                class="form-input"
+                min="0"
+                step="1"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="introInstructor" class="form-label">Instructor</label>
+              <input
+                type="text"
+                id="introInstructor"
+                [(ngModel)]="formData.introductoryTrainingInstructor"
+                name="introductoryTrainingInstructor"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="introInstructorFunction" class="form-label"
+                >Instructor Function</label
+              >
+              <input
+                type="text"
+                id="introInstructorFunction"
+                [(ngModel)]="formData.introductoryTrainingInstructorFunction"
+                name="introductoryTrainingInstructorFunction"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="introContent" class="form-label">Content</label>
+            <textarea
+              id="introContent"
+              [(ngModel)]="formData.introductoryTrainingContent"
+              name="introductoryTrainingContent"
+              class="form-textarea"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="training-section">
+          <h3 class="section-title">Workplace Training</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="workDate" class="form-label">Date</label>
+              <input
+                type="date"
+                id="workDate"
+                [(ngModel)]="formData.workplaceTrainingDate"
+                name="workplaceTrainingDate"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="workHours" class="form-label">Hours</label>
+              <input
+                type="number"
+                id="workHours"
+                [(ngModel)]="formData.workplaceTrainingHours"
+                name="workplaceTrainingHours"
+                class="form-input"
+                min="0"
+                step="1"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="jobTitle" class="form-label">Job Title</label>
+              <input
+                type="text"
+                id="jobTitle"
+                [(ngModel)]="formData.jobTitle"
+                name="jobTitle"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="workInstructor" class="form-label">Instructor</label>
+              <input
+                type="text"
+                id="workInstructor"
+                [(ngModel)]="formData.workplaceTrainingInstructor"
+                name="workplaceTrainingInstructor"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="workInstructorFunction" class="form-label"
+                >Instructor Function</label
+              >
+              <input
+                type="text"
+                id="workInstructorFunction"
+                [(ngModel)]="formData.workplaceTrainingInstructorFunction"
+                name="workplaceTrainingInstructorFunction"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="workContent" class="form-label">Content</label>
+            <textarea
+              id="workContent"
+              [(ngModel)]="formData.workplaceTrainingContent"
+              name="workplaceTrainingContent"
+              class="form-textarea"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div
+      class="user-picker-overlay"
+      *ngIf="isUserPickerVisible"
+      (click)="closeUserPicker()"
+    >
+      <div class="user-picker-modal" (click)="$event.stopPropagation()">
+        <div class="user-picker-header">
+          <h3>Select users for initial training</h3>
+          <button
+            type="button"
+            class="close-button"
+            (click)="closeUserPicker()"
+            aria-label="Close user selector"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="user-picker-body">
+          <input
+            type="text"
+            class="form-input"
+            [(ngModel)]="userSearchQuery"
+            name="userSearchQuery"
+            placeholder="Search by name, email, or department"
+          />
+
+          <div class="picker-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="selectAllFilteredUsers()"
+            >
+              Select all shown
+            </button>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="deselectAllFilteredUsers()"
+            >
+              Deselect all shown
+            </button>
+          </div>
+
+          <div
+            class="users-list"
+            *ngIf="!isLoadingUsers; else loadingUsersTemplate"
+          >
+            <label class="user-row" *ngFor="let user of filteredUsers">
+              <input
+                type="checkbox"
+                class="form-checkbox"
+                [checked]="isUserSelected(user.id)"
+                (change)="toggleUserSelection(user.id)"
+              />
+              <div class="user-meta">
+                <span class="user-name"
+                  >{{ user.firstName }} {{ user.lastName }}</span
+                >
+                <span class="user-email"
+                  >{{ user.email }} | {{ user.departmentName }}</span
+                >
+              </div>
+            </label>
+            <p class="form-hint" *ngIf="filteredUsers.length === 0">
+              No users found for this filter.
+            </p>
+          </div>
+
+          <ng-template #loadingUsersTemplate>
+            <p class="form-hint">Loading users...</p>
+          </ng-template>
+        </div>
+
+        <div class="user-picker-footer">
+          <span class="form-hint"
+            >Selected users: {{ selectedUsersCount }}</span
+          >
+          <button type="button" class="btn-primary" (click)="closeUserPicker()">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="closeModal()"
+        [disabled]="isSubmitting"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="submitBulkInitialTraining()"
+        [disabled]="isSubmitting || isLoadingDepartments"
+      >
+        {{ isSubmitting ? "Applying..." : "Apply Initial Training" }}
+      </button>
+    </div>
+  </div>
+</div>
