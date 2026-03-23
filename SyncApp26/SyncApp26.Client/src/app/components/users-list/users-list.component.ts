@@ -6,6 +6,7 @@ import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
+import { NotificationService } from '../../services/notification.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 
@@ -47,7 +48,8 @@ export class UsersListComponent implements OnInit {
     private userSyncService: UserSyncService,
     private authService: AuthenticationService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private notificationService: NotificationService
   ) { }
 
   logout(): void {
@@ -145,7 +147,8 @@ export class UsersListComponent implements OnInit {
   navigateToDataRequests(): void {
     this.router.navigate(['/data-requests']);
   }
-navigateToDocuments(): void {
+
+  navigateToDocuments(): void {
     this.router.navigate(['/documents']);
   }
 

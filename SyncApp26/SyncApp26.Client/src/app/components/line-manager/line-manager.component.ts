@@ -11,6 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 import { UserSignatureService, UserSignature, UserSignatureHistory } from '../../services/user-signature.service';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-line-manager',
@@ -73,7 +74,8 @@ export class LineManagerComponent implements OnInit {
     private userSyncService: UserSyncService,
     private http: HttpClient,
     private router: Router,
-    private userSignatureService: UserSignatureService
+    private userSignatureService: UserSignatureService,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -411,6 +413,16 @@ export class LineManagerComponent implements OnInit {
         alert(err.error?.message || 'Could not initiate bulk signing.');
       }
     });
+  }
+
+  notifyUser(user: User, documentType: 'SSM' | 'SU', event: Event): void {
+    event.stopPropagation();
+    if (confirm(`Are you sure you want to notify ${user.firstName} ${user.lastName} about the missing ${documentType} document?`)) {
+      this.notificationService.notifyUser(user.id, documentType).subscribe({
+        next: (res) => alert(res.message || 'Notification sent!'),
+        error: (err) => alert(err.error?.message || 'Failed to send notification.')
+      });
+    }
   }
 
 }

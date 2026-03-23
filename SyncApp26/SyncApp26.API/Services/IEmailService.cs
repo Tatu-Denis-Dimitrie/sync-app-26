@@ -7,5 +7,7 @@ namespace SyncApp26.API.Services
         Task SendPasswordResetEmailAsync(string toEmail, string firstName, string resetUrl, int expirationMinutes);
         Task SendDocumentSignatureEmailWithLinkAsync(string toEmail, string documentName, string secureLink);
         Task SendDocumentSignatureEmailForRegisteredUserAsync(string toEmail, string documentName, string loginLink);
+        Task SendMissingSignatureToUserEmailAsync(string toEmail, string firstName, string documentName, DateTime? trainingDate);
+        Task SendMissingSignatureToManagerEmailAsync(string toEmail, string managerName, string documentName, int unsignedCount);
     }
 }
