@@ -94,9 +94,19 @@ export class DocumentsViewComponent implements OnInit {
     this.loading = true;
     this.documents$ = this.http.get<DocumentDto[]>(`${environment.apiUrl}/Document/all`).pipe(
       map(docs => {
-        this.allDocuments = docs;
+        // Keep only the latest document per employee+documentType
+        const latestMap = new Map<string, DocumentDto>();
+        for (const d of docs) {
+          const key = `${d.userId}|${d.documentType}`;
+          const existing = latestMap.get(key);
+          if (!existing || new Date(d.generatedAt) > new Date(existing.generatedAt)) {
+            latestMap.set(key, d);
+          }
+        }
+        const latestDocs = Array.from(latestMap.values());
+        this.allDocuments = latestDocs;
         this.loading = false;
-        return docs;
+        return latestDocs;
       }),
       catchError(err => {
         this.error = 'Failed to load documents.';
@@ -211,6 +221,7 @@ export class DocumentsViewComponent implements OnInit {
       case 'PendingUser': return 'Pending User';
       case 'PendingManager': return 'Pending Manager';
       case 'Completed': return 'Completed';
+      case 'Superseded': return 'Superseded';
       default: return status;
     }
   }
@@ -220,6 +231,7 @@ export class DocumentsViewComponent implements OnInit {
       case 'PendingUser': return 'bg-yellow-100 text-yellow-800';
       case 'PendingManager': return 'bg-blue-100 text-blue-800';
       case 'Completed': return 'bg-green-100 text-green-800';
+      case 'Superseded': return 'bg-gray-200 text-gray-500';
       default: return 'bg-gray-100 text-gray-800';
     }
   }
