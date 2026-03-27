@@ -13,10 +13,12 @@ namespace SyncApp26.Application.Services
     public class DataChangeRequestService : IDataChangeRequestService
     {
         private readonly IDataChangeRequestRepository _repository;
+        private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
 
-        public DataChangeRequestService(IDataChangeRequestRepository repository)
+        public DataChangeRequestService(IDataChangeRequestRepository repository, IUserChangeHistoryRepository userChangeHistoryRepository)
         {
             _repository = repository;
+            _userChangeHistoryRepository = userChangeHistoryRepository;
         }
 
         private DataChangeRequestDTO MapToDTO(DataChangeRequest req)
@@ -90,21 +92,53 @@ namespace SyncApp26.Application.Services
             req.ResolvedAt = DateTime.UtcNow;
             req.ResolvedByAdminId = adminId;
 
-            if (dto.Status == "Approved")
+            var historyEntries = new List<UserChangeHistory>();
+            var now = DateTime.UtcNow;
+            var statusLower = dto.Status.ToLower(); // "approved" or "rejected"
+
+            try
             {
-                try
+                var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(req.RequestedChangesJson);
+                if (changes != null)
                 {
-                    var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(req.RequestedChangesJson);
-                    if (changes != null)
+                    var userType = typeof(User);
+
+                    // Capture old values and build history entries
+                    foreach (var kv in changes)
                     {
-                        var userType = typeof(User);
+                        var prop = userType.GetProperty(kv.Key);
+                        if (prop != null)
+                        {
+                            var oldValue = prop.GetValue(req.User)?.ToString() ?? string.Empty;
+                            var newValue = kv.Value?.ToString() ?? string.Empty;
+
+                            if (!string.Equals(oldValue, newValue, StringComparison.Ordinal))
+                            {
+                                historyEntries.Add(new UserChangeHistory
+                                {
+                                    Id = Guid.NewGuid(),
+                                    UserId = req.UserId,
+                                    FieldName = kv.Key,
+                                    OldValue = oldValue,
+                                    NewValue = newValue,
+                                    ImportHistoryId = null,
+                                    Status = statusLower,
+                                    CreatedAt = now
+                                });
+                            }
+                        }
+                    }
+
+                    // Apply changes to user only if approved
+                    if (dto.Status == "Approved")
+                    {
                         foreach (var kv in changes)
                         {
                             var prop = userType.GetProperty(kv.Key);
                             if (prop != null && prop.CanWrite)
                             {
                                 var stringValue = kv.Value?.ToString();
-                                
+
                                 if (prop.PropertyType == typeof(string))
                                     prop.SetValue(req.User, stringValue);
                                 else if (prop.PropertyType == typeof(Guid) && Guid.TryParse(stringValue, out var g))
@@ -117,18 +151,25 @@ namespace SyncApp26.Application.Services
                                     prop.SetValue(req.User, nit);
                             }
                         }
+                        req.User.UpdatedAt = DateTime.UtcNow;
+                        await _repository.UpdateUserAsync(req.User);
                     }
-                    req.User.UpdatedAt = DateTime.UtcNow;
-                    await _repository.UpdateUserAsync(req.User);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error applying changes: {ex.Message}");
-                    throw new Exception("Error applying JSON changes to user.");
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing changes: {ex.Message}");
+                throw new Exception("Error processing data change request.");
             }
 
             await _repository.UpdateAsync(req);
+
+            // Save history entries
+            foreach (var entry in historyEntries)
+            {
+                await _userChangeHistoryRepository.AddAsync(entry);
+            }
+
             return MapToDTO(req);
         }
     }

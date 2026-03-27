@@ -122,7 +122,8 @@
         !loading &&
         !error &&
         getFilteredImportGroups().length === 0 &&
-        getFilteredManualDayGroups().length === 0
+        getFilteredManualDayGroups().length === 0 &&
+        getFilteredDataChangeRequestGroups().length === 0
       "
       class="text-sm text-muted-foreground"
     >
@@ -330,6 +331,101 @@
                     class="text-xs font-medium text-muted-foreground uppercase mb-2"
                   >
                     New
+                  </div>
+                  <p class="font-mono text-sm text-foreground">
+                    {{ change.newValue || "N/A" }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="getFilteredDataChangeRequestGroups().length > 0" class="space-y-6">
+        <div
+          class="text-sm font-semibold text-foreground uppercase tracking-wide"
+        >
+          Data Change Requests
+        </div>
+
+        <div
+          *ngFor="let dayGroup of getFilteredDataChangeRequestGroups()"
+          class="bg-card border border-border rounded-lg overflow-hidden"
+        >
+          <div
+            class="px-6 py-4 bg-muted/30 border-b border-border flex items-center justify-between cursor-pointer"
+            (click)="toggleDataChangeDay(dayGroup.dayKey)"
+          >
+            <div>
+              <h3 class="text-lg font-semibold text-foreground">
+                {{ formatDate(dayGroup.dayDate) }}
+              </h3>
+              <p class="text-xs text-muted-foreground">
+                {{ dayGroup.changes.length }} changes
+              </p>
+            </div>
+          </div>
+
+          <div
+            *ngIf="isDataChangeDayExpanded(dayGroup.dayKey)"
+            class="divide-y divide-border"
+          >
+            <div
+              *ngFor="let change of dayGroup.changes"
+              class="border-t border-border"
+            >
+              <div class="px-6 py-3 flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-foreground">
+                    {{ getUserName(change.userId) }} ·
+                    {{ formatConflictField(change.fieldName) }}
+                  </p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ formatDateTime(change.createdAt || change.importDate) }}
+                  </p>
+                </div>
+                <span
+                  [ngClass]="change.status === 'approved'
+                    ? 'bg-green-500/10 text-green-700 border-green-500/20'
+                    : 'bg-red-500/10 text-red-700 border-red-500/20'"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
+                >
+                  {{ change.status }}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-[1fr,auto,1fr]">
+                <div class="p-4 bg-red-50/30">
+                  <div
+                    class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                  >
+                    Previous
+                  </div>
+                  <p class="font-mono text-sm text-foreground">
+                    {{ change.oldValue || "N/A" }}
+                  </p>
+                </div>
+                <div class="flex items-center justify-center bg-muted/20 px-2">
+                  <svg
+                    class="w-4 h-4 text-muted-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    ></path>
+                  </svg>
+                </div>
+                <div class="p-4 bg-green-50/30">
+                  <div
+                    class="text-xs font-medium text-muted-foreground uppercase mb-2"
+                  >
+                    Requested
                   </div>
                   <p class="font-mono text-sm text-foreground">
                     {{ change.newValue || "N/A" }}
