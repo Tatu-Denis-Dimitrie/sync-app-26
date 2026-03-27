@@ -16,17 +16,23 @@ namespace SyncApp26.API.Controllers
         private readonly IEmailService _emailService;
         private readonly IDocumentService _documentService;
         private readonly IPeriodicTrainingService _periodicTrainingService;
+        private readonly IDocumentSignatureService _documentSignatureService;
+        private readonly IConfiguration _configuration;
 
         public NotificationController(
             IUserService userService,
             IEmailService emailService,
             IDocumentService documentService,
-            IPeriodicTrainingService periodicTrainingService)
+            IPeriodicTrainingService periodicTrainingService,
+            IDocumentSignatureService documentSignatureService,
+            IConfiguration configuration)
         {
             _userService = userService;
             _emailService = emailService;
             _documentService = documentService;
             _periodicTrainingService = periodicTrainingService;
+            _documentSignatureService = documentSignatureService;
+            _configuration = configuration;
         }
 
         [HttpPost("notify-user/{userId}")]
@@ -59,10 +65,15 @@ namespace SyncApp26.API.Controllers
             }
 
             // Verify they actually need to sign it
-            var signedIds = await _documentService.GetUserIdsWithDocumentTypeAsync(request.DocumentType);
-            if (signedIds.Contains(userId))
+            var unsignedIds = await _documentService.GetUserIdsWithUnsignedDocumentTypeAsync(request.DocumentType);
+            if (!unsignedIds.Contains(userId))
             {
-                return BadRequest(new { Message = $"User has already signed the {request.DocumentType} document." });
+                var signedIds = await _documentService.GetUserIdsWithDocumentTypeAsync(request.DocumentType);
+                if (signedIds.Contains(userId))
+                {
+                    return BadRequest(new { Message = $"User has already signed the {request.DocumentType} document." });
+                }
+                return BadRequest(new { Message = $"User does not have an unsigned {request.DocumentType} document to sign." });
             }
 
             // Find training date: try WorkplaceTrainingDate, IntroductoryTrainingDate, or PeriodicTraining
@@ -82,11 +93,32 @@ namespace SyncApp26.API.Controllers
                 trainingDate = latestTraining?.TrainingDate;
             }
 
+            string? signLink = null;
+            if (string.IsNullOrEmpty(targetUser.PasswordHash))
+            {
+                // Generate a one-time signing link for users without an account
+                var userDocs = await _documentService.GetUserDocumentsAsync(userId);
+                var pendingDoc = userDocs.FirstOrDefault(d => 
+                    d.DocumentType == request.DocumentType && d.Status == "PendingUser");
+                
+                if (pendingDoc != null)
+                {
+                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(
+                        targetUser.Email, 
+                        pendingDoc.Id, 
+                        $"{request.DocumentType} Document");
+                    
+                    var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+                    signLink = $"{frontendUrl}/sign/{token}";
+                }
+            }
+
             await _emailService.SendMissingSignatureToUserEmailAsync(
                 targetUser.Email,
                 targetUser.FirstName,
                 request.DocumentType,
-                trainingDate
+                trainingDate,
+                signLink
             );
 
             return Ok(new { Message = "Notification sent successfully." });

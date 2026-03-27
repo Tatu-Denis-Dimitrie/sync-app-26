@@ -90,6 +90,9 @@ namespace SyncApp26.API.Controllers
             var users = await _userService.GetAllUsersAsync();
             var ssmIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SSM");
             var suIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SU");
+            var unsignedSsmIds = await _documentService.GetUserIdsWithUnsignedDocumentTypeAsync("SSM");
+            var unsignedSuIds = await _documentService.GetUserIdsWithUnsignedDocumentTypeAsync("SU");
+
             var responseList = users.Select(user => new UserGETResponseDTO
             {
                 Id = user.Id,
@@ -107,7 +110,9 @@ namespace SyncApp26.API.Controllers
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt,
                 HasSignedSsm = ssmIds.Contains(user.Id),
-                HasSignedSu = suIds.Contains(user.Id)
+                HasSignedSu = suIds.Contains(user.Id),
+                HasUnsignedSsm = unsignedSsmIds.Contains(user.Id),
+                HasUnsignedSu = unsignedSuIds.Contains(user.Id)
             }).ToList();
 
             return Ok(responseList);

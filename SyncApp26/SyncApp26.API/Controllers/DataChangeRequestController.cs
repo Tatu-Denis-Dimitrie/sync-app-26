@@ -58,38 +58,26 @@ namespace SyncApp26.API.Controllers
         {
             var userId = GetUserId();
             var status = "Pending";
-            string newEmail = null;
 
             try 
             {
                 var changes = JsonSerializer.Deserialize<Dictionary<string, string>>(dto.RequestedChangesJson);
-                if (changes != null && changes.ContainsKey("Email") && !string.IsNullOrWhiteSpace(changes["Email"])) 
+                if (changes != null && changes.ContainsKey("Email")) 
                 {
-                    newEmail = changes["Email"];
-                    status = "Awaiting Verification";
+                    // Explicitly block email changes from being requested
+                    changes.Remove("Email");
+                    dto.RequestedChangesJson = JsonSerializer.Serialize(changes);
+                    
+                    // If Email was the only change, we might want to return early or just let the service handle it (it will likely fail validation if empty)
+                    if (changes.Count == 0)
+                    {
+                        return BadRequest(new { message = "Email changes are no longer allowed. Please provide other fields to change." });
+                    }
                 }
             } 
             catch { }
 
             var result = await _service.CreateRequestAsync(userId, dto, status);
-
-            if (newEmail != null) 
-            {
-                var user = await _repository.GetUserByIdAsync(userId);
-                if (user != null) 
-                {
-                    user.EmailVerificationToken = Guid.NewGuid().ToString("N");
-                    user.EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24);
-                    await _repository.UpdateUserAsync(user);
-
-                    var reqFormat = Request != null ? $"{Request.Scheme}://{Request.Host}" : "http://localhost:4200";
-                    var verifyUrl = $"http://localhost:4200/confirm-email-change?reqId={result.Id}&token={user.EmailVerificationToken}";
-                    
-                    var emailHtml = $"<p>Hello {user.FirstName},</p><p>You requested an email change for your SyncApp26 account.</p><p>Please click <a href='{verifyUrl}'>here</a> to confirm your new email address. Your data change request will not be processed by administrators until this is confirmed.</p>";
-                    await _emailService.SendEmailAsync(newEmail, "Confirm your new email address", emailHtml);
-                }
-            }
-
             return Ok(result);
         }
 

@@ -18,5 +18,7 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public DateTime? UpdatedAt { get; set; }
         public bool HasSignedSsm { get; set; }
         public bool HasSignedSu { get; set; }
+        public bool HasUnsignedSsm { get; set; }
+        public bool HasUnsignedSu { get; set; }
     }
 }

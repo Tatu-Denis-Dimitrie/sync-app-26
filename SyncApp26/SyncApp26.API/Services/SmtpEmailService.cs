@@ -202,7 +202,7 @@ namespace SyncApp26.API.Services
             await SendEmailAsync(toEmail, subject, html.ToString());
         }
 
-        public async Task SendMissingSignatureToUserEmailAsync(string toEmail, string firstName, string documentName, DateTime? trainingDate)
+        public async Task SendMissingSignatureToUserEmailAsync(string toEmail, string firstName, string documentName, DateTime? trainingDate, string? signLink = null)
         {
             var dateString = trainingDate.HasValue ? trainingDate.Value.ToString("dd/MM/yyyy") : "recently";
             var subject = $"Action Required: Missing Signature for {documentName}";
@@ -222,7 +222,21 @@ namespace SyncApp26.API.Services
             html.Append("</td></tr><tr><td style='padding:26px 28px;'>");
             html.Append($"<p style='margin:0 0 12px;font-size:16px;line-height:1.5;'>Hello <strong>{encodedFirstName}</strong>,</p>");
             html.Append($"<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>You have not signed the <strong>{encodedDocumentName}</strong> document that happened on <strong>{encodedDate}</strong>.</p>");
-            html.Append("<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>Please log in to your account and sign this document as soon as possible.</p>");
+            
+            if (!string.IsNullOrEmpty(signLink))
+            {
+                var encodedLink = WebUtility.HtmlEncode(signLink);
+                html.Append("<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>Since you don’t have an account yet, you can sign the document directly using the secure link below:</p>");
+                html.Append("<table role='presentation' cellspacing='0' cellpadding='0' style='margin:0 0 18px;'><tr><td>");
+                html.Append($"<a href='{encodedLink}' style='display:inline-block;background:#088395;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-size:14px;font-weight:600;'>Review and Sign Document</a>");
+                html.Append("</td></tr></table>");
+                html.Append("<p style='margin:0 0 8px;font-size:13px;line-height:1.6;color:#6b7280;'>This is a secure, personal link for this document only.</p>");
+            }
+            else
+            {
+                html.Append("<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>Please log in to your account and sign this document as soon as possible.</p>");
+            }
+            
             html.Append("</td></tr><tr><td style='padding:14px 28px 24px;border-top:1px solid #e5e7eb;'>");
             html.Append("<p style='margin:0;font-size:12px;color:#9ca3af;'>SyncApp26 - SSM and SU Digitalization Platform</p>");
             html.Append("</td></tr></table></td></tr></table></body></html>");

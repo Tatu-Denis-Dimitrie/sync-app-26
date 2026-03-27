@@ -55,11 +55,12 @@ export class BasicUserComponent implements OnInit {
   dataChangeError = '';
   dataChangeSuccess = '';
   
-  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' }[] = [
+  availableDepartments: string[] = [];
+  
+  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select' }[] = [
     { key: 'LastName', label: 'Last Name', type: 'text' },
     { key: 'FirstName', label: 'First Name', type: 'text' },
-    { key: 'Email', label: 'Email', type: 'email' },
-    { key: 'Department', label: 'Department (Name)', type: 'text' },
+    { key: 'Department', label: 'Department (Name)', type: 'select' },
     { key: 'Function', label: 'Function (Name)', type: 'text' }
   ];
   selectedFieldKey = '';
@@ -105,6 +106,20 @@ export class BasicUserComponent implements OnInit {
 
     this.loadPendingSignatures();
     this.loadSavedSignature();
+    this.loadDepartments();
+  }
+
+  loadDepartments(): void {
+    this.userSyncService.getDepartments().subscribe({
+      next: (depts) => {
+        const currentDept = this.user?.departmentName;
+        this.availableDepartments = depts
+          .filter(d => d.isActive && d.name !== currentDept)
+          .map(d => d.name)
+          .sort((a, b) => a.localeCompare(b));
+      },
+      error: (err) => console.error('Failed to load departments', err)
+    });
   }
 
   loadPendingSignatures(): void {

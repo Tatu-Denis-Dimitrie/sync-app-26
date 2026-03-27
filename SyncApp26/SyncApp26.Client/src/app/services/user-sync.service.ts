@@ -25,6 +25,8 @@ interface BackendUser {
   updatedAt?: string;
   hasSignedSsm?: boolean;
   hasSignedSu?: boolean;
+  hasUnsignedSsm?: boolean;
+  hasUnsignedSu?: boolean;
 }
 
 @Injectable({
@@ -144,7 +146,9 @@ export class UserSyncService {
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
       role: this.mapBackendRole(backendUser),
       hasSignedSsm: backendUser.hasSignedSsm ?? false,
-      hasSignedSu: backendUser.hasSignedSu ?? false
+      hasSignedSu: backendUser.hasSignedSu ?? false,
+      hasUnsignedSsm: backendUser.hasUnsignedSsm ?? false,
+      hasUnsignedSu: backendUser.hasUnsignedSu ?? false
     };
   }
 
@@ -169,24 +173,7 @@ export class UserSyncService {
    */
   getUserById(id: string): Observable<User | null> {
     return this.http.get<BackendUser>(`${this.apiUrl}/${id}`).pipe(
-      map(backendUser => {
-        return {
-          id: backendUser.id,
-          personalId: backendUser.personalId,
-          firstName: backendUser.firstName,
-          lastName: backendUser.lastName,
-          email: backendUser.email,
-          departmentId: backendUser.departmentId,
-          departmentName: backendUser.departmentName,
-          assignedToId: backendUser.assignedToId,
-          assignedToPersonalId: backendUser.assignedToPersonalId,
-          assignedToName: backendUser.assignedToName,
-          function: this.normalizeFunction(backendUser.function),
-          createdAt: new Date(backendUser.createdAt),
-          updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-          role: this.mapBackendRole(backendUser)
-        };
-      }),
+      map(backendUser => this.mapBackendUser(backendUser)),
       catchError(error => {
         console.error('Error fetching user:', error);
         return of(null);
@@ -196,24 +183,7 @@ export class UserSyncService {
 
   getByPersonalId(personalId: string): Observable<User | null> {
     return this.http.get<BackendUser>(`${this.apiUrl}/personalId/${personalId}`).pipe(
-      map(backendUser => {
-        return {
-          id: backendUser.id,
-          personalId: backendUser.personalId,
-          firstName: backendUser.firstName,
-          lastName: backendUser.lastName,
-          email: backendUser.email,
-          departmentId: backendUser.departmentId,
-          departmentName: backendUser.departmentName,
-          assignedToId: backendUser.assignedToId,
-          assignedToPersonalId: backendUser.assignedToPersonalId,
-          assignedToName: backendUser.assignedToName,
-          function: this.normalizeFunction(backendUser.function),
-          createdAt: new Date(backendUser.createdAt),
-          updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
-          role: this.mapBackendRole(backendUser)
-        };
-      }),
+      map(backendUser => this.mapBackendUser(backendUser)),
       catchError(error => {
         console.error('Error fetching user by personal ID:', error);
         return of(null);
