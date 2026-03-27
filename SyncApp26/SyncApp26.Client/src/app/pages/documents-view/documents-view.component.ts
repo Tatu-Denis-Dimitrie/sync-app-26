@@ -180,7 +180,8 @@ export class DocumentsViewComponent implements OnInit {
         this.bulkGenerateResult = res;
 
         if (res?.adminSignLink) {
-          window.open(res.adminSignLink, '_blank');
+          // Redirect admin to the signing page in the same tab instead of opening a new one
+          window.location.href = res.adminSignLink;
         }
       },
       error: (err) => {

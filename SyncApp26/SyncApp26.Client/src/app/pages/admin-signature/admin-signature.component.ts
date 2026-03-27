@@ -185,6 +185,10 @@ navigateToDocuments(): void {
     this.router.navigate(['/documents']);
   }
 
+  navigateToDashboard(): void {
+    this.router.navigate(['/dashboard']);
+  }
+
   logout(): void {
     this.authService.logout();
   }
