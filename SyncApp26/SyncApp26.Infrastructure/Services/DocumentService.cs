@@ -958,6 +958,16 @@ namespace SyncApp26.Infrastructure.Services
             return new HashSet<Guid>(ids);
         }
 
+        public async Task<HashSet<Guid>> GetUserIdsWithUnsignedDocumentTypeAsync(string documentType)
+        {
+            var ids = await _context.UserDocuments
+                .Where(d => d.DocumentType == documentType && d.Status == "PendingUser")
+                .Select(d => d.UserId)
+                .Distinct()
+                .ToListAsync();
+            return new HashSet<Guid>(ids);
+        }
+
         public async Task<bool> UpdateDocumentSignatureAsync(Guid documentId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false)
         {
             var doc = await _context.UserDocuments

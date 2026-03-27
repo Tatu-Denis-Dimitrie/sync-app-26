@@ -446,9 +446,18 @@
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<div *ngFor="let field of availableFields" class="flex flex-col">
 							<span class="text-xs text-muted-foreground mb-1">{{ field.label }}</span>
-							<input [type]="field.type" [(ngModel)]="requestedChanges[field.key]"
-								placeholder="Current value is okay (leave empty)"
-								class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500" />
+							<ng-container *ngIf="field.type === 'select'; else otherInput">
+								<select [(ngModel)]="requestedChanges[field.key]"
+									class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500">
+									<option value="">(No change)</option>
+									<option *ngFor="let opt of availableDepartments" [value]="opt">{{ opt }}</option>
+								</select>
+							</ng-container>
+							<ng-template #otherInput>
+								<input [type]="field.type" [(ngModel)]="requestedChanges[field.key]"
+									placeholder="Current value is okay (leave empty)"
+									class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500" />
+							</ng-template>
 						</div>
 					</div>
 				</div>

@@ -414,9 +414,9 @@
 							|| 'unknown' }}</td>
 						<td class="px-6 py-4 whitespace-nowrap text-center text-sm">
 							<div class="flex items-center justify-center gap-2">
-								<button *ngIf="assignedUser.hasSignedSsm === false" (click)="notifyUser(assignedUser, 'SSM', $event)" title="Notify missing SSM" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition">Notify SSM</button>
-								<button *ngIf="assignedUser.hasSignedSu === false" (click)="notifyUser(assignedUser, 'SU', $event)" title="Notify missing SU" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition">Notify SU</button>
-								<span *ngIf="assignedUser.hasSignedSsm !== false && assignedUser.hasSignedSu !== false" class="text-green-600 text-xs font-medium">None</span>
+								<button *ngIf="assignedUser.hasUnsignedSsm" (click)="notifyUser(assignedUser, 'SSM', $event)" title="Notify missing SSM" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition">Notify SSM</button>
+								<button *ngIf="assignedUser.hasUnsignedSu" (click)="notifyUser(assignedUser, 'SU', $event)" title="Notify missing SU" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition">Notify SU</button>
+								<span *ngIf="!assignedUser.hasUnsignedSsm && !assignedUser.hasUnsignedSu" class="text-green-600 text-xs font-medium">None</span>
 							</div>
 						</td>
 					</tr>

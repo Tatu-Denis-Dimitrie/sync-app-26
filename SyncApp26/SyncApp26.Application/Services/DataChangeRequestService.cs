@@ -134,6 +134,7 @@ namespace SyncApp26.Application.Services
                     {
                         foreach (var kv in changes)
                         {
+                            if (kv.Key == "Email") continue; // Explicitly block Email changes
                             var prop = userType.GetProperty(kv.Key);
                             if (prop != null && prop.CanWrite)
                             {
