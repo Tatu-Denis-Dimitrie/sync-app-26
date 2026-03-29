@@ -1,19 +1,4 @@
 <div class="basic-user-page bg-background">
-	<header class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-		<div class="container mx-auto px-4 py-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<h1 class="text-xl font-semibold text-foreground">My Profile</h1>
-					<p class="text-sm text-muted-foreground">Personal and work information</p>
-				</div>
-				<button (click)="logout()"
-					class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
-					Logout
-				</button>
-			</div>
-		</div>
-	</header>
-
 	<div class="container mx-auto px-4 py-8">
 		<div *ngIf="isLoading" class="text-muted-foreground text-sm">Loading profile...</div>
 		<div *ngIf="!isLoading && errorMessage" class="text-red-600 text-sm">{{ errorMessage }}</div>

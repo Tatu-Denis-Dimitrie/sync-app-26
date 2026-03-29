@@ -1,85 +1,4 @@
 <div class="min-h-screen bg-background">
-  <!-- Header -->
-  <header
-    class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40"
-  >
-    <div class="container mx-auto px-4 py-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <button
-            (click)="navigateToDashboard()"
-            class="w-8 h-8 bg-primary rounded-md flex items-center justify-center hover:bg-primary/90 transition-colors"
-          >
-            <svg
-              class="w-5 h-5 text-primary-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              ></path>
-            </svg>
-          </button>
-          <div>
-            <h1 class="text-xl font-semibold text-foreground">SyncApp 26</h1>
-            <p class="text-sm text-muted-foreground">
-              Synchronize employee data with CSV import
-            </p>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button
-            (click)="navigateToDepartments()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Departments
-          </button>
-          <button
-            (click)="navigateToImportHistory()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            User History
-          </button>
-          <button
-            (click)="navigateToUsers()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Users
-          </button>
-          <button
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-white bg-gray-500"
-          >
-            Employees
-          </button>
-          <button
-            (click)="navigateToDocuments()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Documents
-          </button>
-          <button
-            (click)="navigateToSignature()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Signature
-          </button>
-          <button (click)="navigateToDataRequests()" class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
-            Data Requests
-          </button>
-          <button
-            (click)="logout()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
 
   <!-- Success Message Banner -->
   <div *ngIf="successMessage" class="container mx-auto px-4 pt-4">
@@ -103,7 +22,7 @@
     </div>
   </div>
 
-  <div class="container mx-auto px-4 py-8">
+  <div class="container mx-auto px-4 py-4">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Left Side: Employees List -->
       <div class="lg:col-span-1">
