@@ -41,7 +41,7 @@ namespace SyncApp26.Domain.Entities
         /// <summary>
         /// Material taught (Materialul predat)
         /// </summary>
-        [MaxLength(500)]
+        [MaxLength(2000)]
         public string? MaterialTaught { get; set; }
 
         /// <summary>

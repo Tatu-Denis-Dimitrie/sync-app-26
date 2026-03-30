@@ -688,13 +688,13 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             table.ColumnsDefinition(c =>
                             {
-                                c.ConstantColumn(60);   // Data
+                                c.ConstantColumn(50);   // Data
                                 c.ConstantColumn(35);   // Durata
-                                c.RelativeColumn(2);    // Ocupatia / Specialitatea
-                                c.RelativeColumn(3);    // Material predat
-                                c.RelativeColumn(1.5f);    // Semnătură instruit
-                                c.RelativeColumn(1.5f);    // Semnătură instructor
-                                if (isSsm) c.RelativeColumn(1.5f); // Semnătură verificator
+                                c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
+                                c.RelativeColumn(4.5f); // Material predat
+                                c.RelativeColumn(1.0f); // Semnătură instruit
+                                c.RelativeColumn(1.0f); // Semnătură instructor
+                                if (isSsm) c.RelativeColumn(1.0f); // Semnătură verificator
                             });
 
                             static IContainer HeaderCell(IContainer c) =>
@@ -768,7 +768,7 @@ namespace SyncApp26.Infrastructure.Services
                                 table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
                                 table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
                                 table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(7);
+                                table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(6.5f);
 
                                 table.Cell().Element(rowCell).Column(c => RenderSignature(c, userSigMethod, userSigData));
                                 table.Cell().Element(rowCell).Column(c => RenderSignature(c, mgrSigMethod, mgrSigData));
@@ -1062,7 +1062,7 @@ namespace SyncApp26.Infrastructure.Services
 
             return true;
         }
-    
+
         // public async Task<bool> SignPeriodicTrainingAsync(Guid periodicTrainingId, bool isUserSignature, bool isAdminSignature, string signatureMethod, string signatureData, string ipAddress)
         // {
         //     var pt = await _context.PeriodicTrainings
