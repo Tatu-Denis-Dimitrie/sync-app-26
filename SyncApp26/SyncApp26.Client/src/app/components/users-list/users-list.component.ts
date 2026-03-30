@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { trigger, transition, style, animate } from '@angular/animations';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
@@ -43,7 +44,18 @@ type ManagerSortKey = keyof LineManagerTeamStats;
   standalone: true,
   imports: [CommonModule, FormsModule, PaginationComponent],
   templateUrl: './users-list.component.html',
-  styleUrls: ['./users-list.component.css']
+  styleUrls: ['./users-list.component.css'],
+  animations: [
+    trigger('fadeSlide', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(-12px)' }),
+        animate('250ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ opacity: 0, transform: 'translateY(-12px)' }))
+      ])
+    ])
+  ]
 })
 export class UsersListComponent implements OnInit {
   users$!: Observable<User[]>;
@@ -55,6 +67,9 @@ export class UsersListComponent implements OnInit {
   sortedDepartmentSignatureStats$!: Observable<DepartmentSignatureStats[]>;
   lineManagerTeamStats$!: Observable<LineManagerTeamStats[]>;
   sortedLineManagerTeamStats$!: Observable<LineManagerTeamStats[]>;
+
+  showDepartmentStats = false;
+  showManagerStats = false;
 
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 15;
