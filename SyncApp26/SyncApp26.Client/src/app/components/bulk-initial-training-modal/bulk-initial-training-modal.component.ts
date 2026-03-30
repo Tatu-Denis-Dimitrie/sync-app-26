@@ -55,6 +55,8 @@ export class BulkInitialTrainingModalComponent implements OnInit {
   isLoadingUsers = false;
   isUserPickerVisible = false;
   userSearchQuery = '';
+  pickerDepartmentId: string | null = null;
+  pickerShowSelectedOnly = false;
 
   formData: BulkInitialTrainingData = {
     introductoryTrainingDate: '',
@@ -124,7 +126,11 @@ export class BulkInitialTrainingModalComponent implements OnInit {
     const query = this.userSearchQuery.trim().toLowerCase();
 
     return this.users.filter((user) => {
-      const matchesDepartment = !this.formData.selectedDepartmentId || user.departmentId === this.formData.selectedDepartmentId;
+      if (this.pickerShowSelectedOnly && !this.isUserSelected(user.id)) {
+        return false;
+      }
+
+      const matchesDepartment = !this.pickerDepartmentId || user.departmentId === this.pickerDepartmentId;
       if (!matchesDepartment) {
         return false;
       }
@@ -145,15 +151,14 @@ export class BulkInitialTrainingModalComponent implements OnInit {
   }
 
   onDepartmentChanged(): void {
-    if (!this.formData.applyToAllUsers) {
-      const allowedIds = new Set(this.filteredUsers.map((u) => u.id));
-      this.formData.selectedUserIds = this.formData.selectedUserIds.filter((id) => allowedIds.has(id));
-    }
+    // Department filter only affects the user picker display; existing selections are preserved.
   }
 
   openUserPicker(): void {
     this.isUserPickerVisible = true;
     this.userSearchQuery = '';
+    this.pickerDepartmentId = this.formData.selectedDepartmentId;
+    this.pickerShowSelectedOnly = false;
 
     if (!this.users.length) {
       this.loadUsers();

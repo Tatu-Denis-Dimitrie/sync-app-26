@@ -34,7 +34,7 @@
             (ngModelChange)="onDepartmentChanged()"
             name="selectedDepartmentId"
             class="form-input"
-            [disabled]="isLoadingDepartments"
+            [disabled]="isLoadingDepartments || !formData.applyToAllUsers"
           >
             <option [ngValue]="null">
               {{
@@ -140,7 +140,16 @@
               name="introductoryTrainingContent"
               class="form-textarea"
               rows="2"
+              maxlength="2000"
             ></textarea>
+            <p
+              class="form-hint text-right"
+              [class.text-rose-500]="
+                formData.introductoryTrainingContent.length >= 2000
+              "
+            >
+              {{ formData.introductoryTrainingContent.length }} / 2000
+            </p>
           </div>
         </div>
 
@@ -218,7 +227,16 @@
               name="workplaceTrainingContent"
               class="form-textarea"
               rows="2"
+              maxlength="2000"
             ></textarea>
+            <p
+              class="form-hint text-right"
+              [class.text-rose-500]="
+                formData.workplaceTrainingContent.length >= 2000
+              "
+            >
+              {{ formData.workplaceTrainingContent.length }} / 2000
+            </p>
           </div>
         </div>
       </form>
@@ -255,13 +273,34 @@
         </div>
 
         <div class="user-picker-body">
-          <input
-            type="text"
-            class="form-input"
-            [(ngModel)]="userSearchQuery"
-            name="userSearchQuery"
-            placeholder="Search by name, email, or department"
-          />
+          <div class="picker-filters">
+            <input
+              type="text"
+              class="form-input"
+              [(ngModel)]="userSearchQuery"
+              name="userSearchQuery"
+              placeholder="Search by name or email..."
+            />
+            <select
+              class="form-input"
+              [(ngModel)]="pickerDepartmentId"
+              name="pickerDepartmentId"
+            >
+              <option [ngValue]="null">All departments</option>
+              <option *ngFor="let dept of departments" [ngValue]="dept.id">
+                {{ dept.name }}
+              </option>
+            </select>
+            <label class="picker-toggle-row">
+              <input
+                type="checkbox"
+                class="form-checkbox"
+                [(ngModel)]="pickerShowSelectedOnly"
+                name="pickerShowSelectedOnly"
+              />
+              <span>Show selected only ({{ selectedUsersCount }})</span>
+            </label>
+          </div>
 
           <div class="picker-actions">
             <button

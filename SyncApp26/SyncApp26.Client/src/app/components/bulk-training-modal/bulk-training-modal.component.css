@@ -236,6 +236,22 @@
   flex-wrap: wrap;
 }
 
+.picker-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.picker-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+
 .users-list {
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
