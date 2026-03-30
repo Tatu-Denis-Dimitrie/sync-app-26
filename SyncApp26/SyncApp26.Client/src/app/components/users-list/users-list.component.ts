@@ -71,6 +71,17 @@ export class UsersListComponent implements OnInit {
   showDepartmentStats = false;
   showManagerStats = false;
 
+  toastMessage = '';
+  toastType: 'success' | 'error' = 'success';
+  confirmingNotify: 'SSM' | 'SU' | null = null;
+  isSendingNotify = false;
+
+  private showToast(message: string, type: 'success' | 'error' = 'success'): void {
+    this.toastMessage = message;
+    this.toastType = type;
+    setTimeout(() => this.toastMessage = '', 5000);
+  }
+
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 15;
   totalItems = 0;
@@ -355,6 +366,29 @@ export class UsersListComponent implements OnInit {
     this.pendingUsersForModal = [];
   }
 
+  notifyAllManagers(documentType: 'SSM' | 'SU'): void {
+    if (this.confirmingNotify !== documentType) {
+      this.confirmingNotify = documentType;
+      return;
+    }
+    this.confirmingNotify = null;
+    this.isSendingNotify = true;
+    this.notificationService.notifyAllManagers(documentType).subscribe({
+      next: (res) => {
+        this.isSendingNotify = false;
+        this.showToast(res.message || 'Notifications sent!');
+      },
+      error: (err) => {
+        this.isSendingNotify = false;
+        this.showToast(err.error?.message || 'Failed to send notifications.', 'error');
+      }
+    });
+  }
+
+  cancelNotify(): void {
+    this.confirmingNotify = null;
+  }
+
   getRoleBadgeColor(role: UserRole): string {
     return role === UserRole.LineManager
       ? 'bg-purple-500/10 text-purple-700 border-purple-500/20'
@@ -485,7 +519,7 @@ export class UsersListComponent implements OnInit {
     };
 
     if (this.editForm.role === UserRole.Employee && !payload.assignedToId) {
-      alert('Please select a Line Manager for the Employee.');
+      this.showToast('Please select a Line Manager for the Employee.', 'error');
       return;
     }
 
@@ -496,7 +530,7 @@ export class UsersListComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error updating user:', err);
-        alert(err.error?.message || 'Error updating user');
+        this.showToast(err.error?.message || 'Error updating user', 'error');
       }
     });
   }
@@ -521,7 +555,7 @@ export class UsersListComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error deleting user:', err);
-        alert(err.error?.message || 'Error deleting user');
+        this.showToast(err.error?.message || 'Error deleting user', 'error');
       }
     });
   }

@@ -24,4 +24,9 @@ export class NotificationService {
     const payload: NotificationRequest = { documentType };
     return this.http.post(`${this.apiUrl}/notify-manager/${managerId}`, payload);
   }
+
+  notifyAllManagers(documentType: 'SSM' | 'SU'): Observable<any> {
+    const payload: NotificationRequest = { documentType };
+    return this.http.post(`${this.apiUrl}/notify-all-managers`, payload);
+  }
 }

@@ -38,7 +38,7 @@ namespace SyncApp26.API.Controllers
         [HttpPost("notify-user/{userId}")]
         public async Task<IActionResult> NotifyUser(Guid userId, [FromBody] NotificationRequestDTO request)
         {
-            if (string.IsNullOrWhiteSpace(request.DocumentType) || 
+            if (string.IsNullOrWhiteSpace(request.DocumentType) ||
                 (request.DocumentType != "SSM" && request.DocumentType != "SU"))
             {
                 return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
@@ -98,16 +98,16 @@ namespace SyncApp26.API.Controllers
             {
                 // Generate a one-time signing link for users without an account
                 var userDocs = await _documentService.GetUserDocumentsAsync(userId);
-                var pendingDoc = userDocs.FirstOrDefault(d => 
+                var pendingDoc = userDocs.FirstOrDefault(d =>
                     d.DocumentType == request.DocumentType && d.Status == "PendingUser");
-                
+
                 if (pendingDoc != null)
                 {
                     var token = await _documentSignatureService.GenerateSignatureTokenAsync(
-                        targetUser.Email, 
-                        pendingDoc.Id, 
+                        targetUser.Email,
+                        pendingDoc.Id,
                         $"{request.DocumentType} Document");
-                    
+
                     var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
                     signLink = $"{frontendUrl}/sign/{token}";
                 }
@@ -128,7 +128,7 @@ namespace SyncApp26.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> NotifyManager(Guid managerId, [FromBody] NotificationRequestDTO request)
         {
-            if (string.IsNullOrWhiteSpace(request.DocumentType) || 
+            if (string.IsNullOrWhiteSpace(request.DocumentType) ||
                 (request.DocumentType != "SSM" && request.DocumentType != "SU"))
             {
                 return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
@@ -147,7 +147,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var signedIds = await _documentService.GetUserIdsWithDocumentTypeAsync(request.DocumentType);
-            
+
             // Count how many users assigned to this manager are NOT in the signedIds list
             var unsignedCount = assignedUsers.Count(u => !signedIds.Contains(u.Id));
 
@@ -164,6 +164,48 @@ namespace SyncApp26.API.Controllers
             );
 
             return Ok(new { Message = $"Notification sent successfully for {unsignedCount} missing signatures." });
+        }
+
+        [HttpPost("notify-all-managers")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> NotifyAllManagers([FromBody] NotificationRequestDTO request)
+        {
+            if (string.IsNullOrWhiteSpace(request.DocumentType) ||
+                (request.DocumentType != "SSM" && request.DocumentType != "SU"))
+            {
+                return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
+            }
+
+            var allUsers = await _userService.GetAllUsersAsync();
+            var managers = allUsers
+                .Where(u => u.Role?.Name == "Line Manager")
+                .ToList();
+
+            if (!managers.Any())
+                return BadRequest(new { Message = "No active line managers found." });
+
+            var signedIds = await _documentService.GetUserIdsWithDocumentTypeAsync(request.DocumentType);
+            int notifiedCount = 0;
+
+            foreach (var manager in managers)
+            {
+                var assignedUsers = await _userService.GetUsersAssignedToAsync(manager.Id);
+                var unsignedCount = assignedUsers.Count(u => !signedIds.Contains(u.Id));
+                if (unsignedCount == 0) continue;
+
+                await _emailService.SendMissingSignatureToManagerEmailAsync(
+                    manager.Email,
+                    $"{manager.FirstName} {manager.LastName}",
+                    request.DocumentType,
+                    unsignedCount
+                );
+                notifiedCount++;
+            }
+
+            if (notifiedCount == 0)
+                return Ok(new { Message = $"All managers' teams have already signed the {request.DocumentType} document. No emails sent." });
+
+            return Ok(new { Message = $"Notifications sent to {notifiedCount} line manager(s) with unsigned {request.DocumentType} documents." });
         }
     }
 }
