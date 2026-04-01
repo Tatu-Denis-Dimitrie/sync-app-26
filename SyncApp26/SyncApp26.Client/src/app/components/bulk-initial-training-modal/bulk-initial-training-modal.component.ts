@@ -20,6 +20,7 @@ interface UserOption {
 }
 
 interface BulkInitialTrainingData {
+  documentType: string;
   introductoryTrainingDate: string;
   introductoryTrainingHours: number | null;
   introductoryTrainingInstructor: string;
@@ -49,6 +50,10 @@ export class BulkInitialTrainingModalComponent implements OnInit {
 
   isVisible = false;
   isSubmitting = false;
+  submitted = false;
+  submittedCount = 0;
+  errorMessage = '';
+  validationMessage = '';
   departments: DepartmentOption[] = [];
   isLoadingDepartments = false;
   users: UserOption[] = [];
@@ -59,6 +64,7 @@ export class BulkInitialTrainingModalComponent implements OnInit {
   pickerShowSelectedOnly = false;
 
   formData: BulkInitialTrainingData = {
+    documentType: 'Both',
     introductoryTrainingDate: '',
     introductoryTrainingHours: null,
     introductoryTrainingInstructor: '',
@@ -218,6 +224,7 @@ export class BulkInitialTrainingModalComponent implements OnInit {
 
   resetForm() {
     this.formData = {
+      documentType: 'Both',
       introductoryTrainingDate: '',
       introductoryTrainingHours: null,
       introductoryTrainingInstructor: '',
@@ -234,48 +241,48 @@ export class BulkInitialTrainingModalComponent implements OnInit {
       selectedUserIds: []
     };
     this.userSearchQuery = '';
+    this.submitted = false;
+    this.submittedCount = 0;
+    this.errorMessage = '';
+    this.validationMessage = '';
   }
 
   submitBulkInitialTraining() {
+    this.validationMessage = '';
+    this.errorMessage = '';
+
     if (!this.formData.introductoryTrainingDate && !this.formData.workplaceTrainingDate) {
-      alert('Please provide at least one date for initial training.');
+      this.validationMessage = 'Please provide at least one date for initial training.';
       return;
     }
 
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {
-      alert('Please select at least one user for this operation.');
+      this.validationMessage = 'Please select at least one user for this operation.';
       return;
     }
 
-    const targetText = this.formData.applyToAllUsers
-      ? (this.formData.selectedDepartmentId ? 'all users in the selected department' : 'all users')
-      : `${this.formData.selectedUserIds.length} selected user(s)`;
+    this.isSubmitting = true;
 
-    if (confirm(`Apply initial training data for ${targetText}? Existing initial training values will not be overwritten.`)) {
-      this.isSubmitting = true;
+    const payload = {
+      ...this.formData,
+      introductoryTrainingDate: this.formData.introductoryTrainingDate || null,
+      workplaceTrainingDate: this.formData.workplaceTrainingDate || null,
+      selectedDepartmentId: this.formData.selectedDepartmentId ?? null
+    };
 
-      const payload = {
-        ...this.formData,
-        introductoryTrainingDate: this.formData.introductoryTrainingDate || null,
-        workplaceTrainingDate: this.formData.workplaceTrainingDate || null,
-        selectedDepartmentId: this.formData.selectedDepartmentId ?? null
-      };
-
-      this.http.post<any>(`${environment.apiUrl}/User/bulk-initial-training`, payload)
-        .subscribe({
-          next: (response) => {
-            this.isSubmitting = false;
-            alert(`Initial training updated for ${response.successCount} users. Skipped ${response.skippedCount} users.`);
-            this.success.emit();
-            this.closeModal();
-          },
-          error: (err) => {
-            this.isSubmitting = false;
-            console.error('Error applying initial training in bulk:', err);
-            const message = err?.error?.errors?.[0] || err?.error?.message || 'Error applying initial training in bulk. Please try again.';
-            alert(message);
-          }
-        });
-    }
+    this.http.post<any>(`${environment.apiUrl}/User/bulk-initial-training`, payload)
+      .subscribe({
+        next: (response) => {
+          this.isSubmitting = false;
+          this.submitted = true;
+          this.submittedCount = response?.updatedCount ?? response?.count ?? 0;
+          this.success.emit();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          console.error('Error applying initial training in bulk:', err);
+          this.errorMessage = err?.error?.errors?.[0] || err?.error?.message || 'Error applying initial training in bulk. Please try again.';
+        }
+      });
   }
 }

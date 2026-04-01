@@ -272,25 +272,25 @@
           <p>
             a fost efectuată la data
             <span *ngIf="!editMode" class="field">{{
-              formatDate(formData.introductoryTrainingDate) ||
+              formatDate(formData.ssmTraining.introductoryTrainingDate) ||
                 formatDate(userForm.hireDate)
             }}</span>
             <input
               *ngIf="editMode"
               type="date"
-              [(ngModel)]="formData.introductoryTrainingDate"
+              [(ngModel)]="formData.ssmTraining.introductoryTrainingDate"
               class="edit-input"
             />
           </p>
           <p>
             timp de
             <span *ngIf="!editMode" class="field">{{
-              formData.introductoryTrainingHours || "8"
+              formData.ssmTraining.introductoryTrainingHours || "8"
             }}</span>
             <input
               *ngIf="editMode"
               type="number"
-              [(ngModel)]="formData.introductoryTrainingHours"
+              [(ngModel)]="formData.ssmTraining.introductoryTrainingHours"
               class="edit-input"
               style="width: 60px"
             />
@@ -298,12 +298,13 @@
           </p>
           <p>
             <span *ngIf="!editMode" class="field">{{
-              formData.introductoryTrainingInstructor || getManagerFullName()
+              formData.ssmTraining.introductoryTrainingInstructor ||
+                getManagerFullName()
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.introductoryTrainingInstructor"
+              [(ngModel)]="formData.ssmTraining.introductoryTrainingInstructor"
               class="edit-input"
               placeholder="Numele instructorului"
             />
@@ -311,14 +312,16 @@
           <p>
             având funcția de
             <span *ngIf="!editMode" class="field">{{
-              formData.introductoryTrainingInstructorFunction ||
+              formData.ssmTraining.introductoryTrainingInstructorFunction ||
                 userForm.managerFunctionName ||
                 "Manager"
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.introductoryTrainingInstructorFunction"
+              [(ngModel)]="
+                formData.ssmTraining.introductoryTrainingInstructorFunction
+              "
               class="edit-input"
               placeholder="Funcția instructorului"
             />
@@ -327,14 +330,14 @@
           <div class="field-box" *ngIf="!editMode">
             <p>
               {{
-                formData.introductoryTrainingContent ||
+                formData.ssmTraining.introductoryTrainingContent ||
                   "____________________________________________"
               }}
             </p>
           </div>
           <textarea
             *ngIf="editMode"
-            [(ngModel)]="formData.introductoryTrainingContent"
+            [(ngModel)]="formData.ssmTraining.introductoryTrainingContent"
             class="edit-input"
             rows="4"
             placeholder="Descrieți conținutul instruirii..."
@@ -352,27 +355,27 @@
           <p>
             a fost efectuată la data
             <span *ngIf="!editMode" class="field">{{
-              formatDate(formData.workplaceTrainingDate) ||
+              formatDate(formData.ssmTraining.workplaceTrainingDate) ||
                 formatDate(userForm.hireDate)
             }}</span>
             <input
               *ngIf="editMode"
               type="date"
-              [(ngModel)]="formData.workplaceTrainingDate"
+              [(ngModel)]="formData.ssmTraining.workplaceTrainingDate"
               class="edit-input"
             />
           </p>
           <p>
             loc de muncă/post de lucru
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingLocation ||
+              formData.ssmTraining.workplaceTrainingLocation ||
                 userForm.functionName ||
                 "N/A"
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.workplaceTrainingLocation"
+              [(ngModel)]="formData.ssmTraining.workplaceTrainingLocation"
               class="edit-input"
               placeholder="Locul de muncă"
             />
@@ -380,23 +383,24 @@
           <p>
             timp de
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingHours || "2"
+              formData.ssmTraining.workplaceTrainingHours || "2"
             }}</span>
             <input
               *ngIf="editMode"
               type="number"
-              [(ngModel)]="formData.workplaceTrainingHours"
+              [(ngModel)]="formData.ssmTraining.workplaceTrainingHours"
               class="edit-input"
               style="width: 60px"
             />
             ore de către
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingInstructor || getManagerFullName()
+              formData.ssmTraining.workplaceTrainingInstructor ||
+                getManagerFullName()
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.workplaceTrainingInstructor"
+              [(ngModel)]="formData.ssmTraining.workplaceTrainingInstructor"
               class="edit-input"
               placeholder="Numele instructorului"
             />
@@ -404,14 +408,16 @@
           <p>
             având funcția de
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingInstructorFunction ||
+              formData.ssmTraining.workplaceTrainingInstructorFunction ||
                 userForm.managerFunctionName ||
                 "Manager"
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.workplaceTrainingInstructorFunction"
+              [(ngModel)]="
+                formData.ssmTraining.workplaceTrainingInstructorFunction
+              "
               class="edit-input"
               placeholder="Funcția instructorului"
             />
@@ -420,14 +426,14 @@
           <div class="field-box" *ngIf="!editMode">
             <p>
               {{
-                formData.workplaceTrainingContent ||
+                formData.ssmTraining.workplaceTrainingContent ||
                   "____________________________________________"
               }}
             </p>
           </div>
           <textarea
             *ngIf="editMode"
-            [(ngModel)]="formData.workplaceTrainingContent"
+            [(ngModel)]="formData.ssmTraining.workplaceTrainingContent"
             class="edit-input"
             rows="3"
             placeholder="Descrieți conținutul instruirii..."
@@ -497,45 +503,85 @@
               <th>Materialul predat</th>
               <th>Semnătura instruit (angajat)</th>
               <th>Semnătura instructor (manager)</th>
-              <th *ngIf="selectedTab === 'ssm'">Semnătura verificator (admin)</th>
+              <th *ngIf="selectedTab === 'ssm'">
+                Semnătura verificator (admin)
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let t of displayedTrainings">
-              <td>{{ t.trainingDate ? (t.trainingDate | date:'shortDate') : '________' }}</td>
-              <td>{{ t.durationHours ?? '____' }}</td>
+              <td>
+                {{
+                  t.trainingDate
+                    ? (t.trainingDate | date: "shortDate")
+                    : "________"
+                }}
+              </td>
+              <td>{{ t.durationHours ?? "____" }}</td>
               <td>{{ t.occupation || userForm.functionName }}</td>
-              <td>{{ t.materialTaught || '_____________' }}</td>
+              <td>{{ t.materialTaught || "_____________" }}</td>
               <td>
                 <ng-container *ngIf="t.userSignatureData; else dashUser">
-                  <span *ngIf="t.userSignatureMethod?.toLowerCase() === 'type'; else userDrawn" class="sig-typed">{{ t.userSignatureData }}</span>
+                  <span
+                    *ngIf="
+                      t.userSignatureMethod?.toLowerCase() === 'type';
+                      else userDrawn
+                    "
+                    class="sig-typed"
+                    >{{ t.userSignatureData }}</span
+                  >
                   <ng-template #userDrawn>
-                    <img [src]="getSafeImage(t.userSignatureData)" class="sig-thumb" />
+                    <img
+                      [src]="getSafeImage(t.userSignatureData)"
+                      class="sig-thumb"
+                    />
                   </ng-template>
                 </ng-container>
                 <ng-template #dashUser>—</ng-template>
               </td>
               <td>
                 <ng-container *ngIf="t.instructorSignature; else dashInstr">
-                  <span *ngIf="t.instructorSignatureMethod?.toLowerCase() === 'type'; else instrDrawn" class="sig-typed">{{ t.instructorSignature }}</span>
+                  <span
+                    *ngIf="
+                      t.instructorSignatureMethod?.toLowerCase() === 'type';
+                      else instrDrawn
+                    "
+                    class="sig-typed"
+                    >{{ t.instructorSignature }}</span
+                  >
                   <ng-template #instrDrawn>
-                    <img [src]="getSafeImage(t.instructorSignature)" class="sig-thumb" />
+                    <img
+                      [src]="getSafeImage(t.instructorSignature)"
+                      class="sig-thumb"
+                    />
                   </ng-template>
                 </ng-container>
                 <ng-template #dashInstr>—</ng-template>
               </td>
               <td *ngIf="selectedTab === 'ssm'">
                 <ng-container *ngIf="t.verifierSignature; else dashVer">
-                  <span *ngIf="t.verifierSignatureMethod?.toLowerCase() === 'type'; else verifDrawn" class="sig-typed">{{ t.verifierSignature }}</span>
+                  <span
+                    *ngIf="
+                      t.verifierSignatureMethod?.toLowerCase() === 'type';
+                      else verifDrawn
+                    "
+                    class="sig-typed"
+                    >{{ t.verifierSignature }}</span
+                  >
                   <ng-template #verifDrawn>
-                    <img [src]="getSafeImage(t.verifierSignature)" class="sig-thumb" />
+                    <img
+                      [src]="getSafeImage(t.verifierSignature)"
+                      class="sig-thumb"
+                    />
                   </ng-template>
                 </ng-container>
                 <ng-template #dashVer>—</ng-template>
               </td>
             </tr>
             <tr *ngIf="trainings.length === 0">
-              <td [attr.colspan]="selectedTab === 'ssm' ? 7 : 6">No periodic trainings recorded.</td>
+              <td [attr.colspan]="selectedTab === 'ssm' ? 7 : 6">
+                No periodic trainings recorded.
+              </td>
             </tr>
           </tbody>
         </table>
@@ -633,36 +679,37 @@
           <p>
             a fost efectuat la data de
             <span *ngIf="!editMode" class="field">{{
-              formatDate(formData.introductoryTrainingDate) ||
+              formatDate(formData.suTraining.introductoryTrainingDate) ||
                 formatDate(userForm.hireDate)
             }}</span>
             <input
               *ngIf="editMode"
               type="date"
-              [(ngModel)]="formData.introductoryTrainingDate"
+              [(ngModel)]="formData.suTraining.introductoryTrainingDate"
               class="edit-input"
             />
           </p>
           <p>
             timp de
             <span *ngIf="!editMode" class="field">{{
-              formData.introductoryTrainingHours || "8"
+              formData.suTraining.introductoryTrainingHours || "8"
             }}</span>
             <input
               *ngIf="editMode"
               type="number"
-              [(ngModel)]="formData.introductoryTrainingHours"
+              [(ngModel)]="formData.suTraining.introductoryTrainingHours"
               class="edit-input"
               style="width: 60px"
             />
             ore de către
             <span *ngIf="!editMode" class="field">{{
-              formData.introductoryTrainingInstructor || getManagerFullName()
+              formData.suTraining.introductoryTrainingInstructor ||
+                getManagerFullName()
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.introductoryTrainingInstructor"
+              [(ngModel)]="formData.suTraining.introductoryTrainingInstructor"
               class="edit-input"
               placeholder="Numele instructorului"
             />
@@ -670,12 +717,15 @@
           <p>
             având funcția de
             <span *ngIf="!editMode" class="field">{{
-              formData.introductoryTrainingInstructorFunction || "Cadru tehnic"
+              formData.suTraining.introductoryTrainingInstructorFunction ||
+                "Cadru tehnic"
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.introductoryTrainingInstructorFunction"
+              [(ngModel)]="
+                formData.suTraining.introductoryTrainingInstructorFunction
+              "
               class="edit-input"
               placeholder="Funcția"
             />
@@ -684,14 +734,14 @@
           <div class="field-box" *ngIf="!editMode">
             <p>
               {{
-                formData.introductoryTrainingContent ||
+                formData.suTraining.introductoryTrainingContent ||
                   "____________________________________________"
               }}
             </p>
           </div>
           <textarea
             *ngIf="editMode"
-            [(ngModel)]="formData.introductoryTrainingContent"
+            [(ngModel)]="formData.suTraining.introductoryTrainingContent"
             class="edit-input"
             rows="3"
             placeholder="Descrieți conținutul instructajului..."
@@ -708,27 +758,27 @@
           <p>
             a fost efectuat la data de
             <span *ngIf="!editMode" class="field">{{
-              formatDate(formData.workplaceTrainingDate) ||
+              formatDate(formData.suTraining.workplaceTrainingDate) ||
                 formatDate(userForm.hireDate)
             }}</span>
             <input
               *ngIf="editMode"
               type="date"
-              [(ngModel)]="formData.workplaceTrainingDate"
+              [(ngModel)]="formData.suTraining.workplaceTrainingDate"
               class="edit-input"
             />
           </p>
           <p>
             pentru locul de muncă
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingLocation ||
+              formData.suTraining.workplaceTrainingLocation ||
                 userForm.departmentName ||
                 "N/A"
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.workplaceTrainingLocation"
+              [(ngModel)]="formData.suTraining.workplaceTrainingLocation"
               class="edit-input"
               placeholder="Locul de muncă"
             />
@@ -740,23 +790,24 @@
           <p>
             timp de
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingHours || "8"
+              formData.suTraining.workplaceTrainingHours || "8"
             }}</span>
             <input
               *ngIf="editMode"
               type="number"
-              [(ngModel)]="formData.workplaceTrainingHours"
+              [(ngModel)]="formData.suTraining.workplaceTrainingHours"
               class="edit-input"
               style="width: 60px"
             />
             ore, de către
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingInstructor || getManagerFullName()
+              formData.suTraining.workplaceTrainingInstructor ||
+                getManagerFullName()
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.workplaceTrainingInstructor"
+              [(ngModel)]="formData.suTraining.workplaceTrainingInstructor"
               class="edit-input"
               placeholder="Numele instructorului"
             />
@@ -764,14 +815,16 @@
           <p>
             având funcția de
             <span *ngIf="!editMode" class="field">{{
-              formData.workplaceTrainingInstructorFunction ||
+              formData.suTraining.workplaceTrainingInstructorFunction ||
                 userForm.managerFunctionName ||
                 "Manager"
             }}</span>
             <input
               *ngIf="editMode"
               type="text"
-              [(ngModel)]="formData.workplaceTrainingInstructorFunction"
+              [(ngModel)]="
+                formData.suTraining.workplaceTrainingInstructorFunction
+              "
               class="edit-input"
               placeholder="Funcția instructorului"
             />
@@ -780,14 +833,14 @@
           <div class="field-box" *ngIf="!editMode">
             <p>
               {{
-                formData.workplaceTrainingContent ||
+                formData.suTraining.workplaceTrainingContent ||
                   "____________________________________________"
               }}
             </p>
           </div>
           <textarea
             *ngIf="editMode"
-            [(ngModel)]="formData.workplaceTrainingContent"
+            [(ngModel)]="formData.suTraining.workplaceTrainingContent"
             class="edit-input"
             rows="3"
             placeholder="Descrieți conținutul instructajului..."
@@ -863,24 +916,50 @@
           </thead>
           <tbody>
             <tr *ngFor="let t of displayedTrainings">
-              <td>{{ t.trainingDate ? (t.trainingDate | date:'shortDate') : '________' }}</td>
+              <td>
+                {{
+                  t.trainingDate
+                    ? (t.trainingDate | date: "shortDate")
+                    : "________"
+                }}
+              </td>
               <td>{{ t.occupation || userForm.functionName }}</td>
-              <td>{{ t.materialTaught || '_____________' }}</td>
-              <td>{{ t.durationHours ?? '____' }}</td>
+              <td>{{ t.materialTaught || "_____________" }}</td>
+              <td>{{ t.durationHours ?? "____" }}</td>
               <td>
                 <ng-container *ngIf="t.userSignatureData; else dashUserSu">
-                  <span *ngIf="t.userSignatureMethod?.toLowerCase() === 'type'; else userDrawnSu" class="sig-typed">{{ t.userSignatureData }}</span>
+                  <span
+                    *ngIf="
+                      t.userSignatureMethod?.toLowerCase() === 'type';
+                      else userDrawnSu
+                    "
+                    class="sig-typed"
+                    >{{ t.userSignatureData }}</span
+                  >
                   <ng-template #userDrawnSu>
-                    <img [src]="getSafeImage(t.userSignatureData)" class="sig-thumb" />
+                    <img
+                      [src]="getSafeImage(t.userSignatureData)"
+                      class="sig-thumb"
+                    />
                   </ng-template>
                 </ng-container>
                 <ng-template #dashUserSu>—</ng-template>
               </td>
               <td>
                 <ng-container *ngIf="t.instructorSignature; else dashInstrSu">
-                  <span *ngIf="t.instructorSignatureMethod?.toLowerCase() === 'type'; else instrDrawnSu" class="sig-typed">{{ t.instructorSignature }}</span>
+                  <span
+                    *ngIf="
+                      t.instructorSignatureMethod?.toLowerCase() === 'type';
+                      else instrDrawnSu
+                    "
+                    class="sig-typed"
+                    >{{ t.instructorSignature }}</span
+                  >
                   <ng-template #instrDrawnSu>
-                    <img [src]="getSafeImage(t.instructorSignature)" class="sig-thumb" />
+                    <img
+                      [src]="getSafeImage(t.instructorSignature)"
+                      class="sig-thumb"
+                    />
                   </ng-template>
                 </ng-container>
                 <ng-template #dashInstrSu>—</ng-template>

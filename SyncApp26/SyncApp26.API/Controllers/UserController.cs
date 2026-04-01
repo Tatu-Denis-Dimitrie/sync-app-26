@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Infrastructure.Context;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Shared.DTOs.Response.User;
 using System.ComponentModel.DataAnnotations;
@@ -17,8 +19,9 @@ namespace SyncApp26.API.Controllers
         private readonly IUserChangeHistoryService _userChangeHistoryService;
         private readonly IDocumentService _documentService;
         private readonly IPeriodicTrainingService _periodicTrainingService;
+        private readonly ApplicationDbContext _context;
 
-        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService, IDocumentService documentService, IPeriodicTrainingService periodicTrainingService)
+        public UserController(IUserService userService, IDepartmentService departmentService, IFunctionService functionService, IUserChangeHistoryService userChangeHistoryService, IDocumentService documentService, IPeriodicTrainingService periodicTrainingService, ApplicationDbContext context)
         {
             _userService = userService;
             _departmentService = departmentService;
@@ -26,6 +29,7 @@ namespace SyncApp26.API.Controllers
             _userChangeHistoryService = userChangeHistoryService;
             _documentService = documentService;
             _periodicTrainingService = periodicTrainingService;
+            _context = context;
         }
 
         [HttpGet("{id}")]
@@ -570,24 +574,26 @@ namespace SyncApp26.API.Controllers
                 Qualifications = user.Qualifications,
                 CommuteRoute = user.CommuteRoute,
                 CommuteDurationMinutes = user.CommuteDurationMinutes,
-                IntroductoryTrainingDate = user.IntroductoryTrainingDate,
-                IntroductoryTrainingHours = user.IntroductoryTrainingHours,
-                IntroductoryTrainingInstructor = user.IntroductoryTrainingInstructor,
-                IntroductoryTrainingInstructorFunction = user.IntroductoryTrainingInstructorFunction,
-                IntroductoryTrainingContent = user.IntroductoryTrainingContent,
-                WorkplaceTrainingDate = user.WorkplaceTrainingDate,
-                WorkplaceTrainingLocation = user.WorkplaceTrainingLocation,
-                WorkplaceTrainingHours = user.WorkplaceTrainingHours,
-                WorkplaceTrainingInstructor = user.WorkplaceTrainingInstructor,
-                WorkplaceTrainingInstructorFunction = user.WorkplaceTrainingInstructorFunction,
-                WorkplaceTrainingContent = user.WorkplaceTrainingContent,
+                InitialTrainings = user.InitialTrainings.Select(it => new InitialTrainingEntryDTO
+                {
+                    DocumentType = it.DocumentType,
+                    IntroductoryTrainingDate = it.IntroductoryTrainingDate,
+                    IntroductoryTrainingHours = it.IntroductoryTrainingHours,
+                    IntroductoryTrainingInstructor = it.IntroductoryTrainingInstructor,
+                    IntroductoryTrainingInstructorFunction = it.IntroductoryTrainingInstructorFunction,
+                    IntroductoryTrainingContent = it.IntroductoryTrainingContent,
+                    WorkplaceTrainingDate = it.WorkplaceTrainingDate,
+                    WorkplaceTrainingLocation = it.WorkplaceTrainingLocation,
+                    WorkplaceTrainingHours = it.WorkplaceTrainingHours,
+                    WorkplaceTrainingInstructor = it.WorkplaceTrainingInstructor,
+                    WorkplaceTrainingInstructorFunction = it.WorkplaceTrainingInstructorFunction,
+                    WorkplaceTrainingContent = it.WorkplaceTrainingContent,
+                }).ToList(),
                 AdmittedByName = user.AdmittedByName,
                 AdmittedByFunction = user.AdmittedByFunction,
                 AdmittedDate = user.AdmittedDate,
-                HireDate = user.CreatedAt, // Using CreatedAt as HireDate
-                CreatedAt = user.CreatedAt
-                ,
-                // include latest signatures when available
+                HireDate = user.CreatedAt,
+                CreatedAt = user.CreatedAt,
                 LatestInstructorSignature = latestTraining?.InstructorSignature,
                 LatestInstructorSignatureMethod = latestTraining?.InstructorSignatureMethod,
                 LatestVerifierSignature = latestTraining?.VerifierSignature,
@@ -619,27 +625,40 @@ namespace SyncApp26.API.Controllers
             user.CommuteRoute = dto.CommuteRoute;
             user.CommuteDurationMinutes = dto.CommuteDurationMinutes;
 
-            // Update training fields
-            user.IntroductoryTrainingDate = dto.IntroductoryTrainingDate;
-            user.IntroductoryTrainingHours = dto.IntroductoryTrainingHours;
-            user.IntroductoryTrainingInstructor = dto.IntroductoryTrainingInstructor;
-            user.IntroductoryTrainingInstructorFunction = dto.IntroductoryTrainingInstructorFunction;
-            user.IntroductoryTrainingContent = dto.IntroductoryTrainingContent;
-
-            user.WorkplaceTrainingDate = dto.WorkplaceTrainingDate;
-            user.WorkplaceTrainingLocation = dto.WorkplaceTrainingLocation;
-            user.WorkplaceTrainingHours = dto.WorkplaceTrainingHours;
-            user.WorkplaceTrainingInstructor = dto.WorkplaceTrainingInstructor;
-            user.WorkplaceTrainingInstructorFunction = dto.WorkplaceTrainingInstructorFunction;
-            user.WorkplaceTrainingContent = dto.WorkplaceTrainingContent;
-
             user.AdmittedByName = dto.AdmittedByName;
             user.AdmittedByFunction = dto.AdmittedByFunction;
             user.AdmittedDate = dto.AdmittedDate;
 
             user.UpdatedAt = DateTime.UtcNow;
 
+            // Upsert per-type initial training rows
+            foreach (var entry in dto.InitialTrainings)
+            {
+                if (string.IsNullOrWhiteSpace(entry.DocumentType)) continue;
+                var docType = entry.DocumentType.ToUpper();
+                var existing = await _context.UserInitialTrainings
+                    .FirstOrDefaultAsync(t => t.UserId == user.Id && t.DocumentType == docType);
+                if (existing == null)
+                {
+                    existing = new UserInitialTraining { UserId = user.Id, DocumentType = docType, CreatedAt = DateTime.UtcNow };
+                    _context.UserInitialTrainings.Add(existing);
+                }
+                existing.IntroductoryTrainingDate = entry.IntroductoryTrainingDate;
+                existing.IntroductoryTrainingHours = entry.IntroductoryTrainingHours;
+                existing.IntroductoryTrainingInstructor = entry.IntroductoryTrainingInstructor;
+                existing.IntroductoryTrainingInstructorFunction = entry.IntroductoryTrainingInstructorFunction;
+                existing.IntroductoryTrainingContent = entry.IntroductoryTrainingContent;
+                existing.WorkplaceTrainingDate = entry.WorkplaceTrainingDate;
+                existing.WorkplaceTrainingLocation = entry.WorkplaceTrainingLocation;
+                existing.WorkplaceTrainingHours = entry.WorkplaceTrainingHours;
+                existing.WorkplaceTrainingInstructor = entry.WorkplaceTrainingInstructor;
+                existing.WorkplaceTrainingInstructorFunction = entry.WorkplaceTrainingInstructorFunction;
+                existing.WorkplaceTrainingContent = entry.WorkplaceTrainingContent;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+
             await _userService.UpdateUserAsync(user);
+            await _context.SaveChangesAsync();
 
             return Ok(new UserResponseDTO
             {
@@ -657,9 +676,7 @@ namespace SyncApp26.API.Controllers
             var targetUsers = users.AsQueryable();
 
             if (dto.SelectedDepartmentId.HasValue)
-            {
                 targetUsers = targetUsers.Where(u => u.DepartmentId == dto.SelectedDepartmentId.Value);
-            }
 
             if (!dto.ApplyToAllUsers)
             {
@@ -674,86 +691,68 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(result);
             }
 
+            // Resolve which doc types to write
+            var docTypes = dto.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
+                ? new[] { "SSM", "SU" }
+                : new[] { dto.DocumentType.ToUpper() };
+
             foreach (var user in usersToUpdate)
             {
                 try
                 {
                     var changed = false;
-
-                    if (!user.IntroductoryTrainingDate.HasValue && dto.IntroductoryTrainingDate.HasValue)
+                    foreach (var docType in docTypes)
                     {
-                        user.IntroductoryTrainingDate = dto.IntroductoryTrainingDate;
-                        changed = true;
+                        var existing = await _context.UserInitialTrainings
+                            .FirstOrDefaultAsync(t => t.UserId == user.Id && t.DocumentType == docType);
+
+                        if (existing == null)
+                        {
+                            existing = new UserInitialTraining { UserId = user.Id, DocumentType = docType, CreatedAt = DateTime.UtcNow };
+                            _context.UserInitialTrainings.Add(existing);
+                            changed = true;
+                        }
+
+                        // Only fill in fields that are not already set (initial training doesn't change)
+                        if (!existing.IntroductoryTrainingDate.HasValue && dto.IntroductoryTrainingDate.HasValue)
+                        { existing.IntroductoryTrainingDate = dto.IntroductoryTrainingDate; changed = true; }
+
+                        if (!existing.IntroductoryTrainingHours.HasValue && dto.IntroductoryTrainingHours.HasValue)
+                        { existing.IntroductoryTrainingHours = dto.IntroductoryTrainingHours; changed = true; }
+
+                        if (string.IsNullOrWhiteSpace(existing.IntroductoryTrainingInstructor) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingInstructor))
+                        { existing.IntroductoryTrainingInstructor = dto.IntroductoryTrainingInstructor.Trim(); changed = true; }
+
+                        if (string.IsNullOrWhiteSpace(existing.IntroductoryTrainingInstructorFunction) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingInstructorFunction))
+                        { existing.IntroductoryTrainingInstructorFunction = dto.IntroductoryTrainingInstructorFunction.Trim(); changed = true; }
+
+                        if (string.IsNullOrWhiteSpace(existing.IntroductoryTrainingContent) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingContent))
+                        { existing.IntroductoryTrainingContent = dto.IntroductoryTrainingContent.Trim(); changed = true; }
+
+                        if (!existing.WorkplaceTrainingDate.HasValue && dto.WorkplaceTrainingDate.HasValue)
+                        { existing.WorkplaceTrainingDate = dto.WorkplaceTrainingDate; changed = true; }
+
+                        if (string.IsNullOrWhiteSpace(existing.WorkplaceTrainingLocation) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingLocation))
+                        { existing.WorkplaceTrainingLocation = dto.WorkplaceTrainingLocation.Trim(); changed = true; }
+
+                        if (!existing.WorkplaceTrainingHours.HasValue && dto.WorkplaceTrainingHours.HasValue)
+                        { existing.WorkplaceTrainingHours = dto.WorkplaceTrainingHours; changed = true; }
+
+                        if (string.IsNullOrWhiteSpace(existing.WorkplaceTrainingInstructor) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingInstructor))
+                        { existing.WorkplaceTrainingInstructor = dto.WorkplaceTrainingInstructor.Trim(); changed = true; }
+
+                        if (string.IsNullOrWhiteSpace(existing.WorkplaceTrainingInstructorFunction) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingInstructorFunction))
+                        { existing.WorkplaceTrainingInstructorFunction = dto.WorkplaceTrainingInstructorFunction.Trim(); changed = true; }
+
+                        if (string.IsNullOrWhiteSpace(existing.WorkplaceTrainingContent) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingContent))
+                        { existing.WorkplaceTrainingContent = dto.WorkplaceTrainingContent.Trim(); changed = true; }
+
+                        if (changed) existing.UpdatedAt = DateTime.UtcNow;
                     }
 
-                    if (!user.IntroductoryTrainingHours.HasValue && dto.IntroductoryTrainingHours.HasValue)
-                    {
-                        user.IntroductoryTrainingHours = dto.IntroductoryTrainingHours;
-                        changed = true;
-                    }
+                    if (!changed) { result.SkippedCount++; continue; }
 
-                    if (string.IsNullOrWhiteSpace(user.IntroductoryTrainingInstructor) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingInstructor))
-                    {
-                        user.IntroductoryTrainingInstructor = dto.IntroductoryTrainingInstructor.Trim();
-                        changed = true;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(user.IntroductoryTrainingInstructorFunction) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingInstructorFunction))
-                    {
-                        user.IntroductoryTrainingInstructorFunction = dto.IntroductoryTrainingInstructorFunction.Trim();
-                        changed = true;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(user.IntroductoryTrainingContent) && !string.IsNullOrWhiteSpace(dto.IntroductoryTrainingContent))
-                    {
-                        user.IntroductoryTrainingContent = dto.IntroductoryTrainingContent.Trim();
-                        changed = true;
-                    }
-
-                    if (!user.WorkplaceTrainingDate.HasValue && dto.WorkplaceTrainingDate.HasValue)
-                    {
-                        user.WorkplaceTrainingDate = dto.WorkplaceTrainingDate;
-                        changed = true;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingLocation) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingLocation))
-                    {
-                        user.WorkplaceTrainingLocation = dto.WorkplaceTrainingLocation.Trim();
-                        changed = true;
-                    }
-
-                    if (!user.WorkplaceTrainingHours.HasValue && dto.WorkplaceTrainingHours.HasValue)
-                    {
-                        user.WorkplaceTrainingHours = dto.WorkplaceTrainingHours;
-                        changed = true;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingInstructor) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingInstructor))
-                    {
-                        user.WorkplaceTrainingInstructor = dto.WorkplaceTrainingInstructor.Trim();
-                        changed = true;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingInstructorFunction) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingInstructorFunction))
-                    {
-                        user.WorkplaceTrainingInstructorFunction = dto.WorkplaceTrainingInstructorFunction.Trim();
-                        changed = true;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(user.WorkplaceTrainingContent) && !string.IsNullOrWhiteSpace(dto.WorkplaceTrainingContent))
-                    {
-                        user.WorkplaceTrainingContent = dto.WorkplaceTrainingContent.Trim();
-                        changed = true;
-                    }
-
-                    if (!changed)
-                    {
-                        result.SkippedCount++;
-                        continue;
-                    }
-
-                    user.UpdatedAt = DateTime.UtcNow;
-                    await _userService.UpdateUserAsync(user);
+                    await _context.SaveChangesAsync();
                     result.SuccessCount++;
                 }
                 catch (Exception ex)

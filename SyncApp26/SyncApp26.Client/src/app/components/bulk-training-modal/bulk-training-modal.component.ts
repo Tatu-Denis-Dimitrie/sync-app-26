@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -41,9 +41,17 @@ interface BulkTrainingData {
 export class BulkTrainingModalComponent implements OnInit {
   @Output() close = new EventEmitter<void>();
   @Output() success = new EventEmitter<void>();
+  @ViewChild('modalContent') modalContentRef!: ElementRef<HTMLElement>;
 
   isVisible = false;
   isSubmitting = false;
+  submitted = false;
+  submittedCount = 0;
+  submittedUserIds: string[] = [];
+  submittedDocType = '';
+  isGenerating = false;
+  errorMessage = '';
+  validationMessage = '';
   departments: DepartmentOption[] = [];
   isLoadingDepartments = false;
   users: UserOption[] = [];
@@ -219,45 +227,82 @@ export class BulkTrainingModalComponent implements OnInit {
       selectedUserIds: []
     };
     this.userSearchQuery = '';
+    this.submitted = false;
+    this.submittedCount = 0;
+    this.submittedUserIds = [];
+    this.submittedDocType = '';
+    this.isGenerating = false;
+    this.errorMessage = '';
+    this.validationMessage = '';
   }
 
   submitBulkTraining() {
+    this.validationMessage = '';
+    this.errorMessage = '';
+
     if (!this.formData.trainingDate) {
-      alert('Please select a training date');
+      this.validationMessage = 'Please select a training date.';
       return;
     }
 
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {
-      alert('Please select at least one user for this training.');
+      this.validationMessage = 'Please select at least one user for this training.';
       return;
     }
 
-    const targetText = this.formData.applyToAllUsers
-      ? (this.formData.selectedDepartmentId ? 'all users in the selected department' : 'all users')
-      : `${this.formData.selectedUserIds.length} selected user(s)`;
+    this.isSubmitting = true;
 
-    if (confirm(`Are you sure you want to add this periodic training record for ${targetText}?`)) {
-      this.isSubmitting = true;
+    const payload = {
+      ...this.formData,
+      selectedDepartmentId: this.formData.selectedDepartmentId ?? null
+    };
 
-      const payload = {
-        ...this.formData,
-        selectedDepartmentId: this.formData.selectedDepartmentId ?? null
-      };
+    this.http.post(`${environment.apiUrl}/PeriodicTraining/bulk`, payload)
+      .subscribe({
+        next: (response: any) => {
+          this.isSubmitting = false;
+          this.submitted = true;
+          this.submittedCount = response.successCount;
+          this.submittedUserIds = this.formData.applyToAllUsers ? [] : [...this.formData.selectedUserIds];
+          this.submittedDocType = this.formData.documentType;
+          this.success.emit();
+          setTimeout(() => {
+            this.modalContentRef?.nativeElement?.scrollTo({ top: this.modalContentRef.nativeElement.scrollHeight, behavior: 'smooth' });
+          }, 50);
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          console.error('Error creating bulk training:', err);
+          this.errorMessage = err?.error?.message || 'Error creating bulk training records. Please try again.';
+        }
+      });
+  }
 
-      this.http.post(`${environment.apiUrl}/PeriodicTraining/bulk`, payload)
-        .subscribe({
-          next: (response: any) => {
-            this.isSubmitting = false;
-            alert(`Successfully added training records for ${response.successCount} users`);
-            this.success.emit();
+  generateDocuments() {
+    this.isGenerating = true;
+    const payload = {
+      documentType: this.submittedDocType,
+      selectedUserIds: this.submittedUserIds.length > 0 ? this.submittedUserIds : null
+    };
+    this.http.post<any>(`${environment.apiUrl}/Document/bulk-generate`, payload)
+      .subscribe({
+        next: (res) => {
+          this.isGenerating = false;
+          if (res?.adminSignLink) {
+            window.location.href = res.adminSignLink;
+          } else {
             this.closeModal();
-          },
-          error: (err) => {
-            this.isSubmitting = false;
-            console.error('Error creating bulk training:', err);
-            alert('Error creating bulk training records. Please try again.');
           }
-        });
-    }
+        },
+        error: (err) => {
+          this.isGenerating = false;
+          console.error('Error generating documents:', err);
+          this.errorMessage = 'Error generating documents. Please try again.';
+        }
+      });
+  }
+
+  skipGenerate() {
+    this.closeModal();
   }
 }

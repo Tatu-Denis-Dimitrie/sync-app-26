@@ -1,5 +1,5 @@
 <div *ngIf="isVisible" class="modal-overlay" (click)="closeModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
+  <div class="modal-content" #modalContent (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2 class="modal-title">Add Bulk Periodic Training</h2>
       <button class="close-button" (click)="closeModal()" aria-label="Close">
@@ -297,25 +297,65 @@
       </div>
     </div>
 
-    <div class="modal-footer">
-      <button
-        type="button"
-        class="btn-secondary"
-        (click)="closeModal()"
-        [disabled]="isSubmitting"
+    <div class="modal-footer flex-col gap-2" *ngIf="!submitted">
+      <p
+        *ngIf="validationMessage"
+        class="text-sm text-red-600 text-center w-full"
       >
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="btn-primary"
-        (click)="submitBulkTraining()"
-        [disabled]="
-          isSubmitting || !formData.trainingDate || isLoadingDepartments
-        "
-      >
-        {{ isSubmitting ? "Adding..." : "Add Training Records" }}
-      </button>
+        ⚠️ {{ validationMessage }}
+      </p>
+      <p *ngIf="errorMessage" class="text-sm text-red-600 text-center w-full">
+        ❌ {{ errorMessage }}
+      </p>
+      <div class="flex gap-3 justify-end w-full">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closeModal()"
+          [disabled]="isSubmitting"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="submitBulkTraining()"
+          [disabled]="
+            isSubmitting || !formData.trainingDate || isLoadingDepartments
+          "
+        >
+          {{ isSubmitting ? "Adding..." : "Add Training Records" }}
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-footer flex-col gap-3" *ngIf="submitted">
+      <p class="text-sm text-gray-700 text-center">
+        ✅ Training records added for
+        <strong>{{ submittedCount }}</strong> user(s).<br />
+        Would you like to generate documents for them now?
+      </p>
+      <p *ngIf="errorMessage" class="text-sm text-red-600 text-center w-full">
+        ❌ {{ errorMessage }}
+      </p>
+      <div class="flex gap-3 justify-end w-full">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="skipGenerate()"
+          [disabled]="isGenerating"
+        >
+          Skip
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="generateDocuments()"
+          [disabled]="isGenerating"
+        >
+          {{ isGenerating ? "Generating..." : "Generate Documents" }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

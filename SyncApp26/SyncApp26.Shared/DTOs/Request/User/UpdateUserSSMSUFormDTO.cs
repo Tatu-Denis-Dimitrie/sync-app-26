@@ -12,7 +12,19 @@ namespace SyncApp26.Shared.DTOs.Request.User
         public string? CommuteRoute { get; set; }
         public int? CommuteDurationMinutes { get; set; }
 
-        // Training fields
+        public string? AdmittedByName { get; set; }
+        public string? AdmittedByFunction { get; set; }
+        public DateTime? AdmittedDate { get; set; }
+
+        // Per-type initial training (documentType = "SSM" or "SU")
+        public List<InitialTrainingEntryDTO> InitialTrainings { get; set; } = new();
+    }
+
+    public class InitialTrainingEntryDTO
+    {
+        /// <summary>"SSM" or "SU"</summary>
+        public string DocumentType { get; set; } = string.Empty;
+
         public DateTime? IntroductoryTrainingDate { get; set; }
         public int? IntroductoryTrainingHours { get; set; }
         public string? IntroductoryTrainingInstructor { get; set; }
@@ -25,9 +37,5 @@ namespace SyncApp26.Shared.DTOs.Request.User
         public string? WorkplaceTrainingInstructor { get; set; }
         public string? WorkplaceTrainingInstructorFunction { get; set; }
         public string? WorkplaceTrainingContent { get; set; }
-
-        public string? AdmittedByName { get; set; }
-        public string? AdmittedByFunction { get; set; }
-        public DateTime? AdmittedDate { get; set; }
     }
 }

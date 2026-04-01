@@ -37,11 +37,11 @@ namespace SyncApp26.API.Controllers
         {
             d.Id,
             d.UserId,
-            UserFirstName  = d.User?.FirstName,
-            UserLastName   = d.User?.LastName,
-            UserEmail      = d.User?.Email,
+            UserFirstName = d.User?.FirstName,
+            UserLastName = d.User?.LastName,
+            UserEmail = d.User?.Email,
             UserDepartment = d.User?.Department?.Name,
-            UserFunction   = d.User?.Function?.Name,
+            UserFunction = d.User?.Function?.Name,
             d.DocumentType,
             d.Status,
             d.GeneratedAt,
@@ -79,6 +79,7 @@ namespace SyncApp26.API.Controllers
         {
             /// <summary>"SSM", "SU", or "Both"</summary>
             public string DocumentType { get; set; } = string.Empty;
+            public List<Guid>? SelectedUserIds { get; set; }
         }
 
         [HttpPost("bulk-generate")]
@@ -98,7 +99,7 @@ namespace SyncApp26.API.Controllers
 
             foreach (var type in types)
             {
-                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail);
+                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds);
                 totalGenerated += generated;
                 totalSkipped += skipped;
             }
@@ -273,7 +274,7 @@ namespace SyncApp26.API.Controllers
 
             if (isUser && document.UserSignedAt != null)
                 return BadRequest(new { message = "User already signed this document." });
-            
+
             if (isManager && document.ManagerSignedAt != null && !IsSsmManagerSignaturePending(document))
                 return BadRequest(new { message = "Manager already signed this document." });
 
@@ -303,9 +304,9 @@ namespace SyncApp26.API.Controllers
             var document = await _documentService.GetDocumentByIdAsync(documentId);
             if (document == null) return NotFound(new { message = "Document not found." });
 
-            bool isDocOwner  = document.UserId == userId;
-            bool isManager   = document.User?.AssignedToId == userId;
-            bool isAdmin     = User.IsInRole("Admin");
+            bool isDocOwner = document.UserId == userId;
+            bool isManager = document.User?.AssignedToId == userId;
+            bool isAdmin = User.IsInRole("Admin");
 
             if (!isDocOwner && !isManager && !isAdmin)
                 return Forbid();
@@ -314,8 +315,8 @@ namespace SyncApp26.API.Controllers
             if (docUser == null) return NotFound(new { message = "Associated user not found." });
 
             var safeFirst = string.Concat(docUser.FirstName.Where(char.IsLetterOrDigit));
-            var safeLast  = string.Concat(docUser.LastName.Where(char.IsLetterOrDigit));
-            var fileName  = $"{document.DocumentType}_{safeFirst}_{safeLast}.pdf";
+            var safeLast = string.Concat(docUser.LastName.Where(char.IsLetterOrDigit));
+            var fileName = $"{document.DocumentType}_{safeFirst}_{safeLast}.pdf";
 
             // If a saved PDF exists on disk and is valid, serve it directly
             if (!string.IsNullOrEmpty(document.PdfFilePath) && System.IO.File.Exists(document.PdfFilePath))

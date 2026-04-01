@@ -5,6 +5,9 @@ namespace SyncApp26.Shared.DTOs.Request.User
 {
     public class BulkInitialTrainingDTO
     {
+        /// <summary>"SSM", "SU", or "Both"</summary>
+        public string DocumentType { get; set; } = "Both";
+
         public DateTime? IntroductoryTrainingDate { get; set; }
         public int? IntroductoryTrainingHours { get; set; }
         public string? IntroductoryTrainingInstructor { get; set; }

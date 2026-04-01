@@ -103,25 +103,23 @@ namespace SyncApp26.Infrastructure.Services
             _context.UserDocuments.Add(doc);
             await _context.SaveChangesAsync();
 
-            // ── Copy all previous PT rows as historical rows into the new document ──
-            // Include rows from the previous document AND any unlinked rows (UserDocumentId == null)
-            // that were created before this feature existed
+            // ── Step 1: Copy rows from PREVIOUS documents only (historical rows) ──
             {
                 var allPreviousDocIds = await _context.UserDocuments
                     .Where(d => d.UserId == userId && d.DocumentType == documentType && d.Id != doc.Id)
                     .Select(d => d.Id)
                     .ToListAsync();
 
-                var previousPtRows = await _context.PeriodicTrainings
+                var previousDocPtRows = await _context.PeriodicTrainings
                     .Where(pt => pt.UserId == userId
-                        && (pt.UserDocumentId == null || allPreviousDocIds.Contains(pt.UserDocumentId.Value)))
+                        && pt.UserDocumentId != null
+                        && allPreviousDocIds.Contains(pt.UserDocumentId.Value)
+                        && (pt.DocumentType == null || pt.DocumentType == documentType))
                     .OrderBy(pt => pt.CreatedAt)
                     .ToListAsync();
 
-                // Deduplicate: keep only distinct rows by original CreatedAt + TrainingDate
-                // (avoid re-copying copies from earlier generations)
                 var seen = new HashSet<string>();
-                foreach (var oldRow in previousPtRows)
+                foreach (var oldRow in previousDocPtRows)
                 {
                     var key = $"{oldRow.TrainingDate:O}|{oldRow.CreatedAt:O}|{oldRow.Occupation}|{oldRow.MaterialTaught}";
                     if (!seen.Add(key)) continue;
@@ -131,6 +129,7 @@ namespace SyncApp26.Infrastructure.Services
                         Id = Guid.NewGuid(),
                         UserId = userId,
                         UserDocumentId = doc.Id,
+                        DocumentType = documentType,
                         TrainingDate = oldRow.TrainingDate,
                         DurationHours = oldRow.DurationHours,
                         Occupation = oldRow.Occupation,
@@ -143,38 +142,57 @@ namespace SyncApp26.Infrastructure.Services
                         InstructorSignatureMethod = oldRow.InstructorSignatureMethod,
                         VerifierSignature = oldRow.VerifierSignature,
                         VerifierSignatureMethod = oldRow.VerifierSignatureMethod,
-                        CreatedAt = oldRow.CreatedAt, // preserve original date for ordering
+                        CreatedAt = oldRow.CreatedAt,
                     };
                     _context.PeriodicTrainings.Add(copy);
                 }
             }
 
-            // ── Create the new (current) PT row for this document ──
-            // Create a fresh current training row. Use the current UTC time for both
-            // TrainingDate and CreatedAt so it's unambiguous as the newest entry.
-            var mostRecentTraining = await _context.PeriodicTrainings
-                .Where(pt => pt.UserId == userId && pt.UserDocumentId != doc.Id)
-                .OrderByDescending(pt => pt.CreatedAt)
-                .FirstOrDefaultAsync();
-
-            var now = DateTime.UtcNow;
-            var newTraining = new PeriodicTraining
+            // ── Step 2: Link any unlinked (bulk training) rows directly to this document ──
+            var unlinkedRows = await _context.PeriodicTrainings
+                .Where(pt => pt.UserId == userId
+                    && pt.UserDocumentId == null
+                    && (pt.DocumentType == null || pt.DocumentType == documentType))
+                .ToListAsync();
+            foreach (var row in unlinkedRows)
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                UserDocumentId = doc.Id,
-                TrainingDate = now,
-                DurationHours = mostRecentTraining?.DurationHours,
-                Occupation = mostRecentTraining?.Occupation,
-                MaterialTaught = mostRecentTraining?.MaterialTaught,
-                InstructorName = mostRecentTraining?.InstructorName,
-                VerifierName = mostRecentTraining?.VerifierName,
-                CreatedAt = now,
-            };
-            _context.PeriodicTrainings.Add(newTraining);
+                row.UserDocumentId = doc.Id;
+                row.DocumentType = documentType;
+            }
+
+            // ── Step 3: Create a current row only if no unlinked rows were linked ──
+            PeriodicTraining? currentRow = unlinkedRows.Count > 0
+                ? unlinkedRows.OrderByDescending(r => r.CreatedAt).First()
+                : null;
+
+            if (currentRow == null)
+            {
+                var mostRecentTraining = await _context.PeriodicTrainings
+                    .Where(pt => pt.UserId == userId && pt.UserDocumentId != doc.Id
+                        && (pt.DocumentType == null || pt.DocumentType == documentType))
+                    .OrderByDescending(pt => pt.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                var now = DateTime.UtcNow;
+                currentRow = new PeriodicTraining
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    UserDocumentId = doc.Id,
+                    DocumentType = documentType,
+                    TrainingDate = now,
+                    DurationHours = mostRecentTraining?.DurationHours,
+                    Occupation = mostRecentTraining?.Occupation,
+                    MaterialTaught = mostRecentTraining?.MaterialTaught,
+                    InstructorName = mostRecentTraining?.InstructorName,
+                    VerifierName = mostRecentTraining?.VerifierName,
+                    CreatedAt = now,
+                };
+                _context.PeriodicTrainings.Add(currentRow);
+            }
             await _context.SaveChangesAsync();
 
-            // ── For SSM: place admin's saved signature as verifier on the NEW row ──
+            // ── For SSM: place admin's saved signature as verifier on the current row ──
             if (isSsmDocumentType)
             {
                 var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == generatedByEmail);
@@ -187,8 +205,8 @@ namespace SyncApp26.Infrastructure.Services
 
                     if (adminSig != null)
                     {
-                        newTraining.VerifierSignature = adminSig.SignatureData;
-                        newTraining.VerifierSignatureMethod = adminSig.SignatureMethod;
+                        currentRow.VerifierSignature = adminSig.SignatureData;
+                        currentRow.VerifierSignatureMethod = adminSig.SignatureMethod;
                         await _context.SaveChangesAsync();
                     }
                 }
@@ -199,6 +217,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -241,6 +260,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(u => u.Id == doc.UserId);
 
@@ -321,6 +341,7 @@ namespace SyncApp26.Infrastructure.Services
                     .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                     .Include(u => u.Department)
                     .Include(u => u.Function)
+                    .Include(u => u.InitialTrainings)
                     .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                     .FirstOrDefaultAsync(u => u.Id == doc.UserId);
                 if (freshUser != null)
@@ -558,6 +579,7 @@ namespace SyncApp26.Infrastructure.Services
                         col.Item().Height(8);
 
                         // ── Instruire la angajare ──────────────────────
+                        var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? "SSM" : "SU"));
                         string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
                         SectionHeader(col, sectionTitle, accentColor);
 
@@ -569,17 +591,17 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             string verb = isSsm ? "efectuată" : "efectuat";
                             text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
                             text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
                             text.Span(" ore de către ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingInstructor ?? managerName)).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.IntroductoryTrainingInstructor ?? managerName)).Underline().FontSize(10);
                             text.Span(" având funcția de ").FontSize(10);
-                            text.Span(FUnderline(user.IntroductoryTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.IntroductoryTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
                         });
                         col.Item().Height(3);
                         col.Item().Text("Conținutul instruirii:").Bold();
-                        var introContent = user.IntroductoryTrainingContent;
+                        var introContent = it?.IntroductoryTrainingContent;
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
                         var introVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
@@ -608,19 +630,19 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             string verb = isSsm ? "efectuată" : "efectuat";
                             text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
                             text.Span(" loc de muncă/post de lucru ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
                             text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
                             text.Span(" ore, de către ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingInstructor ?? managerName)).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.WorkplaceTrainingInstructor ?? managerName)).Underline().FontSize(10);
                             text.Span(" având funcția de ").FontSize(10);
-                            text.Span(FUnderline(user.WorkplaceTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
+                            text.Span(FUnderline(it?.WorkplaceTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
                         });
                         col.Item().Height(3);
                         col.Item().Text("Conținutul instruirii:").Bold();
-                        var workContent = user.WorkplaceTrainingContent;
+                        var workContent = it?.WorkplaceTrainingContent;
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
                         var workVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
@@ -721,7 +743,7 @@ namespace SyncApp26.Infrastructure.Services
                             // Each document is self-contained: show only its own PT rows
                             var periodicTrainings = user.PeriodicTrainings?
                                 .Where(pt => pt.UserDocumentId == document.Id)
-                                .OrderBy(pt => pt.CreatedAt).ToList() ?? new List<PeriodicTraining>();
+                                .OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt).ToList() ?? new List<PeriodicTraining>();
                             string occupation = user.Function?.Name ?? "";
 
                             bool hasTrainings = periodicTrainings.Count > 0;
@@ -1219,6 +1241,7 @@ namespace SyncApp26.Infrastructure.Services
                     .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                     .Include(u => u.Department)
                     .Include(u => u.Function)
+                    .Include(u => u.InitialTrainings)
                     .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                     .FirstOrDefaultAsync(u => u.Id == doc.UserId);
 
@@ -1233,7 +1256,7 @@ namespace SyncApp26.Infrastructure.Services
             return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
         }
 
-        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail)
+        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null)
         {
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
@@ -1242,11 +1265,15 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .ToListAsync();
 
             // Filter out admin users on client side (EF doesn't support StringComparison parameter)
-            var nonAdminUsers = users.Where(u => u.Role == null || !string.Equals(u.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase)).ToList();
+            var nonAdminUsers = users
+                .Where(u => u.Role == null || !string.Equals(u.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+                .Where(u => selectedUserIds == null || selectedUserIds.Contains(u.Id))
+                .ToList();
 
             int generated = 0;
             int skipped = 0;
@@ -1343,6 +1370,7 @@ namespace SyncApp26.Infrastructure.Services
                     .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                     .Include(u => u.Department)
                     .Include(u => u.Function)
+                    .Include(u => u.InitialTrainings)
                     .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                     .FirstOrDefaultAsync(u => u.Id == doc.UserId);
 

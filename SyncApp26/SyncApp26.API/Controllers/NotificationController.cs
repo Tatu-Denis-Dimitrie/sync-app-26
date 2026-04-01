@@ -76,15 +76,17 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { Message = $"User does not have an unsigned {request.DocumentType} document to sign." });
             }
 
-            // Find training date: try WorkplaceTrainingDate, IntroductoryTrainingDate, or PeriodicTraining
+            // Find training date from InitialTrainings (matching document type) or PeriodicTraining
             DateTime? trainingDate = null;
-            if (targetUser.WorkplaceTrainingDate.HasValue)
+            var initialTraining = targetUser.InitialTrainings
+                ?.FirstOrDefault(t => string.Equals(t.DocumentType, request.DocumentType, StringComparison.OrdinalIgnoreCase));
+            if (initialTraining?.WorkplaceTrainingDate.HasValue == true)
             {
-                trainingDate = targetUser.WorkplaceTrainingDate;
+                trainingDate = initialTraining.WorkplaceTrainingDate;
             }
-            else if (targetUser.IntroductoryTrainingDate.HasValue)
+            else if (initialTraining?.IntroductoryTrainingDate.HasValue == true)
             {
-                trainingDate = targetUser.IntroductoryTrainingDate;
+                trainingDate = initialTraining.IntroductoryTrainingDate;
             }
             else
             {

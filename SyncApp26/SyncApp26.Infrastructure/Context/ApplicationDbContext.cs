@@ -43,6 +43,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<DepartmentFunction> DepartmentFunctions { get; set; }
         public DbSet<UserDocument> UserDocuments { get; set; }
         public DbSet<PeriodicTraining> PeriodicTrainings { get; set; }
+        public DbSet<UserInitialTraining> UserInitialTrainings { get; set; }
         public DbSet<UserSignature> UserSignatures { get; set; }
         public DbSet<UserSignatureHistory> UserSignatureHistories { get; set; }
         public DbSet<DataChangeRequest> DataChangeRequests { get; set; }
@@ -298,6 +299,25 @@ namespace SyncApp26.Infrastructure.Context
 
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => e.Status);
+            });
+
+            // Configure UserInitialTraining entity — one row per (UserId, DocumentType)
+            modelBuilder.Entity<UserInitialTraining>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DocumentType)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.InitialTrainings)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.UserId, e.DocumentType })
+                    .IsUnique()
+                    .HasDatabaseName("IX_UserInitialTrainings_UserId_DocumentType");
             });
         }
 

@@ -21,8 +21,18 @@
 
     <div class="modal-body">
       <p class="modal-description">
-        Fill first-employment training fields for multiple users. Existing
-        values are preserved and will not be overwritten.
+        Fill first-employment training fields for multiple users into each
+        user's
+        <select
+          [(ngModel)]="formData.documentType"
+          name="documentType"
+          class="inline-dropdown"
+        >
+          <option value="Both">SSM &amp; SU</option>
+          <option value="SSM">SSM</option>
+          <option value="SU">SU</option>
+        </select>
+        document. Existing values are preserved and will not be overwritten.
       </p>
 
       <form class="training-form">
@@ -360,23 +370,49 @@
       </div>
     </div>
 
-    <div class="modal-footer">
-      <button
-        type="button"
-        class="btn-secondary"
-        (click)="closeModal()"
-        [disabled]="isSubmitting"
+    <div class="modal-footer flex-col gap-3" *ngIf="submitted">
+      <p class="text-sm text-gray-700 text-center">
+        ✅ Initial training data applied successfully.<br />
+        <ng-container *ngIf="submittedCount > 0">
+          Updated <strong>{{ submittedCount }}</strong> user record(s).
+        </ng-container>
+        Existing values were not overwritten.
+      </p>
+      <div class="flex gap-3 justify-end w-full">
+        <button type="button" class="btn-primary" (click)="closeModal()">
+          Close
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-footer flex-col gap-2" *ngIf="!submitted">
+      <p
+        *ngIf="validationMessage"
+        class="text-sm text-red-600 text-center w-full"
       >
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="btn-primary"
-        (click)="submitBulkInitialTraining()"
-        [disabled]="isSubmitting || isLoadingDepartments"
-      >
-        {{ isSubmitting ? "Applying..." : "Apply Initial Training" }}
-      </button>
+        ⚠️ {{ validationMessage }}
+      </p>
+      <p *ngIf="errorMessage" class="text-sm text-red-600 text-center w-full">
+        ❌ {{ errorMessage }}
+      </p>
+      <div class="flex gap-3 justify-end w-full">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closeModal()"
+          [disabled]="isSubmitting"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="submitBulkInitialTraining()"
+          [disabled]="isSubmitting || isLoadingDepartments"
+        >
+          {{ isSubmitting ? "Applying..." : "Apply Initial Training" }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

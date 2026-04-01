@@ -23,6 +23,12 @@ namespace SyncApp26.Domain.Entities
         public virtual UserDocument? Document { get; set; }
 
         /// <summary>
+        /// Which document type this row belongs to: "SSM", "SU", or null for legacy rows
+        /// </summary>
+        [MaxLength(10)]
+        public string? DocumentType { get; set; }
+
+        /// <summary>
         /// Date of the training session
         /// </summary>
         public DateTime? TrainingDate { get; set; }
