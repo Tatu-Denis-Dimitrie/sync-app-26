@@ -19,7 +19,7 @@ namespace SyncApp26.Application.IServices
         Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null);
         Task<int> BulkSignAndSendGeneratedDocumentsAsync(string documentType, string signatureMethod, string signatureData, string ipAddress);
         Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document);
-        Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document);
+        Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false);
         Task<int> GetPendingSsmDocumentsForAdminAsync();
         Task<List<UserDocument>> GetPendingSsmDocumentsForAdminListAsync();
         Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress);

@@ -318,17 +318,8 @@ namespace SyncApp26.API.Controllers
             var safeLast = string.Concat(docUser.LastName.Where(char.IsLetterOrDigit));
             var fileName = $"{document.DocumentType}_{safeFirst}_{safeLast}.pdf";
 
-            // If a saved PDF exists on disk and is valid, serve it directly
-            if (!string.IsNullOrEmpty(document.PdfFilePath) && System.IO.File.Exists(document.PdfFilePath))
-            {
-                var fileBytes = await System.IO.File.ReadAllBytesAsync(document.PdfFilePath);
-                // Validate it starts with the PDF magic bytes %PDF
-                if (fileBytes.Length > 4 && fileBytes[0] == 0x25 && fileBytes[1] == 0x50 && fileBytes[2] == 0x44 && fileBytes[3] == 0x46)
-                    return File(fileBytes, "application/pdf", fileName);
-            }
-
-            // Fallback: generate on-the-fly
-            var pdfBytes = await _documentService.GeneratePdfBytesAsync(docUser, document);
+            // Always generate on-the-fly so highlight logic adapts to the viewer's role
+            var pdfBytes = await _documentService.GeneratePdfBytesAsync(docUser, document, viewerIsAdmin: isAdmin);
             return File(pdfBytes, "application/pdf", fileName);
         }
     }

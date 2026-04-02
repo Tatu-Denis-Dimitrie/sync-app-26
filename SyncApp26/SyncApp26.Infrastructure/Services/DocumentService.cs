@@ -115,15 +115,20 @@ namespace SyncApp26.Infrastructure.Services
                         && pt.UserDocumentId != null
                         && allPreviousDocIds.Contains(pt.UserDocumentId.Value)
                         && (pt.DocumentType == null || pt.DocumentType == documentType))
-                    .OrderBy(pt => pt.CreatedAt)
                     .ToListAsync();
 
-                var seen = new HashSet<string>();
-                foreach (var oldRow in previousDocPtRows)
-                {
-                    var key = $"{oldRow.TrainingDate:O}|{oldRow.CreatedAt:O}|{oldRow.Occupation}|{oldRow.MaterialTaught}";
-                    if (!seen.Add(key)) continue;
+                // Group by logical identity and keep the copy with the most signatures
+                var bestRows = previousDocPtRows
+                    .GroupBy(pt => $"{pt.TrainingDate:O}|{pt.CreatedAt:O}|{pt.Occupation}|{pt.MaterialTaught}")
+                    .Select(g => g.OrderByDescending(pt =>
+                        (!string.IsNullOrEmpty(pt.UserSignatureData) ? 1 : 0) +
+                        (!string.IsNullOrEmpty(pt.InstructorSignature) ? 1 : 0) +
+                        (!string.IsNullOrEmpty(pt.VerifierSignature) ? 1 : 0)).First())
+                    .OrderBy(pt => pt.CreatedAt)
+                    .ToList();
 
+                foreach (var oldRow in bestRows)
+                {
                     var copy = new PeriodicTraining
                     {
                         Id = Guid.NewGuid(),
@@ -442,7 +447,7 @@ namespace SyncApp26.Infrastructure.Services
 
         // ─── Core PDF builder ────────────────────────────────────────────────────
 
-        private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document)
+        private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document, bool viewerIsAdmin = false)
         {
             QuestPDF.Settings.License = LicenseType.Community;
 
@@ -784,8 +789,12 @@ namespace SyncApp26.Infrastructure.Services
                                     ? !string.IsNullOrEmpty(userSigData) && (string.IsNullOrEmpty(mgrSigData) || string.IsNullOrEmpty(verifierSigData))
                                     : !string.IsNullOrEmpty(userSigData) && string.IsNullOrEmpty(mgrSigData);
 
-                                // Highlight this row if it belongs to the current document
-                                Func<IContainer, IContainer> rowCell = isCurrentDocRow ? HighlightCell : DataCell;
+                                // Highlight this row only if signatures are still missing and viewer is not admin
+                                bool allSigned = isSsm
+                                    ? !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData) && !string.IsNullOrEmpty(verifierSigData)
+                                    : !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData);
+
+                                Func<IContainer, IContainer> rowCell = (isCurrentDocRow && !allSigned && !viewerIsAdmin) ? HighlightCell : DataCell;
 
                                 table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
                                 table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
@@ -799,10 +808,10 @@ namespace SyncApp26.Infrastructure.Services
                                     table.Cell().Element(rowCell).Column(c => RenderSignature(c, verifierSigMethod, verifierSigData));
                             }
 
-                            // Fallback: if no periodic trainings exist, render an empty highlighted row.
+                            // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
                             if (!hasTrainings)
                             {
-                                Func<IContainer, IContainer> rowCell = HighlightCell;
+                                Func<IContainer, IContainer> rowCell = viewerIsAdmin ? DataCell : HighlightCell;
 
                                 table.Cell().Element(rowCell).Text(document.GeneratedAt.ToString("dd.MM.yyyy")).FontSize(7);
                                 table.Cell().Element(rowCell).Text("").FontSize(7);
@@ -845,9 +854,9 @@ namespace SyncApp26.Infrastructure.Services
             return Task.FromResult(filePath);
         }
 
-        public Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document)
+        public Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false)
         {
-            var bytes = BuildDocument(user, document).GeneratePdf();
+            var bytes = BuildDocument(user, document, viewerIsAdmin).GeneratePdf();
             return Task.FromResult(bytes);
         }
 
