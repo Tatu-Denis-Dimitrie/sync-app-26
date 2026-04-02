@@ -971,22 +971,33 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<HashSet<Guid>> GetUserIdsWithDocumentTypeAsync(string documentType)
         {
-            var ids = await _context.UserDocuments
+            // Only count a user as "signed" if their LATEST document of this type has been signed by the user
+            var latestPerUser = await _context.UserDocuments
                 .Where(d => d.DocumentType == documentType)
+                .GroupBy(d => d.UserId)
+                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
+                .ToListAsync();
+
+            var ids = latestPerUser
                 .Where(d => d.UserSignedAt != null || !string.IsNullOrEmpty(d.UserSignatureData))
                 .Select(d => d.UserId)
-                .Distinct()
-                .ToListAsync();
+                .Distinct();
             return new HashSet<Guid>(ids);
         }
 
         public async Task<HashSet<Guid>> GetUserIdsWithUnsignedDocumentTypeAsync(string documentType)
         {
-            var ids = await _context.UserDocuments
-                .Where(d => d.DocumentType == documentType && d.Status == "PendingUser")
-                .Select(d => d.UserId)
-                .Distinct()
+            // Only flag a user as "having unsigned" if their LATEST document of this type is PendingUser
+            var latestPerUser = await _context.UserDocuments
+                .Where(d => d.DocumentType == documentType)
+                .GroupBy(d => d.UserId)
+                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
                 .ToListAsync();
+
+            var ids = latestPerUser
+                .Where(d => d.Status == "PendingUser")
+                .Select(d => d.UserId)
+                .Distinct();
             return new HashSet<Guid>(ids);
         }
 
@@ -1000,6 +1011,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
