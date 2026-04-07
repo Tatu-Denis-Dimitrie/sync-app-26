@@ -58,5 +58,19 @@ namespace SyncApp26.Domain.Entities
         public string? ManagerSignatureIpAddress { get; set; }
         
         public DateTime? ManagerSignedAt { get; set; }
+
+        // --- Admin Signature Metadata ---
+        
+        public string? AdminCryptographicSignature { get; set; }
+        
+        [MaxLength(50)]
+        public string? AdminSignatureMethod { get; set; }
+        
+        public string? AdminSignatureData { get; set; }
+        
+        [MaxLength(50)]
+        public string? AdminSignatureIpAddress { get; set; }
+        
+        public DateTime? AdminSignedAt { get; set; }
     }
 }

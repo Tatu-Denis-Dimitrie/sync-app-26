@@ -26,6 +26,7 @@ interface DocumentDto {
   pdfFilePath: string;
   userSignedAt: string | null;
   managerSignedAt: string | null;
+  adminSignedAt: string | null;
 }
 
 @Component({
@@ -178,11 +179,8 @@ export class DocumentsViewComponent implements OnInit {
       next: (res) => {
         this.isBulkGenerating = false;
         this.bulkGenerateResult = res;
-
-        if (res?.adminSignLink) {
-          // Redirect admin to the signing page in the same tab instead of opening a new one
-          window.location.href = res.adminSignLink;
-        }
+        // Reload the documents list to reflect newly generated docs
+        this.loadDocuments();
       },
       error: (err) => {
         this.isBulkGenerating = false;
@@ -205,11 +203,13 @@ export class DocumentsViewComponent implements OnInit {
 
   onBulkTrainingSuccess(): void {
     this.successMessage = 'Bulk periodic training created successfully for all users!';
+    this.loadDocuments();
     setTimeout(() => this.successMessage = '', 5000);
   }
 
   onBulkInitialTrainingSuccess(): void {
     this.successMessage = 'Bulk initial training applied successfully. Existing initial values were kept unchanged.';
+    this.loadDocuments();
     setTimeout(() => this.successMessage = '', 5000);
   }
 
@@ -221,6 +221,7 @@ export class DocumentsViewComponent implements OnInit {
     switch (status) {
       case 'PendingUser': return 'Pending User';
       case 'PendingManager': return 'Pending Manager';
+      case 'PendingAdmin': return 'Pending Admin';
       case 'Completed': return 'Completed';
       case 'Superseded': return 'Superseded';
       default: return status;
@@ -231,10 +232,23 @@ export class DocumentsViewComponent implements OnInit {
     switch (status) {
       case 'PendingUser': return 'bg-yellow-100 text-yellow-800';
       case 'PendingManager': return 'bg-blue-100 text-blue-800';
+      case 'PendingAdmin': return 'bg-orange-100 text-orange-800';
       case 'Completed': return 'bg-green-100 text-green-800';
       case 'Superseded': return 'bg-gray-200 text-gray-500';
       default: return 'bg-gray-100 text-gray-800';
     }
+  }
+
+  signAsAdmin(doc: DocumentDto): void {
+    this.http.get<{ token: string }>(`${environment.apiUrl}/Document/token-for-document/${doc.id}`)
+      .subscribe({
+        next: (res) => {
+          this.router.navigate(['/sign', res.token]);
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Failed to get signing token.';
+        }
+      });
   }
 
   getTypeClass(type: string): string {

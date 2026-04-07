@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using SyncApp26.API.Hubs;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using System.Collections.Concurrent;
@@ -19,6 +21,7 @@ namespace SyncApp26.API.Controllers
         private readonly IDocumentService _documentService;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IHubContext<SyncHub> _hubContext;
 
         private static readonly ConcurrentDictionary<string, BulkSignProgress> BulkSignJobs = new();
 
@@ -28,7 +31,8 @@ namespace SyncApp26.API.Controllers
             IEmailService emailService,
             IDocumentService documentService,
             IConfiguration configuration,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            IHubContext<SyncHub> hubContext)
         {
             _documentSignatureService = documentSignatureService;
             _userService = userService;
@@ -36,6 +40,7 @@ namespace SyncApp26.API.Controllers
             _documentService = documentService;
             _configuration = configuration;
             _scopeFactory = scopeFactory;
+            _hubContext = hubContext;
         }
 
         public class RequestSignatureDto
@@ -93,12 +98,13 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Invalid or expired token." });
             }
 
-            // Determine whether the signer is acting as the employee or the manager.
+            // Determine whether the signer is acting as the employee, the manager, or the admin.
             var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
             var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
             bool signerIsAdmin = string.Equals(signerUser?.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
-            bool isManagerSigning = signerIsAdmin || (document?.User?.AssignedTo != null &&
+            bool isManagerSigning = !signerIsAdmin && (document?.User?.AssignedTo != null &&
                 string.Equals(document.User.AssignedTo.Email, signatureToken.Email, StringComparison.OrdinalIgnoreCase));
+            bool isAdminSigning = signerIsAdmin && document?.DocumentType?.ToUpperInvariant() == "SSM";
 
             // Return the necessary document info for the frontend to render the signing UI
             return Ok(new
@@ -107,7 +113,8 @@ namespace SyncApp26.API.Controllers
                 documentName = signatureToken.DocumentName,
                 email = signatureToken.Email,
                 documentType = document?.DocumentType,
-                isManagerSigning = isManagerSigning
+                isManagerSigning = isManagerSigning,
+                isAdminSigning = isAdminSigning
             });
         }
 
@@ -142,18 +149,34 @@ namespace SyncApp26.API.Controllers
 
             var signerUserFromToken = await _userService.GetUserByEmailAsync(tokenEntity.Email);
             bool signerIsAdmin = string.Equals(signerUserFromToken?.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
-            bool isManagerSigning = signerIsAdmin || (document.User?.AssignedTo != null &&
+            bool isLineManager = !signerIsAdmin && (document.User?.AssignedTo != null &&
                 string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase));
-            bool isUserSignature = !isManagerSigning;
+            bool isUserSignature = !signerIsAdmin && !isLineManager;
 
+            // Enforce sequential signing
             if (isUserSignature && document.UserSignedAt != null)
             {
                 return BadRequest(new { message = "User already signed this document." });
             }
 
-            if (!isUserSignature && document.ManagerSignedAt != null)
+            if (isLineManager && document.UserSignedAt == null)
+            {
+                return BadRequest(new { message = "Employee must sign this document first." });
+            }
+
+            if (isLineManager && document.ManagerSignedAt != null)
             {
                 return BadRequest(new { message = "Manager already signed this document." });
+            }
+
+            if (signerIsAdmin)
+            {
+                if (document.UserSignedAt == null || document.ManagerSignedAt == null)
+                    return BadRequest(new { message = "Both employee and manager must sign before admin can verify." });
+                if (document.DocumentType?.ToUpperInvariant() != "SSM")
+                    return BadRequest(new { message = "Admin only signs SSM documents." });
+                if (document.Status != "PendingAdmin")
+                    return BadRequest(new { message = "Document is not pending admin signature." });
             }
 
             var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
@@ -163,7 +186,6 @@ namespace SyncApp26.API.Controllers
             }
 
             // Record signature
-            // A line manager can sign their employee's document regardless of whether the employee has signed yet.
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
             await _documentService.UpdateDocumentSignatureAsync(
@@ -175,8 +197,8 @@ namespace SyncApp26.API.Controllers
                 signerIsAdmin
             );
 
-            // If user signed, generate link for the manager and send email
-            if (isUserSignature && document.User?.AssignedTo != null && document.ManagerSignedAt == null)
+            // If employee signed, generate link for the manager and send email
+            if (isUserSignature && document.User?.AssignedTo != null)
             {
                 var manager = document.User.AssignedTo;
                 var managerToken = await _documentSignatureService.GenerateSignatureTokenAsync(
@@ -187,54 +209,40 @@ namespace SyncApp26.API.Controllers
                 var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
                 var managerSecureLink = $"{frontendUrl}/sign/{managerToken}";
 
-                await _emailService.SendDocumentSignatureEmailWithLinkAsync(
-                    manager.Email, 
-                    $"{document.DocumentType} Document (Manager Approval)", 
-                    managerSecureLink);
+                try
+                {
+                    await _emailService.SendDocumentSignatureEmailWithLinkAsync(
+                        manager.Email, 
+                        $"{document.DocumentType} Document (Manager Approval)", 
+                        managerSecureLink);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the signing operation
+                    Console.WriteLine($"Warning: Failed to send email to manager {manager.Email}: {ex.Message}");
+                }
             }
 
             // Bulk sign: apply the same signature to all other pending docs this signer is responsible for
             int bulkCount = 0;
-            if (request.BulkSign && !isUserSignature)
+            if (request.BulkSign && (isLineManager || signerIsAdmin))
             {
                 if (signerUserFromToken != null)
                 {
-                    bool bulkSignerIsAdmin = string.Equals(signerUserFromToken.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
                     var ipAddress2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
                     bulkCount = await _documentService.BulkSignDocumentsAsync(
-                        bulkSignerIsAdmin, signerUserFromToken.Id,
+                        signerIsAdmin, signerUserFromToken.Id,
                         request.SignatureMethod, request.SignatureData, ipAddress2);
-
-                    // For admin bulk-sign flow, send user signature links after admin countersigns.
-                    if (bulkSignerIsAdmin)
-                    {
-                        var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
-                        var types = new[] { "SSM", "SU" };
-                        foreach (var type in types)
-                        {
-                            var pendingDocs = await _documentService.GetAllPendingUserDocumentsAsync(type);
-                            foreach (var pendingDoc in pendingDocs)
-                            {
-                                if (pendingDoc.User?.Email is { Length: > 0 } userEmail && pendingDoc.UserSignedAt == null)
-                                {
-                                    try
-                                    {
-                                        var userToken = await _documentSignatureService.GenerateSignatureTokenAsync(
-                                            userEmail, pendingDoc.Id, $"{type} Document");
-                                        var userLink = $"{frontendUrl}/sign/{userToken}";
-                                        await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", userLink);
-                                    }
-                                    catch { /* non-fatal per user */ }
-                                }
-                            }
-                        }
-                    }
                 }
             }
 
             var msg = bulkCount > 0
                 ? $"Document successfully signed. {bulkCount} additional document(s) were signed with the same signature."
                 : "Document successfully signed using secure link.";
+
+            // Notify all connected clients that a signature was recorded so dashboards can refresh
+            await _hubContext.Clients.All.SendAsync("SignatureUpdated");
+
             return Ok(new { message = msg });
         }
 
@@ -270,6 +278,8 @@ namespace SyncApp26.API.Controllers
 
             var count = await _documentService.BulkSignDocumentsAsync(
                 isAdmin, userId, request.SignatureMethod, request.SignatureData, ipAddress);
+
+            await _hubContext.Clients.All.SendAsync("SignatureUpdated");
 
             return Ok(new { message = $"Successfully signed {count} document(s).", count });
         }

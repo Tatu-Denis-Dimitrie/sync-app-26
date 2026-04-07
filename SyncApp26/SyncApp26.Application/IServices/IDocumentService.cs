@@ -23,5 +23,7 @@ namespace SyncApp26.Application.IServices
         Task<int> GetPendingSsmDocumentsForAdminAsync();
         Task<List<UserDocument>> GetPendingSsmDocumentsForAdminListAsync();
         Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress);
+        Task<List<UserDocument>> GetAdminPendingDocumentsAsync();
+        Task<List<UserDocument>> GetAdminSignedDocumentsAsync();
     }
 }

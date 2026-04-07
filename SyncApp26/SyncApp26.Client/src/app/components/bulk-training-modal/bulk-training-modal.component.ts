@@ -288,11 +288,8 @@ export class BulkTrainingModalComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.isGenerating = false;
-          if (res?.adminSignLink) {
-            window.location.href = res.adminSignLink;
-          } else {
-            this.closeModal();
-          }
+          this.closeModal();
+          this.success.emit();
         },
         error: (err) => {
           this.isGenerating = false;

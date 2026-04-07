@@ -11,7 +11,7 @@ import { CSVDepartmentComparisonDTO } from '../../models/csv-department-sync.mod
 import { User, UserComparison, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { ComparisonViewComponent } from '../comparison-view/comparison-view.component';
-import { UploadProgress, SyncProgressUpdate } from '../../services/user-sync.signalr.service';
+import { UserSyncSignalrService, UploadProgress, SyncProgressUpdate } from '../../services/user-sync.signalr.service';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -95,7 +95,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private userSyncService: UserSyncService,
     private departmentsSyncService: DepartmentsSyncService,
     private authService: AuthenticationService,
-    private router: Router
+    private router: Router,
+    private signalrService: UserSyncSignalrService
   ) { }
 
   logout(): void {
@@ -107,6 +108,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.stats$ = this.userSyncService.getUserStats();
     this.departments$ = this.userSyncService.getDepartments();
     this.currentComparison$ = this.userSyncService.currentComparison$;
+
+    // Ensure SignalR is connected for real-time updates
+    this.signalrService.startConnection();
+
+    // Subscribe to real-time signature updates
+    this.signalrService.signatureUpdated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.userSyncService.refreshUsers();
+      });
 
     // Subscribe to progress events
     this.userSyncService.uploadProgress$

@@ -24,6 +24,7 @@ export class UserSyncSignalrService {
     public uploadProgress$ = new Subject<UploadProgress>();
     public comparisonResult$ = new Subject<UserComparison>();
     public syncProgress$ = new Subject<SyncProgressUpdate>();
+    public signatureUpdated$ = new Subject<void>();
     public connectionId$ = new BehaviorSubject<string | null>(null);
 
     constructor() { }
@@ -70,6 +71,10 @@ export class UserSyncSignalrService {
 
         this.hubConnection.on('SyncProgress', (data: SyncProgressUpdate) => {
             this.syncProgress$.next(data);
+        });
+
+        this.hubConnection.on('SignatureUpdated', () => {
+            this.signatureUpdated$.next();
         });
     }
 

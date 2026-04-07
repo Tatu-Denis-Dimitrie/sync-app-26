@@ -35,8 +35,7 @@ namespace SyncApp26.Infrastructure.Services
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
                     (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
-                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
-                    d.ManagerSignedAt == null)
+                    d.Status == "PendingAdmin")
                 .ToListAsync();
 
             // Keep only the latest document per user
@@ -59,8 +58,7 @@ namespace SyncApp26.Infrastructure.Services
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
                     (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
-                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
-                    d.ManagerSignedAt == null)
+                    d.Status == "PendingAdmin")
                 .ToListAsync();
 
             // Keep only the latest document per user
@@ -197,26 +195,6 @@ namespace SyncApp26.Infrastructure.Services
             }
             await _context.SaveChangesAsync();
 
-            // ── For SSM: place admin's saved signature as verifier on the current row ──
-            if (isSsmDocumentType)
-            {
-                var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == generatedByEmail);
-                if (adminUser != null)
-                {
-                    var adminSig = await _context.UserSignatures
-                        .Where(s => s.UserId == adminUser.Id && s.RevokedAt == null)
-                        .OrderByDescending(s => s.UpdatedAt ?? s.CreatedAt)
-                        .FirstOrDefaultAsync();
-
-                    if (adminSig != null)
-                    {
-                        currentRow.VerifierSignature = adminSig.SignatureData;
-                        currentRow.VerifierSignatureMethod = adminSig.SignatureMethod;
-                        await _context.SaveChangesAsync();
-                    }
-                }
-            }
-
             // Reload user with all PeriodicTrainings (deterministic order)
             var user = await _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
@@ -243,8 +221,8 @@ namespace SyncApp26.Infrastructure.Services
             var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
             var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
 
-            // Doar semnătură ca verifier (admin)
-            doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
+            // Admin signs last — mark as Completed
+            doc.Status = "Completed";
 
 
             var latestTraining = doc.User?.PeriodicTrainings
@@ -1039,15 +1017,20 @@ namespace SyncApp26.Infrastructure.Services
                 doc.UserSignatureIpAddress = ipAddress;
                 doc.UserSignedAt = timestamp;
                 doc.UserCryptographicSignature = cryptoSignature;
-                doc.Status = doc.ManagerSignedAt != null ? "Completed" : "PendingManager";
+                doc.Status = "PendingManager";
             }
             else
             {
                 bool isSsmAdminVerifier = isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM";
                 if (isSsmAdminVerifier)
                 {
-                    // Admin SSM signature is verifier-only; line-manager countersignature remains pending.
-                    doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
+                    // Admin signs last on SSM — store admin signature and mark as Completed
+                    doc.AdminSignatureMethod = signatureMethod;
+                    doc.AdminSignatureData = signatureData;
+                    doc.AdminSignatureIpAddress = ipAddress;
+                    doc.AdminSignedAt = timestamp;
+                    doc.AdminCryptographicSignature = cryptoSignature;
+                    doc.Status = "Completed";
                 }
                 else
                 {
@@ -1056,7 +1039,9 @@ namespace SyncApp26.Infrastructure.Services
                     doc.ManagerSignatureIpAddress = ipAddress;
                     doc.ManagerSignedAt = timestamp;
                     doc.ManagerCryptographicSignature = cryptoSignature;
-                    doc.Status = doc.UserSignedAt != null ? "Completed" : "PendingUser";
+                    // SSM needs admin verifier next; SU is complete after LM signs
+                    bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
+                    doc.Status = isSsm ? "PendingAdmin" : "Completed";
                 }
             }
 
@@ -1199,8 +1184,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .Where(d =>
                     (isAdmin
-                        ? d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.User != null && (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") && (d.Status == "PendingManager" || d.Status == "PendingUser") && d.ManagerSignedAt == null
-                        : (d.Status == "PendingManager" || d.Status == "PendingUser") && d.ManagerSignedAt == null && d.User != null && d.User.AssignedToId == signerUserId)
+                        ? d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.User != null && (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") && d.Status == "PendingAdmin"
+                        : d.Status == "PendingManager" && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User != null && d.User.AssignedToId == signerUserId)
                 )
                 .ToListAsync();
 
@@ -1222,7 +1207,13 @@ namespace SyncApp26.Infrastructure.Services
                 bool isSsmAdminVerifier = isAdmin && doc.DocumentType?.ToUpperInvariant() == "SSM";
                 if (isSsmAdminVerifier)
                 {
-                    doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
+                    // Admin signs last — store admin signature and mark as Completed
+                    doc.AdminSignatureMethod = signatureMethod;
+                    doc.AdminSignatureData = signatureData;
+                    doc.AdminSignatureIpAddress = ipAddress;
+                    doc.AdminSignedAt = timestamp;
+                    doc.AdminCryptographicSignature = cryptoSignature;
+                    doc.Status = "Completed";
                 }
                 else
                 {
@@ -1231,7 +1222,9 @@ namespace SyncApp26.Infrastructure.Services
                     doc.ManagerSignatureIpAddress = ipAddress;
                     doc.ManagerSignedAt = timestamp;
                     doc.ManagerCryptographicSignature = cryptoSignature;
-                    doc.Status = doc.UserSignedAt != null ? "Completed" : "PendingUser";
+                    // SSM needs admin next; SU is complete after LM signs
+                    bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
+                    doc.Status = isSsm ? "PendingAdmin" : "Completed";
                 }
 
                 var trainingForDoc = await _context.PeriodicTrainings
@@ -1405,6 +1398,51 @@ namespace SyncApp26.Infrastructure.Services
             await _context.SaveChangesAsync();
 
             return docs.Count;
+        }
+
+        // Returns SSM documents pending admin signature (PendingAdmin status, signed by both employee and LM)
+        public async Task<List<UserDocument>> GetAdminPendingDocumentsAsync()
+        {
+            var allPending = await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                .Where(d =>
+                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.User != null &&
+                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
+                    d.Status == "PendingAdmin")
+                .OrderByDescending(d => d.GeneratedAt)
+                .ToListAsync();
+
+            return allPending
+                .GroupBy(d => d.UserId)
+                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
+                .ToList();
+        }
+
+        // Returns SSM documents already signed by admin (Completed and have verifier signature)
+        public async Task<List<UserDocument>> GetAdminSignedDocumentsAsync()
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings)
+                .Where(d =>
+                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.Status == "Completed" &&
+                    d.User != null &&
+                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN"))
+                .OrderByDescending(d => d.GeneratedAt)
+                .ToListAsync();
         }
     }
 }
