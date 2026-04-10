@@ -222,6 +222,11 @@ namespace SyncApp26.Infrastructure.Services
             var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
 
             // Admin signs last — mark as Completed
+            doc.AdminSignatureMethod = signatureMethod;
+            doc.AdminSignatureData = signatureData;
+            doc.AdminSignatureIpAddress = ipAddress;
+            doc.AdminSignedAt = timestamp;
+            doc.AdminCryptographicSignature = cryptoSignature;
             doc.Status = "Completed";
 
 

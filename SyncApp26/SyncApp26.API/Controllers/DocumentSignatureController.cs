@@ -236,14 +236,15 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
+            var totalSigned = bulkCount + 1; // +1 for the document signed individually
             var msg = bulkCount > 0
-                ? $"Document successfully signed. {bulkCount} additional document(s) were signed with the same signature."
+                ? $"Successfully signed {totalSigned} document(s)."
                 : "Document successfully signed using secure link.";
 
             // Notify all connected clients that a signature was recorded so dashboards can refresh
             await _hubContext.Clients.All.SendAsync("SignatureUpdated");
 
-            return Ok(new { message = msg });
+            return Ok(new { message = msg, count = totalSigned });
         }
 
         public class BulkSignDto

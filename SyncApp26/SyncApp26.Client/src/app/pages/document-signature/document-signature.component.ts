@@ -279,10 +279,13 @@ export class DocumentSignatureComponent implements OnInit {
       )
       .subscribe(res => {
         if (res) {
-          this.successMessage = res.message || 'Document successfully signed!';
           this.documentData = null;
-          if (this.isBulkMode && this.bulkTotal > 0 && typeof res.count === 'number') {
+          if (this.isBulkMode && typeof res.count === 'number' && res.count > 1) {
+            this.bulkTotal = res.count;
             this.bulkSigned = res.count;
+            this.successMessage = `Successfully signed ${res.count} document(s).`;
+          } else {
+            this.successMessage = res.message || 'Document successfully signed!';
           }
         }
       });

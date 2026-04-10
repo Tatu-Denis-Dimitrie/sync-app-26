@@ -47,6 +47,17 @@
           <option value="Completed">Completed</option>
         </select>
 
+        <select
+          [(ngModel)]="selectedSignatureFilter"
+          (ngModelChange)="onFilterChange()"
+          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+        >
+          <option value="all">All signatures</option>
+          <option value="employeeSigned">Employee signed only</option>
+          <option value="managerSigned">Manager signed</option>
+          <option value="completed">Fully signed</option>
+        </select>
+
         <!-- Page actions moved inline with filters -->
         <div class="flex items-center gap-3 md:ml-auto">
           <button
@@ -81,6 +92,17 @@
             class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors"
           >
             Bulk Initial Training
+          </button>
+
+          <button
+            *ngIf="pendingAdminCount > 0"
+            (click)="bulkSignAsAdmin()"
+            class="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+            </svg>
+            Sign All as Admin ({{ pendingAdminCount }})
           </button>
         </div>
       </div>

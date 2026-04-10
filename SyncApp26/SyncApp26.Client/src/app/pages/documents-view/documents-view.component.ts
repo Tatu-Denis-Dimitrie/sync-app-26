@@ -55,6 +55,7 @@ export class DocumentsViewComponent implements OnInit {
   searchQuery$ = new BehaviorSubject<string>('');
   selectedType$ = new BehaviorSubject<string>('SSM');
   selectedStatus$ = new BehaviorSubject<string>('all');
+  selectedSignatureFilter$ = new BehaviorSubject<string>('all');
 
   get searchQuery(): string { return this.searchQuery$.value; }
   set searchQuery(value: string) { this.searchQuery$.next(value); }
@@ -64,6 +65,9 @@ export class DocumentsViewComponent implements OnInit {
 
   get selectedStatus(): string { return this.selectedStatus$.value; }
   set selectedStatus(value: string) { this.selectedStatus$.next(value); }
+
+  get selectedSignatureFilter(): string { return this.selectedSignatureFilter$.value; }
+  set selectedSignatureFilter(value: string) { this.selectedSignatureFilter$.next(value); }
 
   loading = true;
   error: string | null = null;
@@ -80,6 +84,9 @@ export class DocumentsViewComponent implements OnInit {
   pdfDocumentName = '';
   successMessage = '';
 
+  // Bulk admin sign
+  pendingAdminCount = 0;
+
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -89,6 +96,15 @@ export class DocumentsViewComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadDocuments();
+    this.loadPendingAdminCount();
+  }
+
+  loadPendingAdminCount(): void {
+    this.http.get<{ count: number }>(`${environment.apiUrl}/DocumentSignature/pending-ssm-admin-count`)
+      .subscribe({
+        next: (res) => this.pendingAdminCount = res.count || 0,
+        error: () => this.pendingAdminCount = 0
+      });
   }
 
   loadDocuments(): void {
@@ -125,9 +141,10 @@ export class DocumentsViewComponent implements OnInit {
       this.documents$,
       this.searchQuery$,
       this.selectedType$,
-      this.selectedStatus$
+      this.selectedStatus$,
+      this.selectedSignatureFilter$
     ]).pipe(
-      map(([docs, search, type, status]) => docs.filter(d => {
+      map(([docs, search, type, status, sigFilter]) => docs.filter(d => {
         const fullName = `${d.userFirstName} ${d.userLastName}`.toLowerCase();
         const matchesSearch = !search ||
           fullName.includes(search.toLowerCase()) ||
@@ -135,7 +152,15 @@ export class DocumentsViewComponent implements OnInit {
           (d.userDepartment && d.userDepartment.toLowerCase().includes(search.toLowerCase()));
         const matchesType = type === 'all' || d.documentType === type;
         const matchesStatus = status === 'all' || d.status === status;
-        return matchesSearch && matchesType && matchesStatus;
+        let matchesSignature = true;
+        if (sigFilter === 'employeeSigned') {
+          matchesSignature = !!d.userSignedAt && !d.managerSignedAt;
+        } else if (sigFilter === 'managerSigned') {
+          matchesSignature = !!d.userSignedAt && !!d.managerSignedAt && !d.adminSignedAt;
+        } else if (sigFilter === 'completed') {
+          matchesSignature = d.status === 'Completed';
+        }
+        return matchesSearch && matchesType && matchesStatus && matchesSignature;
       })),
       shareReplay(1)
     );
@@ -244,6 +269,24 @@ export class DocumentsViewComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.router.navigate(['/sign', res.token]);
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Failed to get signing token.';
+        }
+      });
+  }
+
+  bulkSignAsAdmin(): void {
+    // Get a token for any pending admin document, then navigate to the signing page in bulk mode
+    const pendingAdminDoc = this.allDocuments.find(d => d.status === 'PendingAdmin');
+    if (!pendingAdminDoc) {
+      this.error = 'No documents pending admin signature.';
+      return;
+    }
+    this.http.get<{ token: string }>(`${environment.apiUrl}/Document/token-for-document/${pendingAdminDoc.id}`)
+      .subscribe({
+        next: (res) => {
+          this.router.navigate(['/sign', res.token], { queryParams: { bulk: 'true' } });
         },
         error: (err) => {
           this.error = err.error?.message || 'Failed to get signing token.';

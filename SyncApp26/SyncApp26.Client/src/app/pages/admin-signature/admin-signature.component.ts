@@ -118,15 +118,15 @@ export class AdminSignatureComponent {
     }
     this.userSignatureService.saveMySignature(payload).subscribe({
       next: (response) => {
-        console.log('Răspuns salvare semnătură admin:', response);
-        alert('Semnătura a fost salvată!');
+        console.log('Response:', response);
+        alert('Signature saved successfully!');
         this.loadSignature();
         this.isSigConfirmed = false;
         this.clearSignature();
       },
       error: (err) => {
-        console.error('Eroare la salvarea semnăturii admin:', err);
-        alert('Eroare la salvarea semnăturii!');
+        console.error('Error saving admin signature:', err);
+        alert('Error saving signature!');
       }
     });
   }
