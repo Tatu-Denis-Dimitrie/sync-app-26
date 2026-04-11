@@ -51,13 +51,17 @@
                 class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">User History</a>
             </ng-container>
 
-            <ng-container *ngIf="!isAdmin && currentUser?.role === 'LineManager'">
+            <ng-container *ngIf="!isAdmin && (currentUser?.role === 'Line Manager' || currentUser?.role === 'LineManager')">
               <a routerLink="/line-manager" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
                 class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Manager
                 Console</a>
+              <a routerLink="/employees" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
+                class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Employees</a>
+              <a routerLink="/documents" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
+                class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">Documents</a>
             </ng-container>
 
-            <ng-container *ngIf="!isAdmin">
+            <ng-container *ngIf="!isAdmin && currentUser?.role !== 'Line Manager' && currentUser?.role !== 'LineManager'">
               <a routerLink="/basic-user" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
                 class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">My
                 Profile</a>
@@ -155,12 +159,16 @@
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">User History</a>
         </ng-container>
 
-        <ng-container *ngIf="!isAdmin && currentUser?.role === 'LineManager'">
+        <ng-container *ngIf="!isAdmin && (currentUser?.role === 'Line Manager' || currentUser?.role === 'LineManager')">
           <a routerLink="/line-manager" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Manager Console</a>
+          <a routerLink="/employees" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
+            class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Employees</a>
+          <a routerLink="/documents" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
+            class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Documents</a>
         </ng-container>
 
-        <a *ngIf="!isAdmin" routerLink="/basic-user" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
+        <a *ngIf="!isAdmin && currentUser?.role !== 'Line Manager' && currentUser?.role !== 'LineManager'" routerLink="/basic-user" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
           class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">My Profile</a>
 
         <div class="mt-2 border-t border-white/5 pt-2">

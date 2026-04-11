@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { AuthenticationService } from '../../services/authentication.service';
 
 interface InitialTrainingEntry {
   documentType: string;
@@ -115,9 +116,9 @@ export class SsmSuFormComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private http: HttpClient
-    ,
-    private sanitizer: DomSanitizer
+    private http: HttpClient,
+    private sanitizer: DomSanitizer,
+    private authService: AuthenticationService
   ) {}
 
   ngOnInit() {
@@ -282,7 +283,11 @@ export class SsmSuFormComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/employees', this.userId]);
+    if (this.authService.isAdmin()) {
+      this.router.navigate(['/employees', this.userId]);
+    } else {
+      this.router.navigate(['/line-manager']);
+    }
   }
 
   print() {

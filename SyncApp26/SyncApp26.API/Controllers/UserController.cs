@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Infrastructure.Context;
@@ -11,6 +12,7 @@ namespace SyncApp26.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -91,7 +93,16 @@ namespace SyncApp26.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetAllUsers()
         {
-            var users = await _userService.GetAllUsersAsync();
+            var usersList = await _userService.GetAllUsersAsync();
+            var users = usersList.AsEnumerable();
+
+            var isAdmin = User.IsInRole("Admin");
+            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                users = users.Where(u => u.AssignedToId == currentUserId || u.Id == currentUserId);
+            }
+
             var ssmIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SSM");
             var suIds = await _documentService.GetUserIdsWithDocumentTypeAsync("SU");
             var unsignedSsmIds = await _documentService.GetUserIdsWithUnsignedDocumentTypeAsync("SSM");
@@ -545,6 +556,16 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found" });
             }
 
+            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            bool isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                if (user.AssignedToId != currentUserId && user.Id != currentUserId)
+                {
+                    return Forbid();
+                }
+            }
+
             // Keep first-employment training fields sourced only from user profile data.
             var periodicTrainings = await _periodicTrainingService.GetByUserIdAsync(id);
             var latestTraining = periodicTrainings
@@ -614,6 +635,16 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
+            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            bool isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                if (user.AssignedToId != currentUserId && user.Id != currentUserId)
+                {
+                    return Forbid();
+                }
+            }
+
             // Update SSM/SU fields
             user.DateOfBirth = dto.DateOfBirth;
             user.PlaceOfBirth = dto.PlaceOfBirth;
@@ -677,6 +708,13 @@ namespace SyncApp26.API.Controllers
 
             if (dto.SelectedDepartmentId.HasValue)
                 targetUsers = targetUsers.Where(u => u.DepartmentId == dto.SelectedDepartmentId.Value);
+
+            var isAdmin = User.IsInRole("Admin");
+            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                targetUsers = targetUsers.Where(u => u.AssignedToId == currentUserId);
+            }
 
             if (!dto.ApplyToAllUsers)
             {

@@ -99,6 +99,26 @@ namespace SyncApp26.API.Controllers
                 ? new[] { "SSM", "SU" }
                 : new[] { request.DocumentType.ToUpper() };
 
+            var isAdmin = User.IsInRole("Admin");
+            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                var allUsers = await _userService.GetAllUsersAsync();
+                var myEmployees = allUsers
+                    .Where(u => u.AssignedToId == currentUserId)
+                    .Select(u => u.Id)
+                    .ToList();
+
+                if (request.SelectedUserIds == null || !request.SelectedUserIds.Any())
+                {
+                    request.SelectedUserIds = myEmployees;
+                }
+                else
+                {
+                    request.SelectedUserIds = request.SelectedUserIds.Intersect(myEmployees).ToList();
+                }
+            }
+
             int totalGenerated = 0, totalSkipped = 0;
 
             foreach (var type in types)
@@ -147,6 +167,19 @@ namespace SyncApp26.API.Controllers
             {
                 var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@syncapp26.com";
 
+                var user = await _userService.GetUserByIdAsync(request.UserId);
+                if (user == null) return NotFound(new { message = "User not found." });
+
+                var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                bool isAdmin = User.IsInRole("Admin");
+                if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+                {
+                    if (user.AssignedToId != currentUserId)
+                    {
+                        return Forbid();
+                    }
+                }
+
                 var document = await _documentService.GenerateDocumentAsync(request.UserId, request.DocumentType, adminEmail);
 
                 // Now we need to send the signature request to the user.
@@ -179,10 +212,18 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("all")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllDocuments()
         {
-            var documents = await _documentService.GetAllDocumentsAsync();
+            var allDocs = await _documentService.GetAllDocumentsAsync();
+            var documents = allDocs.AsEnumerable();
+
+            var isAdmin = User.IsInRole("Admin");
+            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                documents = documents.Where(d => d.User?.AssignedToId == currentUserId || d.UserId == currentUserId);
+            }
+
             return Ok(documents.Select(MapDocument));
         }
 

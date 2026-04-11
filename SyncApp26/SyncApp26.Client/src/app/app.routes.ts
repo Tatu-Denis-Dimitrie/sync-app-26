@@ -44,13 +44,13 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent, canActivate: [AdminGuard] },
   { path: 'departments', component: DepartmentsComponent, canActivate: [AdminGuard] },
   { path: 'users', component: UsersListComponent, canActivate: [AdminGuard] },
-  { path: 'employees', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
-  { path: 'employees/:id', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
-  { path: 'employees/:id/ssm-su', component: SsmSuFormComponent, canActivate: [AdminGuard] },
+  { path: 'employees', component: EmployeesDetailComponent, canActivate: [LineManagerGuard] },
+  { path: 'employees/:id', component: EmployeesDetailComponent, canActivate: [LineManagerGuard] },
+  { path: 'employees/:id/ssm-su', component: SsmSuFormComponent, canActivate: [LineManagerGuard] },
   { path: 'import-history', component: ImportHistoryComponent, canActivate: [AdminGuard] },
   { path: 'test-signature', component: TestSignatureComponent, canActivate: [AdminGuard] },
   { path: 'admin-signature', component: AdminSignatureComponent, canActivate: [AdminGuard] },
-  { path: 'documents', component: DocumentsViewComponent, canActivate: [AdminGuard] },
+  { path: 'documents', component: DocumentsViewComponent, canActivate: [LineManagerGuard] },
   { path: 'data-requests', component: DataChangeRequestsComponent, canActivate: [AdminGuard] },
   
   { path: '**', redirectTo: '/login' }
