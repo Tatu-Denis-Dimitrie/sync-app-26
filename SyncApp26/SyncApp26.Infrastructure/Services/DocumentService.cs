@@ -680,7 +680,7 @@ namespace SyncApp26.Infrastructure.Services
                 });
 
                 // ══════════════════════════════════════════════════════
-                // PAGE 3 — INSTRUIRE PERIODICĂ (landscape table)
+                // PAGE 3 — INSTRUIRE PERIODICĂ 
                 // ══════════════════════════════════════════════════════
                 container.Page(page =>
                 {
@@ -698,6 +698,7 @@ namespace SyncApp26.Infrastructure.Services
                         {
                             table.ColumnsDefinition(c =>
                             {
+                                c.ConstantColumn(20);   // Nr. crt.
                                 c.ConstantColumn(50);   // Data
                                 c.ConstantColumn(35);   // Durata
                                 c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
@@ -712,6 +713,7 @@ namespace SyncApp26.Infrastructure.Services
 
                             table.Header(header =>
                             {
+                                header.Cell().Element(HeaderCell).Text("Nr. crt.").Bold().FontSize(7);
                                 header.Cell().Element(HeaderCell).Text("Data instruirii").Bold().FontSize(7);
                                 header.Cell().Element(HeaderCell).Text("Durata (h)").Bold().FontSize(7);
                                 header.Cell().Element(HeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(7);
@@ -779,6 +781,7 @@ namespace SyncApp26.Infrastructure.Services
 
                                 Func<IContainer, IContainer> rowCell = (isCurrentDocRow && !allSigned && !viewerIsAdmin) ? HighlightCell : DataCell;
 
+                                table.Cell().Element(rowCell).Text((i + 1).ToString()).FontSize(7);
                                 table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
                                 table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
                                 table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
@@ -796,6 +799,7 @@ namespace SyncApp26.Infrastructure.Services
                             {
                                 Func<IContainer, IContainer> rowCell = viewerIsAdmin ? DataCell : HighlightCell;
 
+                                table.Cell().Element(rowCell).Text("1").FontSize(7);
                                 table.Cell().Element(rowCell).Text(document.GeneratedAt.ToString("dd.MM.yyyy")).FontSize(7);
                                 table.Cell().Element(rowCell).Text("").FontSize(7);
                                 table.Cell().Element(rowCell).Text(occupation).FontSize(7);
@@ -941,6 +945,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
+                .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
         }
@@ -954,6 +960,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
                 .Where(d => d.UserId == userId)
