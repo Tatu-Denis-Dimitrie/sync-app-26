@@ -54,6 +54,8 @@ export class BulkInitialTrainingModalComponent implements OnInit {
   submittedCount = 0;
   errorMessage = '';
   validationMessage = '';
+  pastDateWarningIntro = false;
+  pastDateWarningWork = false;
   departments: DepartmentOption[] = [];
   isLoadingDepartments = false;
   users: UserOption[] = [];
@@ -160,6 +162,18 @@ export class BulkInitialTrainingModalComponent implements OnInit {
     // Department filter only affects the user picker display; existing selections are preserved.
   }
 
+  onIntroDateChanged(): void {
+    if (!this.formData.introductoryTrainingDate) { this.pastDateWarningIntro = false; return; }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    this.pastDateWarningIntro = new Date(this.formData.introductoryTrainingDate) < today;
+  }
+
+  onWorkDateChanged(): void {
+    if (!this.formData.workplaceTrainingDate) { this.pastDateWarningWork = false; return; }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    this.pastDateWarningWork = new Date(this.formData.workplaceTrainingDate) < today;
+  }
+
   openUserPicker(): void {
     this.isUserPickerVisible = true;
     this.userSearchQuery = '';
@@ -245,6 +259,8 @@ export class BulkInitialTrainingModalComponent implements OnInit {
     this.submittedCount = 0;
     this.errorMessage = '';
     this.validationMessage = '';
+    this.pastDateWarningIntro = false;
+    this.pastDateWarningWork = false;
   }
 
   submitBulkInitialTraining() {

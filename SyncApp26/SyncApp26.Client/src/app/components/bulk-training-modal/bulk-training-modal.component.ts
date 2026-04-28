@@ -52,6 +52,7 @@ export class BulkTrainingModalComponent implements OnInit {
   isGenerating = false;
   errorMessage = '';
   validationMessage = '';
+  pastDateWarning = false;
   departments: DepartmentOption[] = [];
   isLoadingDepartments = false;
   users: UserOption[] = [];
@@ -196,6 +197,12 @@ export class BulkTrainingModalComponent implements OnInit {
     this.formData.durationHours = this.formData.documentType === 'SU' ? 1 : 2;
   }
 
+  onTrainingDateChanged(): void {
+    if (!this.formData.trainingDate) { this.pastDateWarning = false; return; }
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    this.pastDateWarning = new Date(this.formData.trainingDate) < today;
+  }
+
   open() {
     this.isVisible = true;
     // Set default date to today
@@ -240,6 +247,7 @@ export class BulkTrainingModalComponent implements OnInit {
     this.isGenerating = false;
     this.errorMessage = '';
     this.validationMessage = '';
+    this.pastDateWarning = false;
   }
 
   submitBulkTraining() {

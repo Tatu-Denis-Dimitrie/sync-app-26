@@ -46,10 +46,18 @@
               type="date"
               id="trainingDate"
               [(ngModel)]="formData.trainingDate"
+              (ngModelChange)="onTrainingDateChanged()"
               name="trainingDate"
               class="form-input"
               required
             />
+            <p
+              *ngIf="pastDateWarning"
+              class="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1"
+            >
+              ⚠️ Aceasta dată este în trecut. Continuarea poate cauza erori în
+              generarea documentelor.
+            </p>
           </div>
 
           <div class="form-group">
@@ -332,9 +340,16 @@
 
     <div class="modal-footer flex-col gap-3" *ngIf="submitted">
       <!-- Loading overlay while generating -->
-      <div *ngIf="isGenerating" class="flex flex-col items-center justify-center py-8 gap-3 w-full">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"></div>
-        <p class="text-sm text-gray-500">Generating documents, please wait...</p>
+      <div
+        *ngIf="isGenerating"
+        class="flex flex-col items-center justify-center py-8 gap-3 w-full"
+      >
+        <div
+          class="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"
+        ></div>
+        <p class="text-sm text-gray-500">
+          Generating documents, please wait...
+        </p>
       </div>
 
       <ng-container *ngIf="!isGenerating">
@@ -347,11 +362,7 @@
           ❌ {{ errorMessage }}
         </p>
         <div class="flex gap-3 justify-end w-full">
-          <button
-            type="button"
-            class="btn-secondary"
-            (click)="skipGenerate()"
-          >
+          <button type="button" class="btn-secondary" (click)="skipGenerate()">
             Skip
           </button>
           <button

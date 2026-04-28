@@ -94,17 +94,29 @@
           <h3 class="section-title">Introductory Training</h3>
           <div class="form-row">
             <div class="form-group">
-              <label for="introDate" class="form-label">Date <span class="required">*</span></label>
+              <label for="introDate" class="form-label"
+                >Date <span class="required">*</span></label
+              >
               <input
                 type="date"
                 id="introDate"
                 [(ngModel)]="formData.introductoryTrainingDate"
+                (ngModelChange)="onIntroDateChanged()"
                 name="introductoryTrainingDate"
                 class="form-input"
               />
+              <p
+                *ngIf="pastDateWarningIntro"
+                class="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1"
+              >
+                ⚠️ Aceasta dată este în trecut. Continuarea poate cauza erori în
+                generarea documentelor.
+              </p>
             </div>
             <div class="form-group">
-              <label for="introHours" class="form-label">Hours <span class="required">*</span></label>
+              <label for="introHours" class="form-label"
+                >Hours <span class="required">*</span></label
+              >
               <input
                 type="number"
                 id="introHours"
@@ -119,7 +131,9 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="introInstructor" class="form-label">Instructor <span class="required">*</span></label>
+              <label for="introInstructor" class="form-label"
+                >Instructor <span class="required">*</span></label
+              >
               <input
                 type="text"
                 id="introInstructor"
@@ -167,17 +181,29 @@
           <h3 class="section-title">Workplace Training</h3>
           <div class="form-row">
             <div class="form-group">
-              <label for="workDate" class="form-label">Date <span class="required">*</span></label>
+              <label for="workDate" class="form-label"
+                >Date <span class="required">*</span></label
+              >
               <input
                 type="date"
                 id="workDate"
                 [(ngModel)]="formData.workplaceTrainingDate"
+                (ngModelChange)="onWorkDateChanged()"
                 name="workplaceTrainingDate"
                 class="form-input"
               />
+              <p
+                *ngIf="pastDateWarningWork"
+                class="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1"
+              >
+                ⚠️ Aceasta dată este în trecut. Continuarea poate cauza erori în
+                generarea documentelor.
+              </p>
             </div>
             <div class="form-group">
-              <label for="workHours" class="form-label">Hours <span class="required">*</span></label>
+              <label for="workHours" class="form-label"
+                >Hours <span class="required">*</span></label
+              >
               <input
                 type="number"
                 id="workHours"
@@ -192,7 +218,9 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="jobTitle" class="form-label">Job Title <span class="required">*</span></label>
+              <label for="jobTitle" class="form-label"
+                >Job Title <span class="required">*</span></label
+              >
               <input
                 type="text"
                 id="jobTitle"
@@ -202,7 +230,9 @@
               />
             </div>
             <div class="form-group">
-              <label for="workInstructor" class="form-label">Instructor <span class="required">*</span></label>
+              <label for="workInstructor" class="form-label"
+                >Instructor <span class="required">*</span></label
+              >
               <input
                 type="text"
                 id="workInstructor"
