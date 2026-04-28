@@ -44,6 +44,19 @@ namespace SyncApp26.Domain.Entities
         [MaxLength(2000)]
         public string? WorkplaceTrainingContent { get; set; }
 
+        // ── Signatures (captured once on first signing, never overwritten) ──────
+        public string? UserSignatureData { get; set; }
+        [MaxLength(20)]
+        public string? UserSignatureMethod { get; set; }
+
+        public string? InstructorSignatureData { get; set; }
+        [MaxLength(20)]
+        public string? InstructorSignatureMethod { get; set; }
+
+        public string? VerifierSignatureData { get; set; }
+        [MaxLength(20)]
+        public string? VerifierSignatureMethod { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
     }

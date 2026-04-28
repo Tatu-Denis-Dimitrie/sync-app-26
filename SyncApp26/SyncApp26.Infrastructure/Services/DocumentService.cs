@@ -592,21 +592,11 @@ namespace SyncApp26.Infrastructure.Services
                         var introContent = it?.IntroductoryTrainingContent;
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
-                        var introVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
-                        var introVerifierSigMethod = (isSsm && !string.IsNullOrEmpty(introVerifierSigData))
-                            ? latestPt?.VerifierSignatureMethod
-                            : null;
-                        var introInstructorSigData = isSsm
-                            ? (latestPt?.InstructorSignature ?? document.ManagerSignatureData)
-                            : document.ManagerSignatureData;
-                        var introInstructorSigMethod = isSsm
-                            ? (latestPt?.InstructorSignatureMethod ?? document.ManagerSignatureMethod)
-                            : document.ManagerSignatureMethod;
-
+                        // Signatures frozen from first signing — stored on UserInitialTraining
                         SignatureRow(col, isSsm,
-                            document.UserSignatureMethod, document.UserSignatureData,
-                            introInstructorSigMethod, introInstructorSigData,
-                            introVerifierSigMethod, introVerifierSigData);
+                            it?.UserSignatureMethod, it?.UserSignatureData,
+                            it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                            it?.VerifierSignatureMethod, it?.VerifierSignatureData);
 
                         col.Item().Height(8);
 
@@ -633,21 +623,11 @@ namespace SyncApp26.Infrastructure.Services
                         var workContent = it?.WorkplaceTrainingContent;
                         col.Item().Border(0.5f).Padding(6)
                             .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
-                        var workVerifierSigData = isSsm ? latestPt?.VerifierSignature : null;
-                        var workVerifierSigMethod = (isSsm && !string.IsNullOrEmpty(workVerifierSigData))
-                            ? latestPt?.VerifierSignatureMethod
-                            : null;
-                        var workInstructorSigData = isSsm
-                            ? (latestPt?.InstructorSignature ?? document.ManagerSignatureData)
-                            : document.ManagerSignatureData;
-                        var workInstructorSigMethod = isSsm
-                            ? (latestPt?.InstructorSignatureMethod ?? document.ManagerSignatureMethod)
-                            : document.ManagerSignatureMethod;
-
+                        // Signatures frozen from first signing — stored on UserInitialTraining
                         SignatureRow(col, isSsm,
-                            document.UserSignatureMethod, document.UserSignatureData,
-                            workInstructorSigMethod, workInstructorSigData,
-                            workVerifierSigMethod, workVerifierSigData);
+                            it?.UserSignatureMethod, it?.UserSignatureData,
+                            it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                            it?.VerifierSignatureMethod, it?.VerifierSignatureData);
 
                         col.Item().Height(10);
 
@@ -1084,6 +1064,29 @@ namespace SyncApp26.Infrastructure.Services
                 }
             }
 
+            // Capture signature into UserInitialTraining once (first-time only, never overwritten)
+            var initialTraining = doc.User?.InitialTrainings
+                ?.FirstOrDefault(t => string.Equals(t.DocumentType, doc.DocumentType, StringComparison.OrdinalIgnoreCase));
+            if (initialTraining != null)
+            {
+                if (isUserSignature && string.IsNullOrEmpty(initialTraining.UserSignatureData))
+                {
+                    initialTraining.UserSignatureData = signatureData;
+                    initialTraining.UserSignatureMethod = signatureMethod;
+                }
+                else if (!isUserSignature && isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM"
+                    && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
+                {
+                    initialTraining.VerifierSignatureData = signatureData;
+                    initialTraining.VerifierSignatureMethod = signatureMethod;
+                }
+                else if (!isUserSignature && !isAdminSignature && string.IsNullOrEmpty(initialTraining.InstructorSignatureData))
+                {
+                    initialTraining.InstructorSignatureData = signatureData;
+                    initialTraining.InstructorSignatureMethod = signatureMethod;
+                }
+            }
+
             // Regenerate PDF with embedded signature image
             if (doc.User != null && !string.IsNullOrEmpty(doc.PdfFilePath))
             {
@@ -1194,6 +1197,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo)
                         .ThenInclude(m => m!.Function)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
+                .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .Where(d =>
                     (isAdmin
@@ -1256,6 +1261,23 @@ namespace SyncApp26.Infrastructure.Services
                     {
                         trainingForDoc.InstructorSignature = signatureData;
                         trainingForDoc.InstructorSignatureMethod = signatureMethod;
+                    }
+                }
+
+                // Capture into UserInitialTraining (first-time only, never overwritten)
+                var initialTraining = doc.User?.InitialTrainings
+                    ?.FirstOrDefault(t => string.Equals(t.DocumentType, doc.DocumentType, StringComparison.OrdinalIgnoreCase));
+                if (initialTraining != null)
+                {
+                    if (isSsmAdminVerifier && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
+                    {
+                        initialTraining.VerifierSignatureData = signatureData;
+                        initialTraining.VerifierSignatureMethod = signatureMethod;
+                    }
+                    else if (!isSsmAdminVerifier && string.IsNullOrEmpty(initialTraining.InstructorSignatureData))
+                    {
+                        initialTraining.InstructorSignatureData = signatureData;
+                        initialTraining.InstructorSignatureMethod = signatureMethod;
                     }
                 }
             }
