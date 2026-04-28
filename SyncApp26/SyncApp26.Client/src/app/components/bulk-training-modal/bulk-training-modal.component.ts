@@ -192,10 +192,16 @@ export class BulkTrainingModalComponent implements OnInit {
     this.formData.selectedUserIds = this.formData.selectedUserIds.filter((id) => !filteredIds.has(id));
   }
 
+  onDocumentTypeChanged(): void {
+    this.formData.durationHours = this.formData.documentType === 'SU' ? 1 : 2;
+  }
+
   open() {
     this.isVisible = true;
     // Set default date to today
     this.formData.trainingDate = new Date().toISOString().split('T')[0];
+    // Set default duration based on current document type
+    this.formData.durationHours = this.formData.documentType === 'SU' ? 1 : 2;
 
     // Reload in case departments changed while modal was closed
     if (!this.departments.length) {
@@ -217,7 +223,7 @@ export class BulkTrainingModalComponent implements OnInit {
   resetForm() {
     this.formData = {
       trainingDate: '',
-      durationHours: null,
+      durationHours: 2,
       materialTaught: '',
       instructorName: '',
       verifierName: '',
@@ -244,7 +250,22 @@ export class BulkTrainingModalComponent implements OnInit {
       this.validationMessage = 'Please select a training date.';
       return;
     }
-
+    if (!this.formData.durationHours || this.formData.durationHours <= 0) {
+      this.validationMessage = 'Please enter a valid duration in hours.';
+      return;
+    }
+    if (!this.formData.materialTaught?.trim()) {
+      this.validationMessage = 'Please enter the material taught.';
+      return;
+    }
+    if (!this.formData.instructorName?.trim()) {
+      this.validationMessage = 'Please enter the instructor name.';
+      return;
+    }
+    if (this.formData.documentType !== 'SU' && !this.formData.verifierName?.trim()) {
+      this.validationMessage = 'Please enter the verifier name (required for SSM documents).';
+      return;
+    }
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {
       this.validationMessage = 'Please select at least one user for this training.';
       return;

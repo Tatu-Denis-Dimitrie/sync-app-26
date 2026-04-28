@@ -25,6 +25,7 @@
         department. This will create a new training entry in each user's
         <select
           [(ngModel)]="formData.documentType"
+          (ngModelChange)="onDocumentTypeChanged()"
           name="documentType"
           class="inline-dropdown"
         >
@@ -53,7 +54,7 @@
 
           <div class="form-group">
             <label for="durationHours" class="form-label">
-              Duration (hours)
+              Duration (hours) <span class="required">*</span>
             </label>
             <input
               type="number"
@@ -100,7 +101,7 @@
 
         <div class="form-group">
           <label for="materialTaught" class="form-label">
-            Material Taught
+            Material Taught <span class="required">*</span>
           </label>
           <textarea
             id="materialTaught"
@@ -122,7 +123,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="instructorName" class="form-label">
-              Instructor Name
+              Instructor Name <span class="required">*</span>
             </label>
             <input
               type="text"
@@ -136,7 +137,7 @@
 
           <div class="form-group" *ngIf="formData.documentType !== 'SU'">
             <label for="verifierName" class="form-label">
-              Verifier Name (SSM only)
+              Verifier Name (SSM) <span class="required">*</span>
             </label>
             <input
               type="text"

@@ -251,11 +251,42 @@ export class BulkInitialTrainingModalComponent implements OnInit {
     this.validationMessage = '';
     this.errorMessage = '';
 
-    if (!this.formData.introductoryTrainingDate && !this.formData.workplaceTrainingDate) {
-      this.validationMessage = 'Please provide at least one date for initial training.';
+    if (!this.formData.introductoryTrainingDate) {
+      this.validationMessage = 'Please provide the introductory training date.';
       return;
     }
-
+    if (!this.formData.introductoryTrainingHours || this.formData.introductoryTrainingHours <= 0) {
+      this.validationMessage = 'Please enter the introductory training hours.';
+      return;
+    }
+    if (!this.formData.introductoryTrainingInstructor?.trim()) {
+      this.validationMessage = 'Please enter the introductory training instructor name.';
+      return;
+    }
+    if (!this.formData.introductoryTrainingInstructorFunction?.trim()) {
+      this.validationMessage = 'Please enter the introductory training instructor function.';
+      return;
+    }
+    if (!this.formData.workplaceTrainingDate) {
+      this.validationMessage = 'Please provide the workplace training date.';
+      return;
+    }
+    if (!this.formData.workplaceTrainingHours || this.formData.workplaceTrainingHours <= 0) {
+      this.validationMessage = 'Please enter the workplace training hours.';
+      return;
+    }
+    if (!this.formData.jobTitle?.trim()) {
+      this.validationMessage = 'Please enter the job title / workplace location.';
+      return;
+    }
+    if (!this.formData.workplaceTrainingInstructor?.trim()) {
+      this.validationMessage = 'Please enter the workplace training instructor name.';
+      return;
+    }
+    if (!this.formData.workplaceTrainingInstructorFunction?.trim()) {
+      this.validationMessage = 'Please enter the workplace training instructor function.';
+      return;
+    }
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {
       this.validationMessage = 'Please select at least one user for this operation.';
       return;
