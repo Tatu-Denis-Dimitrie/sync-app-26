@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -94,6 +93,12 @@ namespace SyncApp26.Domain.Entities
         /// </summary>
         [MaxLength(200)]
         public string? VerifierName { get; set; }
+
+        /// <summary>
+        /// If this row was copied from another row during document generation, this is the root source row's ID.
+        /// Null for original rows (created via bulk training or auto-generation in Step 3).
+        /// </summary>
+        public Guid? SourceRowId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

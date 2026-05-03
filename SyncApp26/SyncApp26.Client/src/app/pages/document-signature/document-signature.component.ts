@@ -265,7 +265,8 @@ export class DocumentSignatureComponent implements OnInit {
       token: this.token,
       signatureMethod: method,
       signatureData: data,
-      bulkSign: this.isBulkMode
+      bulkSign: this.isBulkMode,
+      periodicTrainingId: this.documentData?.periodicTrainingId ?? null
     };
     // DEBUG: log payload trimis la consume-token
     console.log('Sign payload:', payload);

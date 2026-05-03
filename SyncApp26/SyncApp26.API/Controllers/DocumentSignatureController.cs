@@ -114,7 +114,8 @@ namespace SyncApp26.API.Controllers
                 email = signatureToken.Email,
                 documentType = document?.DocumentType,
                 isManagerSigning = isManagerSigning,
-                isAdminSigning = isAdminSigning
+                isAdminSigning = isAdminSigning,
+                periodicTrainingId = signatureToken.PeriodicTrainingId
             });
         }
 
@@ -125,6 +126,8 @@ namespace SyncApp26.API.Controllers
             public string SignatureData { get; set; } = string.Empty; // Base64
             /// <summary>When true the same signature is applied to all other pending documents the signer is responsible for.</summary>
             public bool BulkSign { get; set; }
+            /// <summary>The specific PeriodicTraining row being signed, as communicated by validate-token.</summary>
+            public Guid? PeriodicTrainingId { get; set; }
         }
 
         [HttpPost("consume-token")]
@@ -185,7 +188,9 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Token could not be consumed." });
             }
 
-            // Record signature
+            // Record signature — prefer the row ID sent explicitly by the client (matches what validate-token returned),
+            // but fall back to the one embedded in the token if the client didn't send it.
+            var periodicTrainingId = request.PeriodicTrainingId ?? tokenEntity.PeriodicTrainingId;
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
             await _documentService.UpdateDocumentSignatureAsync(
@@ -194,7 +199,8 @@ namespace SyncApp26.API.Controllers
                 request.SignatureMethod,
                 request.SignatureData,
                 ipAddress,
-                signerIsAdmin
+                signerIsAdmin,
+                periodicTrainingId
             );
 
             // If employee signed, generate link for the manager and send email
@@ -202,9 +208,10 @@ namespace SyncApp26.API.Controllers
             {
                 var manager = document.User.AssignedTo;
                 var managerToken = await _documentSignatureService.GenerateSignatureTokenAsync(
-                    manager.Email, 
-                    document.Id, 
-                    $"{document.DocumentType} Document (Manager Approval)");
+                    manager.Email,
+                    document.Id,
+                    $"{document.DocumentType} Document (Manager Approval)",
+                    tokenEntity.PeriodicTrainingId);
 
                 var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
                 var managerSecureLink = $"{frontendUrl}/sign/{managerToken}";

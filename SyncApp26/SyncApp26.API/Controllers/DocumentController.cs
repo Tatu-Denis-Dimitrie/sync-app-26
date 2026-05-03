@@ -139,8 +139,9 @@ namespace SyncApp26.API.Controllers
                     {
                         try
                         {
+                            var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(doc.Id);
                             var token = await _documentSignatureService.GenerateSignatureTokenAsync(
-                                userEmail, doc.Id, $"{type} Document");
+                                userEmail, doc.Id, $"{type} Document", currentRowId);
                             var link = $"{frontendUrl}/sign/{token}";
                             await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", link);
                             emailsSent++;
@@ -189,7 +190,8 @@ namespace SyncApp26.API.Controllers
 
                 if (!string.IsNullOrEmpty(userEmail))
                 {
-                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(userEmail, document.Id, $"{document.DocumentType} Document");
+                    var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
+                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(userEmail, document.Id, $"{document.DocumentType} Document", currentRowId);
                     var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
                     var secureLink = $"{frontendUrl}/sign/{token}";
 
@@ -321,6 +323,18 @@ namespace SyncApp26.API.Controllers
             return Ok(docs.Select(MapDocument));
         }
 
+        [HttpPost("regenerate-documents")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RegenerateDocuments()
+        {
+            var count = await _documentService.RegenerateDocumentsAsync();
+            return Ok(new
+            {
+                message = $"S-au regenerat {count} document(e) în folderul GeneratedDocuments.",
+                regenerated = count
+            });
+        }
+
         [HttpGet("token-for-document/{documentId}")]
         public async Task<IActionResult> GetSignTokenForDocument(Guid documentId)
         {
@@ -365,7 +379,8 @@ namespace SyncApp26.API.Controllers
                 if (document.DocumentType?.ToUpperInvariant() != "SSM")
                     return BadRequest(new { message = "Admin only signs SSM documents." });
             }
-            var token = await _documentSignatureService.GenerateSignatureTokenAsync(user.Email, document.Id, $"{document.DocumentType} Document");
+            var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
+            var token = await _documentSignatureService.GenerateSignatureTokenAsync(user.Email, document.Id, $"{document.DocumentType} Document", currentRowId);
 
             return Ok(new { token });
         }

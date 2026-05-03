@@ -15,7 +15,7 @@ namespace SyncApp26.Infrastructure.Services
             _context = context;
         }
 
-        public async Task<string> GenerateSignatureTokenAsync(string email, Guid documentId, string documentName)
+        public async Task<string> GenerateSignatureTokenAsync(string email, Guid documentId, string documentName, Guid? periodicTrainingId = null)
         {
             var tokenString = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
                 .Replace("+", "-")
@@ -28,7 +28,8 @@ namespace SyncApp26.Infrastructure.Services
                 DocumentId = documentId,
                 DocumentName = documentName,
                 Token = tokenString,
-                ExpiresAt = DateTime.UtcNow.AddDays(7) // Valid for 7 days
+                ExpiresAt = DateTime.UtcNow.AddDays(7), // Valid for 7 days
+                PeriodicTrainingId = periodicTrainingId
             };
 
             _context.DocumentSignatureTokens.Add(token);

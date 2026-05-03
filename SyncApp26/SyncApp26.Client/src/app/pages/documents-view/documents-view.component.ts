@@ -87,6 +87,12 @@ export class DocumentsViewComponent implements OnInit {
   // Bulk admin sign
   pendingAdminCount = 0;
 
+  // Regenerate Documents modal state
+  showRegenerateModal = false;
+  isRegenerating = false;
+  regenerateResult: { message: string; regenerated: number } | null = null;
+
+
   constructor(
     private http: HttpClient,
     private router: Router,
@@ -320,6 +326,36 @@ export class DocumentsViewComponent implements OnInit {
 
   viewEmployee(userId: string): void {
     this.router.navigate(['/employees', userId]);
+  }
+
+  openRegenerateModal(): void {
+    this.showRegenerateModal = true;
+    this.regenerateResult = null;
+  }
+
+  closeRegenerateModal(): void {
+    this.showRegenerateModal = false;
+    this.regenerateResult = null;
+  }
+
+  confirmRegenerate(): void {
+    this.isRegenerating = true;
+    this.regenerateResult = null;
+    this.http.post<{ message: string; regenerated: number }>(
+      `${environment.apiUrl}/Document/regenerate-documents`, {}
+    ).subscribe({
+      next: (res) => {
+        this.isRegenerating = false;
+        this.regenerateResult = res;
+      },
+      error: (err) => {
+        this.isRegenerating = false;
+        this.regenerateResult = {
+          message: err.error?.message || 'Regenerarea a eșuat.',
+          regenerated: 0
+        };
+      }
+    });
   }
 
   // Navigation
