@@ -162,7 +162,7 @@ export class BasicUserComponent implements OnInit {
     if (!documentId) return;
 
     // Call backend to generate a valid token for this user for this document
-    this.http.get<any>(`${environment.apiUrl}/Document/token-for-document/${documentId}`).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/document/token-for-document/${documentId}`).subscribe({
       next: (res) => {
         if (res.token) {
           this.router.navigate(['/sign', res.token]);

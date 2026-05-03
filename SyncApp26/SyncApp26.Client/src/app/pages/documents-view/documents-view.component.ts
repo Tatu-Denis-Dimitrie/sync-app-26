@@ -271,7 +271,7 @@ export class DocumentsViewComponent implements OnInit {
   }
 
   signAsAdmin(doc: DocumentDto): void {
-    this.http.get<{ token: string }>(`${environment.apiUrl}/Document/token-for-document/${doc.id}`)
+    this.http.get<{ token: string }>(`${environment.apiUrl}/document/token-for-document/${doc.id}`)
       .subscribe({
         next: (res) => {
           this.router.navigate(['/sign', res.token]);
@@ -289,7 +289,7 @@ export class DocumentsViewComponent implements OnInit {
       this.error = 'No documents pending admin signature.';
       return;
     }
-    this.http.get<{ token: string }>(`${environment.apiUrl}/Document/token-for-document/${pendingAdminDoc.id}`)
+    this.http.get<{ token: string }>(`${environment.apiUrl}/document/token-for-document/${pendingAdminDoc.id}`)
       .subscribe({
         next: (res) => {
           this.router.navigate(['/sign', res.token], { queryParams: { bulk: 'true' } });

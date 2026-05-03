@@ -147,7 +147,7 @@ export class LineManagerComponent implements OnInit {
     if (!documentId) return;
 
     // Call backend to generate a valid token for this user for this document
-    this.http.get<any>(`${environment.apiUrl}/Document/token-for-document/${documentId}`).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/document/token-for-document/${documentId}`).subscribe({
       next: (res) => {
         if (res.token) {
           this.router.navigate(['/sign', res.token]);
@@ -402,7 +402,7 @@ export class LineManagerComponent implements OnInit {
   signAllDocuments(): void {
     const firstDoc = this.pendingManagerSignatures[0];
     if (!firstDoc?.id) return;
-    this.http.get<any>(`${environment.apiUrl}/Document/token-for-document/${firstDoc.id}`).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/document/token-for-document/${firstDoc.id}`).subscribe({
       next: (res) => {
         if (res.token) {
           this.router.navigate(['/sign', res.token], { queryParams: { bulk: 'true' } });

@@ -63,7 +63,7 @@ export class DocumentSignatureComponent implements OnInit {
 
     // Bulk: preia numărul total de documente de semnat pentru admin
     if (this.isBulkMode && this.isLoggedIn && this.authService.getCurrentUser()?.role === 'Admin') {
-      this.http.get<any>(`${environment.apiUrl}${environment.endpoints.documentSignature}/pending-ssm-admin-count`).subscribe({
+      this.http.get<any>(`${environment.apiUrl}/documentsignature/pending-ssm-admin-count`).subscribe({
         next: (res) => {
           this.bulkTotal = res?.count || 0;
           this.bulkSigned = 0;

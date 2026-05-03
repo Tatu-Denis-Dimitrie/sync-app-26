@@ -42,9 +42,17 @@
               <a routerLink="/employees" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
                 class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Employees</a>
               <a routerLink="/documents" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
-                class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Documents</a>
+                class="relative rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">
+                Documents
+                <span *ngIf="pendingSignatureCount > 0"
+                  class="signature-badge absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
+                  {{ pendingSignatureCount }}
+                </span>
+              </a>
               <a routerLink="/admin-signature" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
-                class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Signature</a>
+                class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">
+                Signature
+              </a>
               <a routerLink="/data-requests" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
                 class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">Requests</a>
               <a routerLink="/import-history" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
@@ -150,9 +158,17 @@
           <a routerLink="/employees" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Employees</a>
           <a routerLink="/documents" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Documents</a>
+            class="relative flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">
+            Documents
+            <span *ngIf="pendingSignatureCount > 0"
+              class="signature-badge ml-auto flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
+              {{ pendingSignatureCount }}
+            </span>
+          </a>
           <a routerLink="/admin-signature" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Signature</a>
+            class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">
+            Signature
+          </a>
           <a routerLink="/data-requests" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Data Requests</a>
           <a routerLink="/import-history" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"

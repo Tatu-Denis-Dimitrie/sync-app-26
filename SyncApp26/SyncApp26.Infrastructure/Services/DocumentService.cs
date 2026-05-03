@@ -838,7 +838,8 @@ namespace SyncApp26.Infrastructure.Services
             var docsFolder = Path.Combine(Directory.GetCurrentDirectory(), "GeneratedDocuments");
             if (!Directory.Exists(docsFolder)) Directory.CreateDirectory(docsFolder);
 
-            var fileName = $"{document.DocumentType}_{user.FirstName}_{user.LastName}_{document.Id}.pdf";
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            var fileName = $"{timestamp}_{document.DocumentType}_{user.FirstName}_{user.LastName}_{document.Id}.pdf";
             var filePath = Path.Combine(docsFolder, fileName);
 
             // Generate to memory first — if layout throws, the existing file on disk is NOT corrupted

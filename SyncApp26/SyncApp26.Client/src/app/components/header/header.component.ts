@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthenticationService, User } from '../../services/authentication.service';
+import { DocumentSignatureService } from '../../services/document-signature.service';
+import { UserSyncSignalrService } from '../../services/user-sync.signalr.service';
 import { filter, Subscription } from 'rxjs';
 
 @Component({
@@ -18,11 +20,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isMenuOpen = false;
   isProfileOpen = false;
   isScrolled = false;
+  pendingSignatureCount = 0;
   private routerSubscription!: Subscription;
+  private signatureCountSubscription!: Subscription;
 
   constructor(
     private authService: AuthenticationService,
-    private router: Router
+    private router: Router,
+    private documentSignatureService: DocumentSignatureService,
+    private signalrService: UserSyncSignalrService
   ) { }
 
   ngOnInit(): void {
@@ -35,12 +41,30 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.isMenuOpen = false;
       this.isProfileOpen = false;
       this.checkAuthStatus();
+      if (this.isAdmin) {
+        this.loadPendingSignatureCount();
+      }
     });
+
+    // Subscribe to pending signature count updates
+    if (this.isAdmin) {
+      // Start SignalR connection for real-time updates
+      this.signalrService.startConnection();
+      
+      this.signatureCountSubscription = this.documentSignatureService.getPendingDocumentsCount$().subscribe(
+        count => this.pendingSignatureCount = count
+      );
+      this.loadPendingSignatureCount();
+      this.documentSignatureService.startPollingPendingDocuments(30000);
+    }
   }
 
   ngOnDestroy(): void {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
+    }
+    if (this.signatureCountSubscription) {
+      this.signatureCountSubscription.unsubscribe();
     }
   }
 
@@ -48,6 +72,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isLoggedIn = this.authService.isLoggedIn();
     this.currentUser = this.authService.getCurrentUser();
     this.isAdmin = this.authService.isAdmin();
+  }
+
+  loadPendingSignatureCount(): void {
+    if (this.isAdmin) {
+      this.documentSignatureService.loadPendingDocumentsCount();
+    }
   }
 
   toggleMenu(): void {
