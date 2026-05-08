@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Router } from '@angular/router';
 import { AuthenticationService, User } from '../../services/authentication.service';
 
 @Component({
   selector: 'app-access-restricted',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './access-restricted.component.html',
   styleUrls: ['./access-restricted.component.css']
 })

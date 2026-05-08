@@ -1,112 +1,111 @@
 <div class="bg-background">
   <div class="container mx-auto px-4 py-8">
     <!-- Stats Overview -->
-    <div
-      *ngIf="stats$ | async as stats"
-      class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
-    >
+    @if (stats$ | async; as stats) {
       <div
-        class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
-      >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-muted-foreground">
-              Total Departments
-            </p>
-            <p class="text-3xl font-bold text-foreground mt-2">
-              {{ stats.departments }}
-            </p>
-          </div>
-          <div
-            class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center"
+        class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+        >
+        <div
+          class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
           >
-            <svg
-              class="w-6 h-6 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-muted-foreground">
+                Total Departments
+              </p>
+              <p class="text-3xl font-bold text-foreground mt-2">
+                {{ stats.departments }}
+              </p>
+            </div>
+            <div
+              class="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center"
+              >
+              <svg
+                class="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                ></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
+          >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-muted-foreground">
+                Total Managers
+              </p>
+              <p class="text-3xl font-bold text-purple-600 mt-2">
+                {{ stats.lineManagers }}
+              </p>
+            </div>
+            <div
+              class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center"
+              >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                class="text-purple-600"
+                >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
+          >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-muted-foreground">
+                Total Employees
+              </p>
+              <p class="text-3xl font-bold text-blue-600 mt-2">
+                {{ stats.employees }}
+              </p>
+            </div>
+            <div
+              class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center"
+              >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
                 stroke-width="2"
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              ></path>
-            </svg>
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-blue-600"
+                >
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
           </div>
         </div>
       </div>
-
-      <div
-        class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
-      >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-muted-foreground">
-              Total Managers
-            </p>
-            <p class="text-3xl font-bold text-purple-600 mt-2">
-              {{ stats.lineManagers }}
-            </p>
-          </div>
-          <div
-            class="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="text-purple-600"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow"
-      >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-muted-foreground">
-              Total Employees
-            </p>
-            <p class="text-3xl font-bold text-blue-600 mt-2">
-              {{ stats.employees }}
-            </p>
-          </div>
-          <div
-            class="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="text-blue-600"
-            >
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
+    }
 
     <!-- Search and Filters -->
     <div class="bg-card border border-border rounded-lg p-4 mb-6">
@@ -118,13 +117,13 @@
             (ngModelChange)="onSearchChange()"
             placeholder="Search departments..."
             class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-          />
+            />
           <svg
             class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-          >
+            >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -138,7 +137,7 @@
           [(ngModel)]="sizeFilter"
           (ngModelChange)="onFilterChange()"
           class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-        >
+          >
           <option value="all">All Sizes</option>
           <option value="small">Small (≤10 people)</option>
           <option value="medium">Medium (11-50 people)</option>
@@ -149,7 +148,7 @@
           [(ngModel)]="signatureFilter"
           (ngModelChange)="onFilterChange()"
           class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-        >
+          >
           <option value="all">All Signature Status</option>
           <option value="ssm-signed">Has SSM Signed</option>
           <option value="su-signed">Has SU Signed</option>
@@ -160,127 +159,126 @@
     </div>
 
     <!-- Departments Grid -->
-    <div
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"
-      *ngIf="signatureStatsByDepartment$ | async as signatureStatsByDepartment"
-    >
+    @if (signatureStatsByDepartment$ | async; as signatureStatsByDepartment) {
       <div
-        *ngFor="let dept of paginatedDepartments$ | async"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"
+        >
+        @for (dept of paginatedDepartments$ | async; track dept) {
+          <div
         [class]="
           dept.isActive
             ? 'bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group'
             : 'bg-card border border-red-300 rounded-lg p-6 opacity-75 transition-all cursor-pointer group'
         "
-        (click)="viewDepartmentUsers(dept.name)"
-      >
-        <div class="flex items-start justify-between mb-4">
-          <div
+            (click)="viewDepartmentUsers(dept.name)"
+            >
+            <div class="flex items-start justify-between mb-4">
+              <div
             [class]="
               dept.isActive
                 ? 'w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors'
                 : 'w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center transition-colors'
             "
-          >
-            <svg
+                >
+                <svg
               [class]="
                 dept.isActive ? 'w-6 h-6 text-primary' : 'w-6 h-6 text-red-600'
               "
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              ></path>
-            </svg>
-          </div>
-
-          <div
-            class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <button
-              (click)="openEditModal(dept, $event)"
-              class="p-2 hover:bg-secondary rounded-md text-primary transition-colors"
-              title="Rename Department"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  ></path>
+                </svg>
+              </div>
+              <div
+                class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                <button
+                  (click)="openEditModal(dept, $event)"
+                  class="p-2 hover:bg-secondary rounded-md text-primary transition-colors"
+                  title="Rename Department"
+                  >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    ></path>
+                  </svg>
+                </button>
+                @if (!dept.isActive) {
+                  <button
+                    (click)="openDeleteModal(dept, $event)"
+                    class="p-2 hover:bg-destructive/10 rounded-md text-destructive transition-colors"
+                    title="Delete Department"
+                    >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      ></path>
+                    </svg>
+                  </button>
+                }
+              </div>
+            </div>
+            <h3
+              class="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                ></path>
-              </svg>
-            </button>
-            <button
-              *ngIf="!dept.isActive"
-              (click)="openDeleteModal(dept, $event)"
-              class="p-2 hover:bg-destructive/10 rounded-md text-destructive transition-colors"
-              title="Delete Department"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                ></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <h3
-          class="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors"
-        >
-          {{ dept.name }}
-        </h3>
-
-        <!-- Active/Inactive Badge with Toggle Button -->
-        <div class="mb-3 flex items-center justify-between">
-          <span
-            *ngIf="dept.isActive"
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-700 border border-green-500/20"
-          >
-            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            Active
-          </span>
-          <span
-            *ngIf="!dept.isActive"
-            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 border border-red-500/20"
-          >
-            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            Inactive
-          </span>
-
-          <!-- Toggle Button -->
-          <button
-            (click)="toggleDepartmentStatus($event, dept)"
+              {{ dept.name }}
+            </h3>
+            <!-- Active/Inactive Badge with Toggle Button -->
+            <div class="mb-3 flex items-center justify-between">
+              @if (dept.isActive) {
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-700 border border-green-500/20"
+                  >
+                  <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                      />
+                  </svg>
+                  Active
+                </span>
+              }
+              @if (!dept.isActive) {
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-700 border border-red-500/20"
+                  >
+                  <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clip-rule="evenodd"
+                      />
+                  </svg>
+                  Inactive
+                </span>
+              }
+              <!-- Toggle Button -->
+              <button
+                (click)="toggleDepartmentStatus($event, dept)"
             [class]="
               dept.isActive
                 ? 'px-3 py-1 text-xs font-medium rounded-md border transition-colors hover:bg-red-50 text-red-600 border-red-300'
@@ -289,466 +287,468 @@
             [title]="
               dept.isActive ? 'Deactivate department' : 'Activate department'
             "
-          >
-            {{ dept.isActive ? "Deactivate" : "Activate" }}
-          </button>
-        </div>
-
-        <div class="space-y-2">
-          <div
-            class="flex items-center justify-between py-2 border-t border-border"
-          >
-            <span class="text-sm text-muted-foreground flex items-center gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="inline-block"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              Line Managers
-            </span>
-            <span class="text-lg font-semibold text-purple-600">{{
-              dept.lineManagerCount
-            }}</span>
-          </div>
-
-          <div
-            class="flex items-center justify-between py-2 border-t border-border"
-          >
-            <span class="text-sm text-muted-foreground flex items-center gap-2">
-              <span>👤</span> Employees
-            </span>
-            <span class="text-lg font-semibold text-blue-600">{{
-              dept.employeeCount
-            }}</span>
-          </div>
-
-          <div
-            class="flex items-center justify-between py-2 border-t border-border"
-          >
-            <span class="text-sm font-medium text-foreground"
-              >Total Personnel</span
-            >
-            <span class="text-lg font-bold text-foreground">{{
-              dept.lineManagerCount + dept.employeeCount
-            }}</span>
-          </div>
-
-          <div class="pt-3 border-t border-border">
-            <p
-              class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2"
-            >
-              Document Signatures
-            </p>
-            <div class="grid grid-cols-2 gap-2 text-xs">
+                >
+                {{ dept.isActive ? "Deactivate" : "Activate" }}
+              </button>
+            </div>
+            <div class="space-y-2">
               <div
-                class="rounded-md bg-blue-50 text-blue-700 px-2 py-1 border border-blue-200"
-              >
-                SSM Signed:
-                {{ signatureStatsByDepartment[dept.id].ssmSigned || 0 }}
+                class="flex items-center justify-between py-2 border-t border-border"
+                >
+                <span class="text-sm text-muted-foreground flex items-center gap-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="inline-block"
+                    >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  Line Managers
+                </span>
+                <span class="text-lg font-semibold text-purple-600">{{
+                  dept.lineManagerCount
+                }}</span>
               </div>
               <div
-                class="rounded-md bg-teal-50 text-teal-700 px-2 py-1 border border-teal-200"
-              >
-                SU Signed:
-                {{ signatureStatsByDepartment[dept.id].suSigned || 0 }}
+                class="flex items-center justify-between py-2 border-t border-border"
+                >
+                <span class="text-sm text-muted-foreground flex items-center gap-2">
+                  <span>👤</span> Employees
+                </span>
+                <span class="text-lg font-semibold text-blue-600">{{
+                  dept.employeeCount
+                }}</span>
               </div>
               <div
-                class="rounded-md bg-emerald-50 text-emerald-700 px-2 py-1 border border-emerald-200"
-              >
-                Both Signed:
-                {{ signatureStatsByDepartment[dept.id].bothSigned || 0 }}
-              </div>
-              <div
-                class="rounded-md bg-rose-50 text-rose-700 px-2 py-1 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
-                (click)="viewDepartmentUnsignedUsers(dept.name, $event)"
-                title="View users who have not signed SSM and SU"
-              >
-                Not Signed:
-                {{ signatureStatsByDepartment[dept.id].unsigned || 0 }}
+                class="flex items-center justify-between py-2 border-t border-border"
+                >
+                <span class="text-sm font-medium text-foreground"
+                  >Total Personnel</span
+                  >
+                  <span class="text-lg font-bold text-foreground">{{
+                    dept.lineManagerCount + dept.employeeCount
+                  }}</span>
+                </div>
+                <div class="pt-3 border-t border-border">
+                  <p
+                    class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2"
+                    >
+                    Document Signatures
+                  </p>
+                  <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div
+                      class="rounded-md bg-blue-50 text-blue-700 px-2 py-1 border border-blue-200"
+                      >
+                      SSM Signed:
+                      {{ signatureStatsByDepartment[dept.id].ssmSigned || 0 }}
+                    </div>
+                    <div
+                      class="rounded-md bg-teal-50 text-teal-700 px-2 py-1 border border-teal-200"
+                      >
+                      SU Signed:
+                      {{ signatureStatsByDepartment[dept.id].suSigned || 0 }}
+                    </div>
+                    <div
+                      class="rounded-md bg-emerald-50 text-emerald-700 px-2 py-1 border border-emerald-200"
+                      >
+                      Both Signed:
+                      {{ signatureStatsByDepartment[dept.id].bothSigned || 0 }}
+                    </div>
+                    <div
+                      class="rounded-md bg-rose-50 text-rose-700 px-2 py-1 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                      (click)="viewDepartmentUnsignedUsers(dept.name, $event)"
+                      title="View users who have not signed SSM and SU"
+                      >
+                      Not Signed:
+                      {{ signatureStatsByDepartment[dept.id].unsigned || 0 }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div
-        *ngIf="(paginatedDepartments$ | async)?.length === 0"
-        class="col-span-full text-center py-12"
-      >
-        <div
-          class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"
-        >
-          <svg
-            class="w-8 h-8 text-muted-foreground"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-            ></path>
-          </svg>
-        </div>
-        <h3 class="text-lg font-medium text-foreground mb-2">
-          No departments found
-        </h3>
-        <p class="text-muted-foreground">
-          {{
-            searchQuery
-              ? "Try adjusting your search or filters."
-              : "There are no departments in the system at the moment."
-          }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Scheduled for Deletion Departments -->
-    <div *ngIf="deletedDepartments$ | async as deletedDepts" class="mt-12">
-      <div *ngIf="deletedDepts.length > 0">
-        <h2
-          class="text-2xl font-bold text-foreground mb-6 flex items-center gap-2"
-        >
-          <svg
-            class="w-6 h-6 text-orange-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            ></path>
-          </svg>
-          Scheduled for Deletion
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div
-            *ngFor="let dept of deletedDepts"
-            class="bg-card border border-orange-500/30 rounded-lg p-6 group"
-          >
-            <div class="flex items-start justify-between mb-4">
-              <div
-                class="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center"
+          }
+          <!-- Empty State -->
+          @if ((paginatedDepartments$ | async)?.length === 0) {
+            <div
+              class="col-span-full text-center py-12"
               >
+              <div
+                class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"
+                >
                 <svg
-                  class="w-6 h-6 text-orange-600"
+                  class="w-8 h-8 text-muted-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                >
+                  >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                   ></path>
                 </svg>
               </div>
+              <h3 class="text-lg font-medium text-foreground mb-2">
+                No departments found
+              </h3>
+              <p class="text-muted-foreground">
+                {{
+                searchQuery
+                ? "Try adjusting your search or filters."
+                : "There are no departments in the system at the moment."
+                }}
+              </p>
+            </div>
+          }
+        </div>
+      }
 
-              <div
-                class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <button
-                  (click)="openRestoreModal(dept, $event)"
-                  class="p-2 hover:bg-green-500/10 rounded-md text-green-600 transition-colors flex items-center gap-1"
-                  title="Restore Department"
+      <!-- Scheduled for Deletion Departments -->
+      @if (deletedDepartments$ | async; as deletedDepts) {
+        <div class="mt-12">
+          @if (deletedDepts.length > 0) {
+            <div>
+              <h2
+                class="text-2xl font-bold text-foreground mb-6 flex items-center gap-2"
                 >
+                <svg
+                  class="w-6 h-6 text-orange-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  ></path>
+                </svg>
+                Scheduled for Deletion
+              </h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @for (dept of deletedDepts; track dept) {
+                  <div
+                    class="bg-card border border-orange-500/30 rounded-lg p-6 group"
+                    >
+                    <div class="flex items-start justify-between mb-4">
+                      <div
+                        class="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center"
+                        >
+                        <svg
+                          class="w-6 h-6 text-orange-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          ></path>
+                        </svg>
+                      </div>
+                      <div
+                        class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                        <button
+                          (click)="openRestoreModal(dept, $event)"
+                          class="p-2 hover:bg-green-500/10 rounded-md text-green-600 transition-colors flex items-center gap-1"
+                          title="Restore Department"
+                          >
+                          <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            ></path>
+                          </svg>
+                          <span class="text-xs font-semibold">Restore</span>
+                        </button>
+                      </div>
+                    </div>
+                    <h3
+                      class="text-xl font-bold text-foreground mb-3 opacity-75 line-through"
+                      >
+                      {{ dept.name }}
+                    </h3>
+                    <!-- Countdown Badge -->
+                    <div class="mb-3 flex items-center justify-between">
+                      <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-700 border border-orange-500/20"
+                        >
+                        <svg
+                          class="w-3 h-3 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          ></path>
+                        </svg>
+                        Permanently deleting in
+                        {{ getDaysRemaining(dept.deletedAt) }} days
+                      </span>
+                    </div>
+                    <p class="text-sm text-muted-foreground mt-2">
+                      Deactivated on {{ dept.deletedAt | date: "mediumDate" }}
+                    </p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Pagination -->
+      @if (totalItems > pageSize) {
+        <div class="mt-6">
+          <app-pagination
+            [currentPage]="currentPage"
+            [totalItems]="totalItems"
+            [pageSize]="pageSize"
+            (pageChange)="onPageChange($event)"
+          ></app-pagination>
+        </div>
+      }
+    </div>
+
+    <!-- Edit Department Modal -->
+    @if (isEditModalOpen) {
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+        (click)="closeEditModal()"
+        >
+        <div
+          class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
+          (click)="$event.stopPropagation()"
+          >
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-foreground">Rename Department</h2>
+            <button
+              (click)="closeEditModal()"
+              class="text-muted-foreground hover:text-foreground"
+              >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
+          </div>
+          <form (ngSubmit)="saveDepartment()" class="space-y-4">
+            <div class="space-y-2">
+              <label class="text-sm font-medium text-foreground"
+                >Department Name</label
+                >
+                <input
+                  type="text"
+                  [(ngModel)]="editDeptName"
+                  name="deptName"
+                  required
+                  class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+              </div>
+              <div class="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  (click)="closeEditModal()"
+                  class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
+                  >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
+                  >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- Restore Department Modal -->
+      @if (isRestoreModalOpen) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+          (click)="closeRestoreModal()"
+          >
+          <div
+            class="bg-card w-full max-w-md rounded-lg shadow-lg border border-border p-6"
+            (click)="$event.stopPropagation()"
+            >
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-lg font-semibold text-foreground">
+                Restore Department
+              </h2>
+              <button
+                (click)="closeRestoreModal()"
+                class="text-muted-foreground hover:text-foreground"
+                >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <p class="text-muted-foreground text-sm mb-6">
+              Are you sure you want to restore
+              <strong>{{ deptToRestore?.name }}</strong
+                >? The department will be moved back to your Active Departments list
+                (but remain inactive until you toggle it).
+              </p>
+              <div class="flex justify-end gap-3">
+                <button
+                  type="button"
+                  (click)="closeRestoreModal()"
+                  class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors"
+                  >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  (click)="confirmRestore()"
+                  class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+                  >
+                  Confirm Restore
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Delete Department Modal -->
+        @if (isDeleteModalOpen) {
+          <div
+            class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+            (click)="closeDeleteModal()"
+            >
+            <div
+              class="bg-card w-full max-w-md rounded-lg shadow-lg border border-border p-6"
+              (click)="$event.stopPropagation()"
+              >
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-foreground">Delete Department</h2>
+                <button
+                  (click)="closeDeleteModal()"
+                  class="text-muted-foreground hover:text-foreground"
+                  >
                   <svg
-                    class="w-4 h-4"
+                    class="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
-                  >
+                    >
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       stroke-width="2"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      d="M6 18L18 6M6 6l12 12"
                     ></path>
                   </svg>
-                  <span class="text-xs font-semibold">Restore</span>
                 </button>
               </div>
+              <p class="text-muted-foreground text-sm mb-4">
+                Are you sure you want to delete <strong>{{ selectedDept?.name }}</strong
+                >? The department will be deactivated immediately and scheduled for
+                permanent deletion in 90 days.
+              </p>
+              @if (
+                (selectedDept?.employeeCount || 0) +
+                (selectedDept?.lineManagerCount || 0) >
+                0
+                ) {
+                <div
+                  class="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-md"
+                  >
+                  <p class="text-sm text-orange-700 font-medium mb-2">
+                    This department has
+                    {{
+                    (selectedDept?.employeeCount || 0) +
+                    (selectedDept?.lineManagerCount || 0)
+                    }}
+                    active users. You must transfer them to another department before
+                    deleting.
+                  </p>
+                  <div class="space-y-2 mt-3">
+                    <label class="text-sm font-medium text-foreground"
+                      >Transfer Users To <span class="text-destructive">*</span></label
+                      >
+                      <select
+                        [(ngModel)]="transferToDeptId"
+                        name="transferDept"
+                        required
+                        class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                        <option value="">Select Target Department</option>
+                        @for (dept of allDepartments; track dept) {
+                          <option [value]="dept.id">
+                            {{ dept.name }}
+                          </option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+                }
+                <div class="flex justify-end gap-3 mt-2">
+                  <button
+                    type="button"
+                    (click)="closeDeleteModal()"
+                    class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors"
+                    >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    (click)="confirmDelete()"
+                    class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90 transition-colors"
+                    >
+                    Confirm Delete
+                  </button>
+                </div>
+              </div>
             </div>
-
-            <h3
-              class="text-xl font-bold text-foreground mb-3 opacity-75 line-through"
-            >
-              {{ dept.name }}
-            </h3>
-
-            <!-- Countdown Badge -->
-            <div class="mb-3 flex items-center justify-between">
-              <span
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-700 border border-orange-500/20"
-              >
-                <svg
-                  class="w-3 h-3 mr-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
-                Permanently deleting in
-                {{ getDaysRemaining(dept.deletedAt) }} days
-              </span>
-            </div>
-
-            <p class="text-sm text-muted-foreground mt-2">
-              Deactivated on {{ dept.deletedAt | date: "mediumDate" }}
-            </p>
-          </div>
+          }
         </div>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div *ngIf="totalItems > pageSize" class="mt-6">
-      <app-pagination
-        [currentPage]="currentPage"
-        [totalItems]="totalItems"
-        [pageSize]="pageSize"
-        (pageChange)="onPageChange($event)"
-      ></app-pagination>
-    </div>
-  </div>
-
-  <!-- Edit Department Modal -->
-  <div
-    *ngIf="isEditModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
-    (click)="closeEditModal()"
-  >
-    <div
-      class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold text-foreground">Rename Department</h2>
-        <button
-          (click)="closeEditModal()"
-          class="text-muted-foreground hover:text-foreground"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-      <form (ngSubmit)="saveDepartment()" class="space-y-4">
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-foreground"
-            >Department Name</label
-          >
-          <input
-            type="text"
-            [(ngModel)]="editDeptName"
-            name="deptName"
-            required
-            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-        </div>
-        <div class="flex justify-end gap-3 mt-6">
-          <button
-            type="button"
-            (click)="closeEditModal()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
-          >
-            Save Changes
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Restore Department Modal -->
-  <div
-    *ngIf="isRestoreModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
-    (click)="closeRestoreModal()"
-  >
-    <div
-      class="bg-card w-full max-w-md rounded-lg shadow-lg border border-border p-6"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold text-foreground">
-          Restore Department
-        </h2>
-        <button
-          (click)="closeRestoreModal()"
-          class="text-muted-foreground hover:text-foreground"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-
-      <p class="text-muted-foreground text-sm mb-6">
-        Are you sure you want to restore
-        <strong>{{ deptToRestore?.name }}</strong
-        >? The department will be moved back to your Active Departments list
-        (but remain inactive until you toggle it).
-      </p>
-
-      <div class="flex justify-end gap-3">
-        <button
-          type="button"
-          (click)="closeRestoreModal()"
-          class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          (click)="confirmRestore()"
-          class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
-        >
-          Confirm Restore
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Delete Department Modal -->
-  <div
-    *ngIf="isDeleteModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
-    (click)="closeDeleteModal()"
-  >
-    <div
-      class="bg-card w-full max-w-md rounded-lg shadow-lg border border-border p-6"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold text-foreground">Delete Department</h2>
-        <button
-          (click)="closeDeleteModal()"
-          class="text-muted-foreground hover:text-foreground"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-
-      <p class="text-muted-foreground text-sm mb-4">
-        Are you sure you want to delete <strong>{{ selectedDept?.name }}</strong
-        >? The department will be deactivated immediately and scheduled for
-        permanent deletion in 90 days.
-      </p>
-
-      <div
-        *ngIf="
-          (selectedDept?.employeeCount || 0) +
-            (selectedDept?.lineManagerCount || 0) >
-          0
-        "
-        class="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-md"
-      >
-        <p class="text-sm text-orange-700 font-medium mb-2">
-          This department has
-          {{
-            (selectedDept?.employeeCount || 0) +
-              (selectedDept?.lineManagerCount || 0)
-          }}
-          active users. You must transfer them to another department before
-          deleting.
-        </p>
-        <div class="space-y-2 mt-3">
-          <label class="text-sm font-medium text-foreground"
-            >Transfer Users To <span class="text-destructive">*</span></label
-          >
-          <select
-            [(ngModel)]="transferToDeptId"
-            name="transferDept"
-            required
-            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option value="">Select Target Department</option>
-            <option *ngFor="let dept of allDepartments" [value]="dept.id">
-              {{ dept.name }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-3 mt-2">
-        <button
-          type="button"
-          (click)="closeDeleteModal()"
-          class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          (click)="confirmDelete()"
-          class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90 transition-colors"
-        >
-          Confirm Delete
-        </button>
-      </div>
-    </div>
-  </div>
-</div>

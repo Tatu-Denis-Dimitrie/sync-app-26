@@ -1,5 +1,5 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -40,7 +40,7 @@ interface BulkInitialTrainingData {
 @Component({
   selector: 'app-bulk-initial-training-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './bulk-initial-training-modal.component.html',
   styleUrls: ['./bulk-initial-training-modal.component.css']
 })
