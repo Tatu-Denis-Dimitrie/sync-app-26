@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { FooterComponent } from './components/footer/footer.component';
 import { HeaderComponent } from './components/header/header.component';
@@ -8,7 +8,7 @@ import { Observable, Subscription, filter } from 'rxjs';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, FooterComponent, HeaderComponent],
+  imports: [RouterOutlet, FooterComponent, HeaderComponent],
   standalone: true,
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'

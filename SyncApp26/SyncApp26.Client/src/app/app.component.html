@@ -1,6 +1,8 @@
 <div class="flex flex-col min-h-screen">
   <!-- Header -->
-  <app-header *ngIf="showHeader"></app-header>
+  @if (showHeader) {
+    <app-header></app-header>
+  }
 
   <!-- Main Application -->
   <main class="flex-grow">

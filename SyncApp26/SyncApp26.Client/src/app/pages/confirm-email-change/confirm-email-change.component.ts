@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
 
 @Component({
   selector: 'app-confirm-email-change',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './confirm-email-change.component.html',
   styleUrls: ['./confirm-email-change.component.css']
 })

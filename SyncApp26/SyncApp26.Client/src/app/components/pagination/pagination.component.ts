@@ -1,10 +1,10 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
   selector: 'app-pagination',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="flex items-center justify-between border-t border-border px-4 py-3 sm:px-6">
       <div class="flex flex-1 justify-between sm:hidden">
@@ -12,14 +12,14 @@ import { CommonModule } from '@angular/common';
           (click)="onPageChange(currentPage - 1)"
           [disabled]="currentPage === 1"
           class="relative inline-flex items-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+          >
           Previous
         </button>
         <button
           (click)="onPageChange(currentPage + 1)"
           [disabled]="currentPage === totalPages"
           class="relative ml-3 inline-flex items-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+          >
           Next
         </button>
       </div>
@@ -42,40 +42,42 @@ import { CommonModule } from '@angular/common';
               (click)="onPageChange(currentPage - 1)"
               [disabled]="currentPage === 1"
               class="relative inline-flex items-center rounded-l-md px-2 py-2 text-muted-foreground ring-1 ring-inset ring-border hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:z-20"
-            >
+              >
               <span class="sr-only">Previous</span>
               <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
               </svg>
             </button>
-
+    
             <!-- Page Numbers -->
-            <ng-container *ngFor="let page of visiblePages">
-              <button
-                *ngIf="page !== '...'"
-                (click)="onPageChange(page)"
-                [class.bg-primary]="page === currentPage"
-                [class.text-primary-foreground]="page === currentPage"
-                [class.text-muted-foreground]="page !== currentPage"
-                [class.hover:bg-accent]="page !== currentPage"
-                class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-border focus:z-20 transition-colors"
-              >
-                {{ page }}
-              </button>
-              <span
-                *ngIf="page === '...'"
-                class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-muted-foreground ring-1 ring-inset ring-border"
-              >
-                ...
-              </span>
-            </ng-container>
-
+            @for (page of visiblePages; track page) {
+              @if (page !== '...') {
+                <button
+                  (click)="onPageChange(page)"
+                  [class.bg-primary]="page === currentPage"
+                  [class.text-primary-foreground]="page === currentPage"
+                  [class.text-muted-foreground]="page !== currentPage"
+                  [class.hover:bg-accent]="page !== currentPage"
+                  class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-border focus:z-20 transition-colors"
+                  >
+                  {{ page }}
+                </button>
+              }
+              @if (page === '...') {
+                <span
+                  class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-muted-foreground ring-1 ring-inset ring-border"
+                  >
+                  ...
+                </span>
+              }
+            }
+    
             <!-- Next Button -->
             <button
               (click)="onPageChange(currentPage + 1)"
               [disabled]="currentPage === totalPages"
               class="relative inline-flex items-center rounded-r-md px-2 py-2 text-muted-foreground ring-1 ring-inset ring-border hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:z-20"
-            >
+              >
               <span class="sr-only">Next</span>
               <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
@@ -85,7 +87,7 @@ import { CommonModule } from '@angular/common';
         </div>
       </div>
     </div>
-  `,
+    `,
   styles: []
 })
 export class PaginationComponent {
