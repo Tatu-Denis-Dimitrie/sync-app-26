@@ -117,19 +117,9 @@ export class DocumentsViewComponent implements OnInit {
     this.loading = true;
     this.documents$ = this.http.get<DocumentDto[]>(`${environment.apiUrl}/Document/all`).pipe(
       map(docs => {
-        // Keep only the latest document per employee+documentType
-        const latestMap = new Map<string, DocumentDto>();
-        for (const d of docs) {
-          const key = `${d.userId}|${d.documentType}`;
-          const existing = latestMap.get(key);
-          if (!existing || new Date(d.generatedAt) > new Date(existing.generatedAt)) {
-            latestMap.set(key, d);
-          }
-        }
-        const latestDocs = Array.from(latestMap.values());
-        this.allDocuments = latestDocs;
+        this.allDocuments = docs;
         this.loading = false;
-        return latestDocs;
+        return docs;
       }),
       catchError(err => {
         this.error = 'Failed to load documents.';

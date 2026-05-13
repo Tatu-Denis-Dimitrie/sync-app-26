@@ -26,34 +26,26 @@ namespace SyncApp26.Infrastructure.Services
         }
 
         // Returnează numărul de documente SSM ce trebuie semnate de admin (verificator)
-        // Only counts the LATEST document per user — old documents must not be signed.
         public async Task<int> GetPendingSsmDocumentsForAdminAsync()
         {
-            var allPending = await _context.UserDocuments
+            return await _context.UserDocuments
                 .Include(d => d.User)
-                .Where(d =>
+                .CountAsync(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
                     (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
-                    d.Status == "PendingAdmin")
-                .ToListAsync();
-
-            // Keep only the latest document per user
-            var latestPerUser = allPending
-                .GroupBy(d => d.UserId)
-                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
-                .ToList();
-
-            return latestPerUser.Count;
+                    d.Status == "PendingAdmin");
         }
 
         // Returnează lista de documente SSM ce trebuie semnate de admin (pentru bulk progres)
-        // Only returns the LATEST document per user — old documents must not be signed.
+        // Returns ALL pending documents ordered oldest-first so signatures are applied in creation order.
         public async Task<List<UserDocument>> GetPendingSsmDocumentsForAdminListAsync()
         {
             var allPending = await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
                 .Where(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
@@ -61,11 +53,7 @@ namespace SyncApp26.Infrastructure.Services
                     d.Status == "PendingAdmin")
                 .ToListAsync();
 
-            // Keep only the latest document per user
-            return allPending
-                .GroupBy(d => d.UserId)
-                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
-                .ToList();
+            return allPending.OrderBy(d => d.GeneratedAt).ToList();
         }
 
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
@@ -268,7 +256,20 @@ namespace SyncApp26.Infrastructure.Services
                 latestTraining.VerifierSignatureMethod = signatureMethod;
             }
 
+            // Store verifier signature in UserInitialTraining (first-time only, never overwritten)
+            var initialTraining = doc.User?.InitialTrainings
+                ?.FirstOrDefault(t => string.Equals(t.DocumentType, doc.DocumentType, StringComparison.OrdinalIgnoreCase));
+            if (initialTraining != null && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
+            {
+                initialTraining.VerifierSignatureData = signatureData;
+                initialTraining.VerifierSignatureMethod = signatureMethod;
+            }
+
             await _context.SaveChangesAsync();
+
+            // Propagate verifier signature to copies of this row in newer documents
+            if (latestTraining != null)
+                await PropagateSignatureToNewerDocumentsAsync(latestTraining);
 
             // Reîncarcă user fresh cu toate datele după save
             var freshUser = await _context.Users
@@ -1278,11 +1279,8 @@ namespace SyncApp26.Infrastructure.Services
                 )
                 .ToListAsync();
 
-            // Only sign the LATEST document per user+documentType — old documents must not be touched
-            var docs = allDocs
-                .GroupBy(d => new { d.UserId, d.DocumentType })
-                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
-                .ToList();
+            // Process all pending documents ordered oldest-first so signatures are applied in creation order
+            var docs = allDocs.OrderBy(d => d.GeneratedAt).ToList();
 
             if (docs.Count == 0) return 0;
 
@@ -1374,8 +1372,18 @@ namespace SyncApp26.Infrastructure.Services
 
             await _context.SaveChangesAsync();
 
+            // Propagate signatures from older documents to their copies in newer documents,
+            // then regenerate the PDF for each signed document.
             foreach (var doc in docs)
             {
+                var signedTraining = await _context.PeriodicTrainings
+                    .Where(pt => pt.UserDocumentId == doc.Id)
+                    .OrderByDescending(pt => pt.TrainingDate)
+                    .ThenByDescending(pt => pt.CreatedAt)
+                    .FirstOrDefaultAsync();
+                if (signedTraining != null)
+                    await PropagateSignatureToNewerDocumentsAsync(signedTraining);
+
                 var freshUser = await _context.Users
                     .Include(u => u.Role)
                     .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
@@ -1526,9 +1534,10 @@ namespace SyncApp26.Infrastructure.Services
         }
 
         // Returns SSM documents pending admin signature (PendingAdmin status, signed by both employee and LM)
+        // Returns ALL pending documents (not just latest per user) so admin can sign older versions too.
         public async Task<List<UserDocument>> GetAdminPendingDocumentsAsync()
         {
-            var allPending = await _context.UserDocuments
+            return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
@@ -1542,11 +1551,6 @@ namespace SyncApp26.Infrastructure.Services
                     d.Status == "PendingAdmin")
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
-
-            return allPending
-                .GroupBy(d => d.UserId)
-                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
-                .ToList();
         }
 
         // Returns SSM documents already signed by admin (Completed and have verifier signature)

@@ -325,7 +325,7 @@ export class DocumentSignatureComponent implements OnInit {
   goToDashboard(): void {
     const user = this.authService.getCurrentUser();
     if (!user) { this.router.navigate(['/login']); return; }
-    if (user.role === 'Admin') this.router.navigate(['/dashboard']);
+    if (user.role === 'Admin') this.router.navigate(['/documents']);
     else if (user.role === 'Line Manager') this.router.navigate(['/line-manager']);
     else this.router.navigate(['/basic-user']);
   }
