@@ -1,0 +1,10 @@
+# GitGuardian scanner configuration (minimal example)
+# Adjust ignore paths and allowed secrets as needed for this repository.
+
+ignore_files:
+  - sample-csvs/**
+  - docs/**
+  - users_10k.csv
+
+allowed_secrets: []
+
