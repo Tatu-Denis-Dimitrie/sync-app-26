@@ -27,6 +27,8 @@ export interface User {
   updatedAt?: Date;
   hasSignedSsm?: boolean;
   hasSignedSu?: boolean;
+  hasUnsignedSsm?: boolean;
+  hasUnsignedSu?: boolean;
   // Computed properties
   role?: UserRole;  // Calculated based on whether user has direct reports
 }

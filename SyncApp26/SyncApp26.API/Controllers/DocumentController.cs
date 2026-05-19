@@ -37,11 +37,11 @@ namespace SyncApp26.API.Controllers
         {
             d.Id,
             d.UserId,
-            UserFirstName  = d.User?.FirstName,
-            UserLastName   = d.User?.LastName,
-            UserEmail      = d.User?.Email,
+            UserFirstName = d.User?.FirstName,
+            UserLastName = d.User?.LastName,
+            UserEmail = d.User?.Email,
             UserDepartment = d.User?.Department?.Name,
-            UserFunction   = d.User?.Function?.Name,
+            UserFunction = d.User?.Function?.Name,
             d.DocumentType,
             d.Status,
             d.GeneratedAt,
@@ -55,6 +55,10 @@ namespace SyncApp26.API.Controllers
             d.ManagerSignatureData,
             d.ManagerSignatureIpAddress,
             d.ManagerSignedAt,
+            d.AdminSignatureMethod,
+            d.AdminSignatureData,
+            d.AdminSignatureIpAddress,
+            d.AdminSignedAt,
         };
 
         private static bool IsSsmManagerSignaturePending(UserDocument d)
@@ -79,6 +83,7 @@ namespace SyncApp26.API.Controllers
         {
             /// <summary>"SSM", "SU", or "Both"</summary>
             public string DocumentType { get; set; } = string.Empty;
+            public List<Guid>? SelectedUserIds { get; set; }
         }
 
         [HttpPost("bulk-generate")]
@@ -94,42 +99,65 @@ namespace SyncApp26.API.Controllers
                 ? new[] { "SSM", "SU" }
                 : new[] { request.DocumentType.ToUpper() };
 
+            var isAdmin = User.IsInRole("Admin");
+            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                var allUsers = await _userService.GetAllUsersAsync();
+                var myEmployees = allUsers
+                    .Where(u => u.AssignedToId == currentUserId)
+                    .Select(u => u.Id)
+                    .ToList();
+
+                if (request.SelectedUserIds == null || !request.SelectedUserIds.Any())
+                {
+                    request.SelectedUserIds = myEmployees;
+                }
+                else
+                {
+                    request.SelectedUserIds = request.SelectedUserIds.Intersect(myEmployees).ToList();
+                }
+            }
+
             int totalGenerated = 0, totalSkipped = 0;
 
             foreach (var type in types)
             {
-                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail);
+                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds);
                 totalGenerated += generated;
                 totalSkipped += skipped;
             }
 
-            // Admin signature is only required for SSM documents (verifier column).
-            // For SU documents the admin does not sign.
-            string? adminSignLink = null;
-            if (types.Contains("SSM"))
+            // Send signature request emails to all employees with pending documents
+            int emailsSent = 0;
+            foreach (var type in types)
             {
-                var ssmPending = await _documentService.GetAllPendingUserDocumentsAsync("SSM");
-                var firstPending = ssmPending.FirstOrDefault(d => d.ManagerSignedAt == null);
-                if (firstPending != null)
+                var pendingDocs = await _documentService.GetAllPendingUserDocumentsAsync(type);
+                foreach (var doc in pendingDocs)
                 {
-                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(
-                        adminEmail,
-                        firstPending.Id,
-                        "SSM Document (Admin Bulk Sign)");
-                    adminSignLink = $"{frontendUrl}/sign/{token}?bulk=true";
+                    if (doc.User?.Email is { Length: > 0 } userEmail && doc.UserSignedAt == null)
+                    {
+                        try
+                        {
+                            var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(doc.Id);
+                            var token = await _documentSignatureService.GenerateSignatureTokenAsync(
+                                userEmail, doc.Id, $"{type} Document", currentRowId);
+                            var link = $"{frontendUrl}/sign/{token}";
+                            await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", link);
+                            emailsSent++;
+                        }
+                        catch { /* non-fatal per user */ }
+                    }
                 }
             }
 
-            var message = adminSignLink != null
-                ? $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped. Next step: admin must sign SSM documents."
-                : $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped.";
+            var message = $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped. {emailsSent} signature request(s) sent to employees.";
 
             return Ok(new
             {
                 message,
                 generated = totalGenerated,
-                skipped = totalSkipped,
-                adminSignLink
+                skipped = totalSkipped
             });
         }
 
@@ -140,6 +168,19 @@ namespace SyncApp26.API.Controllers
             {
                 var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@syncapp26.com";
 
+                var user = await _userService.GetUserByIdAsync(request.UserId);
+                if (user == null) return NotFound(new { message = "User not found." });
+
+                var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                bool isAdmin = User.IsInRole("Admin");
+                if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+                {
+                    if (user.AssignedToId != currentUserId)
+                    {
+                        return Forbid();
+                    }
+                }
+
                 var document = await _documentService.GenerateDocumentAsync(request.UserId, request.DocumentType, adminEmail);
 
                 // Now we need to send the signature request to the user.
@@ -149,7 +190,8 @@ namespace SyncApp26.API.Controllers
 
                 if (!string.IsNullOrEmpty(userEmail))
                 {
-                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(userEmail, document.Id, $"{document.DocumentType} Document");
+                    var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
+                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(userEmail, document.Id, $"{document.DocumentType} Document", currentRowId);
                     var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
                     var secureLink = $"{frontendUrl}/sign/{token}";
 
@@ -168,6 +210,22 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> GetUserDocuments(Guid userId)
         {
             var documents = await _documentService.GetUserDocumentsAsync(userId);
+            return Ok(documents.Select(MapDocument));
+        }
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllDocuments()
+        {
+            var allDocs = await _documentService.GetAllDocumentsAsync();
+            var documents = allDocs.AsEnumerable();
+
+            var isAdmin = User.IsInRole("Admin");
+            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            {
+                documents = documents.Where(d => d.User?.AssignedToId == currentUserId || d.UserId == currentUserId);
+            }
+
             return Ok(documents.Select(MapDocument));
         }
 
@@ -192,10 +250,8 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
                 return Unauthorized();
 
-            // Fetch documents where the current user is the manager and signature is still pending.
-            // Managers can sign even before employee signature, so include both PendingUser and PendingManager.
-            // Since IDocumentService doesn't have this, we can get all users where AssignedToId is this user, then their documents
-            // This would be better handled in IDocumentService, but we can do a quick implementation here
+            // Fetch documents where the current user is the manager and employee has already signed.
+            // Line managers can only sign after employee signature.
             var allManagedUsers = await _userService.GetAllUsersAsync();
             var myEmployees = allManagedUsers.Where(u => u.AssignedToId == userId).Select(u => u.Id).ToList();
 
@@ -204,8 +260,9 @@ namespace SyncApp26.API.Controllers
             {
                 var empDocs = await _documentService.GetUserDocumentsAsync(empId);
                 pendingAsManager.AddRange(empDocs.Where(d =>
-                    (d.Status == "PendingManager" || d.Status == "PendingUser") &&
-                    (d.ManagerSignedAt == null || IsSsmManagerSignaturePending(d))));
+                    d.Status == "PendingManager" &&
+                    d.UserSignedAt != null &&
+                    d.ManagerSignedAt == null));
             }
 
             return Ok(pendingAsManager.Select(MapDocument));
@@ -244,6 +301,40 @@ namespace SyncApp26.API.Controllers
             return Ok(signedAsManager.Select(MapDocument));
         }
 
+        /// <summary>
+        /// Returns SSM documents pending admin signature (PendingAdmin status — signed by both employee and LM).
+        /// </summary>
+        [HttpGet("admin-pending-signatures")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAdminPendingSignatures()
+        {
+            var docs = await _documentService.GetAdminPendingDocumentsAsync();
+            return Ok(docs.Select(MapDocument));
+        }
+
+        /// <summary>
+        /// Returns SSM documents already signed by admin (Completed status).
+        /// </summary>
+        [HttpGet("admin-signed-documents")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAdminSignedDocuments()
+        {
+            var docs = await _documentService.GetAdminSignedDocumentsAsync();
+            return Ok(docs.Select(MapDocument));
+        }
+
+        [HttpPost("regenerate-documents")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RegenerateDocuments()
+        {
+            var count = await _documentService.RegenerateDocumentsAsync();
+            return Ok(new
+            {
+                message = $"S-au regenerat {count} document(e) în folderul GeneratedDocuments.",
+                regenerated = count
+            });
+        }
+
         [HttpGet("token-for-document/{documentId}")]
         public async Task<IActionResult> GetSignTokenForDocument(Guid documentId)
         {
@@ -259,23 +350,37 @@ namespace SyncApp26.API.Controllers
 
             bool isUser = document.UserId == userId;
             bool isManager = document.User?.AssignedToId == userId;
+            bool isAdmin = User.IsInRole("Admin");
 
-            if (!isUser && !isManager)
+            if (!isUser && !isManager && !isAdmin)
                 return Forbid();
 
             if (isUser && document.UserSignedAt != null)
                 return BadRequest(new { message = "User already signed this document." });
-            
-            if (isManager && document.ManagerSignedAt != null && !IsSsmManagerSignaturePending(document))
+
+            if (isManager && document.ManagerSignedAt != null)
                 return BadRequest(new { message = "Manager already signed this document." });
+
+            // Enforce sequential signing: employee must sign before manager
+            if (isManager && !isAdmin && document.UserSignedAt == null)
+                return BadRequest(new { message = "Employee must sign first before manager can countersign." });
 
             if (isUser && document.Status != "PendingUser")
                 return BadRequest(new { message = "User signature not required at this time." });
 
-            if (isManager && document.Status != "PendingManager" && document.Status != "PendingUser")
+            if (isManager && !isAdmin && document.Status != "PendingManager")
                 return BadRequest(new { message = "Manager signature not required at this time." });
 
-            var token = await _documentSignatureService.GenerateSignatureTokenAsync(user.Email, document.Id, $"{document.DocumentType} Document");
+            // Admin can only sign SSM documents in PendingAdmin status
+            if (isAdmin && !isUser && !isManager)
+            {
+                if (document.Status != "PendingAdmin")
+                    return BadRequest(new { message = "Admin signature not required at this time." });
+                if (document.DocumentType?.ToUpperInvariant() != "SSM")
+                    return BadRequest(new { message = "Admin only signs SSM documents." });
+            }
+            var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
+            var token = await _documentSignatureService.GenerateSignatureTokenAsync(user.Email, document.Id, $"{document.DocumentType} Document", currentRowId);
 
             return Ok(new { token });
         }
@@ -295,9 +400,9 @@ namespace SyncApp26.API.Controllers
             var document = await _documentService.GetDocumentByIdAsync(documentId);
             if (document == null) return NotFound(new { message = "Document not found." });
 
-            bool isDocOwner  = document.UserId == userId;
-            bool isManager   = document.User?.AssignedToId == userId;
-            bool isAdmin     = User.IsInRole("Admin");
+            bool isDocOwner = document.UserId == userId;
+            bool isManager = document.User?.AssignedToId == userId;
+            bool isAdmin = User.IsInRole("Admin");
 
             if (!isDocOwner && !isManager && !isAdmin)
                 return Forbid();
@@ -306,20 +411,11 @@ namespace SyncApp26.API.Controllers
             if (docUser == null) return NotFound(new { message = "Associated user not found." });
 
             var safeFirst = string.Concat(docUser.FirstName.Where(char.IsLetterOrDigit));
-            var safeLast  = string.Concat(docUser.LastName.Where(char.IsLetterOrDigit));
-            var fileName  = $"{document.DocumentType}_{safeFirst}_{safeLast}.pdf";
+            var safeLast = string.Concat(docUser.LastName.Where(char.IsLetterOrDigit));
+            var fileName = $"{document.DocumentType}_{safeFirst}_{safeLast}.pdf";
 
-            // If a saved PDF exists on disk and is valid, serve it directly
-            if (!string.IsNullOrEmpty(document.PdfFilePath) && System.IO.File.Exists(document.PdfFilePath))
-            {
-                var fileBytes = await System.IO.File.ReadAllBytesAsync(document.PdfFilePath);
-                // Validate it starts with the PDF magic bytes %PDF
-                if (fileBytes.Length > 4 && fileBytes[0] == 0x25 && fileBytes[1] == 0x50 && fileBytes[2] == 0x44 && fileBytes[3] == 0x46)
-                    return File(fileBytes, "application/pdf", fileName);
-            }
-
-            // Fallback: generate on-the-fly
-            var pdfBytes = await _documentService.GeneratePdfBytesAsync(docUser, document);
+            // Always generate on-the-fly so highlight logic adapts to the viewer's role
+            var pdfBytes = await _documentService.GeneratePdfBytesAsync(docUser, document, viewerIsAdmin: isAdmin);
             return File(pdfBytes, "application/pdf", fileName);
         }
     }

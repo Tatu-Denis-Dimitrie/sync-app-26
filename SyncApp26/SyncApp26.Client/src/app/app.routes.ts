@@ -18,6 +18,10 @@ import { LineManagerGuard } from './guards/line-manager.guard';
 import { SsmSuFormComponent } from './components/ssm-su-form/ssm-su-form.component';
 import { BasicUserComponent } from './components/basic-user/basic-user.component';
 import { LineManagerComponent } from './components/line-manager/line-manager.component';
+import { AdminSignatureComponent } from './pages/admin-signature/admin-signature.component';
+import { DocumentsViewComponent } from './pages/documents-view/documents-view.component';
+import { DataChangeRequestsComponent } from './pages/data-change-requests/data-change-requests.component';
+import { ConfirmEmailChangeComponent } from './pages/confirm-email-change/confirm-email-change.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -28,6 +32,7 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
+  { path: 'confirm-email-change', component: ConfirmEmailChangeComponent },
   { path: 'sign/:token', component: DocumentSignatureComponent },
   
   // Authenticated routes (login required)
@@ -39,11 +44,14 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent, canActivate: [AdminGuard] },
   { path: 'departments', component: DepartmentsComponent, canActivate: [AdminGuard] },
   { path: 'users', component: UsersListComponent, canActivate: [AdminGuard] },
-  { path: 'employees', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
-  { path: 'employees/:id', component: EmployeesDetailComponent, canActivate: [AdminGuard] },
-  { path: 'employees/:id/ssm-su', component: SsmSuFormComponent, canActivate: [AdminGuard] },
+  { path: 'employees', component: EmployeesDetailComponent, canActivate: [LineManagerGuard] },
+  { path: 'employees/:id', component: EmployeesDetailComponent, canActivate: [LineManagerGuard] },
+  { path: 'employees/:id/ssm-su', component: SsmSuFormComponent, canActivate: [LineManagerGuard] },
   { path: 'import-history', component: ImportHistoryComponent, canActivate: [AdminGuard] },
   { path: 'test-signature', component: TestSignatureComponent, canActivate: [AdminGuard] },
+  { path: 'admin-signature', component: AdminSignatureComponent, canActivate: [AdminGuard] },
+  { path: 'documents', component: DocumentsViewComponent, canActivate: [LineManagerGuard] },
+  { path: 'data-requests', component: DataChangeRequestsComponent, canActivate: [AdminGuard] },
   
   { path: '**', redirectTo: '/login' }
 ];

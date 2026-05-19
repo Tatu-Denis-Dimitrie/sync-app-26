@@ -21,6 +21,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
+                .Include(u => u.InitialTrainings)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
@@ -32,6 +33,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
+                .Include(u => u.InitialTrainings)
                 .Where(u => u.DeletedAt == null && u.Role.Name != "Admin")
                 .ToListAsync();
         }

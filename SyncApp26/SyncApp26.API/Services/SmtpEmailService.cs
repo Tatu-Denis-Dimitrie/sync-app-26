@@ -201,5 +201,73 @@ namespace SyncApp26.API.Services
 
             await SendEmailAsync(toEmail, subject, html.ToString());
         }
+
+        public async Task SendMissingSignatureToUserEmailAsync(string toEmail, string firstName, string documentName, DateTime? trainingDate, string? signLink = null)
+        {
+            var dateString = trainingDate.HasValue ? trainingDate.Value.ToString("dd/MM/yyyy") : "recently";
+            var subject = $"Action Required: Missing Signature for {documentName}";
+            
+            var encodedFirstName = WebUtility.HtmlEncode(firstName);
+            var encodedDocumentName = WebUtility.HtmlEncode(documentName);
+            var encodedDate = WebUtility.HtmlEncode(dateString);
+
+            var html = new StringBuilder();
+            html.Append("<!doctype html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Missing Signature</title></head>");
+            html.Append("<body style='margin:0;padding:0;background:#f3f4f6;font-family:Segoe UI,Arial,sans-serif;color:#111827;'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='background:#f3f4f6;padding:24px 12px;'><tr><td align='center'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;'>");
+            html.Append("<tr><td style='padding:28px 28px 18px;background:linear-gradient(135deg,#e11d48 0%,#be123c 100%);'>");
+            html.Append("<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:700;'>SyncApp26</h1>");
+            html.Append("<p style='margin:8px 0 0;color:#ffe4e6;font-size:14px;'>Action Required: Missing Signature</p>");
+            html.Append("</td></tr><tr><td style='padding:26px 28px;'>");
+            html.Append($"<p style='margin:0 0 12px;font-size:16px;line-height:1.5;'>Hello <strong>{encodedFirstName}</strong>,</p>");
+            html.Append($"<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>You have not signed the <strong>{encodedDocumentName}</strong> document that happened on <strong>{encodedDate}</strong>.</p>");
+            
+            if (!string.IsNullOrEmpty(signLink))
+            {
+                var encodedLink = WebUtility.HtmlEncode(signLink);
+                html.Append("<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>Since you don’t have an account yet, you can sign the document directly using the secure link below:</p>");
+                html.Append("<table role='presentation' cellspacing='0' cellpadding='0' style='margin:0 0 18px;'><tr><td>");
+                html.Append($"<a href='{encodedLink}' style='display:inline-block;background:#088395;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-size:14px;font-weight:600;'>Review and Sign Document</a>");
+                html.Append("</td></tr></table>");
+                html.Append("<p style='margin:0 0 8px;font-size:13px;line-height:1.6;color:#6b7280;'>This is a secure, personal link for this document only.</p>");
+            }
+            else
+            {
+                html.Append("<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>Please log in to your account and sign this document as soon as possible.</p>");
+            }
+            
+            html.Append("</td></tr><tr><td style='padding:14px 28px 24px;border-top:1px solid #e5e7eb;'>");
+            html.Append("<p style='margin:0;font-size:12px;color:#9ca3af;'>SyncApp26 - SSM and SU Digitalization Platform</p>");
+            html.Append("</td></tr></table></td></tr></table></body></html>");
+
+            await SendEmailAsync(toEmail, subject, html.ToString());
+        }
+
+        public async Task SendMissingSignatureToManagerEmailAsync(string toEmail, string managerName, string documentName, int unsignedCount)
+        {
+            var subject = $"Action Required: Users missing signatures for {documentName}";
+            
+            var encodedManagerName = WebUtility.HtmlEncode(managerName);
+            var encodedDocumentName = WebUtility.HtmlEncode(documentName);
+
+            var html = new StringBuilder();
+            html.Append("<!doctype html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Missing Signatures Overview</title></head>");
+            html.Append("<body style='margin:0;padding:0;background:#f3f4f6;font-family:Segoe UI,Arial,sans-serif;color:#111827;'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='background:#f3f4f6;padding:24px 12px;'><tr><td align='center'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;'>");
+            html.Append("<tr><td style='padding:28px 28px 18px;background:linear-gradient(135deg,#ea580c 0%,#c2410c 100%);'>");
+            html.Append("<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:700;'>SyncApp26</h1>");
+            html.Append("<p style='margin:8px 0 0;color:#ffedd5;font-size:14px;'>Action Required: Missing Signatures</p>");
+            html.Append("</td></tr><tr><td style='padding:26px 28px;'>");
+            html.Append($"<p style='margin:0 0 12px;font-size:16px;line-height:1.5;'>Hello <strong>{encodedManagerName}</strong>,</p>");
+            html.Append($"<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>You have <strong>{unsignedCount}</strong> user(s) who didn't sign the <strong>{encodedDocumentName}</strong> document.</p>");
+            html.Append("<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>Please solve this issue and talk to them to ensure all necessary documents are signed.</p>");
+            html.Append("</td></tr><tr><td style='padding:14px 28px 24px;border-top:1px solid #e5e7eb;'>");
+            html.Append("<p style='margin:0;font-size:12px;color:#9ca3af;'>SyncApp26 - SSM and SU Digitalization Platform</p>");
+            html.Append("</td></tr></table></td></tr></table></body></html>");
+
+            await SendEmailAsync(toEmail, subject, html.ToString());
+        }
     }
 }

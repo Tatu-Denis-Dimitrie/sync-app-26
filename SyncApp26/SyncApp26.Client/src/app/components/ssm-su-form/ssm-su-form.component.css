@@ -264,7 +264,7 @@ textarea.edit-input {
 .instruction-table th,
 .instruction-table td {
   border: 1px solid #000;
-  padding: 10px;
+  padding: 6px 8px;
   text-align: left;
 }
 
@@ -274,7 +274,44 @@ textarea.edit-input {
 }
 
 .instruction-table td {
-  min-height: 40px;
+  min-height: 28px;
+  vertical-align: middle;
+}
+
+/* Signature thumbnail styling */
+.sig-thumb {
+  display: inline-block;
+  width: 72px;
+  height: 28px;
+  object-fit: contain;
+  border: none;
+  background: transparent;
+  border-radius: 2px;
+  box-shadow: none; /* simple, no decoration */
+}
+
+/* No hover effects for signatures — keep them simple */
+.sig-thumb:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Small caption under signatures if needed */
+.sig-caption {
+  display: block;
+  font-size: 11px;
+  color: #444;
+  margin-top: 4px;
+}
+
+.sig-typed {
+  display: inline-block;
+  font-style: italic;
+  color: #222;
+  font-size: 12px;
+  padding: 0;
+  background: transparent; /* no background */
+  border-radius: 0;
 }
 
 /* Print styles */

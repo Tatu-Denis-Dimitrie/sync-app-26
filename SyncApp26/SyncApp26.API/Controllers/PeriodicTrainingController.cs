@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +14,12 @@ namespace SyncApp26.API.Controllers
     public class PeriodicTrainingController : ControllerBase
     {
         private readonly IPeriodicTrainingService _periodicTrainingService;
+        private readonly IUserService _userService;
 
-        public PeriodicTrainingController(IPeriodicTrainingService periodicTrainingService)
+        public PeriodicTrainingController(IPeriodicTrainingService periodicTrainingService, IUserService userService)
         {
             _periodicTrainingService = periodicTrainingService;
+            _userService = userService;
         }
 
         /// <summary>
@@ -101,6 +104,26 @@ namespace SyncApp26.API.Controllers
         {
             try
             {
+                var isAdmin = User.IsInRole("Admin");
+                var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+                {
+                    var myEmployees = (await _userService.GetAllUsersAsync())
+                        .Where(u => u.AssignedToId == currentUserId)
+                        .Select(u => u.Id)
+                        .ToList();
+
+                    if (dto.ApplyToAllUsers || dto.SelectedUserIds == null || !dto.SelectedUserIds.Any())
+                    {
+                        dto.ApplyToAllUsers = false;
+                        dto.SelectedUserIds = myEmployees;
+                    }
+                    else
+                    {
+                        dto.SelectedUserIds = dto.SelectedUserIds.Intersect(myEmployees).ToList();
+                    }
+                }
+
                 var result = await _periodicTrainingService.BulkCreateAsync(dto);
 
                 if (result.FailedCount > 0 && result.SuccessCount == 0)

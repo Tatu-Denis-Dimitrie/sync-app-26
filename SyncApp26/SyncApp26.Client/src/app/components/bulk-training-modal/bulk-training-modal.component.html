@@ -1,259 +1,386 @@
-<div *ngIf="isVisible" class="modal-overlay" (click)="closeModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2 class="modal-title">Add Bulk Periodic Training</h2>
-      <button class="close-button" (click)="closeModal()" aria-label="Close">
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          ></path>
-        </svg>
-      </button>
-    </div>
-
-    <div class="modal-body">
-      <p class="modal-description">
-        Add periodic training records with the same data for users in a selected
-        department. This will create a new training entry in each user's
-        <select
-          [(ngModel)]="formData.documentType"
-          name="documentType"
-          class="inline-dropdown"
-        >
-          <option value="Both">SSM & SU</option>
-          <option value="SSM">SSM</option>
-          <option value="SU">SU</option>
-        </select>
-        document.
-      </p>
-
-      <form class="training-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="trainingDate" class="form-label">
-              Training Date <span class="required">*</span>
-            </label>
-            <input
-              type="date"
-              id="trainingDate"
-              [(ngModel)]="formData.trainingDate"
-              name="trainingDate"
-              class="form-input"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="durationHours" class="form-label">
-              Duration (hours)
-            </label>
-            <input
-              type="number"
-              id="durationHours"
-              [(ngModel)]="formData.durationHours"
-              name="durationHours"
-              class="form-input"
-              min="0"
-              step="0.5"
-              placeholder="e.g., 2.5"
-            />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="department" class="form-label"> Department </label>
-          <select
-            id="department"
-            [(ngModel)]="formData.selectedDepartmentId"
-            (ngModelChange)="onDepartmentChanged()"
-            name="selectedDepartmentId"
-            class="form-input"
-            [disabled]="isLoadingDepartments"
-          >
-            <option [ngValue]="null">
-              {{
-                isLoadingDepartments
-                  ? "Loading departments..."
-                  : "All users (all departments)"
-              }}
-            </option>
-            <option
-              *ngFor="let department of departments"
-              [ngValue]="department.id"
+@if (isVisible) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-content" #modalContent (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Add Bulk Periodic Training</h2>
+        <button class="close-button" (click)="closeModal()" aria-label="Close">
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
             >
-              {{ department.name }}
-            </option>
-          </select>
-          <p class="form-hint">
-            Leave on "All users" to apply globally, or choose one department to
-            target only that team.
-          </p>
-        </div>
-
-        <div class="form-group">
-          <label for="materialTaught" class="form-label">
-            Material Taught
-          </label>
-          <textarea
-            id="materialTaught"
-            [(ngModel)]="formData.materialTaught"
-            name="materialTaught"
-            class="form-textarea"
-            rows="3"
-            placeholder="Enter the training material covered..."
-          ></textarea>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="instructorName" class="form-label">
-              Instructor Name
-            </label>
-            <input
-              type="text"
-              id="instructorName"
-              [(ngModel)]="formData.instructorName"
-              name="instructorName"
-              class="form-input"
-              placeholder="Name of the instructor"
-            />
-          </div>
-
-          <div class="form-group" *ngIf="formData.documentType !== 'SU'">
-            <label for="verifierName" class="form-label">
-              Verifier Name (SSM only)
-            </label>
-            <input
-              type="text"
-              id="verifierName"
-              [(ngModel)]="formData.verifierName"
-              name="verifierName"
-              class="form-input"
-              placeholder="Name of the verifier"
-            />
-          </div>
-        </div>
-
-        <div class="form-group-checkbox">
-          <input
-            type="checkbox"
-            id="applyToAllUsers"
-            [(ngModel)]="formData.applyToAllUsers"
-            name="applyToAllUsers"
-            class="form-checkbox"
-          />
-          <label for="applyToAllUsers" class="checkbox-label">
-            Apply to all active users
-          </label>
-        </div>
-
-        <div class="selection-panel" *ngIf="!formData.applyToAllUsers">
-          <div class="selection-panel-header">
-            <p class="selection-panel-title">Custom user selection</p>
-            <button
-              type="button"
-              class="btn-secondary"
-              (click)="openUserPicker()"
-              [disabled]="isLoadingUsers"
-            >
-              {{ isLoadingUsers ? "Loading users..." : "Select users" }}
-            </button>
-          </div>
-          <p class="form-hint">
-            Selected users: {{ selectedUsersCount }}
-          </p>
-        </div>
-      </form>
-    </div>
-
-    <div
-      class="user-picker-overlay"
-      *ngIf="isUserPickerVisible"
-      (click)="closeUserPicker()"
-    >
-      <div class="user-picker-modal" (click)="$event.stopPropagation()">
-        <div class="user-picker-header">
-          <h3>Select users for training</h3>
-          <button type="button" class="close-button" (click)="closeUserPicker()" aria-label="Close user selector">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-
-        <div class="user-picker-body">
-          <input
-            type="text"
-            class="form-input"
-            [(ngModel)]="userSearchQuery"
-            name="userSearchQuery"
-            placeholder="Search by name, email, or department"
-          />
-
-          <div class="picker-actions">
-            <button type="button" class="btn-secondary" (click)="selectAllFilteredUsers()">
-              Select all shown
-            </button>
-            <button type="button" class="btn-secondary" (click)="deselectAllFilteredUsers()">
-              Deselect all shown
-            </button>
-          </div>
-
-          <div class="users-list" *ngIf="!isLoadingUsers; else loadingUsersTemplate">
-            <label class="user-row" *ngFor="let user of filteredUsers">
-              <input
-                type="checkbox"
-                class="form-checkbox"
-                [checked]="isUserSelected(user.id)"
-                (change)="toggleUserSelection(user.id)"
-              />
-              <div class="user-meta">
-                <span class="user-name">{{ user.firstName }} {{ user.lastName }}</span>
-                <span class="user-email">{{ user.email }} | {{ user.departmentName }}</span>
-              </div>
-            </label>
-            <p class="form-hint" *ngIf="filteredUsers.length === 0">No users found for this filter.</p>
-          </div>
-
-          <ng-template #loadingUsersTemplate>
-            <p class="form-hint">Loading users...</p>
-          </ng-template>
-        </div>
-
-        <div class="user-picker-footer">
-          <span class="form-hint">Selected users: {{ selectedUsersCount }}</span>
-          <button type="button" class="btn-primary" (click)="closeUserPicker()">Done</button>
-        </div>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
       </div>
-    </div>
-
-    <div class="modal-footer">
-      <button
-        type="button"
-        class="btn-secondary"
-        (click)="closeModal()"
-        [disabled]="isSubmitting"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="btn-primary"
-        (click)="submitBulkTraining()"
-        [disabled]="
-          isSubmitting || !formData.trainingDate || isLoadingDepartments
-        "
-      >
-        {{ isSubmitting ? "Adding..." : "Add Training Records" }}
-      </button>
-    </div>
-  </div>
-</div>
+      <div class="modal-body">
+        <p class="modal-description">
+          Add periodic training records with the same data for users in a selected
+          department. This will create a new training entry in each user's
+          <select
+            [(ngModel)]="formData.documentType"
+            (ngModelChange)="onDocumentTypeChanged()"
+            name="documentType"
+            class="inline-dropdown"
+            >
+            <option value="Both">SSM & SU</option>
+            <option value="SSM">SSM</option>
+            <option value="SU">SU</option>
+          </select>
+          document.
+        </p>
+        <form class="training-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="trainingDate" class="form-label">
+                Training Date <span class="required">*</span>
+              </label>
+              <input
+                type="date"
+                id="trainingDate"
+                [(ngModel)]="formData.trainingDate"
+                (ngModelChange)="onTrainingDateChanged()"
+                name="trainingDate"
+                class="form-input"
+                required
+                />
+                @if (pastDateWarning) {
+                  <p
+                    class="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1"
+                    >
+                    ⚠️ Aceasta dată este în trecut. Continuarea poate cauza erori în
+                    generarea documentelor.
+                  </p>
+                }
+              </div>
+              <div class="form-group">
+                <label for="durationHours" class="form-label">
+                  Duration (hours) <span class="required">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="durationHours"
+                  [(ngModel)]="formData.durationHours"
+                  name="durationHours"
+                  class="form-input"
+                  min="0"
+                  step="0.5"
+                  placeholder="e.g., 2.5"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="department" class="form-label"> Department </label>
+                <select
+                  id="department"
+                  [(ngModel)]="formData.selectedDepartmentId"
+                  (ngModelChange)="onDepartmentChanged()"
+                  name="selectedDepartmentId"
+                  class="form-input"
+                  [disabled]="isLoadingDepartments || !formData.applyToAllUsers"
+                  >
+                  <option [ngValue]="null">
+                    {{
+                    isLoadingDepartments
+                    ? "Loading departments..."
+                    : "All users (all departments)"
+                    }}
+                  </option>
+                  @for (department of departments; track department) {
+                    <option
+                      [ngValue]="department.id"
+                      >
+                      {{ department.name }}
+                    </option>
+                  }
+                </select>
+                <p class="form-hint">
+                  Leave on "All users" to apply globally, or choose one department to
+                  target only that team.
+                </p>
+              </div>
+              <div class="form-group">
+                <label for="materialTaught" class="form-label">
+                  Material Taught <span class="required">*</span>
+                </label>
+                <textarea
+                  id="materialTaught"
+                  [(ngModel)]="formData.materialTaught"
+                  name="materialTaught"
+                  class="form-textarea"
+                  rows="3"
+                  maxlength="2000"
+                  placeholder="Enter the training material covered..."
+                ></textarea>
+                <p
+                  class="form-hint text-right"
+                  [class.text-rose-500]="formData.materialTaught.length >= 2000"
+                  >
+                  {{ formData.materialTaught.length }} / 2000
+                </p>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="instructorName" class="form-label">
+                    Instructor Name <span class="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="instructorName"
+                    [(ngModel)]="formData.instructorName"
+                    name="instructorName"
+                    class="form-input"
+                    placeholder="Name of the instructor"
+                    />
+                  </div>
+                  @if (formData.documentType !== 'SU') {
+                    <div class="form-group">
+                      <label for="verifierName" class="form-label">
+                        Verifier Name (SSM) <span class="required">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="verifierName"
+                        [(ngModel)]="formData.verifierName"
+                        name="verifierName"
+                        class="form-input"
+                        placeholder="Name of the verifier"
+                        />
+                      </div>
+                    }
+                  </div>
+                  <div class="form-group-checkbox">
+                    <input
+                      type="checkbox"
+                      id="applyToAllUsers"
+                      [(ngModel)]="formData.applyToAllUsers"
+                      name="applyToAllUsers"
+                      class="form-checkbox"
+                      />
+                      <label for="applyToAllUsers" class="checkbox-label">
+                        Apply to all active users
+                      </label>
+                    </div>
+                    @if (!formData.applyToAllUsers) {
+                      <div class="selection-panel">
+                        <div class="selection-panel-header">
+                          <p class="selection-panel-title">Custom user selection</p>
+                          <button
+                            type="button"
+                            class="btn-secondary"
+                            (click)="openUserPicker()"
+                            [disabled]="isLoadingUsers"
+                            >
+                            {{ isLoadingUsers ? "Loading users..." : "Select users" }}
+                          </button>
+                        </div>
+                        <p class="form-hint">Selected users: {{ selectedUsersCount }}</p>
+                      </div>
+                    }
+                  </form>
+                </div>
+                @if (isUserPickerVisible) {
+                  <div
+                    class="user-picker-overlay"
+                    (click)="closeUserPicker()"
+                    >
+                    <div class="user-picker-modal" (click)="$event.stopPropagation()">
+                      <div class="user-picker-header">
+                        <h3>Select users for training</h3>
+                        <button
+                          type="button"
+                          class="close-button"
+                          (click)="closeUserPicker()"
+                          aria-label="Close user selector"
+                          >
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            ></path>
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="user-picker-body">
+                        <div class="picker-filters">
+                          <input
+                            type="text"
+                            class="form-input"
+                            [(ngModel)]="userSearchQuery"
+                            name="userSearchQuery"
+                            placeholder="Search by name or email..."
+                            />
+                            <select
+                              class="form-input"
+                              [(ngModel)]="pickerDepartmentId"
+                              name="pickerDepartmentId"
+                              >
+                              <option [ngValue]="null">All departments</option>
+                              @for (dept of departments; track dept) {
+                                <option [ngValue]="dept.id">
+                                  {{ dept.name }}
+                                </option>
+                              }
+                            </select>
+                            <label class="picker-toggle-row">
+                              <input
+                                type="checkbox"
+                                class="form-checkbox"
+                                [(ngModel)]="pickerShowSelectedOnly"
+                                name="pickerShowSelectedOnly"
+                                />
+                                <span>Show selected only ({{ selectedUsersCount }})</span>
+                              </label>
+                            </div>
+                            <div class="picker-actions">
+                              <button
+                                type="button"
+                                class="btn-secondary"
+                                (click)="selectAllFilteredUsers()"
+                                >
+                                Select all shown
+                              </button>
+                              <button
+                                type="button"
+                                class="btn-secondary"
+                                (click)="deselectAllFilteredUsers()"
+                                >
+                                Deselect all shown
+                              </button>
+                            </div>
+                            @if (!isLoadingUsers) {
+                              <div
+                                class="users-list"
+                                >
+                                @for (user of filteredUsers; track user) {
+                                  <label class="user-row">
+                                    <input
+                                      type="checkbox"
+                                      class="form-checkbox"
+                                      [checked]="isUserSelected(user.id)"
+                                      (change)="toggleUserSelection(user.id)"
+                                      />
+                                      <div class="user-meta">
+                                        <span class="user-name"
+                                          >{{ user.firstName }} {{ user.lastName }}</span
+                                          >
+                                          <span class="user-email"
+                                            >{{ user.email }} | {{ user.departmentName }}</span
+                                            >
+                                          </div>
+                                        </label>
+                                      }
+                                      @if (filteredUsers.length === 0) {
+                                        <p class="form-hint">
+                                          No users found for this filter.
+                                        </p>
+                                      }
+                                    </div>
+                                  } @else {
+                                    <p class="form-hint">Loading users...</p>
+                                  }
+                                </div>
+                                <div class="user-picker-footer">
+                                  <span class="form-hint"
+                                    >Selected users: {{ selectedUsersCount }}</span
+                                    >
+                                    <button type="button" class="btn-primary" (click)="closeUserPicker()">
+                                      Done
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            }
+                            @if (!submitted) {
+                              <div class="modal-footer flex-col gap-2">
+                                @if (validationMessage) {
+                                  <p
+                                    class="text-sm text-red-600 text-center w-full"
+                                    >
+                                    ⚠️ {{ validationMessage }}
+                                  </p>
+                                }
+                                @if (errorMessage) {
+                                  <p class="text-sm text-red-600 text-center w-full">
+                                    ❌ {{ errorMessage }}
+                                  </p>
+                                }
+                                <div class="flex gap-3 justify-end w-full">
+                                  <button
+                                    type="button"
+                                    class="btn-secondary"
+                                    (click)="closeModal()"
+                                    [disabled]="isSubmitting"
+                                    >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    class="btn-primary"
+                                    (click)="submitBulkTraining()"
+          [disabled]="
+            isSubmitting || !formData.trainingDate || isLoadingDepartments
+          "
+                                    >
+                                    {{ isSubmitting ? "Adding..." : "Add Training Records" }}
+                                  </button>
+                                </div>
+                              </div>
+                            }
+                            @if (submitted) {
+                              <div class="modal-footer flex-col gap-3">
+                                <!-- Loading overlay while generating -->
+                                @if (isGenerating) {
+                                  <div
+                                    class="flex flex-col items-center justify-center py-8 gap-3 w-full"
+                                    >
+                                    <div
+                                      class="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"
+                                    ></div>
+                                    <p class="text-sm text-gray-500">
+                                      Generating documents, please wait...
+                                    </p>
+                                  </div>
+                                }
+                                @if (!isGenerating) {
+                                  <p class="text-sm text-gray-700 text-center">
+                                    ✅ Training records added for
+                                    <strong>{{ submittedCount }}</strong> user(s).<br />
+                                    Would you like to generate documents for them now?
+                                  </p>
+                                  @if (errorMessage) {
+                                    <p class="text-sm text-red-600 text-center w-full">
+                                      ❌ {{ errorMessage }}
+                                    </p>
+                                  }
+                                  <div class="flex gap-3 justify-end w-full">
+                                    <button type="button" class="btn-secondary" (click)="skipGenerate()">
+                                      Skip
+                                    </button>
+                                    <button
+                                      type="button"
+                                      class="btn-primary"
+                                      (click)="generateDocuments()"
+                                      >
+                                      Generate Documents
+                                    </button>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }

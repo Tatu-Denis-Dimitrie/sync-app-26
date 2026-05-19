@@ -118,48 +118,61 @@ namespace SyncApp26.Infrastructure.Services
                     return result;
                 }
 
-                // Create training record for each user
+                // Determine which document types to create rows for
+                var docTypes = dto.DocumentType == "Both"
+                    ? new[] { "SSM", "SU" }
+                    : new[] { dto.DocumentType ?? "SSM" };
+
+                // Create training record for each user × each document type
                 foreach (var user in users)
                 {
                     try
                     {
-                        // Check if there's already an unsigned row for this user — reuse it instead of creating a duplicate
-                        var existingUnsigned = await _context.PeriodicTrainings
-                            .Where(pt => pt.UserId == user.Id
-                                && string.IsNullOrEmpty(pt.UserSignatureData)
-                                && string.IsNullOrEmpty(pt.InstructorSignature))
-                            .OrderByDescending(pt => pt.CreatedAt)
-                            .FirstOrDefaultAsync();
+                        foreach (var docType in docTypes)
+                        {
+                            // Check if there's already an unsigned, unlinked row for this user+type
+                            // with the SAME training date — reuse it to prevent exact duplicates.
+                            var existingUnsigned = await _context.PeriodicTrainings
+                                .Where(pt => pt.UserId == user.Id
+                                    && pt.DocumentType == docType
+                                    && pt.UserDocumentId == null
+                                    && pt.TrainingDate == dto.TrainingDate
+                                    && string.IsNullOrEmpty(pt.UserSignatureData)
+                                    && string.IsNullOrEmpty(pt.InstructorSignature))
+                                .OrderByDescending(pt => pt.CreatedAt)
+                                .FirstOrDefaultAsync();
 
-                        if (existingUnsigned != null)
-                        {
-                            // Update the existing unsigned row with new bulk training data
-                            existingUnsigned.TrainingDate = dto.TrainingDate ?? DateTime.UtcNow;
-                            existingUnsigned.DurationHours = dto.DurationHours;
-                            existingUnsigned.Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
-                                ? dto.Occupation
-                                : user.Function?.Name;
-                            existingUnsigned.MaterialTaught = dto.MaterialTaught;
-                            existingUnsigned.InstructorName = dto.InstructorName;
-                            existingUnsigned.VerifierName = dto.VerifierName;
-                            existingUnsigned.UpdatedAt = DateTime.UtcNow;
-                        }
-                        else
-                        {
-                            var training = new PeriodicTraining
+                            if (existingUnsigned != null)
                             {
-                                UserId = user.Id,
-                                TrainingDate = dto.TrainingDate ?? DateTime.UtcNow,
-                                DurationHours = dto.DurationHours,
-                                Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
+                                existingUnsigned.TrainingDate = dto.TrainingDate ?? DateTime.UtcNow;
+                                existingUnsigned.DurationHours = dto.DurationHours;
+                                existingUnsigned.Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
                                     ? dto.Occupation
-                                    : user.Function?.Name,
-                                MaterialTaught = dto.MaterialTaught,
-                                InstructorName = dto.InstructorName,
-                                VerifierName = dto.VerifierName,
-                                CreatedAt = DateTime.UtcNow
-                            };
-                            _context.PeriodicTrainings.Add(training);
+                                    : user.Function?.Name;
+                                existingUnsigned.MaterialTaught = dto.MaterialTaught;
+                                existingUnsigned.InstructorName = dto.InstructorName;
+                                existingUnsigned.VerifierName = dto.VerifierName;
+                                existingUnsigned.DocumentType = docType;
+                                existingUnsigned.UpdatedAt = DateTime.UtcNow;
+                            }
+                            else
+                            {
+                                var training = new PeriodicTraining
+                                {
+                                    UserId = user.Id,
+                                    DocumentType = docType,
+                                    TrainingDate = dto.TrainingDate ?? DateTime.UtcNow,
+                                    DurationHours = dto.DurationHours,
+                                    Occupation = !string.IsNullOrWhiteSpace(dto.Occupation)
+                                        ? dto.Occupation
+                                        : user.Function?.Name,
+                                    MaterialTaught = dto.MaterialTaught,
+                                    InstructorName = dto.InstructorName,
+                                    VerifierName = dto.VerifierName,
+                                    CreatedAt = DateTime.UtcNow
+                                };
+                                _context.PeriodicTrainings.Add(training);
+                            }
                         }
 
                         result.SuccessCount++;
@@ -192,6 +205,13 @@ namespace SyncApp26.Infrastructure.Services
                 Occupation = training.Occupation,
                 MaterialTaught = training.MaterialTaught,
                 InstructorName = training.InstructorName,
+                // map signature fields
+                UserSignatureData = training.UserSignatureData,
+                UserSignatureMethod = training.UserSignatureMethod,
+                InstructorSignature = training.InstructorSignature,
+                InstructorSignatureMethod = training.InstructorSignatureMethod,
+                VerifierSignature = training.VerifierSignature,
+                VerifierSignatureMethod = training.VerifierSignatureMethod,
                 VerifierName = training.VerifierName,
                 CreatedAt = training.CreatedAt,
                 UpdatedAt = training.UpdatedAt

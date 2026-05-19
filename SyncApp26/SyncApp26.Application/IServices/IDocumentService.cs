@@ -9,14 +9,24 @@ namespace SyncApp26.Application.IServices
     {
         Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail);
         Task<HashSet<Guid>> GetUserIdsWithDocumentTypeAsync(string documentType);
+        Task<HashSet<Guid>> GetUserIdsWithUnsignedDocumentTypeAsync(string documentType);
         Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(Guid userId);
         Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType);
+        Task<IEnumerable<UserDocument>> GetAllDocumentsAsync();
         Task<UserDocument?> GetDocumentByIdAsync(Guid documentId);
-        Task<bool> UpdateDocumentSignatureAsync(Guid documentId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false);
+        Task<bool> UpdateDocumentSignatureAsync(Guid documentId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false, Guid? periodicTrainingId = null);
+        Task<Guid?> GetCurrentTrainingIdForDocumentAsync(Guid documentId);
         Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress);
-        Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail);
+        Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null);
         Task<int> BulkSignAndSendGeneratedDocumentsAsync(string documentType, string signatureMethod, string signatureData, string ipAddress);
         Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document);
-        Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document);
+        Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false);
+        Task<int> GetPendingSsmDocumentsForAdminAsync();
+        Task<List<UserDocument>> GetPendingSsmDocumentsForAdminListAsync();
+        Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress);
+        Task<List<UserDocument>> GetAdminPendingDocumentsAsync();
+        Task<List<UserDocument>> GetAdminSignedDocumentsAsync();
+        Task<int> RegenerateDocumentsAsync();
+        Task<bool> DeleteDocumentAsync(Guid documentId);
     }
 }

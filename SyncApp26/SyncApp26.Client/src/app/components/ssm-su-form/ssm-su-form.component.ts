@@ -4,6 +4,23 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { AuthenticationService } from '../../services/authentication.service';
+
+interface InitialTrainingEntry {
+  documentType: string;
+  introductoryTrainingDate?: string;
+  introductoryTrainingHours?: number;
+  introductoryTrainingInstructor?: string;
+  introductoryTrainingInstructorFunction?: string;
+  introductoryTrainingContent?: string;
+  workplaceTrainingDate?: string;
+  workplaceTrainingLocation?: string;
+  workplaceTrainingHours?: number;
+  workplaceTrainingInstructor?: string;
+  workplaceTrainingInstructorFunction?: string;
+  workplaceTrainingContent?: string;
+}
 
 interface UserSSMSUForm {
   id: string;
@@ -26,22 +43,16 @@ interface UserSSMSUForm {
   qualifications?: string;
   commuteRoute?: string;
   commuteDurationMinutes?: number;
-  introductoryTrainingDate?: string;
-  introductoryTrainingHours?: number;
-  introductoryTrainingInstructor?: string;
-  introductoryTrainingInstructorFunction?: string;
-  introductoryTrainingContent?: string;
-  workplaceTrainingDate?: string;
-  workplaceTrainingLocation?: string;
-  workplaceTrainingHours?: number;
-  workplaceTrainingInstructor?: string;
-  workplaceTrainingInstructorFunction?: string;
-  workplaceTrainingContent?: string;
+  initialTrainings: InitialTrainingEntry[];
   admittedByName?: string;
   admittedByFunction?: string;
   admittedDate?: string;
   hireDate?: string;
   createdAt: string;
+  latestInstructorSignature?: string;
+  latestInstructorSignatureMethod?: string;
+  latestVerifierSignature?: string;
+  latestVerifierSignatureMethod?: string;
 }
 
 @Component({
@@ -71,26 +82,43 @@ export class SsmSuFormComponent implements OnInit {
     qualifications: '',
     commuteRoute: '',
     commuteDurationMinutes: null as number | null,
-    introductoryTrainingDate: '',
-    introductoryTrainingHours: null as number | null,
-    introductoryTrainingInstructor: '',
-    introductoryTrainingInstructorFunction: '',
-    introductoryTrainingContent: '',
-    workplaceTrainingDate: '',
-    workplaceTrainingLocation: '',
-    workplaceTrainingHours: null as number | null,
-    workplaceTrainingInstructor: '',
-    workplaceTrainingInstructorFunction: '',
-    workplaceTrainingContent: '',
     admittedByName: '',
     admittedByFunction: '',
-    admittedDate: ''
+    admittedDate: '',
+    ssmTraining: {
+      introductoryTrainingDate: '',
+      introductoryTrainingHours: null as number | null,
+      introductoryTrainingInstructor: '',
+      introductoryTrainingInstructorFunction: '',
+      introductoryTrainingContent: '',
+      workplaceTrainingDate: '',
+      workplaceTrainingLocation: '',
+      workplaceTrainingHours: null as number | null,
+      workplaceTrainingInstructor: '',
+      workplaceTrainingInstructorFunction: '',
+      workplaceTrainingContent: ''
+    },
+    suTraining: {
+      introductoryTrainingDate: '',
+      introductoryTrainingHours: null as number | null,
+      introductoryTrainingInstructor: '',
+      introductoryTrainingInstructorFunction: '',
+      introductoryTrainingContent: '',
+      workplaceTrainingDate: '',
+      workplaceTrainingLocation: '',
+      workplaceTrainingHours: null as number | null,
+      workplaceTrainingInstructor: '',
+      workplaceTrainingInstructorFunction: '',
+      workplaceTrainingContent: ''
+    }
   };
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private sanitizer: DomSanitizer,
+    private authService: AuthenticationService
   ) {}
 
   ngOnInit() {
@@ -107,6 +135,9 @@ export class SsmSuFormComponent implements OnInit {
         next: (data) => {
           this.userForm = data;
           this.populateFormData();
+          // load periodic trainings for this user (to show signatures per-row)
+          this.http.get<any[]>(`${environment.apiUrl}/PeriodicTraining/user/${this.userId}`)
+            .subscribe({ next: trainings => { this.trainings = trainings || []; }, error: () => { this.trainings = []; } });
           this.loading = false;
         },
         error: (err) => {
@@ -116,8 +147,40 @@ export class SsmSuFormComponent implements OnInit {
       });
   }
 
+  trainings: any[] = [];
+
+  get latestTraining() {
+    return this.trainings && this.trainings.length ? this.trainings[this.trainings.length - 1] : null;
+  }
+
+  get displayedTrainings(): any[] {
+    const start = Math.max(0, this.trainings.length - 5);
+    return this.trainings.slice(start);
+  }
+
+  getSafeImage(data?: string): SafeUrl | null {
+    if (!data) return null;
+    const prefixed = data.startsWith('data:') ? data : `data:image/png;base64,${data}`;
+    return this.sanitizer.bypassSecurityTrustUrl(prefixed);
+  }
+
   populateFormData() {
     if (this.userForm) {
+      const fromEntry = (e?: InitialTrainingEntry) => ({
+        introductoryTrainingDate: e?.introductoryTrainingDate || '',
+        introductoryTrainingHours: e?.introductoryTrainingHours || null,
+        introductoryTrainingInstructor: e?.introductoryTrainingInstructor || '',
+        introductoryTrainingInstructorFunction: e?.introductoryTrainingInstructorFunction || '',
+        introductoryTrainingContent: e?.introductoryTrainingContent || '',
+        workplaceTrainingDate: e?.workplaceTrainingDate || '',
+        workplaceTrainingLocation: e?.workplaceTrainingLocation || '',
+        workplaceTrainingHours: e?.workplaceTrainingHours || null,
+        workplaceTrainingInstructor: e?.workplaceTrainingInstructor || '',
+        workplaceTrainingInstructorFunction: e?.workplaceTrainingInstructorFunction || '',
+        workplaceTrainingContent: e?.workplaceTrainingContent || ''
+      });
+      const ssmEntry = this.userForm.initialTrainings?.find(t => t.documentType === 'SSM');
+      const suEntry = this.userForm.initialTrainings?.find(t => t.documentType === 'SU');
       this.formData = {
         dateOfBirth: this.userForm.dateOfBirth || '',
         placeOfBirth: this.userForm.placeOfBirth || '',
@@ -128,20 +191,11 @@ export class SsmSuFormComponent implements OnInit {
         qualifications: this.userForm.qualifications || '',
         commuteRoute: this.userForm.commuteRoute || '',
         commuteDurationMinutes: this.userForm.commuteDurationMinutes || null,
-        introductoryTrainingDate: this.userForm.introductoryTrainingDate || '',
-        introductoryTrainingHours: this.userForm.introductoryTrainingHours || null,
-        introductoryTrainingInstructor: this.userForm.introductoryTrainingInstructor || '',
-        introductoryTrainingInstructorFunction: this.userForm.introductoryTrainingInstructorFunction || '',
-        introductoryTrainingContent: this.userForm.introductoryTrainingContent || '',
-        workplaceTrainingDate: this.userForm.workplaceTrainingDate || '',
-        workplaceTrainingLocation: this.userForm.workplaceTrainingLocation || '',
-        workplaceTrainingHours: this.userForm.workplaceTrainingHours || null,
-        workplaceTrainingInstructor: this.userForm.workplaceTrainingInstructor || '',
-        workplaceTrainingInstructorFunction: this.userForm.workplaceTrainingInstructorFunction || '',
-        workplaceTrainingContent: this.userForm.workplaceTrainingContent || '',
         admittedByName: this.userForm.admittedByName || '',
         admittedByFunction: this.userForm.admittedByFunction || '',
-        admittedDate: this.userForm.admittedDate || ''
+        admittedDate: this.userForm.admittedDate || '',
+        ssmTraining: fromEntry(ssmEntry),
+        suTraining: fromEntry(suEntry)
       };
     }
   }
@@ -159,13 +213,33 @@ export class SsmSuFormComponent implements OnInit {
 
     this.saving = true;
 
-    // Prepare data - convert empty strings to null for date fields
     const dataToSend = {
-      ...this.formData,
       dateOfBirth: this.formData.dateOfBirth || null,
-      introductoryTrainingDate: this.formData.introductoryTrainingDate || null,
-      workplaceTrainingDate: this.formData.workplaceTrainingDate || null,
-      admittedDate: this.formData.admittedDate || null
+      placeOfBirth: this.formData.placeOfBirth,
+      address: this.formData.address,
+      bloodGroup: this.formData.bloodGroup,
+      badgeNumber: this.formData.badgeNumber,
+      education: this.formData.education,
+      qualifications: this.formData.qualifications,
+      commuteRoute: this.formData.commuteRoute,
+      commuteDurationMinutes: this.formData.commuteDurationMinutes,
+      admittedByName: this.formData.admittedByName,
+      admittedByFunction: this.formData.admittedByFunction,
+      admittedDate: this.formData.admittedDate || null,
+      initialTrainings: [
+        {
+          documentType: 'SSM',
+          ...this.formData.ssmTraining,
+          introductoryTrainingDate: this.formData.ssmTraining.introductoryTrainingDate || null,
+          workplaceTrainingDate: this.formData.ssmTraining.workplaceTrainingDate || null
+        },
+        {
+          documentType: 'SU',
+          ...this.formData.suTraining,
+          introductoryTrainingDate: this.formData.suTraining.introductoryTrainingDate || null,
+          workplaceTrainingDate: this.formData.suTraining.workplaceTrainingDate || null
+        }
+      ]
     };
 
     this.http.put(`${environment.apiUrl}/user/${this.userId}/ssm-su-form`, dataToSend)
@@ -209,7 +283,11 @@ export class SsmSuFormComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/employees', this.userId]);
+    if (this.authService.isAdmin()) {
+      this.router.navigate(['/employees', this.userId]);
+    } else {
+      this.router.navigate(['/line-manager']);
+    }
   }
 
   print() {

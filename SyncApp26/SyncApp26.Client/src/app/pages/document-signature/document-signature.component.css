@@ -1,0 +1,14 @@
+.progress-bar-bg {
+  width: 100%;
+  background: #e5e7eb; /* Tailwind gray-200 */
+  border-radius: 9999px;
+  height: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.08);
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #14b8a6 0%, #06b6d4 100%); /* from-teal-500 to-cyan-500 */
+  border-radius: 9999px;
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+}

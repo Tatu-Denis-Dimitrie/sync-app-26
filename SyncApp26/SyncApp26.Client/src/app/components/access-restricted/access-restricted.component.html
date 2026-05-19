@@ -6,7 +6,7 @@
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
-      >
+        >
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -18,15 +18,17 @@
 
     <h1 class="title">Access Restricted</h1>
 
-    <div class="user-info" *ngIf="currentUser">
-      <p class="greeting">
-        Hello,
-        <strong>{{ currentUser.firstName }} {{ currentUser.lastName }}</strong>
-      </p>
-      <p class="role-badge">
-        <span class="badge">{{ currentUser.role }}</span>
-      </p>
-    </div>
+    @if (currentUser) {
+      <div class="user-info">
+        <p class="greeting">
+          Hello,
+          <strong>{{ currentUser.firstName }} {{ currentUser.lastName }}</strong>
+        </p>
+        <p class="role-badge">
+          <span class="badge">{{ currentUser.role }}</span>
+        </p>
+      </div>
+    }
 
     <p class="message">
       The full application features are currently only available for
@@ -39,7 +41,7 @@
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
-      >
+        >
         <path
           stroke-linecap="round"
           stroke-linejoin="round"

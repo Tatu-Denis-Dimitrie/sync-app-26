@@ -19,6 +19,12 @@ interface ManualDayGroup {
   changes: UserChangeHistory[];
 }
 
+interface DataChangeRequestDayGroup {
+  dayKey: string;
+  dayDate?: string;
+  changes: UserChangeHistory[];
+}
+
 @Component({
   selector: 'app-import-history',
   standalone: true,
@@ -32,6 +38,7 @@ export class ImportHistoryComponent implements OnInit {
   allChanges: UserChangeHistory[] = [];
   expandedImportHistory = new Set<string>();
   expandedManualDays = new Set<string>();
+  expandedDataChangeDays = new Set<string>();
   usersById = new Map<string, User>();
   loading = false;
   error = '';
@@ -114,6 +121,10 @@ export class ImportHistoryComponent implements OnInit {
     return !this.hasRealImportHistoryId(change) && !change.status;
   }
 
+  isDataChangeRequest(change: UserChangeHistory): boolean {
+    return !this.hasRealImportHistoryId(change) && !!change.status;
+  }
+
   toggleImportGroup(historyId: string): void {
     if (this.expandedImportHistory.has(historyId)) {
       this.expandedImportHistory.delete(historyId);
@@ -136,6 +147,18 @@ export class ImportHistoryComponent implements OnInit {
 
   isManualDayExpanded(dayKey: string): boolean {
     return this.expandedManualDays.has(dayKey);
+  }
+
+  toggleDataChangeDay(dayKey: string): void {
+    if (this.expandedDataChangeDays.has(dayKey)) {
+      this.expandedDataChangeDays.delete(dayKey);
+    } else {
+      this.expandedDataChangeDays.add(dayKey);
+    }
+  }
+
+  isDataChangeDayExpanded(dayKey: string): boolean {
+    return this.expandedDataChangeDays.has(dayKey);
   }
 
   getUserName(userId: string): string {
@@ -192,6 +215,56 @@ export class ImportHistoryComponent implements OnInit {
 
     this.allChanges
       .filter(change => this.isManualChange(change))
+      .forEach(change => {
+        const date = this.getChangeDate(change);
+        const dayKey = this.getDayKey(date);
+
+        if (!groups.has(dayKey)) {
+          groups.set(dayKey, {
+            dayKey,
+            dayDate: date,
+            changes: []
+          });
+        }
+
+        const group = groups.get(dayKey)!;
+        group.changes.push(change);
+
+        if (date && (!group.dayDate || this.getChangeTime(change) > new Date(group.dayDate).getTime())) {
+          group.dayDate = date;
+        }
+      });
+
+    let result = Array.from(groups.values()).map(group => ({
+      ...group,
+      changes: group.changes.slice().sort((a, b) => this.getChangeTime(b) - this.getChangeTime(a))
+    }));
+
+    if (query) {
+      result = result.filter(group => {
+        const dateLabel = this.formatDate(group.dayDate).toLowerCase();
+        const hasMatchingDate = dateLabel.includes(query);
+        const hasMatchingChange = group.changes.some(change =>
+          this.getUserName(change.userId).toLowerCase().includes(query) ||
+          this.formatConflictField(change.fieldName).toLowerCase().includes(query)
+        );
+        return hasMatchingDate || hasMatchingChange;
+      });
+    }
+
+    return result.sort((a, b) => {
+      const aTime = a.dayDate ? new Date(a.dayDate).getTime() : 0;
+      const bTime = b.dayDate ? new Date(b.dayDate).getTime() : 0;
+      return this.sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
+    });
+  }
+
+  getFilteredDataChangeRequestGroups(): DataChangeRequestDayGroup[] {
+    const query = this.searchQuery.trim().toLowerCase();
+    const groups = new Map<string, DataChangeRequestDayGroup>();
+
+    this.allChanges
+      .filter(change => this.isDataChangeRequest(change))
       .forEach(change => {
         const date = this.getChangeDate(change);
         const dayKey = this.getDayKey(date);
@@ -310,4 +383,15 @@ export class ImportHistoryComponent implements OnInit {
     this.router.navigate(['/import-history']);
   }
 
+  navigateToSignature(): void {
+    this.router.navigate(['/admin-signature']);
+  }
+
+  
+  navigateToDataRequests(): void {
+    this.router.navigate(['/data-requests']);
+  }
+navigateToDocuments(): void {
+    this.router.navigate(['/documents']);
+  }
 }

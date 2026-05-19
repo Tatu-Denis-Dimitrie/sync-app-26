@@ -4,7 +4,7 @@ namespace SyncApp26.Application.IServices
 {
     public interface IDocumentSignatureService
     {
-        Task<string> GenerateSignatureTokenAsync(string email, Guid documentId, string documentName);
+        Task<string> GenerateSignatureTokenAsync(string email, Guid documentId, string documentName, Guid? periodicTrainingId = null);
         Task<DocumentSignatureToken?> ValidateTokenAsync(string token);
         Task<bool> ConsumeTokenAsync(string token);
     }

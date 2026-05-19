@@ -37,6 +37,10 @@ export class DocumentSignatureComponent implements OnInit {
   signatureMethod: 'draw' | 'type' | 'saved' = 'draw';
   typedSignature: string = '';
 
+  // Bulk signing progress
+  bulkTotal = 0;
+  bulkSigned = 0;
+
   @ViewChild('signatureCanvas') canvasRef?: ElementRef<HTMLCanvasElement>;
   private isDrawing = false;
   private ctx: CanvasRenderingContext2D | null = null;
@@ -56,6 +60,19 @@ export class DocumentSignatureComponent implements OnInit {
     this.isLoggedIn = this.authService.isLoggedIn();
     this.token = this.route.snapshot.paramMap.get('token');
     this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
+
+    // Bulk: preia numărul total de documente de semnat pentru admin
+    if (this.isBulkMode && this.isLoggedIn && this.authService.getCurrentUser()?.role === 'Admin') {
+      this.http.get<any>(`${environment.apiUrl}/documentsignature/pending-ssm-admin-count`).subscribe({
+        next: (res) => {
+          this.bulkTotal = res?.count || 0;
+          this.bulkSigned = 0;
+        },
+        error: () => {
+          this.bulkTotal = 0;
+        }
+      });
+    }
 
     if (!this.token) {
       this.errorMessage = 'Invalid link. No token provided.';
@@ -103,6 +120,9 @@ export class DocumentSignatureComponent implements OnInit {
       .subscribe(data => {
         if (data) {
           this.documentData = data;
+          // Adaugă flag pentru semnare ca admin (verificator SSM)
+          const user = this.authService.getCurrentUser();
+          this.documentData.isAdminSigning = !!(user && user.role === 'Admin' && this.documentData.documentType === 'SSM');
           setTimeout(() => { if (this.signatureMethod === 'draw') this.initCanvas(); }, 100);
         }
       });
@@ -198,23 +218,58 @@ export class DocumentSignatureComponent implements OnInit {
       this.errorMessage = 'Please type your full name as your signature.';
       return;
     }
+    if (this.signatureMethod === 'saved') {
+      if (!this.savedSignature || !this.savedSignature.isActive) {
+        this.errorMessage = 'No active saved signature found.';
+        return;
+      }
+    }
     if (!this.signatureConfirmed) {
       this.errorMessage = 'You must confirm your signature before signing.';
       return;
     }
 
     const { method, data } = this.getSignaturePayload();
-
     this.isLoading = true;
     this.errorMessage = '';
 
+    // Bulk sign cu progres real (admin)
+    if (this.isBulkMode && this.bulkTotal > 0 && this.authService.getCurrentUser()?.role === 'Admin') {
+      this.bulkSigned = 0;
+      this.successMessage = '';
+      const payload = {
+        signatureMethod: method,
+        signatureData: data
+      };
+      // DEBUG: log payload trimis la bulk-sign-async
+      console.log('Bulk sign payload:', payload);
+      this.http.post<any>(`${environment.apiUrl}${environment.endpoints.documentSignature}/bulk-sign-async`, payload)
+        .subscribe(res => {
+          if (res && res.jobId) {
+            this.bulkTotal = res.total;
+            this.bulkSigned = 0;
+            this.pollBulkProgress(res.jobId);
+          } else {
+            this.isLoading = false;
+            this.errorMessage = res?.message || 'No documents to sign.';
+          }
+        }, err => {
+          this.isLoading = false;
+          this.errorMessage = err.error?.message || 'Failed to start bulk signing.';
+        });
+      return;
+    }
+
+    // Semnare normală sau bulk fără progres real
     const payload = {
       token: this.token,
       signatureMethod: method,
       signatureData: data,
-      bulkSign: this.isBulkMode
+      bulkSign: this.isBulkMode,
+      periodicTrainingId: this.documentData?.periodicTrainingId ?? null
     };
-
+    // DEBUG: log payload trimis la consume-token
+    console.log('Sign payload:', payload);
     this.http.post<any>(`${environment.apiUrl}${environment.endpoints.documentSignature}/consume-token`, payload)
       .pipe(
         finalize(() => this.isLoading = false),
@@ -225,16 +280,52 @@ export class DocumentSignatureComponent implements OnInit {
       )
       .subscribe(res => {
         if (res) {
-          this.successMessage = res.message || 'Document successfully signed!';
           this.documentData = null;
+          if (this.isBulkMode && typeof res.count === 'number' && res.count > 1) {
+            this.bulkTotal = res.count;
+            this.bulkSigned = res.count;
+            this.successMessage = `Successfully signed ${res.count} document(s).`;
+          } else {
+            this.successMessage = res.message || 'Document successfully signed!';
+          }
         }
       });
+  }
+
+  pollBulkProgress(jobId: string): void {
+    const poll = () => {
+      this.http.get<any>(`${environment.apiUrl}${environment.endpoints.documentSignature}/bulk-sign-status/${jobId}`)
+        .subscribe(res => {
+          if (res) {
+            this.bulkTotal = res.total;
+            this.bulkSigned = res.signed;
+            if (res.completed) {
+              this.isLoading = false;
+              if (res.error) {
+                this.errorMessage = 'Bulk signing error: ' + res.error;
+              } else {
+                this.successMessage = `Successfully signed ${res.signed} document(s).`;
+                this.documentData = null;
+              }
+            } else {
+              setTimeout(poll, 700);
+            }
+          } else {
+            this.isLoading = false;
+            this.errorMessage = 'Bulk signing status error.';
+          }
+        }, err => {
+          this.isLoading = false;
+          this.errorMessage = 'Bulk signing status error.';
+        });
+    };
+    poll();
   }
 
   goToDashboard(): void {
     const user = this.authService.getCurrentUser();
     if (!user) { this.router.navigate(['/login']); return; }
-    if (user.role === 'Admin') this.router.navigate(['/dashboard']);
+    if (user.role === 'Admin') this.router.navigate(['/documents']);
     else if (user.role === 'Line Manager') this.router.navigate(['/line-manager']);
     else this.router.navigate(['/basic-user']);
   }

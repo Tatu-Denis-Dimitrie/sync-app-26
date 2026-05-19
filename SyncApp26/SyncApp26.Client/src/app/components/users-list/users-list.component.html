@@ -1,439 +1,1047 @@
 <div class="min-h-screen bg-background">
-  <!-- Header -->
-  <header
-    class="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40"
-  >
-    <div class="container mx-auto px-4 py-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <button
-            (click)="navigateToDashboard()"
-            class="w-8 h-8 bg-primary rounded-md flex items-center justify-center hover:bg-primary/90 transition-colors"
-          >
+  <!-- Toast notification -->
+  @if (toastMessage) {
+    <div
+      class="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300"
+      >
+      <div
+      [ngClass]="
+        toastType === 'success'
+          ? 'bg-green-100 border border-green-200 text-green-800'
+          : 'bg-red-100 border border-red-200 text-red-800'
+      "
+        class="px-6 py-4 rounded-lg shadow-lg flex items-center gap-3"
+        >
+        @if (toastType === 'success') {
+          <svg
+            class="w-5 h-5 text-green-600 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+              />
+            </svg>
+          }
+          @if (toastType === 'error') {
             <svg
-              class="w-5 h-5 text-primary-foreground"
+              class="w-5 h-5 text-red-600 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-            >
+              >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              ></path>
-            </svg>
-          </button>
-          <div>
-            <h1 class="text-xl font-semibold text-foreground">SyncApp 26</h1>
-            <p class="text-sm text-muted-foreground">
-              Synchronize employee data with CSV import
-            </p>
+                d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            }
+            <span class="text-sm font-medium">{{ toastMessage }}</span>
           </div>
         </div>
-        <div class="flex gap-2">
-          <button
-            (click)="navigateToDepartments()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Departments
-          </button>
-          <button
-            (click)="navigateToImportHistory()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            User History
-          </button>
-          <button
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-white bg-gray-500"
-          >
-            Users
-          </button>
-          <button
-            (click)="navigateToEmployees()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Employees
-          </button>
-          <button
-            (click)="logout()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <div class="container mx-auto px-4 py-8">
-    <!-- Filters -->
-    <div class="bg-card border border-border rounded-lg p-4 mb-6">
-      <div class="flex flex-col md:flex-row gap-3">
-        <div class="relative flex-1">
-          <input
-            type="text"
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="onSearchChange()"
-            placeholder="Search users..."
-            class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-          />
-          <svg
-            class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            ></path>
-          </svg>
-        </div>
-
-        <select
-          [(ngModel)]="selectedDepartment"
-          (ngModelChange)="onFilterChange()"
-          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-        >
-          <option value="all">All Departments</option>
-          <option *ngFor="let dept of departments$ | async" [value]="dept.name">
-            {{ dept.name }}
-          </option>
-        </select>
-
-        <select
-          [(ngModel)]="selectedRole"
-          (ngModelChange)="onFilterChange()"
-          class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-        >
-          <option value="all">All Roles</option>
-          <option [value]="UserRole.LineManager">Line Managers</option>
-          <option [value]="UserRole.Employee">Employees</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Users Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-      <div
-        *ngFor="let user of paginatedUsers$ | async"
-        class="bg-card border border-border rounded-lg p-4 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
-        (click)="viewUserDetails(user.id)"
-      >
-        <div class="flex items-start justify-between mb-3">
-          <div class="flex items-center gap-3">
-            <div
-              class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"
+      }
+      <div class="container mx-auto px-4 py-8">
+        @if (signatureStats$ | async; as signatureStats) {
+          <div
+            class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6"
             >
-              <svg
-                *ngIf="user.role === UserRole.LineManager"
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="text-purple-600"
+            <div class="bg-card border border-border rounded-lg p-4">
+              <p class="text-xs uppercase tracking-wide text-muted-foreground">
+                Users in View
+              </p>
+              <p class="text-2xl font-bold text-foreground mt-1">
+                {{ signatureStats.total }}
+              </p>
+            </div>
+            <div class="bg-card border border-blue-200 rounded-lg p-4">
+              <p class="text-xs uppercase tracking-wide text-blue-600">SSM Signed</p>
+              <p class="text-2xl font-bold text-blue-700 mt-1">
+                {{ signatureStats.ssmSigned }}
+              </p>
+            </div>
+            <div class="bg-card border border-teal-200 rounded-lg p-4">
+              <p class="text-xs uppercase tracking-wide text-teal-600">SU Signed</p>
+              <p class="text-2xl font-bold text-teal-700 mt-1">
+                {{ signatureStats.suSigned }}
+              </p>
+            </div>
+            <div class="bg-card border border-emerald-200 rounded-lg p-4">
+              <p class="text-xs uppercase tracking-wide text-emerald-600">
+                Both Signed
+              </p>
+              <p class="text-2xl font-bold text-emerald-700 mt-1">
+                {{ signatureStats.bothSigned }}
+              </p>
+            </div>
+            <div class="bg-card border border-rose-200 rounded-lg p-4">
+              <p class="text-xs uppercase tracking-wide text-rose-600">Not Signed</p>
+              <p class="text-2xl font-bold text-rose-700 mt-1">
+                {{ signatureStats.unsigned }}
+              </p>
+            </div>
+          </div>
+        }
+
+        <!-- Statistics toggles -->
+        <div class="flex flex-wrap gap-3 mb-4">
+          <button
+            type="button"
+            role="switch"
+            [attr.aria-checked]="showDepartmentStats"
+            (click)="showDepartmentStats = !showDepartmentStats"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        [ngClass]="
+          showDepartmentStats
+            ? 'border-primary/30 bg-primary/5 shadow-sm shadow-primary/10 backdrop-blur-sm'
+            : 'border-border/60 bg-card/80 backdrop-blur-sm hover:border-primary/20 hover:bg-primary/[0.02]'
+        "
+            >
+            <!-- pill switch -->
+            <div
+              class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-all duration-300"
+          [ngClass]="
+            showDepartmentStats
+              ? 'bg-primary shadow-md shadow-primary/30'
+              : 'bg-muted'
+          "
               >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              <svg
-                *ngIf="user.role === UserRole.Employee"
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="text-blue-600"
-              >
-                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+              <span
+                class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-300"
+                [class.translate-x-5]="showDepartmentStats"
+                [class.translate-x-0]="!showDepartmentStats"
+              ></span>
             </div>
             <div>
-              <h3
-                class="font-semibold text-foreground group-hover:text-primary transition-colors"
-              >
-                {{ user.firstName }} {{ user.lastName }}
-              </h3>
-              <p class="text-sm text-muted-foreground">{{ user.email }}</p>
+              <p class="text-sm font-medium text-foreground leading-tight">
+                Statistics by Department
+              </p>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                Signature coverage per department
+              </p>
             </div>
-          </div>
-          <div class="flex items-center gap-1">
-            <button
-              (click)="openEditModal(user, $event)"
-              class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
+          </button>
+
+          <button
+            type="button"
+            role="switch"
+            [attr.aria-checked]="showManagerStats"
+            (click)="showManagerStats = !showManagerStats"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        [ngClass]="
+          showManagerStats
+            ? 'border-primary/30 bg-primary/5 shadow-sm shadow-primary/10 backdrop-blur-sm'
+            : 'border-border/60 bg-card/80 backdrop-blur-sm hover:border-primary/20 hover:bg-primary/[0.02]'
+        "
             >
-              Edit
-            </button>
-            <button
-              (click)="openDeleteModal(user, $event)"
-              class="text-xs p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
-            >
-              Delete
-            </button>
-          </div>
+            <!-- pill switch -->
+            <div
+              class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-all duration-300"
+          [ngClass]="
+            showManagerStats
+              ? 'bg-primary shadow-md shadow-primary/30'
+              : 'bg-muted'
+          "
+              >
+              <span
+                class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-300"
+                [class.translate-x-5]="showManagerStats"
+                [class.translate-x-0]="!showManagerStats"
+              ></span>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-foreground leading-tight">
+                Statistics by Line Manager
+              </p>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                Teams needing follow-up
+              </p>
+            </div>
+          </button>
         </div>
 
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">Department:</span>
-            <span class="font-medium text-foreground">{{
-              user.departmentName
-            }}</span>
-          </div>
+        @if (
+          sortedDepartmentSignatureStats$ | async; as departmentSignatureStats
+          ) {
+          @if (showDepartmentStats) {
+            <div
+              @fadeSlide
+              class="bg-card border border-border rounded-xl p-0 mb-6 overflow-hidden shadow-sm"
+              >
+              <div
+                class="px-5 py-4 bg-gradient-to-r from-slate-50 to-sky-50 border-b border-border"
+                >
+                <h3 class="text-sm font-semibold text-foreground">
+                  Signature Statistics by Department
+                </h3>
+                <p class="text-xs text-muted-foreground mt-1">
+                  Quick overview of signing coverage for each department
+                </p>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-muted/40 text-muted-foreground">
+                      <th
+                        class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
+                        (click)="toggleDepartmentTableSort('departmentName')"
+                        >
+                        Department{{ getDepartmentSortIndicator("departmentName") }}
+                      </th>
+                      <th
+                        class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                        (click)="toggleDepartmentTableSort('total')"
+                        >
+                        Total{{ getDepartmentSortIndicator("total") }}
+                      </th>
+                      <th
+                        class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                        (click)="toggleDepartmentTableSort('ssmSigned')"
+                        >
+                        SSM Signed{{ getDepartmentSortIndicator("ssmSigned") }}
+                      </th>
+                      <th
+                        class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                        (click)="toggleDepartmentTableSort('suSigned')"
+                        >
+                        SU Signed{{ getDepartmentSortIndicator("suSigned") }}
+                      </th>
+                      <th
+                        class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                        (click)="toggleDepartmentTableSort('bothSigned')"
+                        >
+                        Both Signed{{ getDepartmentSortIndicator("bothSigned") }}
+                      </th>
+                      <th
+                        class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                        (click)="toggleDepartmentTableSort('unsigned')"
+                        >
+                        Not Signed{{ getDepartmentSortIndicator("unsigned") }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of departmentSignatureStats; track row) {
+                      <tr
+                        class="border-t border-border/40 hover:bg-muted/30 transition-colors"
+                        >
+                        <td class="py-3 px-4 font-medium text-foreground">
+                          {{ row.departmentName }}
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                          <span
+                            class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold"
+                            >{{ row.total }}</span
+                            >
+                          </td>
+                          <td class="py-3 px-4 text-right">
+                            <span
+                              class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 font-semibold"
+                              >{{ row.ssmSigned }}</span
+                              >
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                              <span
+                                class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-teal-100 text-teal-700 font-semibold"
+                                >{{ row.suSigned }}</span
+                                >
+                              </td>
+                              <td class="py-3 px-4 text-right">
+                                <span
+                                  class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold"
+                                  >{{ row.bothSigned }}</span
+                                  >
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                  <span
+                                    class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 font-semibold"
+                                    >{{ row.unsigned }}</span
+                                    >
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    }
+                  }
 
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">Role:</span>
-            <span
+                  @if (sortedLineManagerTeamStats$ | async; as lineManagerTeamStats) {
+                    @if (showManagerStats) {
+                      <div
+                        @fadeSlide
+                        class="bg-card border border-border rounded-xl p-0 mb-6 overflow-hidden shadow-sm"
+                        >
+                        <div
+                          class="px-5 py-4 bg-gradient-to-r from-slate-50 to-rose-50 border-b border-border flex items-center justify-between gap-4"
+                          >
+                          <div>
+                            <h3 class="text-sm font-semibold text-foreground">
+                              Line Manager Team Signing Status
+                            </h3>
+                            <p class="text-xs text-muted-foreground mt-1">
+                              Teams needing follow-up are highlighted
+                            </p>
+                          </div>
+                          <div class="flex items-center gap-2 shrink-0">
+                            <!-- Sending spinner -->
+                            @if (isSendingNotify) {
+                              <div
+                                class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-muted bg-muted/30 text-muted-foreground text-xs"
+                                >
+                                <svg
+                                  class="w-3.5 h-3.5 animate-spin"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  >
+                                  <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                    />
+                                    <path
+                                      class="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                      />
+                                    </svg>
+                                    Sending emails…
+                                  </div>
+                                } @else {
+                                  @if (confirmingNotify !== 'SSM') {
+                                    <button
+                                      type="button"
+                                      (click)="notifyAllManagers('SSM')"
+                                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors"
+                                      title="Send a reminder email to all line managers with unsigned SSM documents"
+                                      >
+                                      <svg
+                                        class="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        >
+                                        <path
+                                          stroke-linecap="round"
+                                          stroke-linejoin="round"
+                                          stroke-width="2"
+                                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                          />
+                                        </svg>
+                                        Notify SSM
+                                      </button>
+                                    } @else {
+                                      <span class="text-xs text-muted-foreground"
+                                        >Send SSM reminders?</span
+                                        >
+                                        <button
+                                          type="button"
+                                          (click)="notifyAllManagers('SSM')"
+                                          class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+                                          >
+                                          Yes
+                                        </button>
+                                        <button
+                                          type="button"
+                                          (click)="cancelNotify()"
+                                          class="px-2.5 py-1 rounded-lg border border-input text-muted-foreground text-xs font-medium hover:bg-muted transition-colors"
+                                          >
+                                          Cancel
+                                        </button>
+                                      }
+                                      @if (confirmingNotify !== 'SU') {
+                                        <button
+                                          type="button"
+                                          (click)="notifyAllManagers('SU')"
+                                          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-700 text-xs font-medium hover:bg-teal-100 transition-colors"
+                                          title="Send a reminder email to all line managers with unsigned SU documents"
+                                          >
+                                          <svg
+                                            class="w-3.5 h-3.5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                            >
+                                            <path
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              stroke-width="2"
+                                              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                              />
+                                            </svg>
+                                            Notify SU
+                                          </button>
+                                        } @else {
+                                          <span class="text-xs text-muted-foreground"
+                                            >Send SU reminders?</span
+                                            >
+                                            <button
+                                              type="button"
+                                              (click)="notifyAllManagers('SU')"
+                                              class="px-2.5 py-1 rounded-lg bg-teal-600 text-white text-xs font-medium hover:bg-teal-700 transition-colors"
+                                              >
+                                              Yes
+                                            </button>
+                                            <button
+                                              type="button"
+                                              (click)="cancelNotify()"
+                                              class="px-2.5 py-1 rounded-lg border border-input text-muted-foreground text-xs font-medium hover:bg-muted transition-colors"
+                                              >
+                                              Cancel
+                                            </button>
+                                          }
+                                        }
+                                      </div>
+                                    </div>
+                                    @if (lineManagerTeamStats.length > 0) {
+                                      <div
+                                        class="overflow-x-auto"
+                                        >
+                                        <table class="w-full text-sm">
+                                          <thead>
+                                            <tr class="bg-muted/40 text-muted-foreground">
+                                              <th
+                                                class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
+                                                (click)="toggleManagerTableSort('managerName')"
+                                                >
+                                                Line Manager{{ getManagerSortIndicator("managerName") }}
+                                              </th>
+                                              <th
+                                                class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
+                                                (click)="toggleManagerTableSort('departmentName')"
+                                                >
+                                                Department{{ getManagerSortIndicator("departmentName") }}
+                                              </th>
+                                              <th
+                                                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                                                (click)="toggleManagerTableSort('totalSubordinates')"
+                                                >
+                                                Subordinates{{ getManagerSortIndicator("totalSubordinates") }}
+                                              </th>
+                                              <th
+                                                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                                                (click)="toggleManagerTableSort('missingSsm')"
+                                                >
+                                                Missing SSM{{ getManagerSortIndicator("missingSsm") }}
+                                              </th>
+                                              <th
+                                                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                                                (click)="toggleManagerTableSort('missingSu')"
+                                                >
+                                                Missing SU{{ getManagerSortIndicator("missingSu") }}
+                                              </th>
+                                              <th
+                                                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                                                (click)="toggleManagerTableSort('missingAny')"
+                                                >
+                                                Missing Any{{ getManagerSortIndicator("missingAny") }}
+                                              </th>
+                                              <th
+                                                class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
+                                                (click)="toggleManagerTableSort('fullySignedBoth')"
+                                                >
+                                                Fully Signed Both
+                                                {{ getManagerSortIndicator("fullySignedBoth") }}
+                                              </th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            @for (row of lineManagerTeamStats; track row) {
+                                              <tr
+                                                class="border-t border-border/40 hover:bg-muted/30 transition-colors"
+                                                [class.bg-rose-50]="row.missingAny > 0"
+                                                >
+                                                <td class="py-3 px-4 font-medium text-foreground">
+                                                  {{ row.managerName }}
+                                                </td>
+                                                <td class="py-3 px-4 text-muted-foreground">
+                                                  {{ row.departmentName }}
+                                                </td>
+                                                <td class="py-3 px-4 text-right">
+                                                  <span
+                                                    class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold"
+                                                    >{{ row.totalSubordinates }}</span
+                                                    >
+                                                  </td>
+                                                  <td class="py-3 px-4 text-right">
+                                                    <span
+                                                      class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md"
+                                                      [class.bg-rose-100]="row.missingSsm > 0"
+                                                      [class.text-rose-700]="row.missingSsm > 0"
+                                                      [class.bg-slate-100]="row.missingSsm === 0"
+                                                      [class.text-slate-600]="row.missingSsm === 0"
+                                                      >{{ row.missingSsm }}</span
+                                                      >
+                                                    </td>
+                                                    <td class="py-3 px-4 text-right">
+                                                      <span
+                                                        class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md"
+                                                        [class.bg-rose-100]="row.missingSu > 0"
+                                                        [class.text-rose-700]="row.missingSu > 0"
+                                                        [class.bg-slate-100]="row.missingSu === 0"
+                                                        [class.text-slate-600]="row.missingSu === 0"
+                                                        >{{ row.missingSu }}</span
+                                                        >
+                                                      </td>
+                                                      <td class="py-3 px-4 text-right">
+                                                        <button
+                                                          type="button"
+                                                          class="inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-semibold transition-colors"
+                                                          [class.bg-rose-100]="row.missingAny > 0"
+                                                          [class.text-rose-700]="row.missingAny > 0"
+                                                          [class.border-rose-300]="row.missingAny > 0"
+                                                          [class.hover:bg-rose-200]="row.missingAny > 0"
+                                                          [class.cursor-pointer]="row.missingAny > 0"
+                                                          [class.bg-emerald-100]="row.missingAny === 0"
+                                                          [class.text-emerald-700]="row.missingAny === 0"
+                                                          [class.border-emerald-300]="row.missingAny === 0"
+                                                          [class.cursor-not-allowed]="row.missingAny === 0"
+                                                          [disabled]="row.missingAny === 0"
+                    [title]="
+                      row.missingAny > 0
+                        ? 'View pending users for ' +
+                          row.managerName +
+                          ' (' +
+                          row.missingAny +
+                          ' pending)'
+                        : 'All subordinates are fully signed for ' +
+                          row.managerName
+                    "
+                                                          (click)="openPendingUsersForManager(row, $event)"
+                                                          >
+                                                          <span>{{ row.missingAny }}</span>
+                                                          @if (row.missingAny > 0) {
+                                                            <span>View</span>
+                                                          }
+                                                        </button>
+                                                      </td>
+                                                      <td class="py-3 px-4 text-right text-emerald-700">
+                                                        <span
+                                                          class="inline-flex min-w-[2rem] justify-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold"
+                                                          >{{ row.fullySignedBoth }}</span
+                                                          >
+                                                        </td>
+                                                      </tr>
+                                                    }
+                                                  </tbody>
+                                                </table>
+                                              </div>
+                                            } @else {
+                                              <p class="text-sm text-muted-foreground p-5">
+                                                No line managers with assigned subordinates in this filter scope.
+                                              </p>
+                                            }
+                                          </div>
+                                        }
+                                      }
+
+                                      <!-- Filters -->
+                                      <div class="bg-card border border-border rounded-lg p-4 mb-6">
+                                        <div class="flex flex-col md:flex-row gap-3">
+                                          <div class="relative flex-1">
+                                            <input
+                                              type="text"
+                                              [(ngModel)]="searchQuery"
+                                              (ngModelChange)="onSearchChange()"
+                                              placeholder="Search users..."
+                                              class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                              />
+                                              <svg
+                                                class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                                >
+                                                <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  stroke-width="2"
+                                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                                ></path>
+                                              </svg>
+                                            </div>
+
+                                            <select
+                                              [(ngModel)]="selectedDepartment"
+                                              (ngModelChange)="onFilterChange()"
+                                              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                              >
+                                              <option value="all">All Departments</option>
+                                              @for (dept of departments$ | async; track dept) {
+                                                <option [value]="dept.name">
+                                                  {{ dept.name }}
+                                                </option>
+                                              }
+                                            </select>
+
+                                            <select
+                                              [(ngModel)]="selectedRole"
+                                              (ngModelChange)="onFilterChange()"
+                                              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                              >
+                                              <option value="all">All Roles</option>
+                                              <option [value]="UserRole.LineManager">Line Managers</option>
+                                              <option [value]="UserRole.Employee">Employees</option>
+                                            </select>
+
+                                            <select
+                                              [(ngModel)]="selectedSignature"
+                                              (ngModelChange)="onFilterChange()"
+                                              class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                              >
+                                              <option value="all">All Signature Status</option>
+                                              <option value="ssm-signed">SSM Signed</option>
+                                              <option value="su-signed">SU Signed</option>
+                                              <option value="both-signed">Both Signed</option>
+                                              <option value="unsigned">Not Signed (SSM+SU)</option>
+                                            </select>
+                                          </div>
+                                        </div>
+
+                                        <!-- Users Grid -->
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                                          @for (user of paginatedUsers$ | async; track user) {
+                                            <div
+                                              class="bg-card border border-border rounded-lg p-4 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
+                                              (click)="viewUserDetails(user.id)"
+                                              >
+                                              <div class="flex items-start justify-between mb-3">
+                                                <div class="flex items-center gap-3">
+                                                  <div
+                                                    class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"
+                                                    >
+                                                    @if (user.role === UserRole.LineManager) {
+                                                      <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="20"
+                                                        height="20"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        class="text-purple-600"
+                                                        >
+                                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                                        <circle cx="9" cy="7" r="4" />
+                                                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                                      </svg>
+                                                    }
+                                                    @if (user.role === UserRole.Employee) {
+                                                      <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="20"
+                                                        height="20"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        class="text-blue-600"
+                                                        >
+                                                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                                        <circle cx="12" cy="7" r="4" />
+                                                      </svg>
+                                                    }
+                                                  </div>
+                                                  <div>
+                                                    <h3
+                                                      class="font-semibold text-foreground group-hover:text-primary transition-colors"
+                                                      >
+                                                      {{ user.firstName }} {{ user.lastName }}
+                                                    </h3>
+                                                    <p class="text-sm text-muted-foreground">{{ user.email }}</p>
+                                                  </div>
+                                                </div>
+                                                <div class="flex items-center gap-1">
+                                                  <button
+                                                    (click)="openEditModal(user, $event)"
+                                                    class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
+                                                    >
+                                                    Edit
+                                                  </button>
+                                                  <button
+                                                    (click)="openDeleteModal(user, $event)"
+                                                    class="text-xs p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+                                                    >
+                                                    Delete
+                                                  </button>
+                                                </div>
+                                              </div>
+                                              <div class="space-y-2">
+                                                <div class="flex items-center justify-between text-sm">
+                                                  <span class="text-muted-foreground">Department:</span>
+                                                  <span class="font-medium text-foreground">{{
+                                                    user.departmentName
+                                                  }}</span>
+                                                </div>
+                                                <div class="flex items-center justify-between text-sm">
+                                                  <span class="text-muted-foreground">Role:</span>
+                                                  <span
               [class]="
                 'px-2 py-1 rounded border text-xs font-medium ' +
                 getRoleBadgeColor(user.role!)
               "
-            >
-              {{
-                user.role === UserRole.LineManager ? "Line Manager" : "Employee"
-              }}
-            </span>
-          </div>
+                                                    >
+                                                    {{
+                                                    user.role === UserRole.LineManager ? "Line Manager" : "Employee"
+                                                    }}
+                                                  </span>
+                                                </div>
+                                                @if (user.assignedToName) {
+                                                  <div
+                                                    class="flex items-center justify-between text-sm"
+                                                    >
+                                                    <span class="text-muted-foreground">Manager:</span>
+                                                    <span class="font-medium text-foreground">{{
+                                                      user.assignedToName
+                                                    }}</span>
+                                                  </div>
+                                                }
+                                                <div
+                                                  class="pt-2 border-t border-border flex items-center justify-between text-sm"
+                                                  >
+                                                  <span class="text-muted-foreground">SSM</span>
+                                                  <span
+              [class]="
+                user.hasSignedSsm
+                  ? 'text-blue-700 font-semibold'
+                  : 'text-rose-600 font-semibold'
+              "
+                                                    >
+                                                    {{ user.hasSignedSsm ? "Signed" : "Not Signed" }}
+                                                  </span>
+                                                </div>
+                                                <div class="flex items-center justify-between text-sm">
+                                                  <span class="text-muted-foreground">SU</span>
+                                                  <span
+              [class]="
+                user.hasSignedSu
+                  ? 'text-teal-700 font-semibold'
+                  : 'text-rose-600 font-semibold'
+              "
+                                                    >
+                                                    {{ user.hasSignedSu ? "Signed" : "Not Signed" }}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          }
 
-          <div
-            *ngIf="user.assignedToName"
-            class="flex items-center justify-between text-sm"
-          >
-            <span class="text-muted-foreground">Manager:</span>
-            <span class="font-medium text-foreground">{{
-              user.assignedToName
-            }}</span>
-          </div>
-        </div>
-      </div>
+                                          <!-- Empty State -->
+                                          @if ((paginatedUsers$ | async)?.length === 0) {
+                                            <div
+                                              class="col-span-full text-center py-12"
+                                              >
+                                              <div
+                                                class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"
+                                                >
+                                                <svg
+                                                  class="w-8 h-8 text-muted-foreground"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                  >
+                                                  <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                                  ></path>
+                                                </svg>
+                                              </div>
+                                              <h3 class="text-lg font-medium text-foreground mb-2">No users found</h3>
+                                              <p class="text-muted-foreground">
+                                                There are no users matching the filter criteria.
+                                              </p>
+                                            </div>
+                                          }
+                                        </div>
 
-      <!-- Empty State -->
-      <div
-        *ngIf="(paginatedUsers$ | async)?.length === 0"
-        class="col-span-full text-center py-12"
-      >
-        <div
-          class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"
-        >
-          <svg
-            class="w-8 h-8 text-muted-foreground"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-            ></path>
-          </svg>
-        </div>
-        <h3 class="text-lg font-medium text-foreground mb-2">No users found</h3>
-        <p class="text-muted-foreground">
-          There are no users matching the filter criteria.
-        </p>
-      </div>
-    </div>
+                                        <!-- Pagination -->
+                                        <app-pagination
+                                          [currentPage]="currentPage"
+                                          [totalItems]="totalItems"
+                                          [pageSize]="pageSize"
+                                          (pageChange)="onPageChange($event)"
+                                        ></app-pagination>
+                                      </div>
 
-    <!-- Pagination -->
-    <app-pagination
-      [currentPage]="currentPage"
-      [totalItems]="totalItems"
-      [pageSize]="pageSize"
-      (pageChange)="onPageChange($event)"
-    ></app-pagination>
-  </div>
+                                      <!-- Pending Users Modal -->
+                                      @if (isPendingUsersModalOpen) {
+                                        <div
+                                          class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+                                          (click)="closePendingUsersModal()"
+                                          >
+                                          <div
+                                            class="bg-card w-full max-w-2xl rounded-lg shadow-lg border border-border p-6 max-h-[80vh] overflow-y-auto"
+                                            (click)="$event.stopPropagation()"
+                                            >
+                                            <div class="flex justify-between items-center mb-4">
+                                              <h2 class="text-lg font-semibold text-foreground">
+                                                {{ pendingUsersModalTitle }}
+                                              </h2>
+                                              <button
+                                                (click)="closePendingUsersModal()"
+                                                class="text-muted-foreground hover:text-foreground"
+                                                >
+                                                <svg
+                                                  class="w-5 h-5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                  >
+                                                  <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                  ></path>
+                                                </svg>
+                                              </button>
+                                            </div>
+                                            @if (pendingUsersForModal.length > 0) {
+                                              <div
+                                                class="space-y-2"
+                                                >
+                                                @for (user of pendingUsersForModal; track user) {
+                                                  <div
+                                                    class="border border-border rounded-md p-3 flex items-center justify-between"
+                                                    >
+                                                    <div>
+                                                      <p class="font-medium text-foreground">
+                                                        {{ user.firstName }} {{ user.lastName }}
+                                                      </p>
+                                                      <p class="text-sm text-muted-foreground">{{ user.email }}</p>
+                                                    </div>
+                                                    <div class="text-xs text-right">
+                                                      <p
+              [class]="
+                user.hasSignedSsm
+                  ? 'text-blue-700'
+                  : 'text-rose-700 font-semibold'
+              "
+                                                        >
+                                                        SSM: {{ user.hasSignedSsm ? "Signed" : "Not Signed" }}
+                                                      </p>
+                                                      <p
+              [class]="
+                user.hasSignedSu
+                  ? 'text-teal-700'
+                  : 'text-rose-700 font-semibold'
+              "
+                                                        >
+                                                        SU: {{ user.hasSignedSu ? "Signed" : "Not Signed" }}
+                                                      </p>
+                                                    </div>
+                                                  </div>
+                                                }
+                                              </div>
+                                            } @else {
+                                              <p class="text-sm text-muted-foreground">
+                                                All subordinates are fully signed.
+                                              </p>
+                                            }
+                                          </div>
+                                        </div>
+                                      }
 
-  <!-- Edit Modal -->
-  <div
-    *ngIf="isEditModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
-    (click)="closeEditModal()"
-  >
-    <div
-      class="bg-card w-full max-w-md rounded-lg shadow-lg border border-border p-6"
-      (click)="$event.stopPropagation()"
-    >
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold text-foreground">Edit User</h2>
-        <button
-          (click)="closeEditModal()"
-          class="text-muted-foreground hover:text-foreground"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
-          </svg>
-        </button>
-      </div>
-      <form (ngSubmit)="saveUser()" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-foreground"
-              >First Name</label
-            >
-            <input
-              type="text"
-              [(ngModel)]="editForm.firstName"
-              name="firstName"
-              required
-              class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-foreground">Last Name</label>
-            <input
-              type="text"
-              [(ngModel)]="editForm.lastName"
-              name="lastName"
-              required
-              class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-          </div>
-        </div>
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-foreground">Email</label>
-          <input
-            type="email"
-            [(ngModel)]="editForm.email"
-            name="email"
-            required
-            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-        </div>
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-foreground">Department</label>
-          <select
-            [(ngModel)]="editForm.departmentId"
-            (ngModelChange)="onDepartmentChange($event)"
-            name="departmentId"
-            required
-            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option *ngFor="let dept of departments$ | async" [value]="dept.id">
-              {{ dept.name }}
-            </option>
-          </select>
-        </div>
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-foreground">Function</label>
-          <select
-            [(ngModel)]="editForm.function"
-            name="function"
-            required
-            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option value="" disabled>Select Function</option>
-            <option *ngFor="let fn of availableFunctions" [value]="fn">
-              {{ fn }}
-            </option>
-          </select>
-        </div>
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-foreground">Role</label>
-          <select
-            [(ngModel)]="editForm.role"
-            name="role"
-            required
-            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option [value]="UserRole.Employee">Employee</option>
-            <option [value]="UserRole.LineManager">Line Manager</option>
-          </select>
-        </div>
-        <div *ngIf="editForm.role === UserRole.Employee" class="space-y-2">
-          <label class="text-sm font-medium text-foreground"
-            >Line Manager <span class="text-destructive">*</span></label
-          >
-          <select
-            [(ngModel)]="editForm.assignedToId"
-            name="assignedToId"
-            [required]="editForm.role === UserRole.Employee"
-            class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option value="">Select Line Manager</option>
-            <option *ngFor="let m of getAvailableLineManagers()" [value]="m.id">
-              {{ m.firstName }} {{ m.lastName }}
-            </option>
-          </select>
-        </div>
-        <div class="flex justify-end gap-3 mt-6">
-          <button
-            type="button"
-            (click)="closeEditModal()"
-            class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
-          >
-            Save Changes
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+                                      <!-- Edit Modal -->
+                                      @if (isEditModalOpen) {
+                                        <div
+                                          class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+                                          (click)="closeEditModal()"
+                                          >
+                                          <div
+                                            class="bg-card w-full max-w-md rounded-lg shadow-lg border border-border p-6"
+                                            (click)="$event.stopPropagation()"
+                                            >
+                                            <div class="flex justify-between items-center mb-4">
+                                              <h2 class="text-lg font-semibold text-foreground">Edit User</h2>
+                                              <button
+                                                (click)="closeEditModal()"
+                                                class="text-muted-foreground hover:text-foreground"
+                                                >
+                                                <svg
+                                                  class="w-5 h-5"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                  >
+                                                  <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                  ></path>
+                                                </svg>
+                                              </button>
+                                            </div>
+                                            <form (ngSubmit)="saveUser()" class="space-y-4">
+                                              <div class="grid grid-cols-2 gap-4">
+                                                <div class="space-y-2">
+                                                  <label class="text-sm font-medium text-foreground"
+                                                    >First Name</label
+                                                    >
+                                                    <input
+                                                      type="text"
+                                                      [(ngModel)]="editForm.firstName"
+                                                      name="firstName"
+                                                      required
+                                                      class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                      />
+                                                    </div>
+                                                    <div class="space-y-2">
+                                                      <label class="text-sm font-medium text-foreground">Last Name</label>
+                                                      <input
+                                                        type="text"
+                                                        [(ngModel)]="editForm.lastName"
+                                                        name="lastName"
+                                                        required
+                                                        class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        />
+                                                      </div>
+                                                    </div>
+                                                    <div class="space-y-2">
+                                                      <label class="text-sm font-medium text-foreground">Email</label>
+                                                      <input
+                                                        type="email"
+                                                        [(ngModel)]="editForm.email"
+                                                        name="email"
+                                                        required
+                                                        class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        />
+                                                      </div>
+                                                      <div class="space-y-2">
+                                                        <label class="text-sm font-medium text-foreground">Department</label>
+                                                        <select
+                                                          [(ngModel)]="editForm.departmentId"
+                                                          (ngModelChange)="onDepartmentChange($event)"
+                                                          name="departmentId"
+                                                          required
+                                                          class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                          >
+                                                          @for (dept of departments$ | async; track dept) {
+                                                            <option [value]="dept.id">
+                                                              {{ dept.name }}
+                                                            </option>
+                                                          }
+                                                        </select>
+                                                      </div>
+                                                      <div class="space-y-2">
+                                                        <label class="text-sm font-medium text-foreground">Function</label>
+                                                        <select
+                                                          [(ngModel)]="editForm.function"
+                                                          name="function"
+                                                          required
+                                                          class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                          >
+                                                          <option value="" disabled>Select Function</option>
+                                                          @for (fn of availableFunctions; track fn) {
+                                                            <option [value]="fn">
+                                                              {{ fn }}
+                                                            </option>
+                                                          }
+                                                        </select>
+                                                      </div>
+                                                      <div class="space-y-2">
+                                                        <label class="text-sm font-medium text-foreground">Role</label>
+                                                        <select
+                                                          [(ngModel)]="editForm.role"
+                                                          name="role"
+                                                          required
+                                                          class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                          >
+                                                          <option [value]="UserRole.Employee">Employee</option>
+                                                          <option [value]="UserRole.LineManager">Line Manager</option>
+                                                        </select>
+                                                      </div>
+                                                      @if (editForm.role === UserRole.Employee) {
+                                                        <div class="space-y-2">
+                                                          <label class="text-sm font-medium text-foreground"
+                                                            >Line Manager <span class="text-destructive">*</span></label
+                                                            >
+                                                            <select
+                                                              [(ngModel)]="editForm.assignedToId"
+                                                              name="assignedToId"
+                                                              [required]="editForm.role === UserRole.Employee"
+                                                              class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                              >
+                                                              <option value="">Select Line Manager</option>
+                                                              @for (m of getAvailableLineManagers(); track m) {
+                                                                <option [value]="m.id">
+                                                                  {{ m.firstName }} {{ m.lastName }}
+                                                                </option>
+                                                              }
+                                                            </select>
+                                                          </div>
+                                                        }
+                                                        <div class="flex justify-end gap-3 mt-6">
+                                                          <button
+                                                            type="button"
+                                                            (click)="closeEditModal()"
+                                                            class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
+                                                            >
+                                                            Cancel
+                                                          </button>
+                                                          <button
+                                                            type="submit"
+                                                            class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
+                                                            >
+                                                            Save Changes
+                                                          </button>
+                                                        </div>
+                                                      </form>
+                                                    </div>
+                                                  </div>
+                                                }
 
-  <!-- Delete Modal -->
-  <div
-    *ngIf="isDeleteModalOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
-    (click)="closeDeleteModal()"
-  >
-    <div
-      class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
-      (click)="$event.stopPropagation()"
-    >
-      <h2 class="text-lg font-semibold text-foreground mb-2">Delete User</h2>
-      <p class="text-muted-foreground text-sm mb-6">
-        Are you sure you want to delete
-        <strong
-          >{{ selectedUser?.firstName }} {{ selectedUser?.lastName }}</strong
-        >? This action cannot be undone.
-      </p>
-      <div class="flex justify-end gap-3">
-        <button
-          type="button"
-          (click)="closeDeleteModal()"
-          class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          (click)="confirmDelete()"
-          class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90"
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+                                                <!-- Delete Modal -->
+                                                @if (isDeleteModalOpen) {
+                                                  <div
+                                                    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+                                                    (click)="closeDeleteModal()"
+                                                    >
+                                                    <div
+                                                      class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
+                                                      (click)="$event.stopPropagation()"
+                                                      >
+                                                      <h2 class="text-lg font-semibold text-foreground mb-2">Delete User</h2>
+                                                      <p class="text-muted-foreground text-sm mb-6">
+                                                        Are you sure you want to delete
+                                                        <strong
+                                                          >{{ selectedUser?.firstName }} {{ selectedUser?.lastName }}</strong
+                                                          >? This action cannot be undone.
+                                                        </p>
+                                                        <div class="flex justify-end gap-3">
+                                                          <button
+                                                            type="button"
+                                                            (click)="closeDeleteModal()"
+                                                            class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
+                                                            >
+                                                            Cancel
+                                                          </button>
+                                                          <button
+                                                            type="button"
+                                                            (click)="confirmDelete()"
+                                                            class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90"
+                                                            >
+                                                            Delete
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  }
+                                                </div>

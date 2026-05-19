@@ -7,7 +7,10 @@ namespace SyncApp26.Domain.Entities
         
         // This links to the future SSM/SU Document entity
         public Guid DocumentId { get; set; }
-        
+
+        // The specific PeriodicTraining row this token is authorizing to sign
+        public Guid? PeriodicTrainingId { get; set; }
+
         // Example: The name of the file so we can show it in the email
         public string DocumentName { get; set; } = string.Empty;
         

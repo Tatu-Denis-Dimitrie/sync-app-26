@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -23,6 +22,12 @@ namespace SyncApp26.Domain.Entities
         public virtual UserDocument? Document { get; set; }
 
         /// <summary>
+        /// Which document type this row belongs to: "SSM", "SU", or null for legacy rows
+        /// </summary>
+        [MaxLength(10)]
+        public string? DocumentType { get; set; }
+
+        /// <summary>
         /// Date of the training session
         /// </summary>
         public DateTime? TrainingDate { get; set; }
@@ -41,7 +46,7 @@ namespace SyncApp26.Domain.Entities
         /// <summary>
         /// Material taught (Materialul predat)
         /// </summary>
-        [MaxLength(500)]
+        [MaxLength(2000)]
         public string? MaterialTaught { get; set; }
 
         /// <summary>
@@ -72,6 +77,12 @@ namespace SyncApp26.Domain.Entities
         public string? VerifierSignature { get; set; }
 
         /// <summary>
+        /// Instructor/manager signature method: "Draw" or "Type"
+        /// </summary>
+        [MaxLength(50)]
+        public string? VerifierSignatureMethod { get; set; }
+
+        /// <summary>
         /// Instructor name
         /// </summary>
         [MaxLength(200)]
@@ -82,6 +93,12 @@ namespace SyncApp26.Domain.Entities
         /// </summary>
         [MaxLength(200)]
         public string? VerifierName { get; set; }
+
+        /// <summary>
+        /// If this row was copied from another row during document generation, this is the root source row's ID.
+        /// Null for original rows (created via bulk training or auto-generation in Step 3).
+        /// </summary>
+        public Guid? SourceRowId { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

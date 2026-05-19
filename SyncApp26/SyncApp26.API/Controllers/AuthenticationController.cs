@@ -34,12 +34,12 @@ namespace SyncApp26.API.Controllers
 
         private async Task<IActionResult> VerifyPasswordFormat(string password)
         {
-            if(password.Length < 8)
+            if (password.Length < 8)
             {
                 return BadRequest(new { message = "Password must be at least 8 characters long." });
             }
 
-            if(!Regex.IsMatch(password, @"[A-Z]"))
+            if (!Regex.IsMatch(password, @"[A-Z]"))
             {
                 return BadRequest(new { message = "Password must contain at least one uppercase letter." });
             }
@@ -54,9 +54,9 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Password must contain at least one digit." });
             }
 
-            if(!Regex.IsMatch(password, @"[!#$%&*^<>.,/?;_-@]"))
+            if (!Regex.IsMatch(password, @"[!#$%&*^<>.,/?;_\-@]"))
             {
-                return BadRequest(new { message = "Password must contain at least one special character."});
+                return BadRequest(new { message = "Password must contain at least one special character." });
             }
 
             return Ok();
@@ -85,7 +85,7 @@ namespace SyncApp26.API.Controllers
                 }
 
                 var result = await VerifyPasswordFormat(request.Password);
-                if(result is BadRequestObjectResult badRequest)
+                if (result is BadRequestObjectResult badRequest)
                 {
                     return badRequest;
                 }
@@ -122,7 +122,15 @@ namespace SyncApp26.API.Controllers
                 var apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
                 var verifyUrl = $"{apiBaseUrl}/api/authentication/verify-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(user.EmailVerificationToken!)}";
 
-                await _emailService.SendVerificationEmailAsync(user.Email, user.FirstName, verifyUrl);
+                try
+                {
+                    await _emailService.SendVerificationEmailAsync(user.Email, user.FirstName, verifyUrl);
+                }
+                catch (Exception emailEx)
+                {
+                    // User is saved; just warn that email delivery failed.
+                    return StatusCode(202, new { message = "Account created, but we could not send the verification email. Please contact an administrator.", error = emailEx.Message });
+                }
 
                 return Ok(new { message = "Registration successful. Please check your email to verify your account." });
             }
@@ -231,7 +239,7 @@ namespace SyncApp26.API.Controllers
             var normalizedEmail = request.Email.ToLowerInvariant().Trim();
             var user = await _userService.GetUserByEmailAsync(normalizedEmail);
 
-            if(user == null)
+            if (user == null)
             {
                 return BadRequest(new { message = "This email doesn't have an account." });
             }
@@ -269,7 +277,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var result = await VerifyPasswordFormat(request.NewPassword);
-            if(result is BadRequestObjectResult badRequest)
+            if (result is BadRequestObjectResult badRequest)
             {
                 return badRequest;
             }
@@ -283,7 +291,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var verifyPassword = await _authenticationService.VerifyPasswordAsync(request.NewPassword, user.PasswordHash!);
-            if (verifyPassword)            
+            if (verifyPassword)
             {
                 return BadRequest(new { message = "New password cannot be the same as the old password." });
             }

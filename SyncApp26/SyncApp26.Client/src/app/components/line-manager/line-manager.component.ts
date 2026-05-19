@@ -11,6 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 import { UserSignatureService, UserSignature, UserSignatureHistory } from '../../services/user-signature.service';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-line-manager',
@@ -73,7 +74,8 @@ export class LineManagerComponent implements OnInit {
     private userSyncService: UserSyncService,
     private http: HttpClient,
     private router: Router,
-    private userSignatureService: UserSignatureService
+    private userSignatureService: UserSignatureService,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit(): void {
@@ -145,7 +147,7 @@ export class LineManagerComponent implements OnInit {
     if (!documentId) return;
 
     // Call backend to generate a valid token for this user for this document
-    this.http.get<any>(`${environment.apiUrl}/Document/token-for-document/${documentId}`).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/document/token-for-document/${documentId}`).subscribe({
       next: (res) => {
         if (res.token) {
           this.router.navigate(['/sign', res.token]);
@@ -400,7 +402,7 @@ export class LineManagerComponent implements OnInit {
   signAllDocuments(): void {
     const firstDoc = this.pendingManagerSignatures[0];
     if (!firstDoc?.id) return;
-    this.http.get<any>(`${environment.apiUrl}/Document/token-for-document/${firstDoc.id}`).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/document/token-for-document/${firstDoc.id}`).subscribe({
       next: (res) => {
         if (res.token) {
           this.router.navigate(['/sign', res.token], { queryParams: { bulk: 'true' } });
@@ -411,6 +413,19 @@ export class LineManagerComponent implements OnInit {
         alert(err.error?.message || 'Could not initiate bulk signing.');
       }
     });
+  }
+
+  notifyUser(user: User, documentType: 'SSM' | 'SU'): void {
+    if (confirm(`Are you sure you want to notify ${user.firstName} ${user.lastName} about the missing ${documentType} document?`)) {
+      this.notificationService.notifyUser(user.id, documentType).subscribe({
+        next: (res) => alert(res.message || 'Notification sent!'),
+        error: (err) => alert(err.error?.message || 'Failed to send notification.')
+      });
+    }
+  }
+
+  viewSSMSUForm(user: User): void {
+    this.router.navigate(['/employees', user.id, 'ssm-su']);
   }
 
 }
