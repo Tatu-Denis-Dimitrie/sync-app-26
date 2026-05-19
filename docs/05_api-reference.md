@@ -583,7 +583,7 @@ POST /api/authentication/login
 Content-Type: application/json
 
 {
-	"email": "alex.admin@example.com",
+	"email": "alex.admin.example@example.com",
 	"password": "example"
 }
 ```
