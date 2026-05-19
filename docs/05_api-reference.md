@@ -583,8 +583,8 @@ POST /api/authentication/login
 Content-Type: application/json
 
 {
-	"email": "alex.admin@company.com",
-	"password": "P@ssw0rd!"
+	"email": "alex.admin@example.com",
+	"password": "example"
 }
 ```
 
@@ -595,7 +595,7 @@ Response:
 	"token": "<jwt>",
 	"user": {
 		"id": "2d6511d7-27c4-4bcb-8c5f-9c01e86aa7c0",
-		"email": "alex.admin@company.com",
+		"email": "alex.admin@example.com",
 		"firstName": "Alex",
 		"lastName": "Admin",
 		"role": "Admin"
@@ -624,14 +624,14 @@ Response (abbreviated):
 				"roleName": "Basic User",
 				"firstName": "Maria",
 				"lastName": "Ionescu",
-				"email": "m.ionescu@company.com",
+				"email": "m.ionescu@example.com",
 				"departmentName": "Production"
 			},
 			"csvUser": {
 				"personalId": "E1024",
 				"firstName": "Maria",
 				"lastName": "Ionescu",
-				"email": "m.ionescu@company.com",
+				"email": "m.ionescu@example.com",
 				"departmentName": "Production",
 				"function": "Operator"
 			},
@@ -672,7 +672,7 @@ Content-Type: application/json
 				"personalId": "E1024",
 				"firstName": "Maria",
 				"lastName": "Ionescu",
-				"email": "m.ionescu@company.com",
+				"email": "m.ionescu@example.com",
 				"departmentName": "Production",
 				"function": "Operator"
 			},
