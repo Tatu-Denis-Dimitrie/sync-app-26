@@ -166,6 +166,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // CTO - no manager
                     PersonalId = "fa88f377-32d3-4b03-9e2b-af6fbf44bbc1",
                     FunctionId = functions[0].Id, // CTO
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("john123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-6)
                 },
                 new User
@@ -179,6 +181,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null,
                     PersonalId = "879eabaa-30bf-4ed7-8cac-6bffc73e2907",
                     FunctionId = functions[1].Id, // Team Lead
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("sarah123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -192,6 +196,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to John later
                     PersonalId = "bafc4e21-87f6-44cf-9b98-4d6fde993532",
                     FunctionId = functions[1].Id, // Team Lead
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("michael123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -205,6 +211,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Sarah later
                     PersonalId = "952896bd-30ad-4115-b887-9286a27e8961",
                     FunctionId = functions[2].Id, // Developer
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("emily123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -218,6 +226,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Sarah later
                     PersonalId = "e1a876ae-e51e-46d9-ae31-d88d9a01b0c0",
                     FunctionId = functions[2].Id, // Developer
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("david123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -231,6 +241,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Michael later
                     PersonalId = "f9d7c549-5663-45a9-ae55-d47bd2b17f2b",
                     FunctionId = functions[3].Id, // QA Engineer
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("jessica123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
                 new User
@@ -244,6 +256,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Michael later
                     PersonalId = "14641267-ab9b-4821-8ed8-a24d73df06a1",
                     FunctionId = functions[3].Id, // Sales Executive
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("daniel123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
                 new User
@@ -257,6 +271,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Sarah later
                     PersonalId = "8b6e5200-7297-4d37-ac33-cd80524accff",
                     FunctionId = functions[2].Id, // Developer
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("ashley123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-2)
                 },
 
@@ -272,6 +288,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // HR Director
                     PersonalId = "68f43253-6de9-4d03-a832-5b0b1e95241d",
                     FunctionId = functions[4].Id, // HR Director
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("lisa123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-6)
                 },
                 new User
@@ -285,6 +303,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Lisa later
                     PersonalId = "bf24dc22-87c9-465d-8e66-d8087e7325c6",
                     FunctionId = functions[5].Id, // HR Specialist
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("robert123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -298,6 +318,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Lisa later
                     PersonalId = "977e646c-4513-46b3-9573-d4193c88547f",
                     FunctionId = functions[6].Id, // Recruiter
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("amanda123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
 
@@ -313,6 +335,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Sales Director
                     PersonalId = "6e18bafc-c605-4cab-a6b9-09b9cd5ed339",
                     FunctionId = functions[7].Id, // Sales Executive
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("christopher123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -326,6 +350,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Christopher later
                     PersonalId = "2b944698-1432-4c60-9d15-3f5538acb522",
                     FunctionId = functions[8].Id, // Sales Manager
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("nicole123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -339,6 +365,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Christopher later
                     PersonalId = "153bd6c3-b24b-4755-b734-23b36ee1837f",
                     FunctionId = functions[9].Id, // Sales Representative
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("matthew123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
                 new User
@@ -352,6 +380,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Christopher later
                     PersonalId = "5182389b-1696-46ed-9e20-f78d7fd69002",
                     FunctionId = functions[9].Id, // Sales Representative
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("jennifer123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-2)
                 },
 
@@ -367,6 +397,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Marketing Director
                     PersonalId = "9c508f1f-001f-4472-b4f8-201ea563234b",
                     FunctionId = functions[10].Id, // Marketing Director
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("ryan123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-5)
                 },
                 new User
@@ -380,6 +412,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Ryan later
                     PersonalId = "75bdd628-0a03-4401-a46b-60b4cb599bc9",
                     FunctionId = functions[11].Id, // Marketing Specialist
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("lauren123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -393,6 +427,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Ryan later
                     PersonalId = "475a5584-1187-4e82-b3da-a9d09dd567d3",
                     FunctionId = functions[12].Id, // Digital Marketing Specialist
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("kevin123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
 
@@ -408,6 +444,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // CFO
                     PersonalId = "19a5faeb-8a06-4b54-ab73-ccf1100ad300",
                     FunctionId = functions[13].Id, // CFO
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("michelle123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-4)
                 },
                 new User
@@ -421,6 +459,8 @@ namespace SyncApp26.Infrastructure.Data
                     AssignedToId = null, // Will be set to Michelle later
                     PersonalId = "e887062a-1248-48f7-9734-ab75ceb63950",
                     FunctionId = functions[14].Id, // Financial Analyst
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("brian123"),
+                    IsEmailVerified = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 },
 
