@@ -1,3 +1,5 @@
+using SyncApp26.Domain.Enums;
+
 namespace SyncApp26.Domain.Entities
 {
     public class User
@@ -6,7 +8,7 @@ namespace SyncApp26.Domain.Entities
         public Guid? DepartmentId { get; set; }
         public Guid? FunctionId { get; set; }
         public Guid? AssignedToId { get; set; }
-        public Guid RoleId { get; set; }
+        public required UserRole Role { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
@@ -38,7 +40,6 @@ namespace SyncApp26.Domain.Entities
 
         // Navigation properties
         public Department? Department { get; set; }
-        public Role? Role { get; set; }
         public User? AssignedTo { get; set; }  // Line manager
         public ICollection<User> AssignedUsers { get; set; } = new List<User>();  // Direct reports
         public Function? Function { get; set; }

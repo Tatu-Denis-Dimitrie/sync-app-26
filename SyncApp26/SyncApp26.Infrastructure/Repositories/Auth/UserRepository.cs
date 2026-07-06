@@ -1,5 +1,6 @@
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +18,6 @@ namespace SyncApp26.Infrastructure.Repositories
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
             return await _context.Users
-                .Include(u => u.Role)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
@@ -29,12 +29,11 @@ namespace SyncApp26.Infrastructure.Repositories
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
             return await _context.Users
-                .Include(u => u.Role)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.InitialTrainings)
-                .Where(u => u.DeletedAt == null && u.Role.Name != "Admin")
+                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin)
                 .ToListAsync();
         }
 
@@ -43,11 +42,10 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .AsNoTracking()
-                .Include(u => u.Role)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DeletedAt == null && u.Role.Name != "Admin")
+                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin)
                 .ToListAsync();
         }
 
@@ -69,10 +67,9 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
-                .Include(u => u.Role)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null && u.Role.Name != "Admin")
+                .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null && u.Role != UserRole.Admin)
                 .ToListAsync();
         }
 
@@ -80,10 +77,9 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.Users
                 .Include(u => u.Department)
-                .Include(u => u.Role)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null && u.Role.Name != "Admin")
+                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null && u.Role != UserRole.Admin)
                 .ToListAsync();
         }
 
@@ -112,7 +108,7 @@ namespace SyncApp26.Infrastructure.Repositories
 
         public async Task<bool> IsUserLineManagerAsync(Guid userId)
         {
-            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null && u.Role.Name != "Admin");
+            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null && u.Role != UserRole.Admin);
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -120,7 +116,6 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
-                .Include(u => u.Role)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Email == email);
@@ -131,25 +126,9 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
-                .Include(u => u.Role)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DeletedAt == null && u.Role.Name != "Admin")
+                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin)
                 .FirstOrDefaultAsync(u => u.PersonalId == personalId);
-        }
-
-        public async Task<Guid?> GetRoleIdByNameAsync(string roleName)
-        {
-            if (string.IsNullOrWhiteSpace(roleName))
-            {
-                return null;
-            }
-
-            var normalizedRoleName = roleName.Trim();
-
-            return await _context.Roles
-                .Where(r => r.Name.ToLower() == normalizedRoleName.ToLower())
-                .Select(r => (Guid?)r.Id)
-                .FirstOrDefaultAsync();
         }
     }
 }

@@ -1,3 +1,5 @@
+using SyncApp26.Domain.Enums;
+
 namespace SyncApp26.Shared.DTOs.Request.User
 {
     public class UserRequestDTO
@@ -8,6 +10,6 @@ namespace SyncApp26.Shared.DTOs.Request.User
         public Guid DepartmentId { get; set; }
         public string? Function { get; set; }
         public Guid? AssignedToId { get; set; }
-        public string? RoleName { get; set; }
+        public UserRole? Role { get; set; }
     }
 }

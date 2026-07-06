@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.Department;
 using SyncApp26.Shared.DTOs.Response.Department;
 
@@ -61,7 +62,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("{id}/restore")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ActionResult<DepartmentResponseDTO>> RestoreDepartment(Guid id)
         {
             var existingDepartment = await _departmentService.GetDeletedDepartmentByIdAsync(id);
@@ -88,7 +89,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ActionResult<DepartmentResponseDTO>> AddDepartment([FromBody] DepartmentRequestDTO departmentRequestDTO)
         {
             var department = new Department
@@ -109,7 +110,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ActionResult<DepartmentResponseDTO>> UpdateDepartment(Guid id, [FromBody] DepartmentRequestDTO departmentRequestDTO)
         {
             if (string.IsNullOrEmpty(departmentRequestDTO.Name))
@@ -138,7 +139,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ActionResult<DepartmentResponseDTO>> DeleteDepartment(Guid id, [FromQuery] Guid? transferToId, [FromServices] IUserService userService)
         {
             var existingDepartment = await _departmentService.GetDepartmentByIdAsync(id);

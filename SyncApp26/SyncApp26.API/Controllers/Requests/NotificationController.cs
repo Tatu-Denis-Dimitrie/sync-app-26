@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.Notification;
+using SyncApp26.Domain.Enums;
 using System.Security.Claims;
 
 namespace SyncApp26.API.Controllers
@@ -59,7 +60,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found." });
             }
 
-            if (currentUserRole != "Admin" && targetUser.AssignedToId != currentUserId)
+            if (currentUserRole != Roles.Admin && targetUser.AssignedToId != currentUserId)
             {
                 return Forbid("You do not have permission to notify this user.");
             }
@@ -127,7 +128,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("notify-manager/{managerId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> NotifyManager(Guid managerId, [FromBody] NotificationRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.DocumentType) ||
@@ -169,7 +170,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("notify-all-managers")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> NotifyAllManagers([FromBody] NotificationRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.DocumentType) ||
@@ -180,7 +181,7 @@ namespace SyncApp26.API.Controllers
 
             var allUsers = await _userService.GetAllUsersAsync();
             var managers = allUsers
-                .Where(u => u.Role?.Name == "Line Manager")
+                .Where(u => u.Role == UserRole.LineManager)
                 .ToList();
 
             if (!managers.Any())

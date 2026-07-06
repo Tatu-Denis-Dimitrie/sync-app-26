@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.API.Controllers
 {
@@ -24,7 +25,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("{departmentId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> AddFunctionToDepartment(Guid departmentId, [FromBody] string functionName)
         {
             await _departmentFunctionService.AddFunctionToDepartmentAsync(departmentId, functionName);
@@ -32,7 +33,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpDelete("{departmentId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> RemoveFunctionFromDepartment(Guid departmentId, [FromBody] string functionName)
         {
             await _departmentFunctionService.RemoveFunctionFromDepartmentAsync(departmentId, functionName);

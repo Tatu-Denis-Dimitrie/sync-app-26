@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Shared.DTOs.Response.User;
@@ -47,8 +48,7 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
-                RoleId = user.RoleId,
-                RoleName = user.Role?.Name,
+                Role = user.Role,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -75,8 +75,7 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
-                RoleId = user.RoleId,
-                RoleName = user.Role?.Name,
+                Role = user.Role,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -96,7 +95,7 @@ namespace SyncApp26.API.Controllers
             var usersList = await _userService.GetAllUsersAsync();
             var users = usersList.AsEnumerable();
 
-            var isAdmin = User.IsInRole("Admin");
+            var isAdmin = User.IsInRole(Roles.Admin);
             var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
             {
@@ -112,8 +111,7 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
-                RoleId = user.RoleId,
-                RoleName = user.Role?.Name,
+                Role = user.Role,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -152,8 +150,7 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
-                RoleId = user.RoleId,
-                RoleName = user.Role?.Name,
+                Role = user.Role,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -183,8 +180,7 @@ namespace SyncApp26.API.Controllers
             {
                 Id = user.Id,
                 PersonalId = user.PersonalId,
-                RoleId = user.RoleId,
-                RoleName = user.Role?.Name,
+                Role = user.Role,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -249,21 +245,11 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
-            var roleId = await _userService.GetRoleIdByNameAsync("Basic User");
-            if (roleId == null)
-            {
-                return BadRequest(new UserResponseDTO
-                {
-                    Success = false,
-                    Message = "Role 'Basic User' not found"
-                });
-            }
-
             var user = new User
             {
                 Id = Guid.NewGuid(),
                 PersonalId = Guid.NewGuid().ToString(),
-                RoleId = roleId.Value,
+                Role = UserRole.BasicUser,
                 FirstName = userRequestDTO.FirstName,
                 LastName = userRequestDTO.LastName,
                 Email = userRequestDTO.Email,
@@ -279,14 +265,10 @@ namespace SyncApp26.API.Controllers
             if (userRequestDTO.AssignedToId.HasValue)
             {
                 var managerToPromote = await _userService.GetUserByIdAsync(userRequestDTO.AssignedToId.Value);
-                if (managerToPromote != null)
+                if (managerToPromote != null && managerToPromote.Role != UserRole.LineManager)
                 {
-                    var lineManagerRoleId = await _userService.GetRoleIdByNameAsync("Line Manager");
-                    if (lineManagerRoleId.HasValue && managerToPromote.RoleId != lineManagerRoleId.Value)
-                    {
-                        managerToPromote.RoleId = lineManagerRoleId.Value;
-                        await _userService.UpdateUserAsync(managerToPromote);
-                    }
+                    managerToPromote.Role = UserRole.LineManager;
+                    await _userService.UpdateUserAsync(managerToPromote);
                 }
             }
 
@@ -411,11 +393,9 @@ namespace SyncApp26.API.Controllers
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             // Apply role from DTO if provided
-            if (!string.IsNullOrWhiteSpace(userRequestDTO.RoleName))
+            if (userRequestDTO.Role.HasValue)
             {
-                var requestedRoleId = await _userService.GetRoleIdByNameAsync(userRequestDTO.RoleName);
-                if (requestedRoleId.HasValue)
-                    existingUser.RoleId = requestedRoleId.Value;
+                existingUser.Role = userRequestDTO.Role.Value;
             }
 
             await _userService.UpdateUserAsync(existingUser);
@@ -557,7 +537,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = User.IsInRole(Roles.Admin);
             if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
             {
                 if (user.AssignedToId != currentUserId && user.Id != currentUserId)
@@ -582,7 +562,7 @@ namespace SyncApp26.API.Controllers
                 PersonalId = user.PersonalId,
                 DepartmentName = user.Department?.Name,
                 FunctionName = user.Function?.Name,
-                RoleName = user.Role?.Name,
+                Role = user.Role,
                 ManagerFirstName = user.AssignedTo?.FirstName,
                 ManagerLastName = user.AssignedTo?.LastName,
                 ManagerFunctionName = user.AssignedTo?.Function?.Name,
@@ -636,7 +616,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = User.IsInRole(Roles.Admin);
             if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
             {
                 if (user.AssignedToId != currentUserId && user.Id != currentUserId)
@@ -709,7 +689,7 @@ namespace SyncApp26.API.Controllers
             if (dto.SelectedDepartmentId.HasValue)
                 targetUsers = targetUsers.Where(u => u.DepartmentId == dto.SelectedDepartmentId.Value);
 
-            var isAdmin = User.IsInRole("Admin");
+            var isAdmin = User.IsInRole(Roles.Admin);
             var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
             {

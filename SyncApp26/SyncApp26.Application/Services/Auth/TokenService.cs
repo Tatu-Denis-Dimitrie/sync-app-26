@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.Application.Services
 {
@@ -16,7 +17,7 @@ namespace SyncApp26.Application.Services
             _configuration = configuration;
         }
 
-        public Task<string> GenerateTokenAsync(Guid userId, string email, string role = "Employee")
+        public Task<string> GenerateTokenAsync(Guid userId, string email, UserRole role)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -39,7 +40,7 @@ namespace SyncApp26.Application.Services
                 {
                     new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                     new Claim(ClaimTypes.Email, email),
-                    new Claim(ClaimTypes.Role, role)
+                    new Claim(ClaimTypes.Role, role.ToString())
                 }),
                 Expires = DateTime.UtcNow.AddHours(8),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

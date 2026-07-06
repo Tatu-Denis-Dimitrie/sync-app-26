@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
 
 namespace SyncApp26.API.Controllers
@@ -104,7 +105,7 @@ namespace SyncApp26.API.Controllers
         {
             try
             {
-                var isAdmin = User.IsInRole("Admin");
+                var isAdmin = User.IsInRole(Roles.Admin);
                 var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
                 {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.UserSignature;
 using SyncApp26.Shared.DTOs.Response.UserSignature;
+using SyncApp26.Domain.Enums;
 using System.Security.Claims;
 
 namespace SyncApp26.API.Controllers
@@ -32,7 +33,7 @@ namespace SyncApp26.API.Controllers
         private string CallerEmail =>
             User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
 
-        private bool CallerIsAdmin => User.IsInRole("Admin");
+        private bool CallerIsAdmin => User.IsInRole(Roles.Admin);
 
         /// <summary>
         /// Returns true when the caller is allowed to access the given user's signature data.
@@ -45,7 +46,7 @@ namespace SyncApp26.API.Controllers
             if (callerId == targetUserId) return true;
             if (CallerIsAdmin) return true;
 
-            if (User.IsInRole("Line Manager"))
+            if (User.IsInRole(Roles.LineManager))
             {
                 var target = await _userService.GetUserByIdAsync(targetUserId);
                 return target?.AssignedToId == callerId;
