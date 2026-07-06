@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
@@ -7,6 +8,7 @@ namespace SyncApp26.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ImportHistoryController : ControllerBase
     {
         private readonly IImportHistoryService _importHistoryService;
@@ -35,6 +37,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddImportHistory([FromBody] ImportHistoryRequestDTO importHistoryRequestDTO)
         {
             if(importHistoryRequestDTO == null || string.IsNullOrEmpty(importHistoryRequestDTO.FileName))
@@ -55,6 +58,7 @@ namespace SyncApp26.API.Controllers
 
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteImportHistory(Guid id)
         {
             await _importHistoryService.DeleteImportHistoryAsync(id);

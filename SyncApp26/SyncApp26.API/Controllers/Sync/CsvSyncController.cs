@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Shared.DTOs;
 using System.Globalization;
@@ -11,6 +12,7 @@ namespace SyncApp26.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]
 public class CsvSyncController : ControllerBase
 {
     private readonly ICsvSyncService _csvSyncService;

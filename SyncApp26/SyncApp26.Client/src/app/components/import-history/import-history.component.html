@@ -63,7 +63,7 @@
               >
               Import Conflicts
             </div>
-            @for (group of getFilteredImportGroups(); track group) {
+            @for (group of getFilteredImportGroups(); track group.importHistoryId) {
               <div
                 class="bg-card border border-border rounded-lg overflow-hidden"
                 >
@@ -99,7 +99,7 @@
                         No conflicts for this import.
                       </div>
                     }
-                    @for (userGroup of getConflictGroups(group.conflicts); track userGroup) {
+                    @for (userGroup of getConflictGroups(group.conflicts); track userGroup.userId) {
                       <div
                         class="border-t border-border"
                         >
@@ -111,7 +111,7 @@
                             ID: {{ userGroup.userId }}
                           </p>
                         </div>
-                        @for (conflict of userGroup.conflicts; track conflict) {
+                        @for (conflict of userGroup.conflicts; track conflict.id) {
                           <div
                             class="border-t border-border"
                             >
@@ -184,7 +184,7 @@
               >
               Manual Changes
             </div>
-            @for (dayGroup of getFilteredManualDayGroups(); track dayGroup) {
+            @for (dayGroup of getFilteredManualDayGroups(); track dayGroup.dayKey) {
               <div
                 class="bg-card border border-border rounded-lg overflow-hidden"
                 >
@@ -205,7 +205,7 @@
                   <div
                     class="divide-y divide-border"
                     >
-                    @for (change of dayGroup.changes; track change) {
+                    @for (change of dayGroup.changes; track change.id) {
                       <div
                         class="border-t border-border"
                         >
@@ -277,7 +277,7 @@
               >
               Data Change Requests
             </div>
-            @for (dayGroup of getFilteredDataChangeRequestGroups(); track dayGroup) {
+            @for (dayGroup of getFilteredDataChangeRequestGroups(); track dayGroup.dayKey) {
               <div
                 class="bg-card border border-border rounded-lg overflow-hidden"
                 >
@@ -298,7 +298,7 @@
                   <div
                     class="divide-y divide-border"
                     >
-                    @for (change of dayGroup.changes; track change) {
+                    @for (change of dayGroup.changes; track change.id) {
                       <div
                         class="border-t border-border"
                         >

@@ -13,6 +13,7 @@ namespace SyncApp26.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class DocumentSignatureController : ControllerBase
     {
         private readonly IDocumentSignatureService _documentSignatureService;
@@ -51,6 +52,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("request-signature")]
+        [AllowAnonymous]
         public async Task<IActionResult> RequestSignature([FromBody] RequestSignatureDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
@@ -84,6 +86,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("validate-token/{token}")]
+        [AllowAnonymous]
         public async Task<IActionResult> ValidateToken(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
@@ -131,6 +134,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("consume-token")]
+        [AllowAnonymous]
         public async Task<IActionResult> ConsumeToken([FromBody] ConsumeTokenDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Token))
