@@ -43,8 +43,19 @@ export class BasicUserComponent implements OnInit {
   private sigCtx: CanvasRenderingContext2D | null = null;
   private sigLastX = 0;
   private sigLastY = 0;
+  private _sigCanvasRef?: ElementRef<HTMLCanvasElement>;
 
-  @ViewChild('sigCanvas') sigCanvasRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('sigCanvas')
+  set sigCanvasRef(ref: ElementRef<HTMLCanvasElement> | undefined) {
+    this._sigCanvasRef = ref;
+    if (ref && this.sigMode === 'draw') {
+      this.initSigCanvas();
+    }
+  }
+
+  get sigCanvasRef(): ElementRef<HTMLCanvasElement> | undefined {
+    return this._sigCanvasRef;
+  }
 
   UserRole = UserRole;
 
@@ -202,9 +213,6 @@ export class BasicUserComponent implements OnInit {
   setSigMode(mode: 'draw' | 'type'): void {
     this.sigMode = mode;
     this.isSigConfirmed = false;
-    if (mode === 'draw') {
-      setTimeout(() => this.initSigCanvas(), 50);
-    }
   }
 
   initSigCanvas(): void {
