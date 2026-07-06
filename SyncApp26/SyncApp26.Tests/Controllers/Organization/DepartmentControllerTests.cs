@@ -133,6 +133,19 @@ namespace SyncApp26.Tests.Controllers.Organization
             _departmentServiceMock.Verify(s => s.AddDepartmentAsync(It.Is<Department>(d => d.Name == "Sales" && d.IsActive)), Times.Once);
         }
 
+        [Fact]
+        public async Task AddDepartment_EmptyOrWhitespaceName_IsAcceptedWithoutValidation()
+        {
+            // Documents current behavior: unlike UpdateDepartment, AddDepartment performs no
+            // name validation, so a blank name is silently accepted and persisted as an empty string
+            var controller = CreateController();
+
+            var result = await controller.AddDepartment(new DepartmentRequestDTO { Name = "   ", IsActive = true });
+
+            Assert.True(result.Value!.Success);
+            _departmentServiceMock.Verify(s => s.AddDepartmentAsync(It.Is<Department>(d => d.Name == "")), Times.Once);
+        }
+
         // ───────────────────────── UpdateDepartment ─────────────────────────
 
         [Fact]
