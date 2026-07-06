@@ -3,6 +3,12 @@
 ## Server configuration (API)
 Primary settings are in SyncApp26/SyncApp26.API/appsettings.json. Development overrides live in appsettings.Development.json. The active environment is controlled by ASPNETCORE_ENVIRONMENT.
 
+Both appsettings.json and appsettings.Development.json are git-ignored, so a fresh clone has no config. A tracked template is provided at SyncApp26/SyncApp26.API/appsettings.example.json — copy it to appsettings.json and fill in your own values (JwtSettings:SecretKey and Smtp credentials at minimum):
+
+```bash
+cp SyncApp26/SyncApp26.API/appsettings.example.json SyncApp26/SyncApp26.API/appsettings.json
+```
+
 Key settings:
 - ConnectionStrings:DefaultConnection
   - SQLite path. Relative paths are resolved against the API content root.
