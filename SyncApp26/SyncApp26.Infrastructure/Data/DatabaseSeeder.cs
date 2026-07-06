@@ -538,6 +538,9 @@ namespace SyncApp26.Infrastructure.Data
             // Finance: Michelle is CFO, Brian reports to her
             users[19].AssignedToId = users[18].Id; // Brian reports to Michelle
 
+            // Test users: Basic User is coordinated by Manager User
+            users[22].AssignedToId = users[21].Id; // Basic User reports to Manager User
+
             await context.Users.AddRangeAsync(users);
             await context.SaveChangesAsync();
 
