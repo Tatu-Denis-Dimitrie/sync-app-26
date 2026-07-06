@@ -238,5 +238,47 @@ namespace SyncApp26.Tests.Controllers.Documents
             Assert.Single(captured.SelectedUserIds);
             Assert.Contains(myEmployee.Id, captured.SelectedUserIds);
         }
+
+        [Fact]
+        public async Task BulkCreate_PartialSuccess_StillReturnsOk()
+        {
+            var controller = CreateController();
+            var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
+            var resultDto = new BulkCreateResultDTO { SuccessCount = 2, FailedCount = 1, Errors = new List<string> { "one failure" } };
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>())).ReturnsAsync(resultDto);
+
+            var result = await controller.BulkCreate(dto);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(resultDto, ok.Value);
+        }
+
+        [Fact]
+        public async Task BulkCreate_NonAdminWithExplicitSelectedUserIds_IntersectsWithOwnEmployees()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId, role: "Line Manager");
+            var myEmployee = MakeUser(assignedToId: callerId);
+            var otherEmployee = MakeUser();
+            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });
+
+            BulkCreatePeriodicTrainingDTO? captured = null;
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>()))
+                .Callback<BulkCreatePeriodicTrainingDTO>(d => captured = d)
+                .ReturnsAsync(new BulkCreateResultDTO { SuccessCount = 1 });
+
+            var dto = new BulkCreatePeriodicTrainingDTO
+            {
+                ApplyToAllUsers = false,
+                SelectedUserIds = new List<Guid> { myEmployee.Id, otherEmployee.Id }
+            };
+            var result = await controller.BulkCreate(dto);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(captured);
+            Assert.Single(captured!.SelectedUserIds);
+            Assert.Contains(myEmployee.Id, captured.SelectedUserIds);
+            Assert.DoesNotContain(otherEmployee.Id, captured.SelectedUserIds);
+        }
     }
 }

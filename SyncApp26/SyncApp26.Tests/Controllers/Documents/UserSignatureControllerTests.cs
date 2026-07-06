@@ -316,5 +316,81 @@ namespace SyncApp26.Tests.Controllers.Documents
             var list = Assert.IsAssignableFrom<IEnumerable<UserSignatureHistoryResponseDTO>>(ok.Value);
             Assert.Empty(list);
         }
+
+        // ───────────────────────── Additional GetUserSignature edge cases ─────────────────────────
+
+        [Fact]
+        public async Task GetUserSignature_Admin_ReturnsOk()
+        {
+            var controller = CreateController(role: "Admin");
+            var targetId = Guid.NewGuid();
+            _signatureServiceMock.Setup(s => s.GetUserSignatureAsync(targetId)).ReturnsAsync(MakeSignature(targetId));
+
+            var result = await controller.GetUserSignature(targetId);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetUserSignature_LineManagerNotManagingTarget_ReturnsForbidden()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController(managerId, role: "Line Manager");
+            var target = MakeUser(); // not assigned to this manager
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(target.Id)).ReturnsAsync(target);
+
+            var result = await controller.GetUserSignature(target.Id);
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        // ───────────────────────── Additional GetSignatureHistory edge cases ─────────────────────────
+
+        [Fact]
+        public async Task GetSignatureHistory_Admin_ReturnsOk()
+        {
+            var controller = CreateController(role: "Admin");
+            var targetId = Guid.NewGuid();
+            _signatureServiceMock.Setup(s => s.GetUserSignatureHistoryAsync(targetId)).ReturnsAsync(Array.Empty<UserSignatureHistory>());
+
+            var result = await controller.GetSignatureHistory(targetId);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetSignatureHistory_LineManagerOfTarget_ReturnsOk()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController(managerId, role: "Line Manager");
+            var target = MakeUser(assignedToId: managerId);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(target.Id)).ReturnsAsync(target);
+            _signatureServiceMock.Setup(s => s.GetUserSignatureHistoryAsync(target.Id)).ReturnsAsync(Array.Empty<UserSignatureHistory>());
+
+            var result = await controller.GetSignatureHistory(target.Id);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        // ───────────────────────── Additional SaveMySignature edge case ─────────────────────────
+
+        [Fact]
+        public async Task SaveMySignature_TypeMethod_Success()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId);
+            var savedSig = MakeSignature(callerId);
+            savedSig.SignatureMethod = "Type";
+            _signatureServiceMock.Setup(s => s.SaveUserSignatureAsync(
+                callerId, "typed-signature", "Type", It.IsAny<string>(), callerId, It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+            _signatureServiceMock.Setup(s => s.GetUserSignatureAsync(callerId)).ReturnsAsync(savedSig);
+
+            var result = await controller.SaveMySignature(new SaveUserSignatureRequestDTO { SignatureData = "typed-signature", SignatureMethod = "Type" });
+
+            Assert.IsType<OkObjectResult>(result);
+            _signatureServiceMock.Verify(s => s.SaveUserSignatureAsync(
+                callerId, "typed-signature", "Type", It.IsAny<string>(), callerId, It.IsAny<string>()), Times.Once);
+        }
     }
 }
