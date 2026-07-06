@@ -513,5 +513,213 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.Null(user.PasswordResetToken);
             _userServiceMock.Verify(s => s.UpdateUserAsync(user), Times.Once);
         }
+
+        [Fact]
+        public async Task ResetPassword_ExpiredToken_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                FirstName = "A",
+                LastName = "B",
+                Email = "a@b.com",
+                PersonalId = "1",
+                PasswordHash = "hash",
+                PasswordResetToken = "correct-token",
+                PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(-1)
+            };
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
+            _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), "hash")).ReturnsAsync(false);
+
+            var result = await controller.ResetPassword(new ResetPasswordWithTokenRequestDTO
+            {
+                Email = "a@b.com",
+                Token = "correct-token",
+                NewPassword = "Str0ng!Pass"
+            });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Theory]
+        [InlineData("", "tok", "Str0ng!Pass")]
+        [InlineData("a@b.com", "", "Str0ng!Pass")]
+        [InlineData("a@b.com", "tok", "")]
+        public async Task ResetPassword_IndividualFieldMissing_ReturnsBadRequest(string email, string token, string newPassword)
+        {
+            var controller = CreateController();
+
+            var result = await controller.ResetPassword(new ResetPasswordWithTokenRequestDTO
+            {
+                Email = email,
+                Token = token,
+                NewPassword = newPassword
+            });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        // ───────────────────────── Additional Register edge cases ─────────────────────────
+
+        [Fact]
+        public async Task Register_NullRequest_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+
+            var result = await controller.Register(null!);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Theory]
+        [InlineData("", "Doe", "john@example.com", "Str0ng!Pass")]
+        [InlineData("John", "", "john@example.com", "Str0ng!Pass")]
+        [InlineData("John", "Doe", "", "Str0ng!Pass")]
+        [InlineData("John", "Doe", "john@example.com", "")]
+        public async Task Register_IndividualFieldMissing_ReturnsBadRequest(string firstName, string lastName, string email, string password)
+        {
+            var controller = CreateController();
+
+            var result = await controller.Register(new RegisterUserRequestDTO
+            {
+                FirstName = firstName,
+                LastName = lastName,
+                Email = email,
+                Password = password
+            });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task Register_Success_NormalizesEmailToLowercaseAndTrimmed()
+        {
+            var controller = CreateController();
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("john.doe@example.com")).ReturnsAsync((User?)null);
+            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
+            _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("hashed");
+
+            var request = ValidRegisterRequest();
+            request.Email = "  John.Doe@EXAMPLE.com  ";
+
+            var result = await controller.Register(request);
+
+            Assert.IsType<OkObjectResult>(result);
+            _userServiceMock.Verify(s => s.GetUserByEmailAsync("john.doe@example.com"), Times.Once);
+            _userServiceMock.Verify(s => s.AddUserAsync(It.Is<User>(u => u.Email == "john.doe@example.com")), Times.Once);
+        }
+
+        // ───────────────────────── Additional VerifyEmail edge cases ─────────────────────────
+
+        [Theory]
+        [InlineData("", "token")]
+        [InlineData("john@example.com", "")]
+        public async Task VerifyEmail_IndividualParamMissing_ReturnsBadRequest(string email, string token)
+        {
+            var controller = CreateController();
+
+            var result = await controller.VerifyEmail(email, token);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task VerifyEmail_AlreadyVerified_UsesConfiguredLoginUrl()
+        {
+            var controller = CreateController();
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john@example.com", PersonalId = "1", IsEmailVerified = true });
+            _configurationMock.Setup(c => c["Frontend:LoginUrl"]).Returns("https://custom.example.com/login");
+
+            var result = await controller.VerifyEmail("john@example.com", "token");
+
+            var redirect = Assert.IsType<RedirectResult>(result);
+            Assert.Equal("https://custom.example.com/login", redirect.Url);
+        }
+
+        // ───────────────────────── Additional Login edge cases ─────────────────────────
+
+        [Theory]
+        [InlineData("", "Str0ng!Pass")]
+        [InlineData("a@b.com", "")]
+        public async Task Login_IndividualFieldMissing_ReturnsBadRequest(string email, string password)
+        {
+            var controller = CreateController();
+
+            var result = await controller.Login(new LoginUserRequestDTO { Email = email, Password = password });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task Login_UserWithNoRole_UsesFallbackRoleNames()
+        {
+            var controller = CreateController();
+            var userId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
+                .ReturnsAsync(new User
+                {
+                    Id = userId,
+                    FirstName = "A",
+                    LastName = "B",
+                    Email = "a@b.com",
+                    PersonalId = "1",
+                    PasswordHash = "hash",
+                    IsEmailVerified = true,
+                    Role = null
+                });
+            _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", "Employee")).ReturnsAsync("jwt-token");
+
+            var result = await controller.Login(new LoginUserRequestDTO { Email = "a@b.com", Password = "Str0ng!Pass" });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(userId, "a@b.com", "Employee"), Times.Once);
+
+            var userProp = ok.Value!.GetType().GetProperty("user")!.GetValue(ok.Value)!;
+            var roleValue = (string)userProp.GetType().GetProperty("role")!.GetValue(userProp)!;
+            Assert.Equal("Basic User", roleValue);
+        }
+
+        // ───────────────────────── Additional ForgotPassword edge cases ─────────────────────────
+
+        [Fact]
+        public async Task ForgotPassword_ConfiguredResetUrlWithoutQueryString_UsesQuestionMarkSeparator()
+        {
+            var controller = CreateController();
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1" };
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
+            _configurationMock.Setup(c => c["Frontend:ResetPasswordUrl"]).Returns("https://custom.example.com/reset");
+
+            string? capturedUrl = null;
+            _emailServiceMock.Setup(s => s.SendPasswordResetEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
+                .Callback<string, string, string, int>((_, _, url, _) => capturedUrl = url)
+                .Returns(Task.CompletedTask);
+
+            await controller.ForgotPassword(new ForgotPasswordRequestDTO { Email = "a@b.com" });
+
+            Assert.NotNull(capturedUrl);
+            Assert.StartsWith("https://custom.example.com/reset?email=", capturedUrl);
+        }
+
+        [Fact]
+        public async Task ForgotPassword_ConfiguredResetUrlWithExistingQueryString_UsesAmpersandSeparator()
+        {
+            var controller = CreateController();
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1" };
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
+            _configurationMock.Setup(c => c["Frontend:ResetPasswordUrl"]).Returns("https://custom.example.com/reset?lang=en");
+
+            string? capturedUrl = null;
+            _emailServiceMock.Setup(s => s.SendPasswordResetEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
+                .Callback<string, string, string, int>((_, _, url, _) => capturedUrl = url)
+                .Returns(Task.CompletedTask);
+
+            await controller.ForgotPassword(new ForgotPasswordRequestDTO { Email = "a@b.com" });
+
+            Assert.NotNull(capturedUrl);
+            Assert.StartsWith("https://custom.example.com/reset?lang=en&email=", capturedUrl);
+        }
     }
 }

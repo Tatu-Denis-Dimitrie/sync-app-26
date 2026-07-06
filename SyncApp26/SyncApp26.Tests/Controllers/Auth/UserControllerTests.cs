@@ -601,5 +601,509 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.Equal(0, resultDto.FailedCount);
             Assert.Equal(2, _dbFixture.Context.UserInitialTrainings.Count(t => t.DocumentType == "SSM"));
         }
+
+        [Fact]
+        public async Task BulkInitialTraining_SelectedDepartmentFilter_OnlyAppliesToThatDepartment()
+        {
+            var controller = CreateController();
+            var targetDeptId = Guid.NewGuid();
+            var otherDeptId = Guid.NewGuid();
+            var inDept = MakeUser(departmentId: targetDeptId);
+            var outOfDept = MakeUser(departmentId: otherDeptId);
+            SeedUserRow(inDept);
+            SeedUserRow(outOfDept);
+            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { inDept, outOfDept });
+
+            var dto = new BulkInitialTrainingDTO { ApplyToAllUsers = true, DocumentType = "SSM", SelectedDepartmentId = targetDeptId };
+
+            var result = await controller.BulkInitialTraining(dto);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var resultDto = Assert.IsType<BulkInitialTrainingResultDTO>(ok.Value);
+            Assert.Equal(1, resultDto.SuccessCount);
+            Assert.Single(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == inDept.Id));
+            Assert.Empty(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == outOfDept.Id));
+        }
+
+        [Fact]
+        public async Task BulkInitialTraining_ApplyToAllUsersFalse_OnlyAppliesToSelectedUserIds()
+        {
+            var controller = CreateController();
+            var selectedUser = MakeUser();
+            var unselectedUser = MakeUser();
+            SeedUserRow(selectedUser);
+            SeedUserRow(unselectedUser);
+            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { selectedUser, unselectedUser });
+
+            var dto = new BulkInitialTrainingDTO
+            {
+                ApplyToAllUsers = false,
+                DocumentType = "SSM",
+                SelectedUserIds = new List<Guid> { selectedUser.Id }
+            };
+
+            var result = await controller.BulkInitialTraining(dto);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var resultDto = Assert.IsType<BulkInitialTrainingResultDTO>(ok.Value);
+            Assert.Equal(1, resultDto.SuccessCount);
+            Assert.Single(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == selectedUser.Id));
+            Assert.Empty(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == unselectedUser.Id));
+        }
+
+        [Fact]
+        public async Task BulkInitialTraining_BothDocumentType_CreatesSsmAndSuRows()
+        {
+            var controller = CreateController();
+            var user = MakeUser();
+            SeedUserRow(user);
+            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { user });
+
+            var dto = new BulkInitialTrainingDTO { ApplyToAllUsers = true, DocumentType = "Both" };
+
+            var result = await controller.BulkInitialTraining(dto);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var resultDto = Assert.IsType<BulkInitialTrainingResultDTO>(ok.Value);
+            Assert.Equal(1, resultDto.SuccessCount);
+            var rows = _dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == user.Id).Select(t => t.DocumentType).ToList();
+            Assert.Contains("SSM", rows);
+            Assert.Contains("SU", rows);
+        }
+
+        [Fact]
+        public async Task BulkInitialTraining_NonAdmin_RestrictsToOwnEmployees()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController();
+            controller.SetUser(managerId, role: "Line Manager");
+
+            var myEmployee = MakeUser(assignedToId: managerId);
+            var otherEmployee = MakeUser();
+            SeedUserRow(myEmployee);
+            SeedUserRow(otherEmployee);
+            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });
+
+            var dto = new BulkInitialTrainingDTO { ApplyToAllUsers = true, DocumentType = "SSM" };
+
+            var result = await controller.BulkInitialTraining(dto);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var resultDto = Assert.IsType<BulkInitialTrainingResultDTO>(ok.Value);
+            Assert.Equal(1, resultDto.SuccessCount);
+            Assert.Single(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == myEmployee.Id));
+            Assert.Empty(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == otherEmployee.Id));
+        }
+
+        [Fact]
+        public async Task BulkInitialTraining_ExistingNonEmptyFields_ArePreservedAndCountedAsSkipped()
+        {
+            var controller = CreateController();
+            var user = MakeUser();
+            SeedUserRow(user);
+            _dbFixture.Context.UserInitialTrainings.Add(new UserInitialTraining
+            {
+                UserId = user.Id,
+                DocumentType = "SSM",
+                IntroductoryTrainingInstructor = "Original Instructor",
+                CreatedAt = DateTime.UtcNow
+            });
+            _dbFixture.Context.SaveChanges();
+            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { user });
+
+            var dto = new BulkInitialTrainingDTO
+            {
+                ApplyToAllUsers = true,
+                DocumentType = "SSM",
+                IntroductoryTrainingInstructor = "New Instructor"
+            };
+
+            var result = await controller.BulkInitialTraining(dto);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var resultDto = Assert.IsType<BulkInitialTrainingResultDTO>(ok.Value);
+            Assert.Equal(0, resultDto.SuccessCount);
+            Assert.Equal(1, resultDto.SkippedCount);
+            var row = _dbFixture.Context.UserInitialTrainings.Single(t => t.UserId == user.Id && t.DocumentType == "SSM");
+            Assert.Equal("Original Instructor", row.IntroductoryTrainingInstructor);
+        }
+
+        // ───────────────────────── Additional UpdateUser edge cases ─────────────────────────
+
+        [Fact]
+        public async Task UpdateUser_MissingFields_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            var existing = MakeUser();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+
+            var result = await controller.UpdateUser(existing.Id, new UserRequestDTO { FirstName = "", LastName = "Smith", Email = "j@e.com", DepartmentId = Guid.NewGuid() });
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var dto = Assert.IsType<UserResponseDTO>(badRequest.Value);
+            Assert.Contains("required", dto.Message);
+        }
+
+        [Fact]
+        public async Task UpdateUser_InvalidEmail_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            var existing = MakeUser();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            var request = ValidUserRequest(Guid.NewGuid());
+            request.Email = "not-an-email";
+
+            var result = await controller.UpdateUser(existing.Id, request);
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var dto = Assert.IsType<UserResponseDTO>(badRequest.Value);
+            Assert.Contains("Invalid email format", dto.Message);
+        }
+
+        [Fact]
+        public async Task UpdateUser_AssignedToNotFound_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            var existing = MakeUser();
+            var departmentId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            var request = ValidUserRequest(departmentId);
+            request.AssignedToId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(request.AssignedToId.Value)).ReturnsAsync((User?)null);
+
+            var result = await controller.UpdateUser(existing.Id, request);
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var dto = Assert.IsType<UserResponseDTO>(badRequest.Value);
+            Assert.Contains("Assigned to user not found", dto.Message);
+        }
+
+        [Fact]
+        public async Task UpdateUser_RoleNameProvided_UpdatesRole()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: departmentId);
+            var newRoleId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Admin")).ReturnsAsync(newRoleId);
+
+            var request = ValidUserRequest(departmentId);
+            request.RoleName = "Admin";
+
+            var result = await controller.UpdateUser(existing.Id, request);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            Assert.Equal(newRoleId, existing.RoleId);
+        }
+
+        [Fact]
+        public async Task UpdateUser_RoleNameProvidedButNotFound_KeepsOriginalRole()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: departmentId);
+            var originalRoleId = existing.RoleId;
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Ghost Role")).ReturnsAsync((Guid?)null);
+
+            var request = ValidUserRequest(departmentId);
+            request.RoleName = "Ghost Role";
+
+            var result = await controller.UpdateUser(existing.Id, request);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            Assert.Equal(originalRoleId, existing.RoleId);
+        }
+
+        [Fact]
+        public async Task UpdateUser_LastNameChanged_RecordsChangeHistory()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: departmentId);
+            existing.LastName = "OldLast";
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+
+            var request = ValidUserRequest(departmentId);
+            request.LastName = "NewLast";
+
+            await controller.UpdateUser(existing.Id, request);
+
+            _userChangeHistoryServiceMock.Verify(s => s.AddUserChangeHistoryAsync(It.Is<UserChangeHistory>(
+                h => h.FieldName == "LastName" && h.OldValue == "OldLast" && h.NewValue == "NewLast")), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUser_EmailChanged_RecordsChangeHistory()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: departmentId);
+            var oldEmail = existing.Email;
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+
+            var request = ValidUserRequest(departmentId);
+            request.Email = "brand.new.email@example.com";
+
+            await controller.UpdateUser(existing.Id, request);
+
+            _userChangeHistoryServiceMock.Verify(s => s.AddUserChangeHistoryAsync(It.Is<UserChangeHistory>(
+                h => h.FieldName == "Email" && h.OldValue == oldEmail && h.NewValue == "brand.new.email@example.com")), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUser_DepartmentChanged_RecordsChangeHistory()
+        {
+            var controller = CreateController();
+            var oldDepartmentId = Guid.NewGuid();
+            var newDepartmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: oldDepartmentId);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(newDepartmentId)).ReturnsAsync(new Department { Id = newDepartmentId, Name = "NewDept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+
+            var request = ValidUserRequest(newDepartmentId);
+
+            await controller.UpdateUser(existing.Id, request);
+
+            _userChangeHistoryServiceMock.Verify(s => s.AddUserChangeHistoryAsync(It.Is<UserChangeHistory>(
+                h => h.FieldName == "DepartmentName" && h.NewValue == "NewDept")), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUser_AssignedToChanged_RecordsChangeHistory()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: departmentId);
+            var manager = MakeUser();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(manager.Id)).ReturnsAsync(manager);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+
+            var request = ValidUserRequest(departmentId);
+            request.AssignedToId = manager.Id;
+
+            await controller.UpdateUser(existing.Id, request);
+
+            _userChangeHistoryServiceMock.Verify(s => s.AddUserChangeHistoryAsync(It.Is<UserChangeHistory>(
+                h => h.FieldName == "AssignedToName" && h.NewValue == $"{manager.FirstName} {manager.LastName}")), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUser_FunctionChanged_RecordsChangeHistory()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: departmentId);
+            var newFunction = new Function { Id = Guid.NewGuid(), Name = "Welder", CreatedAt = DateTime.UtcNow };
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Welder")).ReturnsAsync(newFunction);
+
+            var request = ValidUserRequest(departmentId);
+            request.Function = "Welder";
+
+            await controller.UpdateUser(existing.Id, request);
+
+            _userChangeHistoryServiceMock.Verify(s => s.AddUserChangeHistoryAsync(It.Is<UserChangeHistory>(
+                h => h.FieldName == "FunctionName" && h.NewValue == "Welder")), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUser_NoFieldsChanged_DoesNotRecordChangeHistory()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var existing = MakeUser(departmentId: departmentId);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+
+            var request = new UserRequestDTO
+            {
+                FirstName = existing.FirstName,
+                LastName = existing.LastName,
+                Email = existing.Email,
+                DepartmentId = departmentId
+            };
+
+            await controller.UpdateUser(existing.Id, request);
+
+            _userChangeHistoryServiceMock.Verify(s => s.AddUserChangeHistoryAsync(It.IsAny<UserChangeHistory>()), Times.Never);
+        }
+
+        // ───────────────────────── Additional AddUser edge cases ─────────────────────────
+
+        [Fact]
+        public async Task AddUser_ManagerAlreadyLineManager_DoesNotUpdateManagerRole()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var lineManagerRoleId = Guid.NewGuid();
+            var manager = MakeUser();
+            manager.RoleId = lineManagerRoleId; // already a Line Manager
+
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(manager.Id)).ReturnsAsync(manager);
+            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
+            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Line Manager")).ReturnsAsync(lineManagerRoleId);
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+
+            var request = ValidUserRequest(departmentId);
+            request.AssignedToId = manager.Id;
+
+            var result = await controller.AddUser(request);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AddUser_FunctionNameProvided_ResolvesFunctionByName()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            var welderFunction = new Function { Id = Guid.NewGuid(), Name = "Welder", CreatedAt = DateTime.UtcNow };
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Welder")).ReturnsAsync(welderFunction);
+
+            var request = ValidUserRequest(departmentId);
+            request.Function = "Welder";
+
+            var result = await controller.AddUser(request);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            _userServiceMock.Verify(s => s.AddUserAsync(It.Is<User>(u => u.FunctionId == welderFunction.Id)), Times.Once);
+        }
+
+        // ───────────────────────── Additional GetUsersByDepartment edge case ─────────────────────────
+
+        [Fact]
+        public async Task GetUsersByDepartment_NoUsersButDepartmentExists_ReturnsOkEmptyList()
+        {
+            var controller = CreateController();
+            var departmentId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUsersByDepartmentIdAsync(departmentId)).ReturnsAsync(Array.Empty<User>());
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+
+            var result = await controller.GetUsersByDepartment(departmentId);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var list = Assert.IsAssignableFrom<IEnumerable<UserGETResponseDTO>>(ok.Value);
+            Assert.Empty(list);
+        }
+
+        // ───────────────────────── Additional GetUserSSMSUForm edge case ─────────────────────────
+
+        [Fact]
+        public async Task GetUserSSMSUForm_WithTrainingsAndInitialTrainings_MapsLatestAndInitialTrainings()
+        {
+            var controller = CreateController();
+            var user = MakeUser();
+            user.InitialTrainings.Add(new UserInitialTraining
+            {
+                UserId = user.Id,
+                DocumentType = "SSM",
+                IntroductoryTrainingInstructor = "Jane"
+            });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var older = new PeriodicTrainingResponseDTO
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TrainingDate = DateTime.UtcNow.AddDays(-10),
+                InstructorSignature = "old-signature"
+            };
+            var newer = new PeriodicTrainingResponseDTO
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TrainingDate = DateTime.UtcNow.AddDays(-1),
+                InstructorSignature = "new-signature",
+                InstructorSignatureMethod = "Draw"
+            };
+            _periodicTrainingServiceMock.Setup(s => s.GetByUserIdAsync(user.Id)).ReturnsAsync(new[] { older, newer });
+
+            var result = await controller.GetUserSSMSUForm(user.Id);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var dto = Assert.IsType<UserSSMSUFormDTO>(ok.Value);
+            Assert.Equal("new-signature", dto.LatestInstructorSignature);
+            Assert.Equal("Draw", dto.LatestInstructorSignatureMethod);
+            Assert.Single(dto.InitialTrainings);
+            Assert.Equal("Jane", dto.InitialTrainings[0].IntroductoryTrainingInstructor);
+        }
+
+        // ───────────────────────── Additional UpdateUserSSMSUForm edge cases ─────────────────────────
+
+        [Fact]
+        public async Task UpdateUserSSMSUForm_ExistingRow_UpdatesInPlaceRatherThanDuplicating()
+        {
+            var controller = CreateController();
+            var user = MakeUser();
+            SeedUserRow(user);
+            var existingRow = new UserInitialTraining
+            {
+                UserId = user.Id,
+                DocumentType = "SSM",
+                IntroductoryTrainingInstructor = "Old Instructor",
+                CreatedAt = DateTime.UtcNow
+            };
+            _dbFixture.Context.UserInitialTrainings.Add(existingRow);
+            _dbFixture.Context.SaveChanges();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var dto = new UpdateUserSSMSUFormDTO
+            {
+                InitialTrainings = new List<InitialTrainingEntryDTO>
+                {
+                    new() { DocumentType = "SSM", IntroductoryTrainingInstructor = "New Instructor" }
+                }
+            };
+
+            var result = await controller.UpdateUserSSMSUForm(user.Id, dto);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            var rows = _dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == user.Id).ToList();
+            Assert.Single(rows);
+            Assert.Equal(existingRow.Id, rows[0].Id);
+            Assert.Equal("New Instructor", rows[0].IntroductoryTrainingInstructor);
+        }
+
+        [Fact]
+        public async Task UpdateUserSSMSUForm_BlankDocumentType_SkipsEntry()
+        {
+            var controller = CreateController();
+            var user = MakeUser();
+            SeedUserRow(user);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var dto = new UpdateUserSSMSUFormDTO
+            {
+                InitialTrainings = new List<InitialTrainingEntryDTO>
+                {
+                    new() { DocumentType = "", IntroductoryTrainingInstructor = "Should Be Ignored" }
+                }
+            };
+
+            var result = await controller.UpdateUserSSMSUForm(user.Id, dto);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            Assert.Empty(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == user.Id));
+        }
     }
 }
