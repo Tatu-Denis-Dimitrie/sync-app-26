@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
 import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, UserChangeHistory, ImportHistoryItem } from '../models/csv-sync.model';
+import { AuthRole } from './authentication.service';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
 import { from, combineLatest } from 'rxjs';
@@ -10,8 +11,7 @@ import { from, combineLatest } from 'rxjs';
 interface BackendUser {
   id: string;
   personalId: string;
-  roleId?: string;
-  roleName?: string;
+  role?: AuthRole;
   firstName: string;
   lastName: string;
   email: string;
@@ -69,16 +69,16 @@ export class UserSyncService {
   }
 
   private mapBackendRole(backendUser: BackendUser): UserRole {
-    const normalizedRoleName = backendUser.roleName?.trim().toLowerCase();
-
-    if (normalizedRoleName === 'line manager') {
+    if (backendUser.role === AuthRole.LineManager) {
       return UserRole.LineManager;
     }
 
-    if (normalizedRoleName === 'basic user') {
+    if (backendUser.role === AuthRole.BasicUser) {
       return UserRole.Employee;
     }
 
+    // Admins have no equivalent in the business UserRole enum; classify by
+    // whether they're assigned to a manager (unassigned = treated as a manager).
     const isEmployee = !!backendUser.assignedToId || !!backendUser.assignedToPersonalId;
     return isEmployee ? UserRole.Employee : UserRole.LineManager;
   }

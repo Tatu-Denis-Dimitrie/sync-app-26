@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
-import { AuthenticationService, User } from '../../services/authentication.service';
+import { AuthenticationService, User, AuthRole, authRoleLabel } from '../../services/authentication.service';
 import { DocumentSignatureService } from '../../services/document-signature.service';
 import { UserSyncSignalrService } from '../../services/user-sync.signalr.service';
 import { filter, Subscription } from 'rxjs';
@@ -14,6 +14,8 @@ import { filter, Subscription } from 'rxjs';
   styleUrl: './header.component.css'
 })
 export class HeaderComponent implements OnInit, OnDestroy {
+  AuthRole = AuthRole;
+  authRoleLabel = authRoleLabel;
   currentUser: User | null = null;
   isLoggedIn = false;
   isAdmin = false;

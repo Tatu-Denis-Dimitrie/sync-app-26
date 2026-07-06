@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
-import { AuthenticationService } from '../../services/authentication.service';
+import { AuthenticationService, AuthRole } from '../../services/authentication.service';
 import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
@@ -405,7 +405,7 @@ navigateToDocuments(): void {
       email: this.editForm.email,
       departmentId: this.editForm.departmentId,
       function: this.editForm.function || null,
-      roleName: this.editForm.role === UserRole.LineManager ? 'Line Manager' : 'Basic User',
+      role: this.editForm.role === UserRole.LineManager ? AuthRole.LineManager : AuthRole.BasicUser,
       assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
     };
 

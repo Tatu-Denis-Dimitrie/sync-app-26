@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { AuthenticationService } from '../../services/authentication.service';
+import { AuthenticationService, AuthRole } from '../../services/authentication.service';
 
 interface InitialTrainingEntry {
   documentType: string;
@@ -30,7 +30,7 @@ interface UserSSMSUForm {
   personalId: string;
   departmentName?: string;
   functionName?: string;
-  roleName?: string;
+  role?: AuthRole;
   managerFirstName?: string;
   managerLastName?: string;
   managerFunctionName?: string;

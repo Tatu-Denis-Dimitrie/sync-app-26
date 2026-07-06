@@ -31,12 +31,27 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+// Mirrors the backend SyncApp26.Domain.Enums.UserRole enum values exactly.
+export enum AuthRole {
+  Admin = 0,
+  LineManager = 1,
+  BasicUser = 2
+}
+
+export function authRoleLabel(role: AuthRole): string {
+  switch (role) {
+    case AuthRole.Admin: return 'Admin';
+    case AuthRole.LineManager: return 'Line Manager';
+    case AuthRole.BasicUser: return 'Basic User';
+  }
+}
+
 export interface User {
     id: string;
     email: string;
     firstName: string;
     lastName: string;
-    role: string;
+    role: AuthRole;
 }
 
 export interface LoginResponse {
@@ -107,6 +122,11 @@ export class AuthenticationService {
 
   isAdmin(): boolean {
     const user = this.getCurrentUser();
-    return user?.role === 'Admin';
+    return user?.role === AuthRole.Admin;
+  }
+
+  isLineManager(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === AuthRole.LineManager;
   }
 }
