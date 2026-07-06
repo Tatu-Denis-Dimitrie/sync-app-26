@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 
@@ -5,6 +6,7 @@ namespace SyncApp26.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class FunctionController : ControllerBase
     {
         private readonly IFunctionService _functionService;
@@ -29,6 +31,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddFunction([FromBody] string functionName)
         {
             await _functionService.AddFunctionAsync(functionName);
@@ -36,6 +39,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteFunction(Guid id)
         {
             await _functionService.DeleteFunctionAsync(id);
