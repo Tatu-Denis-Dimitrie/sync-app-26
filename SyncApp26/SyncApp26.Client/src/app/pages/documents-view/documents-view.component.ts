@@ -102,7 +102,9 @@ export class DocumentsViewComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadDocuments();
-    this.loadPendingAdminCount();
+    if (this.authService.isAdmin() || this.authService.isLineManager()) {
+      this.loadPendingAdminCount();
+    }
   }
 
   loadPendingAdminCount(): void {

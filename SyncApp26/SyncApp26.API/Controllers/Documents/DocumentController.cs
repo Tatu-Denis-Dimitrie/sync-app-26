@@ -325,7 +325,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("regenerate-documents")]
-        [Authorize(Roles = Roles.Admin)]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<IActionResult> RegenerateDocuments()
         {
             var count = await _documentService.RegenerateDocumentsAsync();

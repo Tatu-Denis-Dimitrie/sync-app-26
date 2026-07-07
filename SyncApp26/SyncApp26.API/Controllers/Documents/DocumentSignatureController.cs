@@ -429,7 +429,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("pending-ssm-admin-count")]
-        [Authorize(Roles = Roles.Admin)]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<IActionResult> GetPendingSsmAdminCount()
         {
             var count = await _documentService.GetPendingSsmDocumentsForAdminAsync();
