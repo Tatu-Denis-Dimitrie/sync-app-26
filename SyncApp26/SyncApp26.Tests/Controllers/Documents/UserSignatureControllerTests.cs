@@ -3,6 +3,7 @@ using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.UserSignature;
 using SyncApp26.Shared.DTOs.Response.UserSignature;
 using SyncApp26.Tests.TestHelpers;
@@ -14,7 +15,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         private readonly Mock<IUserSignatureService> _signatureServiceMock = new();
         private readonly Mock<IUserService> _userServiceMock = new();
 
-        private UserSignatureController CreateController(Guid? callerId = null, string role = "Basic User")
+        private UserSignatureController CreateController(Guid? callerId = null, string role = Roles.BasicUser)
         {
             var controller = new UserSignatureController(_signatureServiceMock.Object, _userServiceMock.Object);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
@@ -39,7 +40,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             Email = $"jane.roe.{Guid.NewGuid():N}@example.com",
             PersonalId = Guid.NewGuid().ToString(),
             AssignedToId = assignedToId,
-            RoleId = Guid.NewGuid(),
+            Role = UserRole.BasicUser,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -102,7 +103,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetUserSignature_UnrelatedNonAdmin_ReturnsForbidden()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Basic User");
+            var controller = CreateController(callerId, role: Roles.BasicUser);
 
             var result = await controller.GetUserSignature(Guid.NewGuid());
 
@@ -113,7 +114,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetUserSignature_LineManagerOfTarget_ReturnsOk()
         {
             var managerId = Guid.NewGuid();
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var target = MakeUser(assignedToId: managerId);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(target.Id)).ReturnsAsync(target);
             _signatureServiceMock.Setup(s => s.GetUserSignatureAsync(target.Id)).ReturnsAsync(MakeSignature(target.Id));
@@ -126,7 +127,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetUserSignature_Admin_NotFound_ReturnsNotFound()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var targetId = Guid.NewGuid();
             _signatureServiceMock.Setup(s => s.GetUserSignatureAsync(targetId)).ReturnsAsync((UserSignature?)null);
 
@@ -255,7 +256,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetSignatureHistory_UnrelatedNonAdmin_ReturnsForbidden()
         {
-            var controller = CreateController(role: "Basic User");
+            var controller = CreateController(role: Roles.BasicUser);
 
             var result = await controller.GetSignatureHistory(Guid.NewGuid());
 
@@ -322,7 +323,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetUserSignature_Admin_ReturnsOk()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var targetId = Guid.NewGuid();
             _signatureServiceMock.Setup(s => s.GetUserSignatureAsync(targetId)).ReturnsAsync(MakeSignature(targetId));
 
@@ -335,7 +336,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetUserSignature_LineManagerNotManagingTarget_ReturnsForbidden()
         {
             var managerId = Guid.NewGuid();
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var target = MakeUser(); // not assigned to this manager
             _userServiceMock.Setup(s => s.GetUserByIdAsync(target.Id)).ReturnsAsync(target);
 
@@ -349,7 +350,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetSignatureHistory_Admin_ReturnsOk()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var targetId = Guid.NewGuid();
             _signatureServiceMock.Setup(s => s.GetUserSignatureHistoryAsync(targetId)).ReturnsAsync(Array.Empty<UserSignatureHistory>());
 
@@ -362,7 +363,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignatureHistory_LineManagerOfTarget_ReturnsOk()
         {
             var managerId = Guid.NewGuid();
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var target = MakeUser(assignedToId: managerId);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(target.Id)).ReturnsAsync(target);
             _signatureServiceMock.Setup(s => s.GetUserSignatureHistoryAsync(target.Id)).ReturnsAsync(Array.Empty<UserSignatureHistory>());

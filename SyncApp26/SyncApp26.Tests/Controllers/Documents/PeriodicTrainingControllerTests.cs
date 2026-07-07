@@ -3,6 +3,7 @@ using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
 using SyncApp26.Shared.DTOs.Response.PeriodicTraining;
 using SyncApp26.Tests.TestHelpers;
@@ -14,7 +15,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         private readonly Mock<IPeriodicTrainingService> _periodicTrainingServiceMock = new();
         private readonly Mock<IUserService> _userServiceMock = new();
 
-        private PeriodicTrainingController CreateController(Guid? callerId = null, string role = "Admin")
+        private PeriodicTrainingController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
             var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object, _userServiceMock.Object);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
@@ -29,7 +30,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             Email = $"jane.roe.{Guid.NewGuid():N}@example.com",
             PersonalId = Guid.NewGuid().ToString(),
             AssignedToId = assignedToId,
-            RoleId = Guid.NewGuid(),
+            Role = UserRole.BasicUser,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -203,7 +204,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkCreate_Admin_PassesDtoUnchanged()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             var resultDto = new BulkCreateResultDTO { SuccessCount = 3 };
             _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(dto)).ReturnsAsync(resultDto);
@@ -219,7 +220,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task BulkCreate_NonAdmin_RestrictsToOwnEmployees()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Line Manager");
+            var controller = CreateController(callerId, role: Roles.LineManager);
             var myEmployee = MakeUser(assignedToId: callerId);
             var otherEmployee = MakeUser();
             _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });
@@ -257,7 +258,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task BulkCreate_NonAdminWithExplicitSelectedUserIds_IntersectsWithOwnEmployees()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Line Manager");
+            var controller = CreateController(callerId, role: Roles.LineManager);
             var myEmployee = MakeUser(assignedToId: callerId);
             var otherEmployee = MakeUser();
             _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });

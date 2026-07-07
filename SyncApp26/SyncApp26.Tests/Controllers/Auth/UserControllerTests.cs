@@ -3,6 +3,7 @@ using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Shared.DTOs.Response.PeriodicTraining;
@@ -34,7 +35,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                 _periodicTrainingServiceMock.Object,
                 _dbFixture.Context);
 
-            controller.SetUser(Guid.NewGuid(), role: "Admin");
+            controller.SetUser(Guid.NewGuid(), role: Roles.Admin);
             return controller;
         }
 
@@ -44,7 +45,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             _documentServiceMock.Setup(s => s.GetUserIdsWithUnsignedDocumentTypeAsync(It.IsAny<string>())).ReturnsAsync(new HashSet<Guid>());
         }
 
-        private static User MakeUser(Guid? id = null, Guid? departmentId = null, Guid? assignedToId = null)
+        private static User MakeUser(Guid? id = null, Guid? departmentId = null, Guid? assignedToId = null, UserRole role = UserRole.BasicUser)
         {
             var userId = id ?? Guid.NewGuid();
             return new User
@@ -56,19 +57,13 @@ namespace SyncApp26.Tests.Controllers.Auth
                 PersonalId = Guid.NewGuid().ToString(),
                 DepartmentId = departmentId,
                 AssignedToId = assignedToId,
-                RoleId = Guid.NewGuid(),
+                Role = role,
                 CreatedAt = DateTime.UtcNow
             };
         }
 
         private void SeedUserRow(User user)
         {
-            var role = new Role { Id = user.RoleId, Name = "Role-" + user.RoleId, CreatedAt = DateTime.UtcNow };
-            if (!_dbFixture.Context.Roles.Any(r => r.Id == user.RoleId))
-            {
-                _dbFixture.Context.Roles.Add(role);
-            }
-
             _dbFixture.Context.Users.Add(new User
             {
                 Id = user.Id,
@@ -76,7 +71,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                 LastName = user.LastName,
                 Email = user.Email,
                 PersonalId = user.PersonalId,
-                RoleId = user.RoleId,
+                Role = user.Role,
                 CreatedAt = user.CreatedAt
             });
             _dbFixture.Context.SaveChanges();
@@ -157,7 +152,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var callerId = Guid.NewGuid();
             var controller = CreateController();
-            controller.SetUser(callerId, role: "Basic User");
+            controller.SetUser(callerId, role: Roles.BasicUser);
             StubEmptyDocumentSets();
 
             var self = MakeUser(id: callerId);
@@ -297,35 +292,14 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
-        public async Task AddUser_MissingBasicUserRole_ReturnsBadRequest()
-        {
-            var controller = CreateController();
-            var departmentId = Guid.NewGuid();
-            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync((Guid?)null);
-            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
-
-            var result = await controller.AddUser(ValidUserRequest(departmentId));
-
-            var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
-            var dto = Assert.IsType<UserResponseDTO>(badRequest.Value);
-            Assert.Contains("Role 'Basic User' not found", dto.Message);
-        }
-
-        [Fact]
         public async Task AddUser_WithAssignedManager_PromotesManagerToLineManager()
         {
             var controller = CreateController();
             var departmentId = Guid.NewGuid();
-            var lineManagerRoleId = Guid.NewGuid();
-            var basicRoleId = Guid.NewGuid();
-            var manager = MakeUser();
-            manager.RoleId = Guid.NewGuid(); // not yet a line manager
+            var manager = MakeUser(role: UserRole.BasicUser); // not yet a line manager
 
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
             _userServiceMock.Setup(s => s.GetUserByIdAsync(manager.Id)).ReturnsAsync(manager);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(basicRoleId);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Line Manager")).ReturnsAsync(lineManagerRoleId);
             _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync(new Function { Id = Guid.NewGuid(), Name = "Unknown", CreatedAt = DateTime.UtcNow });
 
             var request = ValidUserRequest(departmentId);
@@ -337,7 +311,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var dto = Assert.IsType<UserResponseDTO>(ok.Value);
             Assert.True(dto.Success);
             _userServiceMock.Verify(s => s.AddUserAsync(It.Is<User>(u => u.Email == "jane.smith@example.com" && u.AssignedToId == manager.Id)), Times.Once);
-            _userServiceMock.Verify(s => s.UpdateUserAsync(It.Is<User>(u => u.Id == manager.Id && u.RoleId == lineManagerRoleId)), Times.Once);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.Is<User>(u => u.Id == manager.Id && u.Role == UserRole.LineManager)), Times.Once);
         }
 
         // ───────────────────────── UpdateUser ─────────────────────────
@@ -476,7 +450,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var callerId = Guid.NewGuid();
             var controller = CreateController();
-            controller.SetUser(callerId, role: "Basic User");
+            controller.SetUser(callerId, role: Roles.BasicUser);
             var user = MakeUser(); // unrelated to caller
 
             _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
@@ -491,7 +465,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var callerId = Guid.NewGuid();
             var controller = CreateController();
-            controller.SetUser(callerId, role: "Basic User");
+            controller.SetUser(callerId, role: Roles.BasicUser);
             var user = MakeUser(id: callerId);
 
             _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
@@ -522,7 +496,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var callerId = Guid.NewGuid();
             var controller = CreateController();
-            controller.SetUser(callerId, role: "Basic User");
+            controller.SetUser(callerId, role: Roles.BasicUser);
             var user = MakeUser();
             _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
 
@@ -676,7 +650,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var managerId = Guid.NewGuid();
             var controller = CreateController();
-            controller.SetUser(managerId, role: "Line Manager");
+            controller.SetUser(managerId, role: Roles.LineManager);
 
             var myEmployee = MakeUser(assignedToId: managerId);
             var otherEmployee = MakeUser();
@@ -780,45 +754,40 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
-        public async Task UpdateUser_RoleNameProvided_UpdatesRole()
+        public async Task UpdateUser_RoleProvided_UpdatesRole()
         {
             var controller = CreateController();
             var departmentId = Guid.NewGuid();
             var existing = MakeUser(departmentId: departmentId);
-            var newRoleId = Guid.NewGuid();
             _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
             _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Admin")).ReturnsAsync(newRoleId);
 
             var request = ValidUserRequest(departmentId);
-            request.RoleName = "Admin";
+            request.Role = UserRole.Admin;
 
             var result = await controller.UpdateUser(existing.Id, request);
 
             Assert.IsType<OkObjectResult>(result.Result);
-            Assert.Equal(newRoleId, existing.RoleId);
+            Assert.Equal(UserRole.Admin, existing.Role);
         }
 
         [Fact]
-        public async Task UpdateUser_RoleNameProvidedButNotFound_KeepsOriginalRole()
+        public async Task UpdateUser_RoleNotProvided_KeepsOriginalRole()
         {
             var controller = CreateController();
             var departmentId = Guid.NewGuid();
-            var existing = MakeUser(departmentId: departmentId);
-            var originalRoleId = existing.RoleId;
+            var existing = MakeUser(departmentId: departmentId, role: UserRole.LineManager);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
             _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Ghost Role")).ReturnsAsync((Guid?)null);
 
             var request = ValidUserRequest(departmentId);
-            request.RoleName = "Ghost Role";
 
             var result = await controller.UpdateUser(existing.Id, request);
 
             Assert.IsType<OkObjectResult>(result.Result);
-            Assert.Equal(originalRoleId, existing.RoleId);
+            Assert.Equal(UserRole.LineManager, existing.Role);
         }
 
         [Fact]
@@ -951,14 +920,10 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             var departmentId = Guid.NewGuid();
-            var lineManagerRoleId = Guid.NewGuid();
-            var manager = MakeUser();
-            manager.RoleId = lineManagerRoleId; // already a Line Manager
+            var manager = MakeUser(role: UserRole.LineManager); // already a Line Manager
 
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
             _userServiceMock.Setup(s => s.GetUserByIdAsync(manager.Id)).ReturnsAsync(manager);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Line Manager")).ReturnsAsync(lineManagerRoleId);
             _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
 
             var request = ValidUserRequest(departmentId);
@@ -977,7 +942,6 @@ namespace SyncApp26.Tests.Controllers.Auth
             var departmentId = Guid.NewGuid();
             var welderFunction = new Function { Id = Guid.NewGuid(), Name = "Welder", CreatedAt = DateTime.UtcNow };
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
             _functionServiceMock.Setup(s => s.GetByNameAsync("Welder")).ReturnsAsync(welderFunction);
 
             var request = ValidUserRequest(departmentId);

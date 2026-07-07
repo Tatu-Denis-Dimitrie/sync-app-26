@@ -1,12 +1,13 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.Tests.TestHelpers
 {
     public static class ControllerTestExtensions
     {
-        public static void SetUser<T>(this T controller, Guid userId, string role = "Basic User", string email = "user@test.com")
+        public static void SetUser<T>(this T controller, Guid userId, string role = Roles.BasicUser, string email = "user@test.com")
             where T : ControllerBase
         {
             var claims = new List<Claim>
