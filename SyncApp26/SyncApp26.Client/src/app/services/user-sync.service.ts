@@ -74,13 +74,13 @@ export class UserSyncService {
     }
 
     if (backendUser.role === AuthRole.BasicUser) {
-      return UserRole.Employee;
+      return UserRole.BasicUser;
     }
 
     // Admins have no equivalent in the business UserRole enum; classify by
     // whether they're assigned to a manager (unassigned = treated as a manager).
     const isEmployee = !!backendUser.assignedToId || !!backendUser.assignedToPersonalId;
-    return isEmployee ? UserRole.Employee : UserRole.LineManager;
+    return isEmployee ? UserRole.BasicUser : UserRole.LineManager;
   }
 
   /**
@@ -340,7 +340,7 @@ export class UserSyncService {
           map(departments => ({
             total: users.length,
             lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-            employees: users.filter(u => u.role === UserRole.Employee).length,
+            employees: users.filter(u => u.role === UserRole.BasicUser).length,
             departments: departments.length
           })),
           catchError(error => {
@@ -348,7 +348,7 @@ export class UserSyncService {
             return of({
               total: users.length,
               lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-              employees: users.filter(u => u.role === UserRole.Employee).length,
+              employees: users.filter(u => u.role === UserRole.BasicUser).length,
               departments: new Set(users.map(u => u.departmentName)).size
             });
           })

@@ -330,7 +330,7 @@ navigateToDocuments(): void {
     email: '',
     departmentId: '',
     function: '',
-    role: UserRole.Employee,
+    role: UserRole.BasicUser,
     assignedToId: ''
   };
 
@@ -346,7 +346,7 @@ navigateToDocuments(): void {
       email: user.email,
       departmentId: user.departmentId,
       function: user.function || '',
-      role: user.role || UserRole.Employee,
+      role: user.role || UserRole.BasicUser,
       assignedToId: user.assignedToId || ''
     };
 
@@ -409,7 +409,7 @@ navigateToDocuments(): void {
       assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
     };
 
-    if (this.editForm.role === UserRole.Employee && !payload.assignedToId) {
+    if (this.editForm.role === UserRole.BasicUser && !payload.assignedToId) {
       alert('Please select a Line Manager for the Employee.');
       return;
     }

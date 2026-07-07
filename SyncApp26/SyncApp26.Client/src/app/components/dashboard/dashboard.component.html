@@ -283,7 +283,7 @@
                       class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
                       <option value="all">All Roles</option>
                       <option [value]="UserRole.LineManager">Line Managers</option>
-                      <option [value]="UserRole.Employee">Employees</option>
+                      <option [value]="UserRole.BasicUser">Employees</option>
                     </select>
                   </div>
                   <div class="flex gap-3">
@@ -383,7 +383,7 @@
                                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                       </svg>
                                     }
-                                    @if (user.role === UserRole.Employee) {
+                                    @if (user.role === UserRole.BasicUser) {
                                       <svg xmlns="http://www.w3.org/2000/svg" width="18"
                                         height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         stroke-linecap="round" stroke-linejoin="round" class="text-blue-600">

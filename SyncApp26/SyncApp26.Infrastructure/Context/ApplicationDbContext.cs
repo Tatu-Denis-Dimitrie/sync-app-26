@@ -57,6 +57,10 @@ namespace SyncApp26.Infrastructure.Context
             {
                 entity.HasKey(e => e.Id);
 
+                // Defense-in-depth: reject any Role value outside the UserRole enum range
+                // (e.g. from a direct/manual DB write), instead of silently materializing it.
+                entity.ToTable(t => t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN (0, 1, 2)"));
+
                 entity.Property(e => e.FirstName)
                     .IsRequired()
                     .HasMaxLength(100);
