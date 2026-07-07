@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -33,7 +34,7 @@ namespace SyncApp26.Infrastructure.Services
                 .CountAsync(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
-                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
+                    d.User.Role != UserRole.Admin &&
                     d.Status == "PendingAdmin");
         }
 
@@ -49,7 +50,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Where(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
-                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
+                    d.User.Role != UserRole.Admin &&
                     d.Status == "PendingAdmin")
                 .ToListAsync();
 
@@ -62,8 +63,8 @@ namespace SyncApp26.Infrastructure.Services
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
             // Check if user is admin (admins should not have documents generated)
-            var userToGenerate = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == userId);
-            if (userToGenerate?.Role != null && string.Equals(userToGenerate.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+            var userToGenerate = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (userToGenerate != null && userToGenerate.Role == UserRole.Admin)
             {
                 throw new InvalidOperationException("Cannot generate documents for admin users.");
             }
@@ -865,8 +866,6 @@ namespace SyncApp26.Infrastructure.Services
         {
             var all = await _context.UserDocuments
                 .Include(d => d.User)
-                    .ThenInclude(u => u.Role)
-                .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
@@ -875,8 +874,7 @@ namespace SyncApp26.Infrastructure.Services
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
 
-            return all.Where(d => d.User == null ||
-                !string.Equals(d.User.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase));
+            return all.Where(d => d.User == null || d.User.Role != UserRole.Admin);
         }
 
         public async Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType)
@@ -1119,8 +1117,6 @@ namespace SyncApp26.Infrastructure.Services
         {
             var allDocs = await _context.UserDocuments
                 .Include(d => d.User)
-                    .ThenInclude(u => u.Role)
-                .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
@@ -1133,7 +1129,7 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .Where(d =>
                     (isAdmin
-                        ? d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.User != null && (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") && d.Status == "PendingAdmin"
+                        ? d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.User != null && d.User.Role != UserRole.Admin && d.Status == "PendingAdmin"
                         : d.Status == "PendingManager" && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User != null && d.User.AssignedToId == signerUserId)
                 )
                 .ToListAsync();
@@ -1244,7 +1240,6 @@ namespace SyncApp26.Infrastructure.Services
                     await PropagateSignatureToNewerDocumentsAsync(signedTraining);
 
                 var freshUser = await _context.Users
-                    .Include(u => u.Role)
                     .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                     .Include(u => u.Department)
                     .Include(u => u.Function)
@@ -1268,7 +1263,6 @@ namespace SyncApp26.Infrastructure.Services
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
             var users = await _context.Users
-                .Include(u => u.Role)
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
@@ -1278,7 +1272,7 @@ namespace SyncApp26.Infrastructure.Services
 
             // Filter out admin users on client side (EF doesn't support StringComparison parameter)
             var nonAdminUsers = users
-                .Where(u => u.Role == null || !string.Equals(u.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+                .Where(u => u.Role != UserRole.Admin)
                 .Where(u => selectedUserIds == null || selectedUserIds.Contains(u.Id))
                 .ToList();
 
@@ -1304,8 +1298,6 @@ namespace SyncApp26.Infrastructure.Services
         public async Task<int> BulkSignAndSendGeneratedDocumentsAsync(string documentType, string signatureMethod, string signatureData, string ipAddress)
         {
             var allDocs = await _context.UserDocuments
-                .Include(d => d.User)
-                    .ThenInclude(u => u.Role)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
@@ -1373,7 +1365,6 @@ namespace SyncApp26.Infrastructure.Services
             foreach (var doc in docs)
             {
                 var freshUser = await _context.Users
-                    .Include(u => u.Role)
                     .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                     .Include(u => u.Department)
                     .Include(u => u.Function)
@@ -1406,7 +1397,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Where(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.User != null &&
-                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN") &&
+                    d.User.Role != UserRole.Admin &&
                     d.Status == "PendingAdmin")
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
@@ -1428,7 +1419,7 @@ namespace SyncApp26.Infrastructure.Services
                     d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
                     d.Status == "Completed" &&
                     d.User != null &&
-                    (d.User.Role == null || d.User.Role.Name.ToUpper() != "ADMIN"))
+                    d.User.Role != UserRole.Admin)
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
         }

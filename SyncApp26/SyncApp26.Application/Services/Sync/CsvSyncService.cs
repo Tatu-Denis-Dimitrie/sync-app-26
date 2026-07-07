@@ -1,5 +1,6 @@
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.IRepositories;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs;
 using SyncApp26.Shared.DTOs.Response.User;
 using SyncApp26.Application.IServices;
@@ -233,8 +234,6 @@ public class CsvSyncService : ICsvSyncService
             .ToList();
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
         var functionCache = new Dictionary<string, Function?>(StringComparer.OrdinalIgnoreCase);
-        var lineManagerRoleId = await _userRepository.GetRoleIdByNameAsync("Line Manager");
-        var basicUserRoleId = await _userRepository.GetRoleIdByNameAsync("Basic User");
 
         // Batch collections for bulk operations
         var usersToAdd = new List<User>();
@@ -283,17 +282,10 @@ public class CsvSyncService : ICsvSyncService
                     var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
                     var csvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
 
-                    if (basicUserRoleId == null)
-                    {
-                        result.RecordsFailed++;
-                        result.Errors.Add($"User {item.CsvData.Email}: Required role not found for creation.");
-                        continue;
-                    }
-
                     var newUser = new User
                     {
                         Id = Guid.NewGuid(),
-                        RoleId = basicUserRoleId.Value, // Everyone starts as Basic User
+                        Role = UserRole.BasicUser, // Everyone starts as Basic User
                         FirstName = item.CsvData.FirstName.Trim(),
                         LastName = item.CsvData.LastName.Trim(),
                         Email = item.CsvData.Email.Trim(),
@@ -609,7 +601,6 @@ public class CsvSyncService : ICsvSyncService
             }
 
             // Promote to Line Manager anyone who is referenced as a manager by another user
-            if (lineManagerRoleId != null && basicUserRoleId != null)
             {
                 var allUsers = (await _userRepository.GetAllUsersAsync()).ToList();
                 var managerIds = allUsers
@@ -618,14 +609,14 @@ public class CsvSyncService : ICsvSyncService
                     .ToHashSet();
 
                 var usersToPromote = allUsers
-                    .Where(u => managerIds.Contains(u.Id) && u.RoleId != lineManagerRoleId.Value)
+                    .Where(u => managerIds.Contains(u.Id) && u.Role != UserRole.LineManager)
                     .ToList();
                 var usersToDemote = allUsers
-                    .Where(u => !managerIds.Contains(u.Id) && u.RoleId == lineManagerRoleId.Value)
+                    .Where(u => !managerIds.Contains(u.Id) && u.Role == UserRole.LineManager)
                     .ToList();
 
-                foreach (var u in usersToPromote) u.RoleId = lineManagerRoleId.Value;
-                foreach (var u in usersToDemote)  u.RoleId = basicUserRoleId.Value;
+                foreach (var u in usersToPromote) u.Role = UserRole.LineManager;
+                foreach (var u in usersToDemote)  u.Role = UserRole.BasicUser;
 
                 var roleUpdates = usersToPromote.Concat(usersToDemote).ToList();
                 if (roleUpdates.Any())

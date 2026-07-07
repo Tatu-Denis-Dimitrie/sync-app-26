@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.CSV.History;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.API.Controllers
 {
@@ -51,7 +52,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> CreateUserChangeHistory([FromBody] UserChangeHistoryRequestDTO userChangeHistoryRequestDTO)
         {
             if(userChangeHistoryRequestDTO == null || userChangeHistoryRequestDTO.UserId == Guid.Empty || string.IsNullOrEmpty(userChangeHistoryRequestDTO.FieldName))
@@ -76,7 +77,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> DeleteUserChangeHistory(Guid id)
         {
             await _userChangeHistoryService.DeleteUserChangeHistoryAsync(id);

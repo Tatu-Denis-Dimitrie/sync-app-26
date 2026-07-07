@@ -25,7 +25,7 @@
           <strong>{{ currentUser.firstName }} {{ currentUser.lastName }}</strong>
         </p>
         <p class="role-badge">
-          <span class="badge">{{ currentUser.role }}</span>
+          <span class="badge">{{ authRoleLabel(currentUser.role) }}</span>
         </p>
       </div>
     }

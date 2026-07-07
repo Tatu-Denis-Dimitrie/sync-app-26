@@ -107,7 +107,7 @@
                           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                         </svg>
                       }
-                      @if (user.role === UserRole.Employee) {
+                      @if (user.role === UserRole.BasicUser) {
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="18"
@@ -188,7 +188,7 @@
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                       </svg>
                     }
-                    @if (selectedUser.role === UserRole.Employee) {
+                    @if (selectedUser.role === UserRole.BasicUser) {
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="36"
@@ -886,11 +886,11 @@
                                               required
                                               class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                               >
-                                              <option [value]="UserRole.Employee">Employee</option>
+                                              <option [value]="UserRole.BasicUser">Employee</option>
                                               <option [value]="UserRole.LineManager">Line Manager</option>
                                             </select>
                                           </div>
-                                          @if (editForm.role === UserRole.Employee) {
+                                          @if (editForm.role === UserRole.BasicUser) {
                                             <div class="space-y-2">
                                               <label class="text-sm font-medium text-foreground"
                                                 >Line Manager <span class="text-destructive">*</span></label
@@ -898,7 +898,7 @@
                                                 <select
                                                   [(ngModel)]="editForm.assignedToId"
                                                   name="assignedToId"
-                                                  [required]="editForm.role === UserRole.Employee"
+                                                  [required]="editForm.role === UserRole.BasicUser"
                                                   class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                                   >
                                                   <option value="">Select Line Manager</option>

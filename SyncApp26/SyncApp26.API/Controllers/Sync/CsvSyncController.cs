@@ -7,12 +7,13 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.CSV.Department;
+using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = Roles.Admin)]
 public class CsvSyncController : ControllerBase
 {
     private readonly ICsvSyncService _csvSyncService;

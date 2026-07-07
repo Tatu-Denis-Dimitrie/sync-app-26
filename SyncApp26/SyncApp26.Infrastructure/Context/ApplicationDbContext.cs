@@ -35,7 +35,6 @@ namespace SyncApp26.Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
-        public DbSet<Role> Roles { get; set; }
         public DbSet<UserChangeHistory> UserChangeHistories { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
         public DbSet<DocumentSignatureToken> DocumentSignatureTokens { get; set; }
@@ -57,6 +56,10 @@ namespace SyncApp26.Infrastructure.Context
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(e => e.Id);
+
+                // Defense-in-depth: reject any Role value outside the UserRole enum range
+                // (e.g. from a direct/manual DB write), instead of silently materializing it.
+                entity.ToTable(t => t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN (0, 1, 2)"));
 
                 entity.Property(e => e.FirstName)
                     .IsRequired()
@@ -96,12 +99,6 @@ namespace SyncApp26.Infrastructure.Context
                     .HasForeignKey(e => e.DepartmentId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // Configure relationship with Role
-                entity.HasOne(e => e.Role)
-                    .WithMany(r => r.Users)
-                    .HasForeignKey(e => e.RoleId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
                 // Configure self-referencing relationship for line manager
                 entity.HasOne(e => e.AssignedTo)
                     .WithMany(u => u.AssignedUsers)
@@ -122,21 +119,6 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.Name)
                     .IsRequired()
                     .HasMaxLength(200);
-
-                entity.HasIndex(e => e.Name).IsUnique();
-            });
-
-            // Configure Role entity
-            modelBuilder.Entity<Role>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.Property(e => e.Name)
-                    .IsRequired()
-                    .HasMaxLength(100);
-
-                entity.Property(e => e.Description)
-                    .HasMaxLength(500);
 
                 entity.HasIndex(e => e.Name).IsUnique();
             });

@@ -62,7 +62,7 @@
               <a routerLink="/import-history" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
               class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">User History</a>
             }
-            @if (!isAdmin && (currentUser?.role === 'Line Manager' || currentUser?.role === 'LineManager')) {
+            @if (!isAdmin && currentUser?.role === AuthRole.LineManager) {
               <a routerLink="/line-manager" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
                 class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Manager
               Console</a>
@@ -71,7 +71,7 @@
               <a routerLink="/documents" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
               class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">Documents</a>
             }
-            @if (!isAdmin && currentUser?.role !== 'Line Manager' && currentUser?.role !== 'LineManager') {
+            @if (!isAdmin && currentUser?.role !== AuthRole.LineManager) {
               <a routerLink="/basic-user" routerLinkActive="text-foreground border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
                 class="rounded-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">My
               Profile</a>
@@ -103,7 +103,7 @@
                     currentUser?.email }}</p>
                     <span
                       class="mt-2 inline-block px-2.5 py-1 rounded-lg bg-primary/20 text-xs font-medium text-primary leading-none">
-                      {{ currentUser?.role }}
+                      {{ currentUser ? authRoleLabel(currentUser.role) : '' }}
                     </span>
                   </div>
                   @if (!isAdmin) {
@@ -184,7 +184,7 @@
             <a routerLink="/import-history" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">User History</a>
           }
-          @if (!isAdmin && (currentUser?.role === 'Line Manager' || currentUser?.role === 'LineManager')) {
+          @if (!isAdmin && currentUser?.role === AuthRole.LineManager) {
             <a routerLink="/line-manager" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Manager Console</a>
             <a routerLink="/employees" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
@@ -192,7 +192,7 @@
             <a routerLink="/documents" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Documents</a>
           }
-          @if (!isAdmin && currentUser?.role !== 'Line Manager' && currentUser?.role !== 'LineManager') {
+          @if (!isAdmin && currentUser?.role !== AuthRole.LineManager) {
             <a routerLink="/basic-user" routerLinkActive="text-primary border-primary/70" [routerLinkActiveOptions]="{ exact: true }"
             class="flex items-center rounded-lg border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">My Profile</a>
           }

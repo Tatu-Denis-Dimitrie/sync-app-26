@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using SyncApp26.API.Services;
 using SyncApp26.Domain.IRepositories;
+using SyncApp26.Domain.Enums;
 using System.Text.Json;
 using System.Collections.Generic;
 
@@ -38,7 +39,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> GetAll()
         {
             var requests = await _service.GetAllRequestsAsync();
@@ -103,7 +104,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPut("{id}/resolve")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> Resolve(Guid id, [FromBody] ResolveDataChangeRequestDTO dto)
         {
             var adminId = GetUserId();

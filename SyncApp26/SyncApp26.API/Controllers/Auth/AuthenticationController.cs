@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.API.Services;
@@ -96,17 +97,11 @@ namespace SyncApp26.API.Controllers
                     return BadRequest(new { message = "Email is already registered." });
                 }
 
-                var basicUserRoleId = await _userService.GetRoleIdByNameAsync("Basic User");
-                if (basicUserRoleId == null)
-                {
-                    return StatusCode(500, new { message = "Required role 'Basic User' is missing." });
-                }
-
                 var user = new User
                 {
                     Id = Guid.NewGuid(),
                     PersonalId = Guid.NewGuid().ToString(),
-                    RoleId = basicUserRoleId.Value,
+                    Role = UserRole.BasicUser,
                     FirstName = request.FirstName,
                     LastName = request.LastName,
                     Email = normalizedEmail,
@@ -204,8 +199,7 @@ namespace SyncApp26.API.Controllers
                     return Unauthorized(new { message = "Email is not verified. Please check your email for verification instructions." });
                 }
 
-                var roleName = user.Role?.Name ?? "Employee";
-                var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleName);
+                var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
 
                 return Ok(new
                 {
@@ -217,7 +211,7 @@ namespace SyncApp26.API.Controllers
                         email = user.Email,
                         firstName = user.FirstName,
                         lastName = user.LastName,
-                        role = user.Role?.Name ?? "Basic User"
+                        role = user.Role
                     }
                 });
             }

@@ -20,8 +20,7 @@ export class LineManagerGuard implements CanActivate {
       return false;
     }
 
-    const user = this.authService.getCurrentUser();
-    const isLineManager = user?.role === 'Line Manager';
+    const isLineManager = this.authService.isLineManager();
     const isAdmin = this.authService.isAdmin();
 
     if (!isLineManager && !isAdmin) {

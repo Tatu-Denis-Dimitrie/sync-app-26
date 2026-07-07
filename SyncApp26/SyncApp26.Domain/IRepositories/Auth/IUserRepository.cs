@@ -17,6 +17,5 @@ namespace SyncApp26.Domain.IRepositories
         Task<bool> IsUserLineManagerAsync(Guid userId);
         Task<User?> GetUserByEmailAsync(string email);
         Task<User?> GetUserByPersonalIdAsync(string personalId);
-        Task<Guid?> GetRoleIdByNameAsync(string roleName);
     }
 }

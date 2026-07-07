@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
-import { AuthenticationService } from '../../services/authentication.service';
+import { AuthenticationService, AuthRole } from '../../services/authentication.service';
 import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
@@ -330,7 +330,7 @@ navigateToDocuments(): void {
     email: '',
     departmentId: '',
     function: '',
-    role: UserRole.Employee,
+    role: UserRole.BasicUser,
     assignedToId: ''
   };
 
@@ -346,7 +346,7 @@ navigateToDocuments(): void {
       email: user.email,
       departmentId: user.departmentId,
       function: user.function || '',
-      role: user.role || UserRole.Employee,
+      role: user.role || UserRole.BasicUser,
       assignedToId: user.assignedToId || ''
     };
 
@@ -405,11 +405,11 @@ navigateToDocuments(): void {
       email: this.editForm.email,
       departmentId: this.editForm.departmentId,
       function: this.editForm.function || null,
-      roleName: this.editForm.role === UserRole.LineManager ? 'Line Manager' : 'Basic User',
+      role: this.editForm.role === UserRole.LineManager ? AuthRole.LineManager : AuthRole.BasicUser,
       assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
     };
 
-    if (this.editForm.role === UserRole.Employee && !payload.assignedToId) {
+    if (this.editForm.role === UserRole.BasicUser && !payload.assignedToId) {
       alert('Please select a Line Manager for the Employee.');
       return;
     }

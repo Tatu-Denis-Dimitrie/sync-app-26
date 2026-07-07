@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using SyncApp26.API.Hubs;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Threading;
@@ -104,7 +105,7 @@ namespace SyncApp26.API.Controllers
             // Determine whether the signer is acting as the employee, the manager, or the admin.
             var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
             var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
-            bool signerIsAdmin = string.Equals(signerUser?.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
+            bool signerIsAdmin = signerUser?.Role == UserRole.Admin;
             bool isManagerSigning = !signerIsAdmin && (document?.User?.AssignedTo != null &&
                 string.Equals(document.User.AssignedTo.Email, signatureToken.Email, StringComparison.OrdinalIgnoreCase));
             bool isAdminSigning = signerIsAdmin && document?.DocumentType?.ToUpperInvariant() == "SSM";
@@ -155,7 +156,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var signerUserFromToken = await _userService.GetUserByEmailAsync(tokenEntity.Email);
-            bool signerIsAdmin = string.Equals(signerUserFromToken?.Role?.Name, "Admin", StringComparison.OrdinalIgnoreCase);
+            bool signerIsAdmin = signerUserFromToken?.Role == UserRole.Admin;
             bool isLineManager = !signerIsAdmin && (document.User?.AssignedTo != null &&
                 string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase));
             bool isUserSignature = !signerIsAdmin && !isLineManager;
@@ -280,8 +281,8 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
                 return Unauthorized();
 
-            bool isAdmin = User.IsInRole("Admin");
-            bool isLineManager = User.IsInRole("Line Manager");
+            bool isAdmin = User.IsInRole(Roles.Admin);
+            bool isLineManager = User.IsInRole(Roles.LineManager);
 
             if (!isAdmin && !isLineManager)
                 return Forbid();
@@ -297,14 +298,14 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("bulk-sign-async")]
-        [Authorize(Roles = "Admin,Line Manager")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<IActionResult> BulkSignAsync([FromBody] BulkSignDto request)
         {
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
                 return Unauthorized();
 
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = User.IsInRole(Roles.Admin);
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
             // Obține totalul documentelor de semnat
@@ -345,7 +346,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("bulk-sign-status/{jobId}")]
-        [Authorize(Roles = "Admin,Line Manager")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public IActionResult GetBulkSignStatus(string jobId)
         {
             if (BulkSignJobs.TryGetValue(jobId, out var progress))
@@ -384,7 +385,7 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
                 return Unauthorized();
 
-            if (!User.IsInRole("Admin"))
+            if (!User.IsInRole(Roles.Admin))
                 return Forbid();
 
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
@@ -428,7 +429,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("pending-ssm-admin-count")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<IActionResult> GetPendingSsmAdminCount()
         {
             var count = await _documentService.GetPendingSsmDocumentsForAdminAsync();

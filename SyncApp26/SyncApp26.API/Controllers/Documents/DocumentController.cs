@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.API.Services;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using System.Security.Claims;
 
 namespace SyncApp26.API.Controllers
@@ -99,7 +100,7 @@ namespace SyncApp26.API.Controllers
                 ? new[] { "SSM", "SU" }
                 : new[] { request.DocumentType.ToUpper() };
 
-            var isAdmin = User.IsInRole("Admin");
+            var isAdmin = User.IsInRole(Roles.Admin);
             var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
             {
@@ -172,7 +173,7 @@ namespace SyncApp26.API.Controllers
                 if (user == null) return NotFound(new { message = "User not found." });
 
                 var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                bool isAdmin = User.IsInRole("Admin");
+                bool isAdmin = User.IsInRole(Roles.Admin);
                 if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
                 {
                     if (user.AssignedToId != currentUserId)
@@ -219,7 +220,7 @@ namespace SyncApp26.API.Controllers
             var allDocs = await _documentService.GetAllDocumentsAsync();
             var documents = allDocs.AsEnumerable();
 
-            var isAdmin = User.IsInRole("Admin");
+            var isAdmin = User.IsInRole(Roles.Admin);
             var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
             {
@@ -305,7 +306,7 @@ namespace SyncApp26.API.Controllers
         /// Returns SSM documents pending admin signature (PendingAdmin status — signed by both employee and LM).
         /// </summary>
         [HttpGet("admin-pending-signatures")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> GetAdminPendingSignatures()
         {
             var docs = await _documentService.GetAdminPendingDocumentsAsync();
@@ -316,7 +317,7 @@ namespace SyncApp26.API.Controllers
         /// Returns SSM documents already signed by admin (Completed status).
         /// </summary>
         [HttpGet("admin-signed-documents")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> GetAdminSignedDocuments()
         {
             var docs = await _documentService.GetAdminSignedDocumentsAsync();
@@ -324,7 +325,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("regenerate-documents")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<IActionResult> RegenerateDocuments()
         {
             var count = await _documentService.RegenerateDocumentsAsync();
@@ -350,7 +351,7 @@ namespace SyncApp26.API.Controllers
 
             bool isUser = document.UserId == userId;
             bool isManager = document.User?.AssignedToId == userId;
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = User.IsInRole(Roles.Admin);
 
             if (!isUser && !isManager && !isAdmin)
                 return Forbid();
@@ -402,7 +403,7 @@ namespace SyncApp26.API.Controllers
 
             bool isDocOwner = document.UserId == userId;
             bool isManager = document.User?.AssignedToId == userId;
-            bool isAdmin = User.IsInRole("Admin");
+            bool isAdmin = User.IsInRole(Roles.Admin);
 
             if (!isDocOwner && !isManager && !isAdmin)
                 return Forbid();

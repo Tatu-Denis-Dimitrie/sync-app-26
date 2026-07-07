@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
 
 namespace SyncApp26.Shared.DTOs.Response.User
@@ -13,7 +14,7 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public string PersonalId { get; set; } = string.Empty;
         public string? DepartmentName { get; set; }
         public string? FunctionName { get; set; }
-        public string? RoleName { get; set; }
+        public UserRole Role { get; set; }
         public string? ManagerFirstName { get; set; }
         public string? ManagerLastName { get; set; }
         public string? ManagerFunctionName { get; set; }

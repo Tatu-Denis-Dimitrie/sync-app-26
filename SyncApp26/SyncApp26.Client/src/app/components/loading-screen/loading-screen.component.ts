@@ -53,8 +53,7 @@ export class LoadingScreenComponent implements OnInit {
             return;
           }
 
-          const currentUser = this.authService.getCurrentUser();
-          if (currentUser?.role === 'Line Manager') {
+          if (this.authService.isLineManager()) {
             this.router.navigate(['/line-manager']);
             return;
           }
