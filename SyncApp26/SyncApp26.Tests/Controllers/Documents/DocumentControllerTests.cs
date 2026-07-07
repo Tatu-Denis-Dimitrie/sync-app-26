@@ -5,6 +5,7 @@ using SyncApp26.API.Controllers;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Tests.TestHelpers;
 using static SyncApp26.API.Controllers.DocumentController;
 
@@ -18,7 +19,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         private readonly Mock<IUserService> _userServiceMock = new();
         private readonly Mock<IConfiguration> _configurationMock = new();
 
-        private DocumentController CreateController(Guid? callerId = null, string role = "Admin")
+        private DocumentController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
             var controller = new DocumentController(
                 _documentServiceMock.Object,
@@ -39,7 +40,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             Email = $"jane.roe.{Guid.NewGuid():N}@example.com",
             PersonalId = Guid.NewGuid().ToString(),
             AssignedToId = assignedToId,
-            RoleId = Guid.NewGuid(),
+            Role = UserRole.BasicUser,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -71,7 +72,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkGenerateDocuments_Admin_GeneratesBothTypesAndSendsEmails()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>()))
                 .ReturnsAsync((2, 1));
             _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync(It.IsAny<string>()))
@@ -88,7 +89,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task BulkGenerateDocuments_NonAdmin_RestrictsToOwnEmployees()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Line Manager");
+            var controller = CreateController(callerId, role: Roles.LineManager);
             var myEmployee = MakeUser(assignedToId: callerId);
             var otherEmployee = MakeUser();
             _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });
@@ -121,7 +122,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GenerateDocument_NonAdminNotManager_ReturnsForbidden()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Line Manager");
+            var controller = CreateController(callerId, role: Roles.LineManager);
             var user = MakeUser(); // not assigned to caller
             _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
 
@@ -133,7 +134,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GenerateDocument_Success_SendsSignatureEmail()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var user = MakeUser();
             var document = MakeDocument(user: user);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
@@ -183,7 +184,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetAllDocuments_NonAdmin_FiltersToOwnDocuments()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Basic User");
+            var controller = CreateController(callerId, role: Roles.BasicUser);
             var myDoc = MakeDocument(user: MakeUser(id: callerId));
             var otherDoc = MakeDocument();
             _documentServiceMock.Setup(s => s.GetAllDocumentsAsync()).ReturnsAsync(new[] { myDoc, otherDoc });
@@ -285,7 +286,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetAdminPendingSignatures_ReturnsMappedDocuments()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             _documentServiceMock.Setup(s => s.GetAdminPendingDocumentsAsync()).ReturnsAsync(new List<UserDocument> { MakeDocument() });
 
             var result = await controller.GetAdminPendingSignatures();
@@ -298,7 +299,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetAdminSignedDocuments_ReturnsMappedDocuments()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             _documentServiceMock.Setup(s => s.GetAdminSignedDocumentsAsync()).ReturnsAsync(new List<UserDocument> { MakeDocument() });
 
             var result = await controller.GetAdminSignedDocuments();
@@ -313,7 +314,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task RegenerateDocuments_ReturnsCount()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             _documentServiceMock.Setup(s => s.RegenerateDocumentsAsync()).ReturnsAsync(5);
 
             var result = await controller.RegenerateDocuments();
@@ -340,7 +341,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignTokenForDocument_UnrelatedNonAdmin_ReturnsForbidden()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Basic User");
+            var controller = CreateController(callerId, role: Roles.BasicUser);
             var document = MakeDocument(); // owned by someone else, no manager relation
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(callerId)).ReturnsAsync(MakeUser(id: callerId));
@@ -354,7 +355,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignTokenForDocument_UserAlreadySigned_ReturnsBadRequest()
         {
             var owner = MakeUser();
-            var controller = CreateController(owner.Id, role: "Basic User");
+            var controller = CreateController(owner.Id, role: Roles.BasicUser);
             var document = MakeDocument(user: owner);
             document.UserSignedAt = DateTime.UtcNow;
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
@@ -371,7 +372,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var managerId = Guid.NewGuid();
             var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var document = MakeDocument(user: owner, status: "PendingUser");
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(managerId)).ReturnsAsync(MakeUser(id: managerId));
@@ -386,7 +387,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignTokenForDocument_ValidUserSignature_ReturnsToken()
         {
             var owner = MakeUser();
-            var controller = CreateController(owner.Id, role: "Basic User");
+            var controller = CreateController(owner.Id, role: Roles.BasicUser);
             var document = MakeDocument(user: owner, status: "PendingUser");
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
@@ -405,7 +406,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignTokenForDocument_AdminNonSsmDocument_ReturnsBadRequest()
         {
             var adminId = Guid.NewGuid();
-            var controller = CreateController(adminId, role: "Admin");
+            var controller = CreateController(adminId, role: Roles.Admin);
             var document = MakeDocument(documentType: "SU", status: "PendingAdmin");
             document.UserSignedAt = DateTime.UtcNow;
             document.ManagerSignedAt = DateTime.UtcNow;
@@ -446,7 +447,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task ViewPdf_UnrelatedNonAdmin_ReturnsForbidden()
         {
             var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: "Basic User");
+            var controller = CreateController(callerId, role: Roles.BasicUser);
             var document = MakeDocument();
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
 
@@ -459,7 +460,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task ViewPdf_Owner_ReturnsPdfFile()
         {
             var owner = MakeUser();
-            var controller = CreateController(owner.Id, role: "Basic User");
+            var controller = CreateController(owner.Id, role: Roles.BasicUser);
             var document = MakeDocument(user: owner);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _documentServiceMock.Setup(s => s.GeneratePdfBytesAsync(owner, document, false)).ReturnsAsync(new byte[] { 1, 2, 3 });
@@ -475,7 +476,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task ViewPdf_Manager_ReturnsPdfFile()
         {
             var managerId = Guid.NewGuid();
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var owner = MakeUser(assignedToId: managerId);
             var document = MakeDocument(user: owner);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
@@ -490,7 +491,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task ViewPdf_Admin_ReturnsPdfFileWithViewerIsAdminTrue()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var owner = MakeUser(); // unrelated to admin caller
             var document = MakeDocument(user: owner);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
@@ -507,7 +508,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkGenerateDocuments_SendsEmailOnlyToUnsignedUsersWithEmail()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var needsEmail = MakeDocument(user: MakeUser());
             var alreadySigned = MakeDocument(user: MakeUser());
             alreadySigned.UserSignedAt = DateTime.UtcNow;
@@ -528,7 +529,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkGenerateDocuments_EmailFailureForOneUser_DoesNotStopProcessingOthers()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var failingDoc = MakeDocument(user: MakeUser());
             var succeedingDoc = MakeDocument(user: MakeUser());
 
@@ -552,7 +553,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetAllDocuments_Admin_ReturnsAllDocumentsUnfiltered()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             _documentServiceMock.Setup(s => s.GetAllDocumentsAsync()).ReturnsAsync(new[] { MakeDocument(), MakeDocument(), MakeDocument() });
 
             var result = await controller.GetAllDocuments();
@@ -568,7 +569,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GenerateDocument_LineManagerOfUser_Success()
         {
             var managerId = Guid.NewGuid();
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var owner = MakeUser(assignedToId: managerId);
             var document = MakeDocument(user: owner);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
@@ -586,7 +587,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GenerateDocument_EmptyUserEmail_SkipsEmailSending()
         {
-            var controller = CreateController(role: "Admin");
+            var controller = CreateController(role: Roles.Admin);
             var owner = MakeUser();
             owner.Email = "";
             var document = MakeDocument(user: owner);
@@ -607,7 +608,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var managerId = Guid.NewGuid();
             var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var document = MakeDocument(user: owner);
             document.ManagerSignedAt = DateTime.UtcNow;
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
@@ -623,7 +624,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignTokenForDocument_UserStatusMismatch_ReturnsBadRequest()
         {
             var owner = MakeUser();
-            var controller = CreateController(owner.Id, role: "Basic User");
+            var controller = CreateController(owner.Id, role: Roles.BasicUser);
             var document = MakeDocument(user: owner, status: "PendingManager");
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
@@ -639,7 +640,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var managerId = Guid.NewGuid();
             var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var document = MakeDocument(user: owner, status: "PendingAdmin");
             document.UserSignedAt = DateTime.UtcNow;
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
@@ -655,7 +656,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignTokenForDocument_AdminWrongStatus_ReturnsBadRequest()
         {
             var adminId = Guid.NewGuid();
-            var controller = CreateController(adminId, role: "Admin");
+            var controller = CreateController(adminId, role: Roles.Admin);
             var document = MakeDocument(documentType: "SSM", status: "PendingManager"); // unrelated owner, wrong status for admin
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(adminId)).ReturnsAsync(MakeUser(id: adminId));
@@ -671,7 +672,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var managerId = Guid.NewGuid();
             var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: "Line Manager");
+            var controller = CreateController(managerId, role: Roles.LineManager);
             var document = MakeDocument(user: owner, status: "PendingManager");
             document.UserSignedAt = DateTime.UtcNow;
             var manager = MakeUser(id: managerId);
@@ -692,7 +693,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetSignTokenForDocument_AdminValidSignature_ReturnsToken()
         {
             var adminId = Guid.NewGuid();
-            var controller = CreateController(adminId, role: "Admin");
+            var controller = CreateController(adminId, role: Roles.Admin);
             var document = MakeDocument(documentType: "SSM", status: "PendingAdmin"); // unrelated owner
             document.UserSignedAt = DateTime.UtcNow;
             document.ManagerSignedAt = DateTime.UtcNow;

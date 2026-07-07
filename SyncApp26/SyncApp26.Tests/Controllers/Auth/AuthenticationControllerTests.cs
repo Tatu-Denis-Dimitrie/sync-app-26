@@ -5,6 +5,7 @@ using SyncApp26.API.Controllers;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Tests.TestHelpers;
 
@@ -92,7 +93,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john.doe@example.com", PersonalId = "1" });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john.doe@example.com", PersonalId = "1", Role = UserRole.BasicUser });
 
             var result = await controller.Register(ValidRegisterRequest());
 
@@ -101,24 +102,10 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
-        public async Task Register_MissingBasicUserRole_Returns500()
-        {
-            var controller = CreateController();
-            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync((Guid?)null);
-
-            var result = await controller.Register(ValidRegisterRequest());
-
-            var statusResult = Assert.IsType<ObjectResult>(result);
-            Assert.Equal(500, statusResult.StatusCode);
-        }
-
-        [Fact]
         public async Task Register_EmailDeliveryFails_Returns202WithWarning()
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
             _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("hashed");
             _emailServiceMock.Setup(s => s.SendVerificationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ThrowsAsync(new InvalidOperationException("smtp down"));
@@ -135,7 +122,6 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
             _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("hashed");
 
             var result = await controller.Register(ValidRegisterRequest());
@@ -185,7 +171,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john@example.com", PersonalId = "1", IsEmailVerified = true });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john@example.com", PersonalId = "1", IsEmailVerified = true, Role = UserRole.BasicUser });
             _configurationMock.Setup(c => c["Frontend:LoginUrl"]).Returns((string?)null);
 
             var result = await controller.VerifyEmail("john@example.com", "token");
@@ -206,6 +192,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                     LastName = "B",
                     Email = "john@example.com",
                     PersonalId = "1",
+                    Role = UserRole.BasicUser,
                     IsEmailVerified = false,
                     EmailVerificationToken = "correct-token",
                     EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(1)
@@ -228,6 +215,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                     LastName = "B",
                     Email = "john@example.com",
                     PersonalId = "1",
+                    Role = UserRole.BasicUser,
                     IsEmailVerified = false,
                     EmailVerificationToken = "correct-token",
                     EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(-1)
@@ -249,6 +237,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                 LastName = "B",
                 Email = "john@example.com",
                 PersonalId = "1",
+                Role = UserRole.BasicUser,
                 IsEmailVerified = false,
                 EmailVerificationToken = "correct-token",
                 EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(1)
@@ -292,7 +281,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hash", IsEmailVerified = true });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hash", IsEmailVerified = true });
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
 
             var result = await controller.Login(new LoginUserRequestDTO { Email = "a@b.com", Password = "WrongPass1!" });
@@ -305,7 +294,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hash", IsEmailVerified = false });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hash", IsEmailVerified = false });
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
             var result = await controller.Login(new LoginUserRequestDTO { Email = "a@b.com", Password = "Str0ng!Pass" });
@@ -329,15 +318,15 @@ namespace SyncApp26.Tests.Controllers.Auth
                     PersonalId = "1",
                     PasswordHash = "hash",
                     IsEmailVerified = true,
-                    Role = new Role { Id = Guid.NewGuid(), Name = "Admin" }
+                    Role = UserRole.Admin
                 });
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", "Admin")).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.Admin)).ReturnsAsync("jwt-token");
 
             var result = await controller.Login(new LoginUserRequestDTO { Email = "a@b.com", Password = "Str0ng!Pass" });
 
             var ok = Assert.IsType<OkObjectResult>(result);
-            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(userId, "a@b.com", "Admin"), Times.Once);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.Admin), Times.Once);
         }
 
         [Fact]
@@ -379,7 +368,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         public async Task ForgotPassword_Success_SendsResetEmailAndReturnsOk()
         {
             var controller = CreateController();
-            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1" };
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser };
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
             _configurationMock.Setup(c => c["Frontend:ResetPasswordUrl"]).Returns((string?)null);
 
@@ -439,7 +428,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         public async Task ResetPassword_SameAsOldPassword_ReturnsBadRequest()
         {
             var controller = CreateController();
-            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hash" };
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hash" };
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), "hash")).ReturnsAsync(true);
 
@@ -465,6 +454,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                 LastName = "B",
                 Email = "a@b.com",
                 PersonalId = "1",
+                Role = UserRole.BasicUser,
                 PasswordHash = "hash",
                 PasswordResetToken = "correct-token",
                 PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(10)
@@ -493,6 +483,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                 LastName = "B",
                 Email = "a@b.com",
                 PersonalId = "1",
+                Role = UserRole.BasicUser,
                 PasswordHash = "hash",
                 PasswordResetToken = "correct-token",
                 PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(10)
@@ -525,6 +516,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                 LastName = "B",
                 Email = "a@b.com",
                 PersonalId = "1",
+                Role = UserRole.BasicUser,
                 PasswordHash = "hash",
                 PasswordResetToken = "correct-token",
                 PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(-1)
@@ -597,7 +589,6 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("john.doe@example.com")).ReturnsAsync((User?)null);
-            _userServiceMock.Setup(s => s.GetRoleIdByNameAsync("Basic User")).ReturnsAsync(Guid.NewGuid());
             _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("hashed");
 
             var request = ValidRegisterRequest();
@@ -629,7 +620,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john@example.com", PersonalId = "1", IsEmailVerified = true });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john@example.com", PersonalId = "1", IsEmailVerified = true, Role = UserRole.BasicUser });
             _configurationMock.Setup(c => c["Frontend:LoginUrl"]).Returns("https://custom.example.com/login");
 
             var result = await controller.VerifyEmail("john@example.com", "token");
@@ -652,43 +643,13 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.IsType<BadRequestObjectResult>(result);
         }
 
-        [Fact]
-        public async Task Login_UserWithNoRole_UsesFallbackRoleNames()
-        {
-            var controller = CreateController();
-            var userId = Guid.NewGuid();
-            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User
-                {
-                    Id = userId,
-                    FirstName = "A",
-                    LastName = "B",
-                    Email = "a@b.com",
-                    PersonalId = "1",
-                    PasswordHash = "hash",
-                    IsEmailVerified = true,
-                    Role = null
-                });
-            _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", "Employee")).ReturnsAsync("jwt-token");
-
-            var result = await controller.Login(new LoginUserRequestDTO { Email = "a@b.com", Password = "Str0ng!Pass" });
-
-            var ok = Assert.IsType<OkObjectResult>(result);
-            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(userId, "a@b.com", "Employee"), Times.Once);
-
-            var userProp = ok.Value!.GetType().GetProperty("user")!.GetValue(ok.Value)!;
-            var roleValue = (string)userProp.GetType().GetProperty("role")!.GetValue(userProp)!;
-            Assert.Equal("Basic User", roleValue);
-        }
-
         // ───────────────────────── Additional ForgotPassword edge cases ─────────────────────────
 
         [Fact]
         public async Task ForgotPassword_ConfiguredResetUrlWithoutQueryString_UsesQuestionMarkSeparator()
         {
             var controller = CreateController();
-            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1" };
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser };
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
             _configurationMock.Setup(c => c["Frontend:ResetPasswordUrl"]).Returns("https://custom.example.com/reset");
 
@@ -707,7 +668,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         public async Task ForgotPassword_ConfiguredResetUrlWithExistingQueryString_UsesAmpersandSeparator()
         {
             var controller = CreateController();
-            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1" };
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser };
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
             _configurationMock.Setup(c => c["Frontend:ResetPasswordUrl"]).Returns("https://custom.example.com/reset?lang=en");
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Controllers.Organization
@@ -10,7 +11,7 @@ namespace SyncApp26.Tests.Controllers.Organization
     {
         private readonly Mock<IDepartmentFunctionService> _departmentFunctionServiceMock = new();
 
-        private DepartmentFunctionController CreateController(string role = "Admin")
+        private DepartmentFunctionController CreateController(string role = Roles.Admin)
         {
             var controller = new DepartmentFunctionController(_departmentFunctionServiceMock.Object);
             controller.SetUser(Guid.NewGuid(), role: role);
