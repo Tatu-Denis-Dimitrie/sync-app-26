@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.DataChange;
 using System;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using SyncApp26.API.Services;
+using SyncApp26.API.Extensions;
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Domain.Enums;
 using System.Text.Json;
@@ -34,8 +34,7 @@ namespace SyncApp26.API.Controllers
 
         private Guid GetUserId()
         {
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.TryParse(userIdStr, out var userId) ? userId : Guid.Empty;
+            return User.GetUserId() ?? Guid.Empty;
         }
 
         [HttpGet]

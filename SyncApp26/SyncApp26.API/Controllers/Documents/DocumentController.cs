@@ -4,7 +4,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.API.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
-using System.Security.Claims;
+using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -93,7 +93,7 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrWhiteSpace(request.DocumentType))
                 return BadRequest(new { message = "DocumentType is required (SSM, SU, or Both)." });
 
-            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@syncapp26.com";
+            var adminEmail = User.GetEmail() ?? "admin@syncapp26.com";
             var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
 
             var types = request.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
@@ -101,8 +101,7 @@ namespace SyncApp26.API.Controllers
                 : new[] { request.DocumentType.ToUpper() };
 
             var isAdmin = User.IsInRole(Roles.Admin);
-            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            if (!isAdmin && User.GetUserId() is { } currentUserId)
             {
                 var allUsers = await _userService.GetAllUsersAsync();
                 var myEmployees = allUsers
@@ -167,14 +166,13 @@ namespace SyncApp26.API.Controllers
         {
             try
             {
-                var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@syncapp26.com";
+                var adminEmail = User.GetEmail() ?? "admin@syncapp26.com";
 
                 var user = await _userService.GetUserByIdAsync(request.UserId);
                 if (user == null) return NotFound(new { message = "User not found." });
 
-                var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 bool isAdmin = User.IsInRole(Roles.Admin);
-                if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+                if (!isAdmin && User.GetUserId() is { } currentUserId)
                 {
                     if (user.AssignedToId != currentUserId)
                     {
@@ -221,8 +219,7 @@ namespace SyncApp26.API.Controllers
             var documents = allDocs.AsEnumerable();
 
             var isAdmin = User.IsInRole(Roles.Admin);
-            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            if (!isAdmin && User.GetUserId() is { } currentUserId)
             {
                 documents = documents.Where(d => d.User?.AssignedToId == currentUserId || d.UserId == currentUserId);
             }
@@ -233,8 +230,7 @@ namespace SyncApp26.API.Controllers
         [HttpGet("my-pending-signatures")]
         public async Task<IActionResult> GetMyPendingSignatures()
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             // Fetch documents where user is the employee and status is PendingUser
@@ -247,8 +243,7 @@ namespace SyncApp26.API.Controllers
         [HttpGet("manager-pending-signatures")]
         public async Task<IActionResult> GetManagerPendingSignatures()
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             // Fetch documents where the current user is the manager and employee has already signed.
@@ -272,8 +267,7 @@ namespace SyncApp26.API.Controllers
         [HttpGet("my-signed-documents")]
         public async Task<IActionResult> GetMySignedDocuments()
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             var myDocuments = await _documentService.GetUserDocumentsAsync(userId);
@@ -285,8 +279,7 @@ namespace SyncApp26.API.Controllers
         [HttpGet("manager-signed-documents")]
         public async Task<IActionResult> GetManagerSignedDocuments()
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             var allManagedUsers = await _userService.GetAllUsersAsync();
@@ -339,8 +332,7 @@ namespace SyncApp26.API.Controllers
         [HttpGet("token-for-document/{documentId}")]
         public async Task<IActionResult> GetSignTokenForDocument(Guid documentId)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             var document = await _documentService.GetDocumentByIdAsync(documentId);
@@ -394,8 +386,7 @@ namespace SyncApp26.API.Controllers
         [HttpGet("{documentId}/view-pdf")]
         public async Task<IActionResult> ViewPdf(Guid documentId)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             var document = await _documentService.GetDocumentByIdAsync(documentId);

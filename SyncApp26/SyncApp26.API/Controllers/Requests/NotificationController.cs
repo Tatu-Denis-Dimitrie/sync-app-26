@@ -4,7 +4,7 @@ using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.Notification;
 using SyncApp26.Domain.Enums;
-using System.Security.Claims;
+using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -46,10 +46,9 @@ namespace SyncApp26.API.Controllers
             }
 
             // Check permissions: Only Admin or the user's AssingedTo (Line Manager) can notify
-            var currentUserIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var currentUserRole = User.GetRole();
 
-            if (string.IsNullOrEmpty(currentUserIdStr) || !Guid.TryParse(currentUserIdStr, out var currentUserId))
+            if (User.GetUserId() is not { } currentUserId)
             {
                 return Unauthorized();
             }

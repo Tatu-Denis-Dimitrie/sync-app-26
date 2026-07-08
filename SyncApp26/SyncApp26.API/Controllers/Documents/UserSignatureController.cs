@@ -4,7 +4,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.UserSignature;
 using SyncApp26.Shared.DTOs.Response.UserSignature;
 using SyncApp26.Domain.Enums;
-using System.Security.Claims;
+using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -26,12 +26,13 @@ namespace SyncApp26.API.Controllers
 
         private bool TryGetCallerId(out Guid callerId)
         {
-            var raw = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return Guid.TryParse(raw, out callerId);
+            var id = User.GetUserId();
+            callerId = id ?? Guid.Empty;
+            return id.HasValue;
         }
 
         private string CallerEmail =>
-            User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
+            User.GetEmail() ?? string.Empty;
 
         private bool CallerIsAdmin => User.IsInRole(Roles.Admin);
 
