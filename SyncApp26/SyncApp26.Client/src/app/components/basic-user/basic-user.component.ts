@@ -11,6 +11,7 @@ import { DataChangeRequestService } from '../../services/data-change-request.ser
 import { User, UserRole } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
+import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 
 @Component({
   selector: 'app-basic-user',
@@ -41,10 +42,7 @@ export class BasicUserComponent implements OnInit {
   sigMode: 'draw' | 'type' = 'draw';
   typedSig = '';
   isSigConfirmed = false;
-  private isSigDrawing = false;
-  private sigCtx: CanvasRenderingContext2D | null = null;
-  private sigLastX = 0;
-  private sigLastY = 0;
+  private sigPad = new CanvasSignaturePad();
   private _sigCanvasRef?: ElementRef<HTMLCanvasElement>;
 
   @ViewChild('sigCanvas')
@@ -218,59 +216,24 @@ export class BasicUserComponent implements OnInit {
   }
 
   initSigCanvas(): void {
-    const canvas = this.sigCanvasRef?.nativeElement;
-    if (!canvas) return;
-    this.sigCtx = canvas.getContext('2d');
-    if (this.sigCtx) {
-      this.sigCtx.lineWidth = 2.5;
-      this.sigCtx.lineCap = 'round';
-      this.sigCtx.lineJoin = 'round';
-      this.sigCtx.strokeStyle = '#0f766e';
-    }
+    this.sigPad.attach(this.sigCanvasRef?.nativeElement);
   }
 
   sigStartDrawing(e: MouseEvent | TouchEvent): void {
-    if (!this.sigCtx) return;
-    this.isSigDrawing = true;
-    const { x, y } = this.getSigCoords(e);
-    this.sigLastX = x;
-    this.sigLastY = y;
+    this.sigPad.startDrawing(e);
   }
 
   sigDraw(e: MouseEvent | TouchEvent): void {
-    if (!this.isSigDrawing || !this.sigCtx) return;
-    e.preventDefault();
-    const { x, y } = this.getSigCoords(e);
-    this.sigCtx.beginPath();
-    this.sigCtx.moveTo(this.sigLastX, this.sigLastY);
-    this.sigCtx.lineTo(x, y);
-    this.sigCtx.stroke();
-    this.sigLastX = x;
-    this.sigLastY = y;
-    this.isSigConfirmed = true;
+    if (this.sigPad.draw(e)) this.isSigConfirmed = true;
   }
 
   sigStopDrawing(): void {
-    this.isSigDrawing = false;
+    this.sigPad.stopDrawing();
   }
 
   clearSigCanvas(): void {
-    const canvas = this.sigCanvasRef?.nativeElement;
-    if (!canvas || !this.sigCtx) return;
-    this.sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+    this.sigPad.clear();
     this.isSigConfirmed = false;
-  }
-
-  private getSigCoords(e: MouseEvent | TouchEvent): { x: number; y: number } {
-    const canvas = this.sigCanvasRef!.nativeElement;
-    const rect = canvas.getBoundingClientRect();
-    const sx = canvas.width / rect.width;
-    const sy = canvas.height / rect.height;
-    if (window.TouchEvent && e instanceof TouchEvent) {
-      return { x: (e.touches[0].clientX - rect.left) * sx, y: (e.touches[0].clientY - rect.top) * sy };
-    }
-    const m = e as MouseEvent;
-    return { x: (m.clientX - rect.left) * sx, y: (m.clientY - rect.top) * sy };
   }
 
   saveSignature(): void {
