@@ -10,6 +10,7 @@ import { AuthenticationService } from '../../services/authentication.service';
 import { NotificationService } from '../../services/notification.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
+import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 
 interface SignatureStats {
   total: number;
@@ -390,9 +391,7 @@ export class UsersListComponent implements OnInit {
   }
 
   getRoleBadgeColor(role: UserRole): string {
-    return role === UserRole.LineManager
-      ? 'bg-purple-500/10 text-purple-700 border-purple-500/20'
-      : 'bg-blue-500/10 text-blue-700 border-blue-500/20';
+    return getRoleBadgeColorUtil(role);
   }
 
   navigateToDashboard(): void {

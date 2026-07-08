@@ -13,6 +13,7 @@ import { Router } from '@angular/router';
 import { UserSignatureService, UserSignature, UserSignatureHistory } from '../../services/user-signature.service';
 import { NotificationService } from '../../services/notification.service';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
+import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 
 @Component({
   selector: 'app-line-manager',
@@ -377,9 +378,7 @@ export class LineManagerComponent implements OnInit {
   }
 
   getRoleBadgeColor(role: UserRole | undefined): string {
-    return role === UserRole.LineManager
-      ? 'bg-purple-500/10 text-purple-700 border-purple-500/20'
-      : 'bg-blue-500/10 text-blue-700 border-blue-500/20';
+    return getRoleBadgeColorUtil(role);
   }
 
   signAllDocuments(): void {

@@ -11,6 +11,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { formatDate as formatDateUtil, formatDateTime as formatDateTimeUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
+import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 
 @Component({
   selector: 'app-employees-detail',
@@ -254,9 +255,7 @@ export class EmployeesDetailComponent implements OnInit {
   }
 
   getRoleBadgeColor(role: UserRole): string {
-    return role === UserRole.LineManager
-      ? 'bg-purple-500/10 text-purple-700 border-purple-500/20'
-      : 'bg-blue-500/10 text-blue-700 border-blue-500/20';
+    return getRoleBadgeColorUtil(role);
   }
 
   getRelativeTime(date: Date | string | undefined): string {
