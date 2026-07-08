@@ -12,6 +12,9 @@ import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 import { UserSignatureService, UserSignature, UserSignatureHistory } from '../../services/user-signature.service';
 import { NotificationService } from '../../services/notification.service';
+import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
+import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
+import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 
 @Component({
   selector: 'app-line-manager',
@@ -62,10 +65,7 @@ export class LineManagerComponent implements OnInit {
   sigMode: 'draw' | 'type' = 'draw';
   typedSig = '';
   isSigConfirmed = false;
-  private isSigDrawing = false;
-  private sigCtx: CanvasRenderingContext2D | null = null;
-  private sigLastX = 0;
-  private sigLastY = 0;
+  private sigPad = new CanvasSignaturePad();
   @ViewChild('sigCanvas') sigCanvasRef?: ElementRef<HTMLCanvasElement>;
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -246,59 +246,24 @@ export class LineManagerComponent implements OnInit {
   }
 
   initSigCanvas(): void {
-    const canvas = this.sigCanvasRef?.nativeElement;
-    if (!canvas) return;
-    this.sigCtx = canvas.getContext('2d');
-    if (this.sigCtx) {
-      this.sigCtx.lineWidth = 2.5;
-      this.sigCtx.lineCap = 'round';
-      this.sigCtx.lineJoin = 'round';
-      this.sigCtx.strokeStyle = '#0f766e';
-    }
+    this.sigPad.attach(this.sigCanvasRef?.nativeElement);
   }
 
   sigStartDrawing(e: MouseEvent | TouchEvent): void {
-    if (!this.sigCtx) return;
-    this.isSigDrawing = true;
-    const { x, y } = this.getSigCoords(e);
-    this.sigLastX = x;
-    this.sigLastY = y;
+    this.sigPad.startDrawing(e);
   }
 
   sigDraw(e: MouseEvent | TouchEvent): void {
-    if (!this.isSigDrawing || !this.sigCtx) return;
-    e.preventDefault();
-    const { x, y } = this.getSigCoords(e);
-    this.sigCtx.beginPath();
-    this.sigCtx.moveTo(this.sigLastX, this.sigLastY);
-    this.sigCtx.lineTo(x, y);
-    this.sigCtx.stroke();
-    this.sigLastX = x;
-    this.sigLastY = y;
-    this.isSigConfirmed = true;
+    if (this.sigPad.draw(e)) this.isSigConfirmed = true;
   }
 
   sigStopDrawing(): void {
-    this.isSigDrawing = false;
+    this.sigPad.stopDrawing();
   }
 
   clearSigCanvas(): void {
-    const canvas = this.sigCanvasRef?.nativeElement;
-    if (!canvas || !this.sigCtx) return;
-    this.sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+    this.sigPad.clear();
     this.isSigConfirmed = false;
-  }
-
-  private getSigCoords(e: MouseEvent | TouchEvent): { x: number; y: number } {
-    const canvas = this.sigCanvasRef!.nativeElement;
-    const rect = canvas.getBoundingClientRect();
-    const sx = canvas.width / rect.width;
-    const sy = canvas.height / rect.height;
-    if (window.TouchEvent && e instanceof TouchEvent) {
-      return { x: (e.touches[0].clientX - rect.left) * sx, y: (e.touches[0].clientY - rect.top) * sy };
-    }
-    const m = e as MouseEvent;
-    return { x: (m.clientX - rect.left) * sx, y: (m.clientY - rect.top) * sy };
   }
 
   saveSignature(): void {
@@ -368,35 +333,15 @@ export class LineManagerComponent implements OnInit {
   }
 
   formatDate(date: Date | string | undefined): string {
-    if (!date) return 'N/A';
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}/${month}/${year}`;
+    return formatDateUtil(date);
   }
 
   getRelativeTime(date: Date | string | undefined): string {
-    if (!date) return '';
-    const now = new Date().getTime();
-    const then = new Date(date).getTime();
-    const diff = now - then;
-
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'just now';
+    return getRelativeTimeUtil(date);
   }
 
   getRoleBadgeColor(role: UserRole | undefined): string {
-    return role === UserRole.LineManager
-      ? 'bg-purple-500/10 text-purple-700 border-purple-500/20'
-      : 'bg-blue-500/10 text-blue-700 border-blue-500/20';
+    return getRoleBadgeColorUtil(role);
   }
 
   signAllDocuments(): void {

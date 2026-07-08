@@ -7,6 +7,7 @@ using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Shared.DTOs.Response.User;
+using SyncApp26.API.Extensions;
 using System.ComponentModel.DataAnnotations;
 
 namespace SyncApp26.API.Controllers
@@ -96,8 +97,7 @@ namespace SyncApp26.API.Controllers
             var users = usersList.AsEnumerable();
 
             var isAdmin = User.IsInRole(Roles.Admin);
-            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            if (!isAdmin && User.GetUserId() is { } currentUserId)
             {
                 users = users.Where(u => u.AssignedToId == currentUserId || u.Id == currentUserId);
             }
@@ -536,9 +536,8 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found" });
             }
 
-            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             bool isAdmin = User.IsInRole(Roles.Admin);
-            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            if (!isAdmin && User.GetUserId() is { } currentUserId)
             {
                 if (user.AssignedToId != currentUserId && user.Id != currentUserId)
                 {
@@ -615,9 +614,8 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
-            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             bool isAdmin = User.IsInRole(Roles.Admin);
-            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            if (!isAdmin && User.GetUserId() is { } currentUserId)
             {
                 if (user.AssignedToId != currentUserId && user.Id != currentUserId)
                 {
@@ -690,8 +688,7 @@ namespace SyncApp26.API.Controllers
                 targetUsers = targetUsers.Where(u => u.DepartmentId == dto.SelectedDepartmentId.Value);
 
             var isAdmin = User.IsInRole(Roles.Admin);
-            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+            if (!isAdmin && User.GetUserId() is { } currentUserId)
             {
                 targetUsers = targetUsers.Where(u => u.AssignedToId == currentUserId);
             }

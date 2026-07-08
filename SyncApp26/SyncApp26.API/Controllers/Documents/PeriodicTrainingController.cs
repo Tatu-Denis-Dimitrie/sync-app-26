@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
+using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -106,8 +107,7 @@ namespace SyncApp26.API.Controllers
             try
             {
                 var isAdmin = User.IsInRole(Roles.Admin);
-                var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (!isAdmin && Guid.TryParse(currentUserIdString, out var currentUserId))
+                if (!isAdmin && User.GetUserId() is { } currentUserId)
                 {
                     var myEmployees = (await _userService.GetAllUsersAsync())
                         .Where(u => u.AssignedToId == currentUserId)

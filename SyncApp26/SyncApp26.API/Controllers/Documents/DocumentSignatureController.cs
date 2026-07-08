@@ -6,8 +6,8 @@ using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 using System.Collections.Concurrent;
-using System.Security.Claims;
 using System.Threading;
+using SyncApp26.API.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace SyncApp26.API.Controllers
@@ -277,8 +277,7 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrWhiteSpace(request.SignatureData))
                 return BadRequest(new { message = "Signature data is required." });
 
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             bool isAdmin = User.IsInRole(Roles.Admin);
@@ -301,8 +300,7 @@ namespace SyncApp26.API.Controllers
         [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<IActionResult> BulkSignAsync([FromBody] BulkSignDto request)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             bool isAdmin = User.IsInRole(Roles.Admin);
@@ -381,8 +379,7 @@ namespace SyncApp26.API.Controllers
                 ? new[] { "SSM", "SU" }
                 : new[] { request.DocumentType.ToUpperInvariant() };
 
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
             if (!User.IsInRole(Roles.Admin))

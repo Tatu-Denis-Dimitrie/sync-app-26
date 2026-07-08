@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { AuthenticationService, AuthRole } from '../../services/authentication.service';
 import { UserSignatureService, UserSignature } from '../../services/user-signature.service';
+import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 
 @Component({
   selector: 'app-document-signature',
@@ -42,10 +43,7 @@ export class DocumentSignatureComponent implements OnInit {
   bulkSigned = 0;
 
   @ViewChild('signatureCanvas') canvasRef?: ElementRef<HTMLCanvasElement>;
-  private isDrawing = false;
-  private ctx: CanvasRenderingContext2D | null = null;
-  private lastX = 0;
-  private lastY = 0;
+  private sigPad = new CanvasSignaturePad();
 
   constructor(
     private route: ActivatedRoute,
@@ -139,68 +137,24 @@ export class DocumentSignatureComponent implements OnInit {
   }
 
   initCanvas(): void {
-    if (this.canvasRef && this.canvasRef.nativeElement) {
-      const canvas = this.canvasRef.nativeElement;
-      this.ctx = canvas.getContext('2d');
-      if (this.ctx) {
-        this.ctx.lineWidth = 2.5;
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.strokeStyle = '#0f766e';
-      }
-    }
+    this.sigPad.attach(this.canvasRef?.nativeElement);
   }
 
   startDrawing(e: MouseEvent | TouchEvent): void {
-    if (!this.ctx || !this.canvasRef) return;
-    this.isDrawing = true;
-    const { x, y } = this.getCoordinates(e);
-    this.lastX = x;
-    this.lastY = y;
+    this.sigPad.startDrawing(e);
   }
 
   draw(e: MouseEvent | TouchEvent): void {
-    if (!this.isDrawing || !this.ctx) return;
-    e.preventDefault();
-    const { x, y } = this.getCoordinates(e);
-
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.lastX, this.lastY);
-    this.ctx.lineTo(x, y);
-    this.ctx.stroke();
-
-    this.lastX = x;
-    this.lastY = y;
-    this.signatureConfirmed = true;
+    if (this.sigPad.draw(e)) this.signatureConfirmed = true;
   }
 
   stopDrawing(): void {
-    this.isDrawing = false;
+    this.sigPad.stopDrawing();
   }
 
   clearCanvas(): void {
-    if (!this.ctx || !this.canvasRef) return;
-    const canvas = this.canvasRef.nativeElement;
-    this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.sigPad.clear();
     this.signatureConfirmed = false;
-  }
-
-  private getCoordinates(e: MouseEvent | TouchEvent): { x: number; y: number } {
-    const canvas = this.canvasRef!.nativeElement;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    if (window.TouchEvent && e instanceof TouchEvent) {
-      return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY
-      };
-    }
-    const m = e as MouseEvent;
-    return {
-      x: (m.clientX - rect.left) * scaleX,
-      y: (m.clientY - rect.top) * scaleY
-    };
   }
 
   getSignaturePayload(): { method: string; data: string } {

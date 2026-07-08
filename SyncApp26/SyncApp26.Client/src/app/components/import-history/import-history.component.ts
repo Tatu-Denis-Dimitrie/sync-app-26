@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserChangeHistory, User } from '../../models/csv-sync.model';
+import { formatDateTime as formatDateTimeUtil } from '../../shared/utils/date-format.util';
 
 interface ImportHistoryGroup {
   importHistoryId: string;
@@ -335,8 +336,7 @@ export class ImportHistoryComponent implements OnInit {
   }
 
   formatDateTime(date?: string): string {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleString('ro-RO');
+    return formatDateTimeUtil(date);
   }
 
   getStatusColor(status?: string | null): string {

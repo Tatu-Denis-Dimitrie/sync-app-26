@@ -10,6 +10,8 @@ import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { formatDate as formatDateUtil, formatDateTime as formatDateTimeUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
+import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 
 @Component({
   selector: 'app-employees-detail',
@@ -137,12 +139,7 @@ export class EmployeesDetailComponent implements OnInit {
   }
 
   formatDate(date: Date | string | undefined): string {
-    if (!date) return 'N/A';
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}/${month}/${year}`;
+    return formatDateUtil(date);
   }
 
   loadUserConflicts(userId: string): void {
@@ -231,8 +228,7 @@ export class EmployeesDetailComponent implements OnInit {
   }
 
   formatDateTime(date: Date | string | undefined): string {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleString('ro-RO');
+    return formatDateTimeUtil(date);
   }
 
   getConflictStatusColor(status?: string | null): string {
@@ -259,26 +255,11 @@ export class EmployeesDetailComponent implements OnInit {
   }
 
   getRoleBadgeColor(role: UserRole): string {
-    return role === UserRole.LineManager
-      ? 'bg-purple-500/10 text-purple-700 border-purple-500/20'
-      : 'bg-blue-500/10 text-blue-700 border-blue-500/20';
+    return getRoleBadgeColorUtil(role);
   }
 
   getRelativeTime(date: Date | string | undefined): string {
-    if (!date) return '';
-    const now = new Date().getTime();
-    const then = new Date(date).getTime();
-    const diff = now - then;
-
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'just now';
+    return getRelativeTimeUtil(date);
   }
 
   navigateToDashboard(): void {
