@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
+import { formatDate as formatDateUtil } from '../../shared/utils/date-format.util';
 
 @Component({
   selector: 'app-comparison-view',
@@ -199,12 +200,7 @@ export class ComparisonViewComponent implements OnChanges {
   }
 
   formatDate(date: Date | string | undefined): string {
-    if (!date) return 'N/A';
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}/${month}/${year}`;
+    return formatDateUtil(date);
   }
 
   hasFieldConflict(comparison: UserComparison, field: string): boolean {

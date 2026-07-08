@@ -13,6 +13,7 @@ import { PaginationComponent } from '../pagination/pagination.component';
 import { ComparisonViewComponent } from '../comparison-view/comparison-view.component';
 import { UserSyncSignalrService, UploadProgress, SyncProgressUpdate } from '../../services/user-sync.signalr.service';
 import { RouterModule } from '@angular/router';
+import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 
 @Component({
   selector: 'app-dashboard',
@@ -605,12 +606,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   formatDate(date: Date | string | undefined): string {
-    if (!date) return 'N/A';
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}/${month}/${year}`;
+    return formatDateUtil(date);
   }
 
   onComparisonSelectionChange(comparisons: UserComparison[]): void {
@@ -670,19 +666,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getRelativeTime(date: Date | string | undefined): string {
-    if (!date) return '';
-    const now = new Date().getTime();
-    const then = new Date(date).getTime();
-    const diff = now - then;
-
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'just now';
+    return getRelativeTimeUtil(date);
   }
 }
