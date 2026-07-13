@@ -250,34 +250,11 @@ public class CsvSyncService : ICsvSyncService
             {
                 if (item.Status == "new" && item.CsvData != null)
                 {
-                    // Prepare new user
-                    var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
-
-                    if (department == null)
+                    var newUser = await TryBuildNewUserAsync(item.CsvData, departments, dbUsers, functionCache, result);
+                    if (newUser == null)
                     {
-                        // Department does not exist or is inactive - cannot create user
-                        result.RecordsFailed++;
-                        result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist or is inactive. Please ensure the department exists and is active.");
                         continue;
                     }
-
-                    var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
-                    var csvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
-
-                    var newUser = new User
-                    {
-                        Id = Guid.NewGuid(),
-                        Role = UserRole.BasicUser, // Everyone starts as Basic User
-                        FirstName = item.CsvData.FirstName.Trim(),
-                        LastName = item.CsvData.LastName.Trim(),
-                        Email = item.CsvData.Email.Trim(),
-                        DepartmentId = department.Id,
-                        AssignedToId = assignedManager?.Id,
-                        PersonalId = item.CsvData.PersonalId,
-                        FunctionId = csvFunction?.Id,
-                        Function = csvFunction,
-                        CreatedAt = DateTime.UtcNow
-                    };
 
                     usersToAdd.Add(newUser);
                     dbUsers.Add(newUser); // Add to cache for subsequent lookups
@@ -295,6 +272,8 @@ public class CsvSyncService : ICsvSyncService
 
                     if (existingUser != null)
                     {
+                        var csvData = item.CsvData!;
+
                         if (item.Conflicts.Any())
                         {
                             if (!importHistoryCreated)
@@ -303,216 +282,24 @@ public class CsvSyncService : ICsvSyncService
                                 importHistoryCreated = true;
                             }
 
-                            foreach (var conflict in item.Conflicts)
-                            {
-                                var selectedValue = conflict.SelectedValue ?? (conflict.Selected ? "csv" : "db");
-                                if (!selectedValue.Equals("db", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    continue;
-                                }
-
-                                var normalizedField = conflict.Field.Trim().ToLower();
-                                var historyField = normalizedField == "assignedtoname" ? "linemanager" : normalizedField;
-
-                                var rejectedConflict = new UserChangeHistory
-                                {
-                                    Id = Guid.NewGuid(),
-                                    ImportHistoryId = importHistory.Id,
-                                    UserId = existingUser.Id,
-                                    FieldName = historyField,
-                                    OldValue = conflict.DbValue?.ToString() ?? string.Empty,
-                                    NewValue = conflict.CsvValue?.ToString() ?? string.Empty,
-                                    Status = "rejected"
-                                };
-
-                                await _userChangeHistoryRepository.AddAsync(rejectedConflict);
-                            }
+                            await RecordRejectedConflictsAsync(item.Conflicts, existingUser, importHistory);
                         }
 
-                        bool hasChanges = false;
+                        bool hasChanges;
 
-                        // If conflicts exist, apply only selected resolutions
+                        // If conflicts exist, apply only selected resolutions; otherwise sync every differing field
                         if (item.Conflicts.Any())
                         {
-                            foreach (var conflict in item.Conflicts.Where(c => c.Selected))
-                            {
-                                // If no SelectedValue is specified, default to "csv"
-                                var selectedValue = conflict.SelectedValue ?? "csv";
-
-                                if (selectedValue == "csv")
-                                {
-                                    switch (conflict.Field.ToLower())
-                                    {
-                                        case "firstname":
-                                            if (existingUser.FirstName != item.CsvData.FirstName)
-                                            {
-                                                var importConflict = new UserChangeHistory
-                                                {
-                                                    Id = Guid.NewGuid(),
-                                                    ImportHistoryId = importHistory.Id,
-                                                    UserId = existingUser.Id,
-                                                    FieldName = "firstname",
-                                                    OldValue = existingUser.FirstName,
-                                                    NewValue = item.CsvData.FirstName.Trim(),
-                                                    Status = "accepted"
-                                                };
-
-                                                existingUser.FirstName = item.CsvData.FirstName.Trim();
-                                                hasChanges = true;
-                                                await _userChangeHistoryRepository.AddAsync(importConflict);
-                                            }
-                                            break;
-                                        case "lastname":
-                                            if (existingUser.LastName != item.CsvData.LastName)
-                                            {
-                                                var importConflict = new UserChangeHistory
-                                                {
-                                                    Id = Guid.NewGuid(),
-                                                    ImportHistoryId = importHistory.Id,
-                                                    UserId = existingUser.Id,
-                                                    FieldName = "lastname",
-                                                    OldValue = existingUser.LastName,
-                                                    NewValue = item.CsvData.LastName.Trim(),
-                                                    Status = "accepted"
-                                                };
-                                                existingUser.LastName = item.CsvData.LastName.Trim();
-                                                hasChanges = true;
-                                                await _userChangeHistoryRepository.AddAsync(importConflict);
-                                            }
-                                            break;
-                                        case "email":
-                                            if (existingUser.Email != item.CsvData.Email)
-                                            {
-                                                var importConflict = new UserChangeHistory
-                                                {
-                                                    Id = Guid.NewGuid(),
-                                                    ImportHistoryId = importHistory.Id,
-                                                    UserId = existingUser.Id,
-                                                    FieldName = "email",
-                                                    OldValue = existingUser.Email,
-                                                    NewValue = item.CsvData.Email,
-                                                    Status = "accepted"
-                                                };
-                                                existingUser.Email = item.CsvData.Email;
-                                                hasChanges = true;
-                                                await _userChangeHistoryRepository.AddAsync(importConflict);
-                                            }
-                                            break;
-                                        case "departmentname":
-                                            var department = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
-                                            if (department == null)
-                                            {
-                                                // Department does not exist or is inactive - skip this field update
-                                                result.Errors.Add($"User {item.CsvData.Email}: Cannot update department to '{item.CsvData.DepartmentName}' - department does not exist or is inactive.");
-                                                break;
-                                            }
-                                            if (existingUser.DepartmentId != department.Id)
-                                            {
-                                                var userChangeHistory = new UserChangeHistory
-                                                {
-                                                    Id = Guid.NewGuid(),
-                                                    ImportHistoryId = importHistory.Id,
-                                                    UserId = existingUser.Id,
-                                                    FieldName = "departmentname",
-                                                    OldValue = existingUser.Department?.Name ?? string.Empty,
-                                                    NewValue = department.Name,
-                                                    Status = "accepted"
-                                                };
-                                                existingUser.DepartmentId = department.Id;
-                                                hasChanges = true;
-                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
-                                            }
-                                            break;
-                                        case "assignedtoname":
-                                            var newAssignedTo = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
-                                            var newAssignedToId = newAssignedTo?.Id;
-
-                                            if (existingUser.AssignedToId != newAssignedToId)
-                                            {
-                                                var userChangeHistory = new UserChangeHistory
-                                                {
-                                                    Id = Guid.NewGuid(),
-                                                    ImportHistoryId = importHistory.Id,
-                                                    UserId = existingUser.Id,
-                                                    FieldName = "assignedtoname",
-                                                    OldValue = existingUser.AssignedTo != null ? $"{existingUser.AssignedTo.FirstName} {existingUser.AssignedTo.LastName}" : string.Empty,
-                                                    NewValue = newAssignedTo != null ? $"{newAssignedTo.FirstName} {newAssignedTo.LastName}" : string.Empty,
-                                                    Status = "accepted"
-                                                };
-                                                existingUser.AssignedToId = newAssignedToId;
-                                                hasChanges = true;
-                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
-                                            }
-                                            break;
-                                        case "function":
-                                            var selectedCsvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
-                                            var selectedCsvFunctionName = item.CsvData.Function?.Trim();
-
-                                            if (existingUser.FunctionId != selectedCsvFunction?.Id)
-                                            {
-                                                var userChangeHistory = new UserChangeHistory
-                                                {
-                                                    Id = Guid.NewGuid(),
-                                                    ImportHistoryId = importHistory.Id,
-                                                    UserId = existingUser.Id,
-                                                    FieldName = "function",
-                                                    OldValue = existingUser.Function?.Name ?? string.Empty,
-                                                    NewValue = selectedCsvFunctionName ?? string.Empty,
-                                                    Status = "accepted"
-                                                };
-                                                existingUser.FunctionId = selectedCsvFunction?.Id;
-                                                existingUser.Function = selectedCsvFunction;
-                                                hasChanges = true;
-                                                await _userChangeHistoryRepository.AddAsync(userChangeHistory);
-                                            }
-                                            break;
-                                    }
-                                }
-                            }
+                            hasChanges = await ApplySelectedConflictResolutionsAsync(item.Conflicts, csvData, existingUser, departments, dbUsers, functionCache, importHistory, result);
                         }
                         else
                         {
-                            // If no conflicts exist, update all fields that differ from database
-                            if (existingUser.FirstName != item.CsvData.FirstName)
+                            var (success, changed) = await ApplyAllDifferingFieldsAsync(csvData, existingUser, departments, dbUsers, functionCache, result);
+                            if (!success)
                             {
-                                existingUser.FirstName = item.CsvData.FirstName.Trim();
-                                hasChanges = true;
-                            }
-                            if (existingUser.LastName != item.CsvData.LastName)
-                            {
-                                existingUser.LastName = item.CsvData.LastName.Trim();
-                                hasChanges = true;
-                            }
-                            var csvFunction = await ResolveExistingFunctionAsync(item.CsvData.Function, functionCache);
-                            if (existingUser.FunctionId != csvFunction?.Id)
-                            {
-                                existingUser.FunctionId = csvFunction?.Id;
-                                existingUser.Function = csvFunction;
-                                hasChanges = true;
-                            }
-
-                            var dept = departments.FirstOrDefault(d => d.Name.Equals(item.CsvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
-                            if (dept == null)
-                            {
-                                // Department does not exist or is inactive - skip this user update
-                                result.RecordsFailed++;
-                                result.Errors.Add($"User {item.CsvData.Email}: Department '{item.CsvData.DepartmentName}' does not exist or is inactive. Cannot update user.");
                                 continue;
                             }
-                            if (existingUser.DepartmentId != dept.Id)
-                            {
-                                existingUser.DepartmentId = dept.Id;
-                                hasChanges = true;
-                            }
-
-                            var assignedToManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, item.CsvData.AssignedToPersonalId);
-                            var assignedToId = assignedToManager?.Id;
-
-                            if (existingUser.AssignedToId != assignedToId)
-                            {
-                                existingUser.AssignedToId = assignedToId;
-                                hasChanges = true;
-                            }
+                            hasChanges = changed;
                         }
 
                         if (hasChanges)
@@ -529,19 +316,7 @@ public class CsvSyncService : ICsvSyncService
                 }
                 else if (item.Status == "deleted")
                 {
-                    // Soft delete user if hasn't been updated in 90 days
-                    if (dbUserMap.TryGetValue(item.Id, out var userToDelete))
-                    {
-                        if (userToDelete.UpdatedAt != null && userToDelete.UpdatedAt > DateTime.UtcNow.AddDays(-90))
-                        {
-                            result.RecordsSkipped++;
-                            continue; // Skip deletion
-                        }
-
-                        userToDelete.DeletedAt = DateTime.UtcNow;
-                        usersToDelete.Add(userToDelete);
-                        result.RecordsProcessed++;
-                    }
+                    ProcessDeletedItem(item, dbUserMap, usersToDelete, result);
                 }
                 else
                 {
@@ -619,12 +394,332 @@ public class CsvSyncService : ICsvSyncService
 
         stopwatch.Stop();
         result.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
-        result.Success = result.RecordsFailed == 0;
+        result.Success = result.RecordsFailed =
+        = 0;
         result.Message = result.Success
             ? $"Successfully synced {result.RecordsProcessed} records in {result.ProcessingTimeMs}ms"
             : $"Synced with errors: {result.RecordsFailed} failed";
 
         return result;
+    }
+
+    private async Task<User?> TryBuildNewUserAsync(CsvUserDTO csvData, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, SyncResultDTO result)
+    {
+        var department = departments.FirstOrDefault(d => d.Name.Equals(csvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
+        if (department == null)
+        {
+            // Department does not exist or is inactive - cannot create user
+            result.RecordsFailed++;
+            result.Errors.Add($"User {csvData.Email}: Department '{csvData.DepartmentName}' does not exist or is inactive. Please ensure the department exists and is active.");
+            return null;
+        }
+
+        var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvData.AssignedToPersonalId);
+        var csvFunction = await ResolveExistingFunctionAsync(csvData.Function, functionCache);
+
+        return new User
+        {
+            Id = Guid.NewGuid(),
+            Role = UserRole.BasicUser, // Everyone starts as Basic User
+            FirstName = csvData.FirstName.Trim(),
+            LastName = csvData.LastName.Trim(),
+            Email = csvData.Email.Trim(),
+            DepartmentId = department.Id,
+            AssignedToId = assignedManager?.Id,
+            PersonalId = csvData.PersonalId,
+            FunctionId = csvFunction?.Id,
+            Function = csvFunction,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    private static void ProcessDeletedItem(UserSyncItemDTO item, Dictionary<string, User> dbUserMap, List<User> usersToDelete, SyncResultDTO result)
+    {
+        // Soft delete user if hasn't been updated in 90 days
+        if (!dbUserMap.TryGetValue(item.Id, out var userToDelete))
+        {
+            return;
+        }
+
+        if (userToDelete.UpdatedAt != null && userToDelete.UpdatedAt > DateTime.UtcNow.AddDays(-90))
+        {
+            result.RecordsSkipped++;
+            return; // Skip deletion
+        }
+
+        userToDelete.DeletedAt = DateTime.UtcNow;
+        usersToDelete.Add(userToDelete);
+        result.RecordsProcessed++;
+    }
+
+    private async Task RecordRejectedConflictsAsync(List<FieldConflictDTO> conflicts, User existingUser, ImportHistory importHistory)
+    {
+        foreach (var conflict in conflicts)
+        {
+            var selectedValue = conflict.SelectedValue ?? (conflict.Selected ? "csv" : "db");
+            if (!selectedValue.Equals("db", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var normalizedField = conflict.Field.Trim().ToLower();
+            var historyField = normalizedField == "assignedtoname" ? "linemanager" : normalizedField;
+
+            var rejectedConflict = new UserChangeHistory
+            {
+                Id = Guid.NewGuid(),
+                ImportHistoryId = importHistory.Id,
+                UserId = existingUser.Id,
+                FieldName = historyField,
+                OldValue = conflict.DbValue?.ToString() ?? string.Empty,
+                NewValue = conflict.CsvValue?.ToString() ?? string.Empty,
+                Status = "rejected"
+            };
+
+            await _userChangeHistoryRepository.AddAsync(rejectedConflict);
+        }
+    }
+
+    private async Task<bool> ApplySelectedConflictResolutionsAsync(List<FieldConflictDTO> conflicts, CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, ImportHistory importHistory, SyncResultDTO result)
+    {
+        bool hasChanges = false;
+
+        foreach (var conflict in conflicts.Where(c => c.Selected))
+        {
+            // If no SelectedValue is specified, default to "csv"
+            var selectedValue = conflict.SelectedValue ?? "csv";
+
+            if (selectedValue != "csv")
+            {
+                continue;
+            }
+
+            switch (conflict.Field.ToLower())
+            {
+                case "firstname":
+                    hasChanges |= await ApplyFirstNameResolutionAsync(csvData, existingUser, importHistory);
+                    break;
+                case "lastname":
+                    hasChanges |= await ApplyLastNameResolutionAsync(csvData, existingUser, importHistory);
+                    break;
+                case "email":
+                    hasChanges |= await ApplyEmailResolutionAsync(csvData, existingUser, importHistory);
+                    break;
+                case "departmentname":
+                    hasChanges |= await ApplyDepartmentResolutionAsync(csvData, existingUser, departments, importHistory, result);
+                    break;
+                case "assignedtoname":
+                    hasChanges |= await ApplyManagerResolutionAsync(csvData, existingUser, dbUsers, importHistory);
+                    break;
+                case "function":
+                    hasChanges |= await ApplyFunctionResolutionAsync(csvData, existingUser, functionCache, importHistory);
+                    break;
+            }
+        }
+
+        return hasChanges;
+    }
+
+    private async Task<bool> ApplyFirstNameResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory)
+    {
+        if (existingUser.FirstName == csvData.FirstName)
+        {
+            return false;
+        }
+
+        var importConflict = new UserChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportHistoryId = importHistory.Id,
+            UserId = existingUser.Id,
+            FieldName = "firstname",
+            OldValue = existingUser.FirstName,
+            NewValue = csvData.FirstName.Trim(),
+            Status = "accepted"
+        };
+
+        existingUser.FirstName = csvData.FirstName.Trim();
+        await _userChangeHistoryRepository.AddAsync(importConflict);
+        return true;
+    }
+
+    private async Task<bool> ApplyLastNameResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory)
+    {
+        if (existingUser.LastName == csvData.LastName)
+        {
+            return false;
+        }
+
+        var importConflict = new UserChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportHistoryId = importHistory.Id,
+            UserId = existingUser.Id,
+            FieldName = "lastname",
+            OldValue = existingUser.LastName,
+            NewValue = csvData.LastName.Trim(),
+            Status = "accepted"
+        };
+
+        existingUser.LastName = csvData.LastName.Trim();
+        await _userChangeHistoryRepository.AddAsync(importConflict);
+        return true;
+    }
+
+    private async Task<bool> ApplyEmailResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory)
+    {
+        if (existingUser.Email == csvData.Email)
+        {
+            return false;
+        }
+
+        var importConflict = new UserChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportHistoryId = importHistory.Id,
+            UserId = existingUser.Id,
+            FieldName = "email",
+            OldValue = existingUser.Email,
+            NewValue = csvData.Email,
+            Status = "accepted"
+        };
+
+        existingUser.Email = csvData.Email;
+        await _userChangeHistoryRepository.AddAsync(importConflict);
+        return true;
+    }
+
+    private async Task<bool> ApplyDepartmentResolutionAsync(CsvUserDTO csvData, User existingUser, List<Department> departments, ImportHistory importHistory, SyncResultDTO result)
+    {
+        var department = departments.FirstOrDefault(d => d.Name.Equals(csvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
+        if (department == null)
+        {
+            // Department does not exist or is inactive - skip this field update
+            result.Errors.Add($"User {csvData.Email}: Cannot update department to '{csvData.DepartmentName}' - department does not exist or is inactive.");
+            return false;
+        }
+
+        if (existingUser.DepartmentId == department.Id)
+        {
+            return false;
+        }
+
+        var userChangeHistory = new UserChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportHistoryId = importHistory.Id,
+            UserId = existingUser.Id,
+            FieldName = "departmentname",
+            OldValue = existingUser.Department?.Name ?? string.Empty,
+            NewValue = department.Name,
+            Status = "accepted"
+        };
+
+        existingUser.DepartmentId = department.Id;
+        await _userChangeHistoryRepository.AddAsync(userChangeHistory);
+        return true;
+    }
+
+    private async Task<bool> ApplyManagerResolutionAsync(CsvUserDTO csvData, User existingUser, List<User> dbUsers, ImportHistory importHistory)
+    {
+        var newAssignedTo = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvData.AssignedToPersonalId);
+        var newAssignedToId = newAssignedTo?.Id;
+
+        if (existingUser.AssignedToId == newAssignedToId)
+        {
+            return false;
+        }
+
+        var userChangeHistory = new UserChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportHistoryId = importHistory.Id,
+            UserId = existingUser.Id,
+            FieldName = "assignedtoname",
+            OldValue = existingUser.AssignedTo != null ? $"{existingUser.AssignedTo.FirstName} {existingUser.AssignedTo.LastName}" : string.Empty,
+            NewValue = newAssignedTo != null ? $"{newAssignedTo.FirstName} {newAssignedTo.LastName}" : string.Empty,
+            Status = "accepted"
+        };
+
+        existingUser.AssignedToId = newAssignedToId;
+        await _userChangeHistoryRepository.AddAsync(userChangeHistory);
+        return true;
+    }
+
+    private async Task<bool> ApplyFunctionResolutionAsync(CsvUserDTO csvData, User existingUser, Dictionary<string, Function?> functionCache, ImportHistory importHistory)
+    {
+        var selectedCsvFunction = await ResolveExistingFunctionAsync(csvData.Function, functionCache);
+        var selectedCsvFunctionName = csvData.Function?.Trim();
+
+        if (existingUser.FunctionId == selectedCsvFunction?.Id)
+        {
+            return false;
+        }
+
+        var userChangeHistory = new UserChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportHistoryId = importHistory.Id,
+            UserId = existingUser.Id,
+            FieldName = "function",
+            OldValue = existingUser.Function?.Name ?? string.Empty,
+            NewValue = selectedCsvFunctionName ?? string.Empty,
+            Status = "accepted"
+        };
+
+        existingUser.FunctionId = selectedCsvFunction?.Id;
+        existingUser.Function = selectedCsvFunction;
+        await _userChangeHistoryRepository.AddAsync(userChangeHistory);
+        return true;
+    }
+
+    private async Task<(bool Success, bool HasChanges)> ApplyAllDifferingFieldsAsync(CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, SyncResultDTO result)
+    {
+        bool hasChanges = false;
+
+        if (existingUser.FirstName != csvData.FirstName)
+        {
+            existingUser.FirstName = csvData.FirstName.Trim();
+            hasChanges = true;
+        }
+        if (existingUser.LastName != csvData.LastName)
+        {
+            existingUser.LastName = csvData.LastName.Trim();
+            hasChanges = true;
+        }
+
+        var csvFunction = await ResolveExistingFunctionAsync(csvData.Function, functionCache);
+        if (existingUser.FunctionId != csvFunction?.Id)
+        {
+            existingUser.FunctionId = csvFunction?.Id;
+            existingUser.Function = csvFunction;
+            hasChanges = true;
+        }
+
+        var department = departments.FirstOrDefault(d => d.Name.Equals(csvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
+        if (department == null)
+        {
+            // Department does not exist or is inactive - skip this user update
+            result.RecordsFailed++;
+            result.Errors.Add($"User {csvData.Email}: Department '{csvData.DepartmentName}' does not exist or is inactive. Cannot update user.");
+            return (false, hasChanges);
+        }
+        if (existingUser.DepartmentId != department.Id)
+        {
+            existingUser.DepartmentId = department.Id;
+            hasChanges = true;
+        }
+
+        var assignedToManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvData.AssignedToPersonalId);
+        var assignedToId = assignedToManager?.Id;
+
+        if (existingUser.AssignedToId != assignedToId)
+        {
+            existingUser.AssignedToId = assignedToId;
+            hasChanges = true;
+        }
+
+        return (true, hasChanges);
     }
 
     private UserGETResponseDTO MapToUserGETResponseDTO(User user, List<User> allUsers)
