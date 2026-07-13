@@ -45,12 +45,10 @@ public class CsvSyncService : ICsvSyncService
             .Where(u => !string.IsNullOrWhiteSpace(u.PersonalId))
             .ToDictionary(u => u.PersonalId.Trim(), u => u, StringComparer.OrdinalIgnoreCase);
 
-        var csvEmails = new HashSet<string>();
-
         // Process CSV users
         foreach (var csvUser in csvUsers)
         {
-            if (string.IsNullOrWhiteSpace(csvUser.PersonalId))
+            if (!IsValidCsvRow(csvUser))
             {
                 continue;
             }
@@ -59,106 +57,7 @@ public class CsvSyncService : ICsvSyncService
 
             if (dbUserMap.TryGetValue(personalId, out var dbUser))
             {
-                // User exists - compare fields
-                var csvManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvUser.AssignedToPersonalId);
-
-                var csvUserData = new CsvUserDataDTO
-                {
-                    PersonalId = csvUser.PersonalId,
-                    FirstName = csvUser.FirstName,
-                    LastName = csvUser.LastName,
-                    Email = csvUser.Email,
-                    DepartmentName = csvUser.DepartmentName,
-                    AssignedToPersonalId = csvUser.AssignedToPersonalId,
-                    AssignedToName = csvManager != null ? $"{csvManager.FirstName} {csvManager.LastName}" : null,
-                    Function = csvUser.Function != null ? csvUser.Function.Trim() : null
-                };
-
-                // Detect conflicts
-                var conflicts = new List<FieldConflictDTO>();
-
-                if (dbUser.FirstName != csvUser.FirstName)
-                {
-                    conflicts.Add(new FieldConflictDTO
-                    {
-                        Field = "firstName",
-                        DbValue = dbUser.FirstName,
-                        CsvValue = csvUser.FirstName,
-                        Selected = false
-                    });
-                }
-
-                if (dbUser.LastName != csvUser.LastName)
-                {
-                    conflicts.Add(new FieldConflictDTO
-                    {
-                        Field = "lastName",
-                        DbValue = dbUser.LastName,
-                        CsvValue = csvUser.LastName,
-                        Selected = false
-                    });
-                }
-
-                if (dbUser.Department?.Name != csvUser.DepartmentName)
-                {
-                    conflicts.Add(new FieldConflictDTO
-                    {
-                        Field = "departmentName",
-                        DbValue = dbUser.Department?.Name ?? string.Empty,
-                        CsvValue = csvUser.DepartmentName,
-                        Selected = false
-                    });
-                }
-
-                if (dbUser.Email != csvUser.Email)
-                {
-                    conflicts.Add(new FieldConflictDTO
-                    {
-                        Field = "email",
-                        DbValue = dbUser.Email,
-                        CsvValue = csvUser.Email,
-                        Selected = false
-                    });
-                }
-
-                var dbFunctionName = dbUser.Function?.Name?.Trim();
-                var csvFunctionName = csvUser.Function?.Trim();
-                if (!string.Equals(dbFunctionName, csvFunctionName, StringComparison.OrdinalIgnoreCase))
-                {
-                    conflicts.Add(new FieldConflictDTO
-                    {
-                        Field = "function",
-                        DbValue = dbFunctionName ?? string.Empty,
-                        CsvValue = csvFunctionName,
-                        Selected = false
-                    });
-                }
-
-                // Check line manager
-                var csvManagerId = csvManager?.Id;
-                var dbManagerId = dbUser.AssignedToId;
-
-                if (csvManagerId != dbManagerId)
-                {
-                    conflicts.Add(new FieldConflictDTO
-                    {
-                        Field = "assignedToName",
-                        DbValue = dbUser.AssignedTo != null ? $"{dbUser.AssignedTo.FirstName} {dbUser.AssignedTo.LastName}" : null,
-                        CsvValue = csvManager != null ? $"{csvManager.FirstName} {csvManager.LastName}" : null,
-                        Selected = false
-                    });
-                }
-
-                var comparison = new UserComparisonDTO
-                {
-                    Id = dbUser.Id.ToString(), // Use actual database user ID
-                    Status = conflicts.Count > 0 ? "modified" : "unchanged",
-                    DbUser = MapToUserGETResponseDTO(dbUser, dbUsers),
-                    CsvUser = csvUserData,
-                    Conflicts = conflicts,
-                    Selected = conflicts.Count > 0 // Auto-select modified records
-                };
-
+                var comparison = await BuildExistingUserComparisonAsync(dbUser, csvUser, dbUsers);
                 comparisons.Add(comparison);
 
                 // Stream result to frontend
@@ -169,27 +68,7 @@ public class CsvSyncService : ICsvSyncService
             }
             else
             {
-                // New user from CSV
-                var newCsvManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvUser.AssignedToPersonalId);
-
-                var comparison = new UserComparisonDTO
-                {
-                    Id = Guid.NewGuid().ToString(), // For new users, generate new ID
-                    Status = "new",
-                    CsvUser = new CsvUserDataDTO
-                    {
-                        PersonalId = csvUser.PersonalId,
-                        FirstName = csvUser.FirstName,
-                        LastName = csvUser.LastName,
-                        Email = csvUser.Email,
-                        DepartmentName = csvUser.DepartmentName,
-                        AssignedToPersonalId = csvUser.AssignedToPersonalId,
-                        AssignedToName = newCsvManager != null ? $"{newCsvManager.FirstName} {newCsvManager.LastName}" : null,
-                        Function = csvUser.Function != null ? csvUser.Function.Trim() : null
-                    },
-                    Selected = true // Auto-select new records
-                };
-
+                var comparison = await BuildNewUserComparisonAsync(csvUser, dbUsers);
                 comparisons.Add(comparison);
 
                 // Stream result to frontend - fire and forget
@@ -200,16 +79,119 @@ public class CsvSyncService : ICsvSyncService
             }
         }
 
+        comparisons.AddRange(FindDeletedUserComparisons(dbUsers, csvUsers));
+
+        return comparisons;
+    }
+
+    private static bool IsValidCsvRow(CsvUserDTO csvUser)
+    {
+        return !string.IsNullOrWhiteSpace(csvUser.PersonalId);
+    }
+
+    private async Task<UserComparisonDTO> BuildExistingUserComparisonAsync(User dbUser, CsvUserDTO csvUser, List<User> dbUsers)
+    {
+        // User exists - compare fields
+        var csvManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvUser.AssignedToPersonalId);
+        var csvUserData = MapToCsvUserDataDTO(csvUser, csvManager);
+        var conflicts = DetectFieldConflicts(dbUser, csvUser, csvManager);
+
+        return new UserComparisonDTO
+        {
+            Id = dbUser.Id.ToString(), // Use actual database user ID
+            Status = conflicts.Count > 0 ? "modified" : "unchanged",
+            DbUser = MapToUserGETResponseDTO(dbUser, dbUsers),
+            CsvUser = csvUserData,
+            Conflicts = conflicts,
+            Selected = conflicts.Count > 0 // Auto-select modified records
+        };
+    }
+
+    private async Task<UserComparisonDTO> BuildNewUserComparisonAsync(CsvUserDTO csvUser, List<User> dbUsers)
+    {
+        // New user from CSV
+        var newCsvManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvUser.AssignedToPersonalId);
+
+        return new UserComparisonDTO
+        {
+            Id = Guid.NewGuid().ToString(), // For new users, generate new ID
+            Status = "new",
+            CsvUser = MapToCsvUserDataDTO(csvUser, newCsvManager),
+            Selected = true // Auto-select new records
+        };
+    }
+
+    private static CsvUserDataDTO MapToCsvUserDataDTO(CsvUserDTO csvUser, User? manager)
+    {
+        return new CsvUserDataDTO
+        {
+            PersonalId = csvUser.PersonalId,
+            FirstName = csvUser.FirstName,
+            LastName = csvUser.LastName,
+            Email = csvUser.Email,
+            DepartmentName = csvUser.DepartmentName,
+            AssignedToPersonalId = csvUser.AssignedToPersonalId,
+            AssignedToName = manager != null ? $"{manager.FirstName} {manager.LastName}" : null,
+            Function = csvUser.Function != null ? csvUser.Function.Trim() : null
+        };
+    }
+
+    private static List<FieldConflictDTO> DetectFieldConflicts(User dbUser, CsvUserDTO csvUser, User? csvManager)
+    {
+        var conflicts = new List<FieldConflictDTO>();
+
+        AddFieldConflictIfDifferent(conflicts, "firstName", dbUser.FirstName, csvUser.FirstName, dbUser.FirstName != csvUser.FirstName);
+        AddFieldConflictIfDifferent(conflicts, "lastName", dbUser.LastName, csvUser.LastName, dbUser.LastName != csvUser.LastName);
+
+        var dbDepartmentName = dbUser.Department?.Name;
+        AddFieldConflictIfDifferent(conflicts, "departmentName", dbDepartmentName ?? string.Empty, csvUser.DepartmentName, dbDepartmentName != csvUser.DepartmentName);
+
+        AddFieldConflictIfDifferent(conflicts, "email", dbUser.Email, csvUser.Email, dbUser.Email != csvUser.Email);
+
+        var dbFunctionName = dbUser.Function?.Name?.Trim();
+        var csvFunctionName = csvUser.Function?.Trim();
+        AddFieldConflictIfDifferent(conflicts, "function", dbFunctionName ?? string.Empty, csvFunctionName,
+            !string.Equals(dbFunctionName, csvFunctionName, StringComparison.OrdinalIgnoreCase));
+
+        // Check line manager
+        var dbManagerName = dbUser.AssignedTo != null ? $"{dbUser.AssignedTo.FirstName} {dbUser.AssignedTo.LastName}" : null;
+        var csvManagerName = csvManager != null ? $"{csvManager.FirstName} {csvManager.LastName}" : null;
+        AddFieldConflictIfDifferent(conflicts, "assignedToName", dbManagerName, csvManagerName, csvManager?.Id != dbUser.AssignedToId);
+
+        return conflicts;
+    }
+
+    // Adds a field conflict to the list when the DB and CSV values differ.
+    private static void AddFieldConflictIfDifferent(List<FieldConflictDTO> conflicts, string field, object? dbValue, object? csvValue, bool valuesDiffer)
+    {
+        if (!valuesDiffer)
+        {
+            return;
+        }
+
+        conflicts.Add(new FieldConflictDTO
+        {
+            Field = field,
+            DbValue = dbValue,
+            CsvValue = csvValue,
+            Selected = false
+        });
+    }
+
+    private List<UserComparisonDTO> FindDeletedUserComparisons(List<User> dbUsers, IEnumerable<CsvUserDTO> csvUsers)
+    {
         // Find deleted users (in DB but not in CSV) by PersonalId
         var csvPersonalIds = csvUsers
             .Where(u => !string.IsNullOrWhiteSpace(u.PersonalId))
             .Select(u => u.PersonalId.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var deletedComparisons = new List<UserComparisonDTO>();
         foreach (var dbUser in dbUsers)
         {
             if (string.IsNullOrWhiteSpace(dbUser.PersonalId) || !csvPersonalIds.Contains(dbUser.PersonalId.Trim()))
             {
-                comparisons.Add(new UserComparisonDTO
+                deletedComparisons.Add(new UserComparisonDTO
                 {
                     Id = dbUser.Id.ToString(), // Use actual database user ID for deleted users
                     Status = "deleted",
@@ -219,7 +201,7 @@ public class CsvSyncService : ICsvSyncService
             }
         }
 
-        return comparisons;
+        return deletedComparisons;
     }
 
     public async Task<SyncResultDTO> SyncUsers(SyncRequestDTO syncRequest, string? connectionId = null)
