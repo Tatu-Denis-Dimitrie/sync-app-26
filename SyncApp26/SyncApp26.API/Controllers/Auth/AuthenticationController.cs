@@ -1,11 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using SyncApp26.Domain.Entities;
-using SyncApp26.Domain.Enums;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.API.Services;
-using System.Security.Cryptography;
-using System.Text.RegularExpressions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -13,54 +9,18 @@ namespace SyncApp26.API.Controllers
     [Route("api/[controller]")]
     public class AuthenticationController : ControllerBase
     {
-        private readonly IUserService _userService;
-        private readonly ITokenService _tokenService;
-        private readonly IAuthenticationService _authenticationService;
+        private readonly IAccountService _accountService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
 
         public AuthenticationController(
-            IUserService userService,
-            ITokenService tokenService,
-            IAuthenticationService authenticationService,
+            IAccountService accountService,
             IEmailService emailService,
             IConfiguration configuration)
         {
-            _userService = userService;
-            _tokenService = tokenService;
-            _authenticationService = authenticationService;
+            _accountService = accountService;
             _emailService = emailService;
             _configuration = configuration;
-        }
-
-        private async Task<IActionResult> VerifyPasswordFormat(string password)
-        {
-            if (password.Length < 8)
-            {
-                return BadRequest(new { message = "Password must be at least 8 characters long." });
-            }
-
-            if (!Regex.IsMatch(password, @"[A-Z]"))
-            {
-                return BadRequest(new { message = "Password must contain at least one uppercase letter." });
-            }
-
-            if (!Regex.IsMatch(password, @"[a-z]"))
-            {
-                return BadRequest(new { message = "Password must contain at least one lowercase letter." });
-            }
-
-            if (!Regex.IsMatch(password, @"[0-9]"))
-            {
-                return BadRequest(new { message = "Password must contain at least one digit." });
-            }
-
-            if (!Regex.IsMatch(password, @"[!#$%&*^<>.,/?;_\-@]"))
-            {
-                return BadRequest(new { message = "Password must contain at least one special character." });
-            }
-
-            return Ok();
         }
 
         [HttpPost("register")]
@@ -68,58 +28,19 @@ namespace SyncApp26.API.Controllers
         {
             try
             {
-                if (request == null ||
-                    string.IsNullOrWhiteSpace(request.FirstName) ||
-                    string.IsNullOrWhiteSpace(request.LastName) ||
-                    string.IsNullOrWhiteSpace(request.Email) ||
-                    string.IsNullOrWhiteSpace(request.Password))
+                var result = await _accountService.RegisterAsync(request);
+                if (!result.Success)
                 {
-                    return BadRequest(new { message = "All fields are required." });
+                    return BadRequest(new { message = result.ErrorMessage });
                 }
 
-                // Normalize email to lowercase for consistent checking
-                var normalizedEmail = request.Email.ToLowerInvariant().Trim();
-
-                if (!Regex.IsMatch(normalizedEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
-                {
-                    return BadRequest(new { message = "Invalid email format." });
-                }
-
-                var result = await VerifyPasswordFormat(request.Password);
-                if (result is BadRequestObjectResult badRequest)
-                {
-                    return badRequest;
-                }
-
-                var existingUser = await _userService.GetUserByEmailAsync(normalizedEmail);
-                if (existingUser != null)
-                {
-                    return BadRequest(new { message = "Email is already registered." });
-                }
-
-                var user = new User
-                {
-                    Id = Guid.NewGuid(),
-                    PersonalId = Guid.NewGuid().ToString(),
-                    Role = UserRole.BasicUser,
-                    FirstName = request.FirstName,
-                    LastName = request.LastName,
-                    Email = normalizedEmail,
-                    PasswordHash = await _authenticationService.HashPasswordAsync(request.Password),
-                    IsEmailVerified = false,
-                    EmailVerificationToken = Guid.NewGuid().ToString("N"),
-                    EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24),
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _userService.AddUserAsync(user);
-
+                var registered = result.Data!;
                 var apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
-                var verifyUrl = $"{apiBaseUrl}/api/authentication/verify-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(user.EmailVerificationToken!)}";
+                var verifyUrl = $"{apiBaseUrl}/api/authentication/verify-email?email={Uri.EscapeDataString(registered.Email)}&token={Uri.EscapeDataString(registered.EmailVerificationToken)}";
 
                 try
                 {
-                    await _emailService.SendVerificationEmailAsync(user.Email, user.FirstName, verifyUrl);
+                    await _emailService.SendVerificationEmailAsync(registered.Email, registered.FirstName, verifyUrl);
                 }
                 catch (Exception emailEx)
                 {
@@ -144,35 +65,14 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Invalid verification link." });
             }
 
-            var normalizedEmail = email.ToLowerInvariant().Trim();
-            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
+            var result = await _accountService.VerifyEmailAsync(email, token);
 
-            if (user == null)
+            return result.Status switch
             {
-                return NotFound(new { message = "User not found." });
-            }
-
-            if (user.IsEmailVerified == true)
-            {
-                return Redirect(GetLoginRedirectUrl());
-            }
-
-            if (string.IsNullOrWhiteSpace(user.EmailVerificationToken) ||
-                user.EmailVerificationTokenExpiresAt == null ||
-                user.EmailVerificationTokenExpiresAt < DateTime.UtcNow ||
-                !string.Equals(user.EmailVerificationToken, token, StringComparison.Ordinal))
-            {
-                return BadRequest(new { message = "Verification token is invalid or expired." });
-            }
-
-            user.IsEmailVerified = true;
-            user.EmailVerificationToken = null;
-            user.EmailVerificationTokenExpiresAt = null;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            await _userService.UpdateUserAsync(user);
-
-            return Redirect(GetLoginRedirectUrl());
+                EmailVerificationStatus.NotFound => NotFound(new { message = "User not found." }),
+                EmailVerificationStatus.InvalidToken => BadRequest(new { message = "Verification token is invalid or expired." }),
+                _ => Redirect(GetLoginRedirectUrl())
+            };
         }
 
         [HttpPost("login")]
@@ -187,37 +87,29 @@ namespace SyncApp26.API.Controllers
                     return BadRequest(new { message = "Email and password are required." });
                 }
 
-                var normalizedEmail = request.Email.ToLowerInvariant().Trim();
-                var user = await _userService.GetUserByEmailAsync(normalizedEmail);
-                if (user == null || user.PasswordHash == null || !await _authenticationService.VerifyPasswordAsync(request.Password, user.PasswordHash))
-                {
-                    return Unauthorized(new { message = "Invalid email or password." });
-                }
+                var result = await _accountService.AuthenticateAsync(request.Email, request.Password);
 
-                if (user.IsEmailVerified != true)
+                return result.Status switch
                 {
-                    return Unauthorized(new { message = "Email is not verified. Please check your email for verification instructions." });
-                }
-
-                var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
-
-                return Ok(new
-                {
-                    message = "Login successful.",
-                    token,
-                    user = new
+                    LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid email or password." }),
+                    LoginStatus.EmailNotVerified => Unauthorized(new { message = "Email is not verified. Please check your email for verification instructions." }),
+                    _ => Ok(new
                     {
-                        id = user.Id,
-                        email = user.Email,
-                        firstName = user.FirstName,
-                        lastName = user.LastName,
-                        role = user.Role
-                    }
-                });
+                        message = "Login successful.",
+                        token = result.Token,
+                        user = new
+                        {
+                            id = result.UserId,
+                            email = result.Email,
+                            firstName = result.FirstName,
+                            lastName = result.LastName,
+                            role = result.Role
+                        }
+                    })
+                };
             }
             catch (Exception ex)
             {
-                // Log the exception here if you have a logger
                 return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
             }
         }
@@ -230,31 +122,20 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Email is required." });
             }
 
-            var normalizedEmail = request.Email.ToLowerInvariant().Trim();
-            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
-
-            if (user == null)
+            var result = await _accountService.RequestPasswordResetAsync(request.Email);
+            if (!result.Success)
             {
-                return BadRequest(new { message = "This email doesn't have an account." });
+                return BadRequest(new { message = result.ErrorMessage });
             }
 
-            if (user != null)
-            {
-                var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-                user.PasswordResetToken = token;
-                user.PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(30);
-                user.UpdatedAt = DateTime.UtcNow;
+            var reset = result.Data!;
+            var resetUrl = BuildResetPasswordUrl(reset.Email, reset.Token);
 
-                await _userService.UpdateUserAsync(user);
-
-                var resetUrl = BuildResetPasswordUrl(user.Email, token);
-
-                await _emailService.SendPasswordResetEmailAsync(
-                    user.Email,
-                    user.FirstName,
-                    resetUrl,
-                    30);
-            }
+            await _emailService.SendPasswordResetEmailAsync(
+                reset.Email,
+                reset.FirstName,
+                resetUrl,
+                reset.ExpiresInMinutes);
 
             return Ok(new { message = "A password reset link has been sent." });
         }
@@ -270,41 +151,11 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = "Email, token and new password are required." });
             }
 
-            var result = await VerifyPasswordFormat(request.NewPassword);
-            if (result is BadRequestObjectResult badRequest)
+            var result = await _accountService.ResetPasswordAsync(request.Email, request.Token, request.NewPassword);
+            if (!result.Success)
             {
-                return badRequest;
+                return BadRequest(new { message = result.ErrorMessage });
             }
-
-            var normalizedEmail = request.Email.ToLowerInvariant().Trim();
-
-            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
-            if (user == null)
-            {
-                return BadRequest(new { message = "Invalid or expired token." });
-            }
-
-            var verifyPassword = await _authenticationService.VerifyPasswordAsync(request.NewPassword, user.PasswordHash!);
-            if (verifyPassword)
-            {
-                return BadRequest(new { message = "New password cannot be the same as the old password." });
-            }
-
-            var providedToken = request.Token.Trim();
-            if (string.IsNullOrWhiteSpace(user.PasswordResetToken) ||
-                user.PasswordResetTokenExpiresAt == null ||
-                user.PasswordResetTokenExpiresAt < DateTime.UtcNow ||
-                !string.Equals(user.PasswordResetToken, providedToken, StringComparison.Ordinal))
-            {
-                return BadRequest(new { message = "Invalid or expired token." });
-            }
-
-            user.PasswordHash = await _authenticationService.HashPasswordAsync(request.NewPassword);
-            user.PasswordResetToken = null;
-            user.PasswordResetTokenExpiresAt = null;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            await _userService.UpdateUserAsync(user);
 
             return Ok(new { message = "Password reset successfully." });
         }

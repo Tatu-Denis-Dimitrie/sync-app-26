@@ -28,6 +28,7 @@ namespace SyncApp26.Shared.DTOs.Request.User
 
     public class BulkInitialTrainingResultDTO
     {
+        public bool NoUsersMatched { get; set; }
         public int SuccessCount { get; set; }
         public int SkippedCount { get; set; }
         public int FailedCount { get; set; }
