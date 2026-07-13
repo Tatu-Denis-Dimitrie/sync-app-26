@@ -60,26 +60,35 @@ namespace SyncApp26.Infrastructure.Services
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
             Console.WriteLine($"[GENERATE] Starting document generation for UserId: {userId}, DocumentType: {documentType}, GeneratedBy: {generatedByEmail}");
-            bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
-            // Check if user is admin (admins should not have documents generated)
+            await EnsureUserCanHaveDocumentGeneratedAsync(userId);
+
+            var doc = await CreateUserDocumentAsync(userId, documentType);
+
+            await CopyHistoricalPeriodicTrainingRowsAsync(userId, documentType, doc.Id);
+            await LinkOrCreateCurrentPeriodicTrainingRowAsync(userId, documentType, doc.Id);
+            await _context.SaveChangesAsync();
+
+            var user = await LoadUserWithDocumentDataAsync(userId)
+                ?? throw new ArgumentException("User not found.");
+
+            var pdfPath = await GeneratePdfSnapshotAsync(user, doc);
+            doc.PdfFilePath = pdfPath;
+            await _context.SaveChangesAsync();
+
+            return doc;
+        }
+
+        // Admins should not have SSM/SU documents generated for them.
+        private async Task EnsureUserCanHaveDocumentGeneratedAsync(Guid userId)
+        {
             var userToGenerate = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (userToGenerate != null && userToGenerate.Role == UserRole.Admin)
-            {
                 throw new InvalidOperationException("Cannot generate documents for admin users.");
-            }
+        }
 
-            // ── Find the previous (latest) document of the same type for this user ──
-            var previousDoc = await _context.UserDocuments
-                .Where(d => d.UserId == userId && d.DocumentType == documentType)
-                .OrderByDescending(d => d.GeneratedAt)
-                .FirstOrDefaultAsync();
-
-            // NOTE: Do NOT modify existing documents or their PeriodicTraining rows here.
-            // The new document must be a snapshot: copies of previous rows are created
-            // for the new document, but previous documents must remain unchanged.
-
-            // ── Create the new document ──
+        private async Task<UserDocument> CreateUserDocumentAsync(Guid userId, string documentType)
+        {
             var doc = new UserDocument
             {
                 UserId = userId,
@@ -89,85 +98,83 @@ namespace SyncApp26.Infrastructure.Services
             };
             _context.UserDocuments.Add(doc);
             await _context.SaveChangesAsync();
+            return doc;
+        }
 
-            // ── Step 1: Copy rows from PREVIOUS documents only (historical rows) ──
+        private async Task CopyHistoricalPeriodicTrainingRowsAsync(Guid userId, string documentType, Guid newDocId)
+        {
+            var allPreviousDocIds = await _context.UserDocuments
+                .Where(d => d.UserId == userId && d.DocumentType == documentType && d.Id != newDocId)
+                .Select(d => d.Id)
+                .ToListAsync();
+
+            var previousDocPtRows = await _context.PeriodicTrainings
+                .Where(pt => pt.UserId == userId
+                    && pt.UserDocumentId != null
+                    && allPreviousDocIds.Contains(pt.UserDocumentId.Value)
+                    && (pt.DocumentType == null || pt.DocumentType == documentType))
+                .ToListAsync();
+
+            var contentRows = previousDocPtRows.Where(pt =>
+                !string.IsNullOrEmpty(pt.MaterialTaught)
+                || !string.IsNullOrEmpty(pt.UserSignatureData)
+                || !string.IsNullOrEmpty(pt.InstructorSignature)
+                || !string.IsNullOrEmpty(pt.VerifierSignature))
+                .ToList();
+
+            var bestRows = SelectBestPeriodicTrainingRows(contentRows);
+
+            foreach (var oldRow in bestRows)
             {
-                var allPreviousDocIds = await _context.UserDocuments
-                    .Where(d => d.UserId == userId && d.DocumentType == documentType && d.Id != doc.Id)
-                    .Select(d => d.Id)
-                    .ToListAsync();
-
-                var previousDocPtRows = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserId == userId
-                        && pt.UserDocumentId != null
-                        && allPreviousDocIds.Contains(pt.UserDocumentId.Value)
-                        && (pt.DocumentType == null || pt.DocumentType == documentType))
-                    .ToListAsync();
-
-                // Skip blank auto-generated placeholder rows (no content, no signatures).
-                // These are created in Step 3 and should not accumulate across documents.
-                var contentRows = previousDocPtRows.Where(pt =>
-                    !string.IsNullOrEmpty(pt.MaterialTaught)
-                    || !string.IsNullOrEmpty(pt.UserSignatureData)
-                    || !string.IsNullOrEmpty(pt.InstructorSignature)
-                    || !string.IsNullOrEmpty(pt.VerifierSignature))
-                    .ToList();
-
-                // Build the set of IDs that are already referenced as SourceRowId by some copy.
-                // An original row whose Id appears here will use its own Id as the dedup key,
-                // collapsing it into the same group as all its copies.
-                var referencedSourceIds = contentRows
-                    .Where(r => r.SourceRowId.HasValue)
-                    .Select(r => r.SourceRowId!.Value)
-                    .ToHashSet();
-
-                // Dedup rules (in priority order):
-                //   Copy (SourceRowId set)         → key = SourceRowId  (groups all copies of same origin)
-                //   Original with known copies      → key = own Id      (same key as its copies above)
-                //   Legacy row (no SourceRowId tracking yet) → content key (old behaviour)
-                var bestRows = contentRows
-                    .GroupBy(pt => pt.SourceRowId.HasValue
-                        ? pt.SourceRowId.Value.ToString()
-                        : referencedSourceIds.Contains(pt.Id)
-                            ? pt.Id.ToString()
-                            : $"{pt.TrainingDate:O}|{pt.CreatedAt:O}|{pt.Occupation}|{pt.MaterialTaught}")
-                    .Select(g => g.OrderByDescending(pt =>
-                        (!string.IsNullOrEmpty(pt.UserSignatureData) ? 1 : 0) +
-                        (!string.IsNullOrEmpty(pt.InstructorSignature) ? 1 : 0) +
-                        (!string.IsNullOrEmpty(pt.VerifierSignature) ? 1 : 0)).First())
-                    .OrderBy(pt => pt.CreatedAt)
-                    .ToList();
-
-                foreach (var oldRow in bestRows)
+                var sourceId = oldRow.SourceRowId ?? oldRow.Id;
+                var copy = new PeriodicTraining
                 {
-                    // SourceRowId always points to the root original row, never to another copy
-                    var sourceId = oldRow.SourceRowId ?? oldRow.Id;
-                    var copy = new PeriodicTraining
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = userId,
-                        UserDocumentId = doc.Id,
-                        DocumentType = documentType,
-                        SourceRowId = sourceId,
-                        TrainingDate = oldRow.TrainingDate,
-                        DurationHours = oldRow.DurationHours,
-                        Occupation = oldRow.Occupation,
-                        MaterialTaught = oldRow.MaterialTaught,
-                        InstructorName = oldRow.InstructorName,
-                        VerifierName = oldRow.VerifierName,
-                        UserSignatureData = oldRow.UserSignatureData,
-                        UserSignatureMethod = oldRow.UserSignatureMethod,
-                        InstructorSignature = oldRow.InstructorSignature,
-                        InstructorSignatureMethod = oldRow.InstructorSignatureMethod,
-                        VerifierSignature = oldRow.VerifierSignature,
-                        VerifierSignatureMethod = oldRow.VerifierSignatureMethod,
-                        CreatedAt = oldRow.CreatedAt,
-                    };
-                    _context.PeriodicTrainings.Add(copy);
-                }
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    UserDocumentId = newDocId,
+                    DocumentType = documentType,
+                    SourceRowId = sourceId,
+                    TrainingDate = oldRow.TrainingDate,
+                    DurationHours = oldRow.DurationHours,
+                    Occupation = oldRow.Occupation,
+                    MaterialTaught = oldRow.MaterialTaught,
+                    InstructorName = oldRow.InstructorName,
+                    VerifierName = oldRow.VerifierName,
+                    UserSignatureData = oldRow.UserSignatureData,
+                    UserSignatureMethod = oldRow.UserSignatureMethod,
+                    InstructorSignature = oldRow.InstructorSignature,
+                    InstructorSignatureMethod = oldRow.InstructorSignatureMethod,
+                    VerifierSignature = oldRow.VerifierSignature,
+                    VerifierSignatureMethod = oldRow.VerifierSignatureMethod,
+                    CreatedAt = oldRow.CreatedAt,
+                };
+                _context.PeriodicTrainings.Add(copy);
             }
+        }
 
-            // ── Step 2: Link any unlinked (bulk training) rows directly to this document ──
+        private static List<PeriodicTraining> SelectBestPeriodicTrainingRows(List<PeriodicTraining> contentRows)
+        {
+            var referencedSourceIds = contentRows
+                .Where(r => r.SourceRowId.HasValue)
+                .Select(r => r.SourceRowId!.Value)
+                .ToHashSet();
+
+            return contentRows
+                .GroupBy(pt => pt.SourceRowId.HasValue
+                    ? pt.SourceRowId.Value.ToString()
+                    : referencedSourceIds.Contains(pt.Id)
+                        ? pt.Id.ToString()
+                        : $"{pt.TrainingDate:O}|{pt.CreatedAt:O}|{pt.Occupation}|{pt.MaterialTaught}")
+                .Select(g => g.OrderByDescending(pt =>
+                    (!string.IsNullOrEmpty(pt.UserSignatureData) ? 1 : 0) +
+                    (!string.IsNullOrEmpty(pt.InstructorSignature) ? 1 : 0) +
+                    (!string.IsNullOrEmpty(pt.VerifierSignature) ? 1 : 0)).First())
+                .OrderBy(pt => pt.CreatedAt)
+                .ToList();
+        }
+
+        private async Task LinkOrCreateCurrentPeriodicTrainingRowAsync(Guid userId, string documentType, Guid newDocId)
+        {
             var unlinkedRows = await _context.PeriodicTrainings
                 .Where(pt => pt.UserId == userId
                     && pt.UserDocumentId == null
@@ -175,44 +182,40 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
             foreach (var row in unlinkedRows)
             {
-                row.UserDocumentId = doc.Id;
+                row.UserDocumentId = newDocId;
                 row.DocumentType = documentType;
             }
 
-            // ── Step 3: Create a current row only if no unlinked rows were linked ──
-            PeriodicTraining? currentRow = unlinkedRows.Count > 0
-                ? unlinkedRows.OrderByDescending(r => r.CreatedAt).First()
-                : null;
+            if (unlinkedRows.Count > 0)
+                return;
 
-            if (currentRow == null)
+            var mostRecentTraining = await _context.PeriodicTrainings
+                .Where(pt => pt.UserId == userId && pt.UserDocumentId != newDocId
+                    && (pt.DocumentType == null || pt.DocumentType == documentType))
+                .OrderByDescending(pt => pt.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            var now = DateTime.UtcNow;
+            _context.PeriodicTrainings.Add(new PeriodicTraining
             {
-                var mostRecentTraining = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserId == userId && pt.UserDocumentId != doc.Id
-                        && (pt.DocumentType == null || pt.DocumentType == documentType))
-                    .OrderByDescending(pt => pt.CreatedAt)
-                    .FirstOrDefaultAsync();
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                UserDocumentId = newDocId,
+                DocumentType = documentType,
+                TrainingDate = now,
+                DurationHours = mostRecentTraining?.DurationHours,
+                Occupation = mostRecentTraining?.Occupation,
+                MaterialTaught = mostRecentTraining?.MaterialTaught,
+                InstructorName = mostRecentTraining?.InstructorName,
+                VerifierName = mostRecentTraining?.VerifierName,
+                CreatedAt = now,
+            });
+        }
 
-                var now = DateTime.UtcNow;
-                currentRow = new PeriodicTraining
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    UserDocumentId = doc.Id,
-                    DocumentType = documentType,
-                    TrainingDate = now,
-                    DurationHours = mostRecentTraining?.DurationHours,
-                    Occupation = mostRecentTraining?.Occupation,
-                    MaterialTaught = mostRecentTraining?.MaterialTaught,
-                    InstructorName = mostRecentTraining?.InstructorName,
-                    VerifierName = mostRecentTraining?.VerifierName,
-                    CreatedAt = now,
-                };
-                _context.PeriodicTrainings.Add(currentRow);
-            }
-            await _context.SaveChangesAsync();
-
-            // Reload user with all PeriodicTrainings (deterministic order)
-            var user = await _context.Users
+        // Reloads a user with every navigation BuildDocument needs, PeriodicTrainings in
+        // deterministic order (used after mutating training rows, ahead of a PDF snapshot).
+        private Task<User?> LoadUserWithDocumentDataAsync(Guid userId) =>
+            _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
@@ -220,17 +223,6 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
-            if (user == null)
-                throw new ArgumentException("User not found.");
-
-            var pdfPath = await GeneratePdfSnapshotAsync(user, doc);
-            doc.PdfFilePath = pdfPath;
-            await _context.SaveChangesAsync();
-
-            return doc;
-        }
-
-        // Semnează un singur document ca admin (pentru bulk progres)
         public async Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress)
         {
             var timestamp = DateTime.UtcNow;
@@ -272,14 +264,7 @@ namespace SyncApp26.Infrastructure.Services
             if (latestTraining != null)
                 await PropagateSignatureToNewerDocumentsAsync(latestTraining);
 
-            // Reîncarcă user fresh cu toate datele după save
-            var freshUser = await _context.Users
-                .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                .Include(u => u.Department)
-                .Include(u => u.Function)
-                .Include(u => u.InitialTrainings)
-                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+            var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
 
             if (freshUser != null)
             {
@@ -354,13 +339,7 @@ namespace SyncApp26.Infrastructure.Services
             {
                 var doc = await _context.UserDocuments.FirstOrDefaultAsync(d => d.Id == docId);
                 if (doc == null) continue;
-                var freshUser = await _context.Users
-                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                    .Include(u => u.Department)
-                    .Include(u => u.Function)
-                    .Include(u => u.InitialTrainings)
-                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+                var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
                 if (freshUser != null)
                 {
                     try { await GeneratePdfSnapshotAsync(freshUser, doc); } catch { }
@@ -1316,13 +1295,7 @@ namespace SyncApp26.Infrastructure.Services
                 if (signedTraining != null)
                     await PropagateSignatureToNewerDocumentsAsync(signedTraining);
 
-                var freshUser = await _context.Users
-                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                    .Include(u => u.Department)
-                    .Include(u => u.Function)
-                    .Include(u => u.InitialTrainings)
-                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+                var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
 
                 if (freshUser != null)
                 {
@@ -1453,13 +1426,7 @@ namespace SyncApp26.Infrastructure.Services
 
             foreach (var doc in docs)
             {
-                var freshUser = await _context.Users
-                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                    .Include(u => u.Department)
-                    .Include(u => u.Function)
-                    .Include(u => u.InitialTrainings)
-                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+                var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
 
                 if (freshUser != null)
                 {
