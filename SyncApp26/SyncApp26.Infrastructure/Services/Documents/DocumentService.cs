@@ -459,10 +459,32 @@ namespace SyncApp26.Infrastructure.Services
 
         // ─── Core PDF builder ────────────────────────────────────────────────────
 
+        // Shared per-document styling/values computed once and threaded through each page builder.
+        private readonly record struct DocumentRenderContext(
+            bool IsSsm,
+            string FormTitle,
+            string AccentColor,
+            string HeaderColor,
+            string CoverBg,
+            string ManagerName,
+            string ManagerFunction);
+
         private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document, bool viewerIsAdmin = false)
         {
             QuestPDF.Settings.License = LicenseType.Community;
 
+            var ctx = CreateRenderContext(user, document);
+
+            return QuestPDF.Fluent.Document.Create(container =>
+            {
+                BuildCoverPage(container, user, document, ctx);
+                BuildGeneralInfoPage(container, user, ctx);
+                BuildPeriodicTrainingPage(container, user, document, ctx, viewerIsAdmin);
+            });
+        }
+
+        private static DocumentRenderContext CreateRenderContext(User user, UserDocument document)
+        {
             bool isSsm = document.DocumentType?.ToUpper() == "SSM";
             string formTitle = isSsm
                 ? "FIȘA DE SECURITATE ȘI SĂNĂTATE ÎN MUNCĂ"
@@ -476,361 +498,376 @@ namespace SyncApp26.Infrastructure.Services
                 : F(user.AdmittedByName);
             string managerFunction = user.AssignedTo?.Function?.Name ?? F(user.AdmittedByFunction);
 
-            // Get the periodic training for this specific document (avoid mixing SSM/SU signatures)
-            var latestPt = user.PeriodicTrainings?
-                .Where(pt => pt.UserDocumentId == document.Id)
-                .OrderByDescending(pt => pt.TrainingDate)
-                .ThenByDescending(pt => pt.CreatedAt)
-                .FirstOrDefault();
+            return new DocumentRenderContext(isSsm, formTitle, accentColor, headerColor, coverBg, managerName, managerFunction);
+        }
 
-            return QuestPDF.Fluent.Document.Create(container =>
+        private static void PageFooter(PageDescriptor page)
+        {
+            page.Footer().AlignCenter().Text(x =>
             {
-                // ══════════════════════════════════════════════════════
-                // PAGE 1 — COVER (coperta)
-                // ══════════════════════════════════════════════════════
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(2, Unit.Centimetre);
-                    page.PageColor(coverBg);
-                    page.DefaultTextStyle(x => x.FontSize(11));
-
-                    page.Content().Column(col =>
-                    {
-                        col.Item().AlignCenter()
-                            .Text(formTitle)
-                            .Bold().FontSize(13).FontColor(headerColor);
-
-                        col.Item().Height(24);
-
-                        col.Item().Border(1).BorderColor(Colors.Grey.Lighten1).Padding(14).Column(info =>
-                        {
-                            void Row(string lbl, string val)
-                            {
-                                info.Item().Row(r =>
-                                {
-                                    r.ConstantItem(130).Text(lbl).Bold().FontSize(10);
-                                    r.RelativeItem().BorderBottom(0.5f).Text(val).FontSize(10);
-                                });
-                                info.Item().Height(8);
-                            }
-
-                            Row("Unitatea:", F(user.Department?.Name));
-                            Row("Numele și prenumele:", $"{user.FirstName} {user.LastName}");
-
-                            if (isSsm)
-                            {
-                                Row("Domiciliul:", F(user.Address));
-                                Row("Grupa sanguină:", F(user.BloodGroup));
-                                Row("Legitimația / Marca:", F(user.BadgeNumber));
-                            }
-                            else
-                            {
-                                Row("Locul de muncă:", F(user.Department?.Name));
-                                Row("Marca:", F(user.BadgeNumber));
-                                Row("Domiciliul:", F(user.Address));
-                            }
-                        });
-
-                        col.Item().Height(20);
-
-                        col.Item().AlignCenter().Text($"Document generat: {document.GeneratedAt:dd.MM.yyyy}")
-                            .FontSize(9).FontColor(Colors.Grey.Darken1);
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                    });
-                });
-
-                // ══════════════════════════════════════════════════════
-                // PAGE 2 — DATE GENERALE + INSTRUIRE LA ANGAJARE
-                // ══════════════════════════════════════════════════════
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(2, Unit.Centimetre);
-                    page.PageColor(Colors.White);
-                    page.DefaultTextStyle(x => x.FontSize(10));
-
-                    page.Content().Column(col =>
-                    {
-                        // ── Date Generale ──────────────────────────────
-                        SectionHeader(col, "DATE GENERALE", accentColor);
-
-                        col.Item().Column(data =>
-                        {
-                            void DataRow(string lbl, string val)
-                            {
-                                data.Item().Row(r =>
-                                {
-                                    r.ConstantItem(190).Text(lbl).Bold();
-                                    r.RelativeItem().BorderBottom(0.5f).Text(val);
-                                });
-                                data.Item().Height(5);
-                            }
-
-                            DataRow("Nume, prenume:", $"{user.FirstName} {user.LastName}");
-                            DataRow("Data și locul nașterii:", $"{FDate(user.DateOfBirth)}, {F(user.PlaceOfBirth)}");
-
-                            if (isSsm)
-                                DataRow("Calificarea:", F(user.Education));
-                            else
-                            {
-                                DataRow("Studii:", F(user.Education));
-                                DataRow("Calificarea (specialitatea, meseria):", F(user.Function?.Name));
-                            }
-
-                            DataRow("Funcția:", F(user.Function?.Name));
-                            DataRow("Locul de muncă:", F(user.Department?.Name));
-
-                            if (isSsm)
-                            {
-                                DataRow("Autorizații (ISCIR etc.):", F(user.Qualifications));
-                                DataRow("Traseul și durata deplasare la/de la serviciu:",
-                                    $"{F(user.CommuteRoute)}{(user.CommuteDurationMinutes.HasValue ? $" ({user.CommuteDurationMinutes} min)" : "")}");
-                            }
-                        });
-
-                        col.Item().Height(8);
-
-                        // ── Instruire la angajare ──────────────────────
-                        var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? "SSM" : "SU"));
-                        string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
-                        SectionHeader(col, sectionTitle, accentColor);
-
-                        // 1. Instruire introductivă generală
-                        string t1 = isSsm ? "1. Instruirea introductiv generală" : "1. Instructajul introductiv general";
-                        col.Item().Text(t1).Bold();
-                        col.Item().Height(3);
-                        col.Item().Text(text =>
-                        {
-                            string verb = isSsm ? "efectuată" : "efectuat";
-                            text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
-                            text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
-                            text.Span(" ore de către ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingInstructor ?? managerName)).Underline().FontSize(10);
-                            text.Span(" având funcția de ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
-                        });
-                        col.Item().Height(3);
-                        col.Item().Text("Conținutul instruirii:").Bold();
-                        var introContent = it?.IntroductoryTrainingContent;
-                        col.Item().Border(0.5f).Padding(6)
-                            .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
-                        // Signatures frozen from first signing — stored on UserInitialTraining
-                        SignatureRow(col, isSsm,
-                            it?.UserSignatureMethod, it?.UserSignatureData,
-                            it?.InstructorSignatureMethod, it?.InstructorSignatureData,
-                            it?.VerifierSignatureMethod, it?.VerifierSignatureData);
-
-                        col.Item().Height(8);
-
-                        // 2. Instruire la locul de muncă
-                        string t2 = isSsm ? "2. Instruirea la locul de muncă" : "2. Instructajul la locul de muncă";
-                        col.Item().Text(t2).Bold();
-                        col.Item().Height(3);
-                        col.Item().Text(text =>
-                        {
-                            string verb = isSsm ? "efectuată" : "efectuat";
-                            text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
-                            text.Span(" loc de muncă/post de lucru ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
-                            text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
-                            text.Span(" ore, de către ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingInstructor ?? managerName)).Underline().FontSize(10);
-                            text.Span(" având funcția de ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
-                        });
-                        col.Item().Height(3);
-                        col.Item().Text("Conținutul instruirii:").Bold();
-                        var workContent = it?.WorkplaceTrainingContent;
-                        col.Item().Border(0.5f).Padding(6)
-                            .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
-                        // Signatures frozen from first signing — stored on UserInitialTraining
-                        SignatureRow(col, isSsm,
-                            it?.UserSignatureMethod, it?.UserSignatureData,
-                            it?.InstructorSignatureMethod, it?.InstructorSignatureData,
-                            it?.VerifierSignatureMethod, it?.VerifierSignatureData);
-
-                        col.Item().Height(10);
-
-                        // 3. Admis la lucru
-                        col.Item().Text("3. Admis la lucru").Bold();
-                        col.Item().Height(3);
-                        col.Item().Row(r =>
-                        {
-                            r.ConstantItem(160).Text("Numele și prenumele:").Bold();
-                            r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByName ?? managerName));
-                        });
-                        col.Item().Height(4);
-                        col.Item().Row(r =>
-                        {
-                            r.ConstantItem(160).Text("Funcția (șef secție, atelier, șantier):").Bold();
-                            r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByFunction ?? managerFunction));
-                        });
-                        col.Item().Height(4);
-                        col.Item().Row(r =>
-                        {
-                            r.ConstantItem(160).Text("Data și semnătura:").Bold();
-                            r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedDate?.ToString("dd.MM.yyyy")));
-                        });
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                    });
-                });
-
-                // ══════════════════════════════════════════════════════
-                // PAGE 3 — INSTRUIRE PERIODICĂ 
-                // ══════════════════════════════════════════════════════
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(1.5f, Unit.Centimetre);
-                    page.PageColor(Colors.White);
-                    page.DefaultTextStyle(x => x.FontSize(9));
-
-                    page.Content().Column(col =>
-                    {
-                        string periodicTitle = isSsm ? "3. INSTRUIRE PERIODICĂ" : "INSTRUCTAJUL PERIODIC";
-                        SectionHeader(col, periodicTitle, accentColor);
-
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c =>
-                            {
-                                c.ConstantColumn(20);   // Nr. crt.
-                                c.ConstantColumn(50);   // Data
-                                c.ConstantColumn(35);   // Durata
-                                c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
-                                c.RelativeColumn(4.5f); // Material predat
-                                c.RelativeColumn(1.0f); // Semnătură instruit
-                                c.RelativeColumn(1.0f); // Semnătură instructor
-                                if (isSsm) c.RelativeColumn(1.0f); // Semnătură verificator
-                            });
-
-                            static IContainer HeaderCell(IContainer c) =>
-                                c.Background(Colors.Grey.Lighten2).Border(0.5f).Padding(2);
-
-                            table.Header(header =>
-                            {
-                                header.Cell().Element(HeaderCell).Text("Nr. crt.").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Data instruirii").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Durata (h)").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Materialul predat").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstruit").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstructor").Bold().FontSize(7);
-                                if (isSsm)
-                                    header.Cell().Element(HeaderCell).Text("Semnătura\nverificator").Bold().FontSize(7);
-                            });
-
-                            static IContainer DataCell(IContainer c) =>
-                                c.Border(0.5f).Padding(2).MinHeight(14);
-
-                            static IContainer HighlightCell(IContainer c) =>
-                                c.Background("#FFF9C4").Border(0.5f).Padding(3).MinHeight(16);
-
-                            // Each document is self-contained: show only its own PT rows.
-                            // Order by CreatedAt: copies inherit CreatedAt from the original row,
-                            // so insertion order is preserved regardless of TrainingDate.
-                            // The current row (Step 2/3) always has the latest CreatedAt → naturally last.
-                            var periodicTrainings = (user.PeriodicTrainings?
-                                .Where(pt => pt.UserDocumentId == document.Id)
-                                .OrderBy(pt => pt.CreatedAt)
-                                .ToList()) ?? new List<PeriodicTraining>();
-                            string occupation = user.Function?.Name ?? "";
-
-                            bool hasTrainings = periodicTrainings.Count > 0;
-
-                            for (int i = 0; i < periodicTrainings.Count; i++)
-                            {
-                                var training = periodicTrainings[i];
-                                // The last row is the current (new) one; earlier rows are historical copies
-                                bool isCurrentDocRow = (i == periodicTrainings.Count - 1);
-
-                                // Use only per-row signatures stored directly on the PeriodicTraining row.
-                                // No fallback to document-level fields — those are transient; the
-                                // canonical signature store is always the training row.
-                                string? userSigData = training.UserSignatureData;
-                                string? userSigMethod = training.UserSignatureMethod;
-                                string? mgrSigData = training.InstructorSignature;
-                                string? mgrSigMethod = training.InstructorSignatureMethod;
-                                string? verifierSigData = training.VerifierSignature;
-                                string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
-
-                                // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
-                                if (isSsm && !string.IsNullOrEmpty(verifierSigData) && string.IsNullOrEmpty(training.InstructorSignature))
-                                {
-                                    mgrSigData = null;
-                                    mgrSigMethod = null;
-                                }
-
-
-                                // Evidențiere pentru cazurile:
-                                // 1. Lipsesc ambele semnături (angajat și manager/verificator)
-                                // 2. Există semnătura angajatului, dar lipsește cea a managerului/verificatorului (pentru ca managerul să vadă linia evidențiată)
-                                bool missingSignature = isSsm
-                                    ? string.IsNullOrEmpty(userSigData) || (string.IsNullOrEmpty(mgrSigData) && string.IsNullOrEmpty(verifierSigData))
-                                    : string.IsNullOrEmpty(userSigData) || string.IsNullOrEmpty(mgrSigData);
-
-
-                                bool highlightForManager = isSsm
-                                    ? !string.IsNullOrEmpty(userSigData) && (string.IsNullOrEmpty(mgrSigData) || string.IsNullOrEmpty(verifierSigData))
-                                    : !string.IsNullOrEmpty(userSigData) && string.IsNullOrEmpty(mgrSigData);
-
-                                // Highlight this row only if signatures are still missing and viewer is not admin
-                                bool allSigned = isSsm
-                                    ? !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData) && !string.IsNullOrEmpty(verifierSigData)
-                                    : !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData);
-
-                                Func<IContainer, IContainer> rowCell = (isCurrentDocRow && !allSigned && !viewerIsAdmin) ? HighlightCell : DataCell;
-
-                                table.Cell().Element(rowCell).Text((i + 1).ToString()).FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(6.5f);
-
-                                table.Cell().Element(rowCell).Column(c => RenderSignature(c, userSigMethod, userSigData));
-                                table.Cell().Element(rowCell).Column(c => RenderSignature(c, mgrSigMethod, mgrSigData));
-
-                                if (isSsm)
-                                    table.Cell().Element(rowCell).Column(c => RenderSignature(c, verifierSigMethod, verifierSigData));
-                            }
-
-                            // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
-                            if (!hasTrainings)
-                            {
-                                Func<IContainer, IContainer> rowCell = viewerIsAdmin ? DataCell : HighlightCell;
-
-                                table.Cell().Element(rowCell).Text("1").FontSize(7);
-                                table.Cell().Element(rowCell).Text(document.GeneratedAt.ToString("dd.MM.yyyy")).FontSize(7);
-                                table.Cell().Element(rowCell).Text("").FontSize(7);
-                                table.Cell().Element(rowCell).Text(occupation).FontSize(7);
-                                table.Cell().Element(rowCell).Text("").FontSize(7);
-                                table.Cell().Element(rowCell).Text(""); // employee sig — empty until signed
-                                table.Cell().Element(rowCell).Text(""); // instructor sig — empty until signed
-                                if (isSsm)
-                                    table.Cell().Element(rowCell).Text(""); // verifier sig — empty until signed
-                            }
-                        });
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                    });
-                });
+                x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
             });
+        }
+
+        // ══════════════════════════════════════════════════════
+        // PAGE 1 — COVER (coperta)
+        // ══════════════════════════════════════════════════════
+        private static void BuildCoverPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, UserDocument document, DocumentRenderContext ctx)
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(ctx.CoverBg);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Content().Column(col =>
+                {
+                    col.Item().AlignCenter()
+                        .Text(ctx.FormTitle)
+                        .Bold().FontSize(13).FontColor(ctx.HeaderColor);
+
+                    col.Item().Height(24);
+
+                    col.Item().Border(1).BorderColor(Colors.Grey.Lighten1).Padding(14).Column(info =>
+                    {
+                        void Row(string lbl, string val)
+                        {
+                            info.Item().Row(r =>
+                            {
+                                r.ConstantItem(130).Text(lbl).Bold().FontSize(10);
+                                r.RelativeItem().BorderBottom(0.5f).Text(val).FontSize(10);
+                            });
+                            info.Item().Height(8);
+                        }
+
+                        Row("Unitatea:", F(user.Department?.Name));
+                        Row("Numele și prenumele:", $"{user.FirstName} {user.LastName}");
+
+                        if (ctx.IsSsm)
+                        {
+                            Row("Domiciliul:", F(user.Address));
+                            Row("Grupa sanguină:", F(user.BloodGroup));
+                            Row("Legitimația / Marca:", F(user.BadgeNumber));
+                        }
+                        else
+                        {
+                            Row("Locul de muncă:", F(user.Department?.Name));
+                            Row("Marca:", F(user.BadgeNumber));
+                            Row("Domiciliul:", F(user.Address));
+                        }
+                    });
+
+                    col.Item().Height(20);
+
+                    col.Item().AlignCenter().Text($"Document generat: {document.GeneratedAt:dd.MM.yyyy}")
+                        .FontSize(9).FontColor(Colors.Grey.Darken1);
+                });
+
+                PageFooter(page);
+            });
+        }
+
+        // ══════════════════════════════════════════════════════
+        // PAGE 2 — DATE GENERALE + INSTRUIRE LA ANGAJARE
+        // ══════════════════════════════════════════════════════
+        private static void BuildGeneralInfoPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, DocumentRenderContext ctx)
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Content().Column(col =>
+                {
+                    BuildGeneralDataSection(col, user, ctx);
+                    col.Item().Height(8);
+                    BuildInitialTrainingSection(col, user, ctx);
+                });
+
+                PageFooter(page);
+            });
+        }
+
+        private static void BuildGeneralDataSection(ColumnDescriptor col, User user, DocumentRenderContext ctx)
+        {
+            SectionHeader(col, "DATE GENERALE", ctx.AccentColor);
+
+            col.Item().Column(data =>
+            {
+                void DataRow(string lbl, string val)
+                {
+                    data.Item().Row(r =>
+                    {
+                        r.ConstantItem(190).Text(lbl).Bold();
+                        r.RelativeItem().BorderBottom(0.5f).Text(val);
+                    });
+                    data.Item().Height(5);
+                }
+
+                DataRow("Nume, prenume:", $"{user.FirstName} {user.LastName}");
+                DataRow("Data și locul nașterii:", $"{FDate(user.DateOfBirth)}, {F(user.PlaceOfBirth)}");
+
+                if (ctx.IsSsm)
+                    DataRow("Calificarea:", F(user.Education));
+                else
+                {
+                    DataRow("Studii:", F(user.Education));
+                    DataRow("Calificarea (specialitatea, meseria):", F(user.Function?.Name));
+                }
+
+                DataRow("Funcția:", F(user.Function?.Name));
+                DataRow("Locul de muncă:", F(user.Department?.Name));
+
+                if (ctx.IsSsm)
+                {
+                    DataRow("Autorizații (ISCIR etc.):", F(user.Qualifications));
+                    DataRow("Traseul și durata deplasare la/de la serviciu:",
+                        $"{F(user.CommuteRoute)}{(user.CommuteDurationMinutes.HasValue ? $" ({user.CommuteDurationMinutes} min)" : "")}");
+                }
+            });
+        }
+
+        private static void BuildInitialTrainingSection(ColumnDescriptor col, User user, DocumentRenderContext ctx)
+        {
+            bool isSsm = ctx.IsSsm;
+            var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? "SSM" : "SU"));
+            string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
+            SectionHeader(col, sectionTitle, ctx.AccentColor);
+
+            RenderIntroductoryTrainingItem(col, ctx, it);
+            col.Item().Height(8);
+            RenderWorkplaceTrainingItem(col, user, ctx, it);
+            col.Item().Height(10);
+            RenderAdmittedToWorkItem(col, user, ctx);
+        }
+
+        // 1. Instruire introductivă generală
+        private static void RenderIntroductoryTrainingItem(ColumnDescriptor col, DocumentRenderContext ctx, UserInitialTraining? it)
+        {
+            bool isSsm = ctx.IsSsm;
+            string t1 = isSsm ? "1. Instruirea introductiv generală" : "1. Instructajul introductiv general";
+            col.Item().Text(t1).Bold();
+            col.Item().Height(3);
+            col.Item().Text(text =>
+            {
+                string verb = isSsm ? "efectuată" : "efectuat";
+                text.Span($"a fost {verb} la data ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                text.Span(" timp de ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
+                text.Span(" ore de către ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingInstructor ?? ctx.ManagerName)).Underline().FontSize(10);
+                text.Span(" având funcția de ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingInstructorFunction ?? ctx.ManagerFunction)).Underline().FontSize(10);
+            });
+            col.Item().Height(3);
+            col.Item().Text("Conținutul instruirii:").Bold();
+            var introContent = it?.IntroductoryTrainingContent;
+            col.Item().Border(0.5f).Padding(6)
+                .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
+            // Signatures frozen from first signing — stored on UserInitialTraining
+            SignatureRow(col, isSsm,
+                it?.UserSignatureMethod, it?.UserSignatureData,
+                it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                it?.VerifierSignatureMethod, it?.VerifierSignatureData);
+        }
+
+        // 2. Instruire la locul de muncă
+        private static void RenderWorkplaceTrainingItem(ColumnDescriptor col, User user, DocumentRenderContext ctx, UserInitialTraining? it)
+        {
+            bool isSsm = ctx.IsSsm;
+            string t2 = isSsm ? "2. Instruirea la locul de muncă" : "2. Instructajul la locul de muncă";
+            col.Item().Text(t2).Bold();
+            col.Item().Height(3);
+            col.Item().Text(text =>
+            {
+                string verb = isSsm ? "efectuată" : "efectuat";
+                text.Span($"a fost {verb} la data ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                text.Span(" loc de muncă/post de lucru ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
+                text.Span(" timp de ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
+                text.Span(" ore, de către ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingInstructor ?? ctx.ManagerName)).Underline().FontSize(10);
+                text.Span(" având funcția de ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingInstructorFunction ?? ctx.ManagerFunction)).Underline().FontSize(10);
+            });
+            col.Item().Height(3);
+            col.Item().Text("Conținutul instruirii:").Bold();
+            var workContent = it?.WorkplaceTrainingContent;
+            col.Item().Border(0.5f).Padding(6)
+                .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
+            // Signatures frozen from first signing — stored on UserInitialTraining
+            SignatureRow(col, isSsm,
+                it?.UserSignatureMethod, it?.UserSignatureData,
+                it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                it?.VerifierSignatureMethod, it?.VerifierSignatureData);
+        }
+
+        // 3. Admis la lucru
+        private static void RenderAdmittedToWorkItem(ColumnDescriptor col, User user, DocumentRenderContext ctx)
+        {
+            col.Item().Text("3. Admis la lucru").Bold();
+            col.Item().Height(3);
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(160).Text("Numele și prenumele:").Bold();
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByName ?? ctx.ManagerName));
+            });
+            col.Item().Height(4);
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(160).Text("Funcția (șef secție, atelier, șantier):").Bold();
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByFunction ?? ctx.ManagerFunction));
+            });
+            col.Item().Height(4);
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(160).Text("Data și semnătura:").Bold();
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedDate?.ToString("dd.MM.yyyy")));
+            });
+        }
+
+        // ══════════════════════════════════════════════════════
+        // PAGE 3 — INSTRUIRE PERIODICĂ
+        // ══════════════════════════════════════════════════════
+        private static void BuildPeriodicTrainingPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, UserDocument document, DocumentRenderContext ctx, bool viewerIsAdmin)
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.5f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(9));
+
+                page.Content().Column(col =>
+                {
+                    string periodicTitle = ctx.IsSsm ? "3. INSTRUIRE PERIODICĂ" : "INSTRUCTAJUL PERIODIC";
+                    SectionHeader(col, periodicTitle, ctx.AccentColor);
+
+                    col.Item().Table(table => BuildPeriodicTrainingTable(table, user, document, ctx, viewerIsAdmin));
+                });
+
+                PageFooter(page);
+            });
+        }
+
+        private static IContainer PeriodicHeaderCell(IContainer c) =>
+            c.Background(Colors.Grey.Lighten2).Border(0.5f).Padding(2);
+
+        private static IContainer PeriodicDataCell(IContainer c) =>
+            c.Border(0.5f).Padding(2).MinHeight(14);
+
+        private static IContainer PeriodicHighlightCell(IContainer c) =>
+            c.Background("#FFF9C4").Border(0.5f).Padding(3).MinHeight(16);
+
+        private static void BuildPeriodicTrainingTable(TableDescriptor table, User user, UserDocument document, DocumentRenderContext ctx, bool viewerIsAdmin)
+        {
+            bool isSsm = ctx.IsSsm;
+
+            table.ColumnsDefinition(c =>
+            {
+                c.ConstantColumn(20);   // Nr. crt.
+                c.ConstantColumn(50);   // Data
+                c.ConstantColumn(35);   // Durata
+                c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
+                c.RelativeColumn(4.5f); // Material predat
+                c.RelativeColumn(1.0f); // Semnătură instruit
+                c.RelativeColumn(1.0f); // Semnătură instructor
+                if (isSsm) c.RelativeColumn(1.0f); // Semnătură verificator
+            });
+
+            table.Header(header =>
+            {
+                header.Cell().Element(PeriodicHeaderCell).Text("Nr. crt.").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Data instruirii").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Durata (h)").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Materialul predat").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\ninstruit").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\ninstructor").Bold().FontSize(7);
+                if (isSsm)
+                    header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\nverificator").Bold().FontSize(7);
+            });
+
+            // Each document is self-contained: show only its own PT rows.
+            // Order by CreatedAt: copies inherit CreatedAt from the original row,
+            // so insertion order is preserved regardless of TrainingDate.
+            // The current row (Step 2/3) always has the latest CreatedAt → naturally last.
+            var periodicTrainings = (user.PeriodicTrainings?
+                .Where(pt => pt.UserDocumentId == document.Id)
+                .OrderBy(pt => pt.CreatedAt)
+                .ToList()) ?? new List<PeriodicTraining>();
+            string occupation = user.Function?.Name ?? "";
+
+            for (int i = 0; i < periodicTrainings.Count; i++)
+            {
+                // The last row is the current (new) one; earlier rows are historical copies
+                bool isCurrentDocRow = (i == periodicTrainings.Count - 1);
+                RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, occupation, isSsm, viewerIsAdmin);
+            }
+
+            // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
+            if (periodicTrainings.Count == 0)
+                RenderEmptyPeriodicTrainingRow(table, document, occupation, isSsm, viewerIsAdmin);
+        }
+
+        private static void RenderPeriodicTrainingRow(TableDescriptor table, PeriodicTraining training, int index, bool isCurrentDocRow, string occupation, bool isSsm, bool viewerIsAdmin)
+        {
+            // Use only per-row signatures stored directly on the PeriodicTraining row.
+            // No fallback to document-level fields — those are transient; the
+            // canonical signature store is always the training row.
+            string? userSigData = training.UserSignatureData;
+            string? userSigMethod = training.UserSignatureMethod;
+            string? mgrSigData = training.InstructorSignature;
+            string? mgrSigMethod = training.InstructorSignatureMethod;
+            string? verifierSigData = training.VerifierSignature;
+            string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
+
+            // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
+            if (isSsm && !string.IsNullOrEmpty(verifierSigData) && string.IsNullOrEmpty(training.InstructorSignature))
+            {
+                mgrSigData = null;
+                mgrSigMethod = null;
+            }
+
+            // Highlight this row only if signatures are still missing and viewer is not admin
+            bool allSigned = isSsm
+                ? !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData) && !string.IsNullOrEmpty(verifierSigData)
+                : !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData);
+
+            Func<IContainer, IContainer> rowCell = (isCurrentDocRow && !allSigned && !viewerIsAdmin) ? PeriodicHighlightCell : PeriodicDataCell;
+
+            table.Cell().Element(rowCell).Text((index + 1).ToString()).FontSize(7);
+            table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
+            table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
+            table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
+            table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(6.5f);
+
+            table.Cell().Element(rowCell).Column(c => RenderSignature(c, userSigMethod, userSigData));
+            table.Cell().Element(rowCell).Column(c => RenderSignature(c, mgrSigMethod, mgrSigData));
+
+            if (isSsm)
+                table.Cell().Element(rowCell).Column(c => RenderSignature(c, verifierSigMethod, verifierSigData));
+        }
+
+        private static void RenderEmptyPeriodicTrainingRow(TableDescriptor table, UserDocument document, string occupation, bool isSsm, bool viewerIsAdmin)
+        {
+            Func<IContainer, IContainer> rowCell = viewerIsAdmin ? PeriodicDataCell : PeriodicHighlightCell;
+
+            table.Cell().Element(rowCell).Text("1").FontSize(7);
+            table.Cell().Element(rowCell).Text(document.GeneratedAt.ToString("dd.MM.yyyy")).FontSize(7);
+            table.Cell().Element(rowCell).Text("").FontSize(7);
+            table.Cell().Element(rowCell).Text(occupation).FontSize(7);
+            table.Cell().Element(rowCell).Text("").FontSize(7);
+            table.Cell().Element(rowCell).Text(""); // employee sig — empty until signed
+            table.Cell().Element(rowCell).Text(""); // instructor sig — empty until signed
+            if (isSsm)
+                table.Cell().Element(rowCell).Text(""); // verifier sig — empty until signed
         }
 
         // ─── Public interface methods ────────────────────────────────────────────
