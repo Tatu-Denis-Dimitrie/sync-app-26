@@ -1199,6 +1199,24 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
+            var docs = await LoadPendingDocumentsForBulkSignAsync(isAdmin, signerUserId);
+            if (docs.Count == 0) return 0;
+
+            var timestamp = DateTime.UtcNow;
+            foreach (var doc in docs)
+                await SignSingleDocumentInBulkAsync(doc, isAdmin, signatureMethod, signatureData, ipAddress, timestamp);
+
+            await _context.SaveChangesAsync();
+
+            // Propagate signatures from older documents to their copies in newer documents,
+            // then regenerate the PDF for each signed document.
+            await PropagateAndRegenerateBulkSignedDocumentsAsync(docs);
+
+            return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
+        }
+
+        private async Task<List<UserDocument>> LoadPendingDocumentsForBulkSignAsync(bool isAdmin, Guid signerUserId)
+        {
             var allDocs = await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
@@ -1219,107 +1237,51 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
 
             // Process all pending documents ordered oldest-first so signatures are applied in creation order
-            var docs = allDocs.OrderBy(d => d.GeneratedAt).ToList();
+            return allDocs.OrderBy(d => d.GeneratedAt).ToList();
+        }
 
-            if (docs.Count == 0) return 0;
+        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
+        {
+            var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
+            ApplyDocumentLevelSignature(doc, isUserSignature: false, isAdminSignature: isAdmin, signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
 
-            var timestamp = DateTime.UtcNow;
+            bool isSsmAdminVerifier = isAdmin && doc.DocumentType?.ToUpperInvariant() == "SSM";
+            var trainingForDoc = await GetLatestPeriodicTrainingForDocumentAsync(doc.Id);
+            ApplyBulkSignatureToPeriodicTraining(trainingForDoc, isSsmAdminVerifier, signatureMethod, signatureData);
 
-            foreach (var doc in docs)
+            // Capture into UserInitialTraining (first-time only, never overwritten).
+            // Create record automatically if missing and this is the first document.
+            await ApplySignatureToInitialTrainingAsync(doc, isUserSignature: false, isAdminSignature: isAdmin, signatureMethod, signatureData);
+        }
+
+        private Task<PeriodicTraining?> GetLatestPeriodicTrainingForDocumentAsync(Guid documentId) =>
+            _context.PeriodicTrainings
+                .Where(pt => pt.UserDocumentId == documentId)
+                .OrderByDescending(pt => pt.TrainingDate)
+                .ThenByDescending(pt => pt.CreatedAt)
+                .FirstOrDefaultAsync();
+
+        private static void ApplyBulkSignatureToPeriodicTraining(PeriodicTraining? training, bool isSsmAdminVerifier, string signatureMethod, string signatureData)
+        {
+            if (training == null) return;
+
+            if (isSsmAdminVerifier)
             {
-                var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
-                var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
-
-                bool isSsmAdminVerifier = isAdmin && doc.DocumentType?.ToUpperInvariant() == "SSM";
-                if (isSsmAdminVerifier)
-                {
-                    // Admin signs last — store admin signature and mark as Completed
-                    doc.AdminSignatureMethod = signatureMethod;
-                    doc.AdminSignatureData = signatureData;
-                    doc.AdminSignatureIpAddress = ipAddress;
-                    doc.AdminSignedAt = timestamp;
-                    doc.AdminCryptographicSignature = cryptoSignature;
-                    doc.Status = "Completed";
-                }
-                else
-                {
-                    doc.ManagerSignatureMethod = signatureMethod;
-                    doc.ManagerSignatureData = signatureData;
-                    doc.ManagerSignatureIpAddress = ipAddress;
-                    doc.ManagerSignedAt = timestamp;
-                    doc.ManagerCryptographicSignature = cryptoSignature;
-                    // SSM needs admin next; SU is complete after LM signs
-                    bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
-                    doc.Status = isSsm ? "PendingAdmin" : "Completed";
-                }
-
-                var trainingForDoc = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserDocumentId == doc.Id)
-                    .OrderByDescending(pt => pt.TrainingDate)
-                    .ThenByDescending(pt => pt.CreatedAt)
-                    .FirstOrDefaultAsync();
-                if (trainingForDoc != null)
-                {
-                    if (isSsmAdminVerifier)
-                    {
-                        trainingForDoc.VerifierSignature = signatureData;
-                        trainingForDoc.VerifierSignatureMethod = signatureMethod;
-                    }
-                    else
-                    {
-                        trainingForDoc.InstructorSignature = signatureData;
-                        trainingForDoc.InstructorSignatureMethod = signatureMethod;
-                    }
-                }
-
-                // Capture into UserInitialTraining (first-time only, never overwritten).
-                // Create record automatically if missing and this is the first document.
-                var initialTraining = doc.User?.InitialTrainings
-                    ?.FirstOrDefault(t => string.Equals(t.DocumentType, doc.DocumentType, StringComparison.OrdinalIgnoreCase));
-
-                if (initialTraining == null && doc.User != null)
-                {
-                    bool isFirstDocument = !await _context.UserDocuments
-                        .AnyAsync(d => d.UserId == doc.UserId && d.DocumentType == doc.DocumentType && d.Id != doc.Id);
-                    if (isFirstDocument)
-                    {
-                        initialTraining = new UserInitialTraining
-                        {
-                            UserId = doc.UserId,
-                            DocumentType = doc.DocumentType ?? string.Empty,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        _context.UserInitialTrainings.Add(initialTraining);
-                        doc.User.InitialTrainings.Add(initialTraining);
-                    }
-                }
-
-                if (initialTraining != null)
-                {
-                    if (isSsmAdminVerifier && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
-                    {
-                        initialTraining.VerifierSignatureData = signatureData;
-                        initialTraining.VerifierSignatureMethod = signatureMethod;
-                    }
-                    else if (!isSsmAdminVerifier && string.IsNullOrEmpty(initialTraining.InstructorSignatureData))
-                    {
-                        initialTraining.InstructorSignatureData = signatureData;
-                        initialTraining.InstructorSignatureMethod = signatureMethod;
-                    }
-                }
+                training.VerifierSignature = signatureData;
+                training.VerifierSignatureMethod = signatureMethod;
             }
+            else
+            {
+                training.InstructorSignature = signatureData;
+                training.InstructorSignatureMethod = signatureMethod;
+            }
+        }
 
-            await _context.SaveChangesAsync();
-
-            // Propagate signatures from older documents to their copies in newer documents,
-            // then regenerate the PDF for each signed document.
+        private async Task PropagateAndRegenerateBulkSignedDocumentsAsync(List<UserDocument> docs)
+        {
             foreach (var doc in docs)
             {
-                var signedTraining = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserDocumentId == doc.Id)
-                    .OrderByDescending(pt => pt.TrainingDate)
-                    .ThenByDescending(pt => pt.CreatedAt)
-                    .FirstOrDefaultAsync();
+                var signedTraining = await GetLatestPeriodicTrainingForDocumentAsync(doc.Id);
                 if (signedTraining != null)
                     await PropagateSignatureToNewerDocumentsAsync(signedTraining);
 
@@ -1332,8 +1294,6 @@ namespace SyncApp26.Infrastructure.Services
                 }
             }
             await _context.SaveChangesAsync();
-
-            return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
         }
 
         public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
