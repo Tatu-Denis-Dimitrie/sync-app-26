@@ -60,26 +60,35 @@ namespace SyncApp26.Infrastructure.Services
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
             Console.WriteLine($"[GENERATE] Starting document generation for UserId: {userId}, DocumentType: {documentType}, GeneratedBy: {generatedByEmail}");
-            bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
-            // Check if user is admin (admins should not have documents generated)
+            await EnsureUserCanHaveDocumentGeneratedAsync(userId);
+
+            var doc = await CreateUserDocumentAsync(userId, documentType);
+
+            await CopyHistoricalPeriodicTrainingRowsAsync(userId, documentType, doc.Id);
+            await LinkOrCreateCurrentPeriodicTrainingRowAsync(userId, documentType, doc.Id);
+            await _context.SaveChangesAsync();
+
+            var user = await LoadUserWithDocumentDataAsync(userId)
+                ?? throw new ArgumentException("User not found.");
+
+            var pdfPath = await GeneratePdfSnapshotAsync(user, doc);
+            doc.PdfFilePath = pdfPath;
+            await _context.SaveChangesAsync();
+
+            return doc;
+        }
+
+        // Admins should not have SSM/SU documents generated for them.
+        private async Task EnsureUserCanHaveDocumentGeneratedAsync(Guid userId)
+        {
             var userToGenerate = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (userToGenerate != null && userToGenerate.Role == UserRole.Admin)
-            {
                 throw new InvalidOperationException("Cannot generate documents for admin users.");
-            }
+        }
 
-            // ── Find the previous (latest) document of the same type for this user ──
-            var previousDoc = await _context.UserDocuments
-                .Where(d => d.UserId == userId && d.DocumentType == documentType)
-                .OrderByDescending(d => d.GeneratedAt)
-                .FirstOrDefaultAsync();
-
-            // NOTE: Do NOT modify existing documents or their PeriodicTraining rows here.
-            // The new document must be a snapshot: copies of previous rows are created
-            // for the new document, but previous documents must remain unchanged.
-
-            // ── Create the new document ──
+        private async Task<UserDocument> CreateUserDocumentAsync(Guid userId, string documentType)
+        {
             var doc = new UserDocument
             {
                 UserId = userId,
@@ -89,85 +98,83 @@ namespace SyncApp26.Infrastructure.Services
             };
             _context.UserDocuments.Add(doc);
             await _context.SaveChangesAsync();
+            return doc;
+        }
 
-            // ── Step 1: Copy rows from PREVIOUS documents only (historical rows) ──
+        private async Task CopyHistoricalPeriodicTrainingRowsAsync(Guid userId, string documentType, Guid newDocId)
+        {
+            var allPreviousDocIds = await _context.UserDocuments
+                .Where(d => d.UserId == userId && d.DocumentType == documentType && d.Id != newDocId)
+                .Select(d => d.Id)
+                .ToListAsync();
+
+            var previousDocPtRows = await _context.PeriodicTrainings
+                .Where(pt => pt.UserId == userId
+                    && pt.UserDocumentId != null
+                    && allPreviousDocIds.Contains(pt.UserDocumentId.Value)
+                    && (pt.DocumentType == null || pt.DocumentType == documentType))
+                .ToListAsync();
+
+            var contentRows = previousDocPtRows.Where(pt =>
+                !string.IsNullOrEmpty(pt.MaterialTaught)
+                || !string.IsNullOrEmpty(pt.UserSignatureData)
+                || !string.IsNullOrEmpty(pt.InstructorSignature)
+                || !string.IsNullOrEmpty(pt.VerifierSignature))
+                .ToList();
+
+            var bestRows = SelectBestPeriodicTrainingRows(contentRows);
+
+            foreach (var oldRow in bestRows)
             {
-                var allPreviousDocIds = await _context.UserDocuments
-                    .Where(d => d.UserId == userId && d.DocumentType == documentType && d.Id != doc.Id)
-                    .Select(d => d.Id)
-                    .ToListAsync();
-
-                var previousDocPtRows = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserId == userId
-                        && pt.UserDocumentId != null
-                        && allPreviousDocIds.Contains(pt.UserDocumentId.Value)
-                        && (pt.DocumentType == null || pt.DocumentType == documentType))
-                    .ToListAsync();
-
-                // Skip blank auto-generated placeholder rows (no content, no signatures).
-                // These are created in Step 3 and should not accumulate across documents.
-                var contentRows = previousDocPtRows.Where(pt =>
-                    !string.IsNullOrEmpty(pt.MaterialTaught)
-                    || !string.IsNullOrEmpty(pt.UserSignatureData)
-                    || !string.IsNullOrEmpty(pt.InstructorSignature)
-                    || !string.IsNullOrEmpty(pt.VerifierSignature))
-                    .ToList();
-
-                // Build the set of IDs that are already referenced as SourceRowId by some copy.
-                // An original row whose Id appears here will use its own Id as the dedup key,
-                // collapsing it into the same group as all its copies.
-                var referencedSourceIds = contentRows
-                    .Where(r => r.SourceRowId.HasValue)
-                    .Select(r => r.SourceRowId!.Value)
-                    .ToHashSet();
-
-                // Dedup rules (in priority order):
-                //   Copy (SourceRowId set)         → key = SourceRowId  (groups all copies of same origin)
-                //   Original with known copies      → key = own Id      (same key as its copies above)
-                //   Legacy row (no SourceRowId tracking yet) → content key (old behaviour)
-                var bestRows = contentRows
-                    .GroupBy(pt => pt.SourceRowId.HasValue
-                        ? pt.SourceRowId.Value.ToString()
-                        : referencedSourceIds.Contains(pt.Id)
-                            ? pt.Id.ToString()
-                            : $"{pt.TrainingDate:O}|{pt.CreatedAt:O}|{pt.Occupation}|{pt.MaterialTaught}")
-                    .Select(g => g.OrderByDescending(pt =>
-                        (!string.IsNullOrEmpty(pt.UserSignatureData) ? 1 : 0) +
-                        (!string.IsNullOrEmpty(pt.InstructorSignature) ? 1 : 0) +
-                        (!string.IsNullOrEmpty(pt.VerifierSignature) ? 1 : 0)).First())
-                    .OrderBy(pt => pt.CreatedAt)
-                    .ToList();
-
-                foreach (var oldRow in bestRows)
+                var sourceId = oldRow.SourceRowId ?? oldRow.Id;
+                var copy = new PeriodicTraining
                 {
-                    // SourceRowId always points to the root original row, never to another copy
-                    var sourceId = oldRow.SourceRowId ?? oldRow.Id;
-                    var copy = new PeriodicTraining
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = userId,
-                        UserDocumentId = doc.Id,
-                        DocumentType = documentType,
-                        SourceRowId = sourceId,
-                        TrainingDate = oldRow.TrainingDate,
-                        DurationHours = oldRow.DurationHours,
-                        Occupation = oldRow.Occupation,
-                        MaterialTaught = oldRow.MaterialTaught,
-                        InstructorName = oldRow.InstructorName,
-                        VerifierName = oldRow.VerifierName,
-                        UserSignatureData = oldRow.UserSignatureData,
-                        UserSignatureMethod = oldRow.UserSignatureMethod,
-                        InstructorSignature = oldRow.InstructorSignature,
-                        InstructorSignatureMethod = oldRow.InstructorSignatureMethod,
-                        VerifierSignature = oldRow.VerifierSignature,
-                        VerifierSignatureMethod = oldRow.VerifierSignatureMethod,
-                        CreatedAt = oldRow.CreatedAt,
-                    };
-                    _context.PeriodicTrainings.Add(copy);
-                }
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    UserDocumentId = newDocId,
+                    DocumentType = documentType,
+                    SourceRowId = sourceId,
+                    TrainingDate = oldRow.TrainingDate,
+                    DurationHours = oldRow.DurationHours,
+                    Occupation = oldRow.Occupation,
+                    MaterialTaught = oldRow.MaterialTaught,
+                    InstructorName = oldRow.InstructorName,
+                    VerifierName = oldRow.VerifierName,
+                    UserSignatureData = oldRow.UserSignatureData,
+                    UserSignatureMethod = oldRow.UserSignatureMethod,
+                    InstructorSignature = oldRow.InstructorSignature,
+                    InstructorSignatureMethod = oldRow.InstructorSignatureMethod,
+                    VerifierSignature = oldRow.VerifierSignature,
+                    VerifierSignatureMethod = oldRow.VerifierSignatureMethod,
+                    CreatedAt = oldRow.CreatedAt,
+                };
+                _context.PeriodicTrainings.Add(copy);
             }
+        }
 
-            // ── Step 2: Link any unlinked (bulk training) rows directly to this document ──
+        private static List<PeriodicTraining> SelectBestPeriodicTrainingRows(List<PeriodicTraining> contentRows)
+        {
+            var referencedSourceIds = contentRows
+                .Where(r => r.SourceRowId.HasValue)
+                .Select(r => r.SourceRowId!.Value)
+                .ToHashSet();
+
+            return contentRows
+                .GroupBy(pt => pt.SourceRowId.HasValue
+                    ? pt.SourceRowId.Value.ToString()
+                    : referencedSourceIds.Contains(pt.Id)
+                        ? pt.Id.ToString()
+                        : $"{pt.TrainingDate:O}|{pt.CreatedAt:O}|{pt.Occupation}|{pt.MaterialTaught}")
+                .Select(g => g.OrderByDescending(pt =>
+                    (!string.IsNullOrEmpty(pt.UserSignatureData) ? 1 : 0) +
+                    (!string.IsNullOrEmpty(pt.InstructorSignature) ? 1 : 0) +
+                    (!string.IsNullOrEmpty(pt.VerifierSignature) ? 1 : 0)).First())
+                .OrderBy(pt => pt.CreatedAt)
+                .ToList();
+        }
+
+        private async Task LinkOrCreateCurrentPeriodicTrainingRowAsync(Guid userId, string documentType, Guid newDocId)
+        {
             var unlinkedRows = await _context.PeriodicTrainings
                 .Where(pt => pt.UserId == userId
                     && pt.UserDocumentId == null
@@ -175,44 +182,40 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
             foreach (var row in unlinkedRows)
             {
-                row.UserDocumentId = doc.Id;
+                row.UserDocumentId = newDocId;
                 row.DocumentType = documentType;
             }
 
-            // ── Step 3: Create a current row only if no unlinked rows were linked ──
-            PeriodicTraining? currentRow = unlinkedRows.Count > 0
-                ? unlinkedRows.OrderByDescending(r => r.CreatedAt).First()
-                : null;
+            if (unlinkedRows.Count > 0)
+                return;
 
-            if (currentRow == null)
+            var mostRecentTraining = await _context.PeriodicTrainings
+                .Where(pt => pt.UserId == userId && pt.UserDocumentId != newDocId
+                    && (pt.DocumentType == null || pt.DocumentType == documentType))
+                .OrderByDescending(pt => pt.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            var now = DateTime.UtcNow;
+            _context.PeriodicTrainings.Add(new PeriodicTraining
             {
-                var mostRecentTraining = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserId == userId && pt.UserDocumentId != doc.Id
-                        && (pt.DocumentType == null || pt.DocumentType == documentType))
-                    .OrderByDescending(pt => pt.CreatedAt)
-                    .FirstOrDefaultAsync();
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                UserDocumentId = newDocId,
+                DocumentType = documentType,
+                TrainingDate = now,
+                DurationHours = mostRecentTraining?.DurationHours,
+                Occupation = mostRecentTraining?.Occupation,
+                MaterialTaught = mostRecentTraining?.MaterialTaught,
+                InstructorName = mostRecentTraining?.InstructorName,
+                VerifierName = mostRecentTraining?.VerifierName,
+                CreatedAt = now,
+            });
+        }
 
-                var now = DateTime.UtcNow;
-                currentRow = new PeriodicTraining
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    UserDocumentId = doc.Id,
-                    DocumentType = documentType,
-                    TrainingDate = now,
-                    DurationHours = mostRecentTraining?.DurationHours,
-                    Occupation = mostRecentTraining?.Occupation,
-                    MaterialTaught = mostRecentTraining?.MaterialTaught,
-                    InstructorName = mostRecentTraining?.InstructorName,
-                    VerifierName = mostRecentTraining?.VerifierName,
-                    CreatedAt = now,
-                };
-                _context.PeriodicTrainings.Add(currentRow);
-            }
-            await _context.SaveChangesAsync();
-
-            // Reload user with all PeriodicTrainings (deterministic order)
-            var user = await _context.Users
+        // Reloads a user with every navigation BuildDocument needs, PeriodicTrainings in
+        // deterministic order (used after mutating training rows, ahead of a PDF snapshot).
+        private Task<User?> LoadUserWithDocumentDataAsync(Guid userId) =>
+            _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.Function)
@@ -220,17 +223,6 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
-            if (user == null)
-                throw new ArgumentException("User not found.");
-
-            var pdfPath = await GeneratePdfSnapshotAsync(user, doc);
-            doc.PdfFilePath = pdfPath;
-            await _context.SaveChangesAsync();
-
-            return doc;
-        }
-
-        // Semnează un singur document ca admin (pentru bulk progres)
         public async Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress)
         {
             var timestamp = DateTime.UtcNow;
@@ -272,14 +264,7 @@ namespace SyncApp26.Infrastructure.Services
             if (latestTraining != null)
                 await PropagateSignatureToNewerDocumentsAsync(latestTraining);
 
-            // Reîncarcă user fresh cu toate datele după save
-            var freshUser = await _context.Users
-                .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                .Include(u => u.Department)
-                .Include(u => u.Function)
-                .Include(u => u.InitialTrainings)
-                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+            var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
 
             if (freshUser != null)
             {
@@ -354,13 +339,7 @@ namespace SyncApp26.Infrastructure.Services
             {
                 var doc = await _context.UserDocuments.FirstOrDefaultAsync(d => d.Id == docId);
                 if (doc == null) continue;
-                var freshUser = await _context.Users
-                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                    .Include(u => u.Department)
-                    .Include(u => u.Function)
-                    .Include(u => u.InitialTrainings)
-                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+                var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
                 if (freshUser != null)
                 {
                     try { await GeneratePdfSnapshotAsync(freshUser, doc); } catch { }
@@ -459,10 +438,32 @@ namespace SyncApp26.Infrastructure.Services
 
         // ─── Core PDF builder ────────────────────────────────────────────────────
 
+        // Shared per-document styling/values computed once and threaded through each page builder.
+        private readonly record struct DocumentRenderContext(
+            bool IsSsm,
+            string FormTitle,
+            string AccentColor,
+            string HeaderColor,
+            string CoverBg,
+            string ManagerName,
+            string ManagerFunction);
+
         private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document, bool viewerIsAdmin = false)
         {
             QuestPDF.Settings.License = LicenseType.Community;
 
+            var ctx = CreateRenderContext(user, document);
+
+            return QuestPDF.Fluent.Document.Create(container =>
+            {
+                BuildCoverPage(container, user, document, ctx);
+                BuildGeneralInfoPage(container, user, ctx);
+                BuildPeriodicTrainingPage(container, user, document, ctx, viewerIsAdmin);
+            });
+        }
+
+        private static DocumentRenderContext CreateRenderContext(User user, UserDocument document)
+        {
             bool isSsm = document.DocumentType?.ToUpper() == "SSM";
             string formTitle = isSsm
                 ? "FIȘA DE SECURITATE ȘI SĂNĂTATE ÎN MUNCĂ"
@@ -476,361 +477,376 @@ namespace SyncApp26.Infrastructure.Services
                 : F(user.AdmittedByName);
             string managerFunction = user.AssignedTo?.Function?.Name ?? F(user.AdmittedByFunction);
 
-            // Get the periodic training for this specific document (avoid mixing SSM/SU signatures)
-            var latestPt = user.PeriodicTrainings?
-                .Where(pt => pt.UserDocumentId == document.Id)
-                .OrderByDescending(pt => pt.TrainingDate)
-                .ThenByDescending(pt => pt.CreatedAt)
-                .FirstOrDefault();
+            return new DocumentRenderContext(isSsm, formTitle, accentColor, headerColor, coverBg, managerName, managerFunction);
+        }
 
-            return QuestPDF.Fluent.Document.Create(container =>
+        private static void PageFooter(PageDescriptor page)
+        {
+            page.Footer().AlignCenter().Text(x =>
             {
-                // ══════════════════════════════════════════════════════
-                // PAGE 1 — COVER (coperta)
-                // ══════════════════════════════════════════════════════
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(2, Unit.Centimetre);
-                    page.PageColor(coverBg);
-                    page.DefaultTextStyle(x => x.FontSize(11));
-
-                    page.Content().Column(col =>
-                    {
-                        col.Item().AlignCenter()
-                            .Text(formTitle)
-                            .Bold().FontSize(13).FontColor(headerColor);
-
-                        col.Item().Height(24);
-
-                        col.Item().Border(1).BorderColor(Colors.Grey.Lighten1).Padding(14).Column(info =>
-                        {
-                            void Row(string lbl, string val)
-                            {
-                                info.Item().Row(r =>
-                                {
-                                    r.ConstantItem(130).Text(lbl).Bold().FontSize(10);
-                                    r.RelativeItem().BorderBottom(0.5f).Text(val).FontSize(10);
-                                });
-                                info.Item().Height(8);
-                            }
-
-                            Row("Unitatea:", F(user.Department?.Name));
-                            Row("Numele și prenumele:", $"{user.FirstName} {user.LastName}");
-
-                            if (isSsm)
-                            {
-                                Row("Domiciliul:", F(user.Address));
-                                Row("Grupa sanguină:", F(user.BloodGroup));
-                                Row("Legitimația / Marca:", F(user.BadgeNumber));
-                            }
-                            else
-                            {
-                                Row("Locul de muncă:", F(user.Department?.Name));
-                                Row("Marca:", F(user.BadgeNumber));
-                                Row("Domiciliul:", F(user.Address));
-                            }
-                        });
-
-                        col.Item().Height(20);
-
-                        col.Item().AlignCenter().Text($"Document generat: {document.GeneratedAt:dd.MM.yyyy}")
-                            .FontSize(9).FontColor(Colors.Grey.Darken1);
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                    });
-                });
-
-                // ══════════════════════════════════════════════════════
-                // PAGE 2 — DATE GENERALE + INSTRUIRE LA ANGAJARE
-                // ══════════════════════════════════════════════════════
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(2, Unit.Centimetre);
-                    page.PageColor(Colors.White);
-                    page.DefaultTextStyle(x => x.FontSize(10));
-
-                    page.Content().Column(col =>
-                    {
-                        // ── Date Generale ──────────────────────────────
-                        SectionHeader(col, "DATE GENERALE", accentColor);
-
-                        col.Item().Column(data =>
-                        {
-                            void DataRow(string lbl, string val)
-                            {
-                                data.Item().Row(r =>
-                                {
-                                    r.ConstantItem(190).Text(lbl).Bold();
-                                    r.RelativeItem().BorderBottom(0.5f).Text(val);
-                                });
-                                data.Item().Height(5);
-                            }
-
-                            DataRow("Nume, prenume:", $"{user.FirstName} {user.LastName}");
-                            DataRow("Data și locul nașterii:", $"{FDate(user.DateOfBirth)}, {F(user.PlaceOfBirth)}");
-
-                            if (isSsm)
-                                DataRow("Calificarea:", F(user.Education));
-                            else
-                            {
-                                DataRow("Studii:", F(user.Education));
-                                DataRow("Calificarea (specialitatea, meseria):", F(user.Function?.Name));
-                            }
-
-                            DataRow("Funcția:", F(user.Function?.Name));
-                            DataRow("Locul de muncă:", F(user.Department?.Name));
-
-                            if (isSsm)
-                            {
-                                DataRow("Autorizații (ISCIR etc.):", F(user.Qualifications));
-                                DataRow("Traseul și durata deplasare la/de la serviciu:",
-                                    $"{F(user.CommuteRoute)}{(user.CommuteDurationMinutes.HasValue ? $" ({user.CommuteDurationMinutes} min)" : "")}");
-                            }
-                        });
-
-                        col.Item().Height(8);
-
-                        // ── Instruire la angajare ──────────────────────
-                        var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? "SSM" : "SU"));
-                        string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
-                        SectionHeader(col, sectionTitle, accentColor);
-
-                        // 1. Instruire introductivă generală
-                        string t1 = isSsm ? "1. Instruirea introductiv generală" : "1. Instructajul introductiv general";
-                        col.Item().Text(t1).Bold();
-                        col.Item().Height(3);
-                        col.Item().Text(text =>
-                        {
-                            string verb = isSsm ? "efectuată" : "efectuat";
-                            text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
-                            text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
-                            text.Span(" ore de către ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingInstructor ?? managerName)).Underline().FontSize(10);
-                            text.Span(" având funcția de ").FontSize(10);
-                            text.Span(FUnderline(it?.IntroductoryTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
-                        });
-                        col.Item().Height(3);
-                        col.Item().Text("Conținutul instruirii:").Bold();
-                        var introContent = it?.IntroductoryTrainingContent;
-                        col.Item().Border(0.5f).Padding(6)
-                            .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
-                        // Signatures frozen from first signing — stored on UserInitialTraining
-                        SignatureRow(col, isSsm,
-                            it?.UserSignatureMethod, it?.UserSignatureData,
-                            it?.InstructorSignatureMethod, it?.InstructorSignatureData,
-                            it?.VerifierSignatureMethod, it?.VerifierSignatureData);
-
-                        col.Item().Height(8);
-
-                        // 2. Instruire la locul de muncă
-                        string t2 = isSsm ? "2. Instruirea la locul de muncă" : "2. Instructajul la locul de muncă";
-                        col.Item().Text(t2).Bold();
-                        col.Item().Height(3);
-                        col.Item().Text(text =>
-                        {
-                            string verb = isSsm ? "efectuată" : "efectuat";
-                            text.Span($"a fost {verb} la data ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
-                            text.Span(" loc de muncă/post de lucru ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
-                            text.Span(" timp de ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
-                            text.Span(" ore, de către ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingInstructor ?? managerName)).Underline().FontSize(10);
-                            text.Span(" având funcția de ").FontSize(10);
-                            text.Span(FUnderline(it?.WorkplaceTrainingInstructorFunction ?? managerFunction)).Underline().FontSize(10);
-                        });
-                        col.Item().Height(3);
-                        col.Item().Text("Conținutul instruirii:").Bold();
-                        var workContent = it?.WorkplaceTrainingContent;
-                        col.Item().Border(0.5f).Padding(6)
-                            .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
-                        // Signatures frozen from first signing — stored on UserInitialTraining
-                        SignatureRow(col, isSsm,
-                            it?.UserSignatureMethod, it?.UserSignatureData,
-                            it?.InstructorSignatureMethod, it?.InstructorSignatureData,
-                            it?.VerifierSignatureMethod, it?.VerifierSignatureData);
-
-                        col.Item().Height(10);
-
-                        // 3. Admis la lucru
-                        col.Item().Text("3. Admis la lucru").Bold();
-                        col.Item().Height(3);
-                        col.Item().Row(r =>
-                        {
-                            r.ConstantItem(160).Text("Numele și prenumele:").Bold();
-                            r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByName ?? managerName));
-                        });
-                        col.Item().Height(4);
-                        col.Item().Row(r =>
-                        {
-                            r.ConstantItem(160).Text("Funcția (șef secție, atelier, șantier):").Bold();
-                            r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByFunction ?? managerFunction));
-                        });
-                        col.Item().Height(4);
-                        col.Item().Row(r =>
-                        {
-                            r.ConstantItem(160).Text("Data și semnătura:").Bold();
-                            r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedDate?.ToString("dd.MM.yyyy")));
-                        });
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                    });
-                });
-
-                // ══════════════════════════════════════════════════════
-                // PAGE 3 — INSTRUIRE PERIODICĂ 
-                // ══════════════════════════════════════════════════════
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(1.5f, Unit.Centimetre);
-                    page.PageColor(Colors.White);
-                    page.DefaultTextStyle(x => x.FontSize(9));
-
-                    page.Content().Column(col =>
-                    {
-                        string periodicTitle = isSsm ? "3. INSTRUIRE PERIODICĂ" : "INSTRUCTAJUL PERIODIC";
-                        SectionHeader(col, periodicTitle, accentColor);
-
-                        col.Item().Table(table =>
-                        {
-                            table.ColumnsDefinition(c =>
-                            {
-                                c.ConstantColumn(20);   // Nr. crt.
-                                c.ConstantColumn(50);   // Data
-                                c.ConstantColumn(35);   // Durata
-                                c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
-                                c.RelativeColumn(4.5f); // Material predat
-                                c.RelativeColumn(1.0f); // Semnătură instruit
-                                c.RelativeColumn(1.0f); // Semnătură instructor
-                                if (isSsm) c.RelativeColumn(1.0f); // Semnătură verificator
-                            });
-
-                            static IContainer HeaderCell(IContainer c) =>
-                                c.Background(Colors.Grey.Lighten2).Border(0.5f).Padding(2);
-
-                            table.Header(header =>
-                            {
-                                header.Cell().Element(HeaderCell).Text("Nr. crt.").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Data instruirii").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Durata (h)").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Materialul predat").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstruit").Bold().FontSize(7);
-                                header.Cell().Element(HeaderCell).Text("Semnătura\ninstructor").Bold().FontSize(7);
-                                if (isSsm)
-                                    header.Cell().Element(HeaderCell).Text("Semnătura\nverificator").Bold().FontSize(7);
-                            });
-
-                            static IContainer DataCell(IContainer c) =>
-                                c.Border(0.5f).Padding(2).MinHeight(14);
-
-                            static IContainer HighlightCell(IContainer c) =>
-                                c.Background("#FFF9C4").Border(0.5f).Padding(3).MinHeight(16);
-
-                            // Each document is self-contained: show only its own PT rows.
-                            // Order by CreatedAt: copies inherit CreatedAt from the original row,
-                            // so insertion order is preserved regardless of TrainingDate.
-                            // The current row (Step 2/3) always has the latest CreatedAt → naturally last.
-                            var periodicTrainings = (user.PeriodicTrainings?
-                                .Where(pt => pt.UserDocumentId == document.Id)
-                                .OrderBy(pt => pt.CreatedAt)
-                                .ToList()) ?? new List<PeriodicTraining>();
-                            string occupation = user.Function?.Name ?? "";
-
-                            bool hasTrainings = periodicTrainings.Count > 0;
-
-                            for (int i = 0; i < periodicTrainings.Count; i++)
-                            {
-                                var training = periodicTrainings[i];
-                                // The last row is the current (new) one; earlier rows are historical copies
-                                bool isCurrentDocRow = (i == periodicTrainings.Count - 1);
-
-                                // Use only per-row signatures stored directly on the PeriodicTraining row.
-                                // No fallback to document-level fields — those are transient; the
-                                // canonical signature store is always the training row.
-                                string? userSigData = training.UserSignatureData;
-                                string? userSigMethod = training.UserSignatureMethod;
-                                string? mgrSigData = training.InstructorSignature;
-                                string? mgrSigMethod = training.InstructorSignatureMethod;
-                                string? verifierSigData = training.VerifierSignature;
-                                string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
-
-                                // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
-                                if (isSsm && !string.IsNullOrEmpty(verifierSigData) && string.IsNullOrEmpty(training.InstructorSignature))
-                                {
-                                    mgrSigData = null;
-                                    mgrSigMethod = null;
-                                }
-
-
-                                // Evidențiere pentru cazurile:
-                                // 1. Lipsesc ambele semnături (angajat și manager/verificator)
-                                // 2. Există semnătura angajatului, dar lipsește cea a managerului/verificatorului (pentru ca managerul să vadă linia evidențiată)
-                                bool missingSignature = isSsm
-                                    ? string.IsNullOrEmpty(userSigData) || (string.IsNullOrEmpty(mgrSigData) && string.IsNullOrEmpty(verifierSigData))
-                                    : string.IsNullOrEmpty(userSigData) || string.IsNullOrEmpty(mgrSigData);
-
-
-                                bool highlightForManager = isSsm
-                                    ? !string.IsNullOrEmpty(userSigData) && (string.IsNullOrEmpty(mgrSigData) || string.IsNullOrEmpty(verifierSigData))
-                                    : !string.IsNullOrEmpty(userSigData) && string.IsNullOrEmpty(mgrSigData);
-
-                                // Highlight this row only if signatures are still missing and viewer is not admin
-                                bool allSigned = isSsm
-                                    ? !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData) && !string.IsNullOrEmpty(verifierSigData)
-                                    : !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData);
-
-                                Func<IContainer, IContainer> rowCell = (isCurrentDocRow && !allSigned && !viewerIsAdmin) ? HighlightCell : DataCell;
-
-                                table.Cell().Element(rowCell).Text((i + 1).ToString()).FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
-                                table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(6.5f);
-
-                                table.Cell().Element(rowCell).Column(c => RenderSignature(c, userSigMethod, userSigData));
-                                table.Cell().Element(rowCell).Column(c => RenderSignature(c, mgrSigMethod, mgrSigData));
-
-                                if (isSsm)
-                                    table.Cell().Element(rowCell).Column(c => RenderSignature(c, verifierSigMethod, verifierSigData));
-                            }
-
-                            // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
-                            if (!hasTrainings)
-                            {
-                                Func<IContainer, IContainer> rowCell = viewerIsAdmin ? DataCell : HighlightCell;
-
-                                table.Cell().Element(rowCell).Text("1").FontSize(7);
-                                table.Cell().Element(rowCell).Text(document.GeneratedAt.ToString("dd.MM.yyyy")).FontSize(7);
-                                table.Cell().Element(rowCell).Text("").FontSize(7);
-                                table.Cell().Element(rowCell).Text(occupation).FontSize(7);
-                                table.Cell().Element(rowCell).Text("").FontSize(7);
-                                table.Cell().Element(rowCell).Text(""); // employee sig — empty until signed
-                                table.Cell().Element(rowCell).Text(""); // instructor sig — empty until signed
-                                if (isSsm)
-                                    table.Cell().Element(rowCell).Text(""); // verifier sig — empty until signed
-                            }
-                        });
-                    });
-
-                    page.Footer().AlignCenter().Text(x =>
-                    {
-                        x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
-                    });
-                });
+                x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
             });
+        }
+
+        // ══════════════════════════════════════════════════════
+        // PAGE 1 — COVER (coperta)
+        // ══════════════════════════════════════════════════════
+        private static void BuildCoverPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, UserDocument document, DocumentRenderContext ctx)
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(ctx.CoverBg);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Content().Column(col =>
+                {
+                    col.Item().AlignCenter()
+                        .Text(ctx.FormTitle)
+                        .Bold().FontSize(13).FontColor(ctx.HeaderColor);
+
+                    col.Item().Height(24);
+
+                    col.Item().Border(1).BorderColor(Colors.Grey.Lighten1).Padding(14).Column(info =>
+                    {
+                        void Row(string lbl, string val)
+                        {
+                            info.Item().Row(r =>
+                            {
+                                r.ConstantItem(130).Text(lbl).Bold().FontSize(10);
+                                r.RelativeItem().BorderBottom(0.5f).Text(val).FontSize(10);
+                            });
+                            info.Item().Height(8);
+                        }
+
+                        Row("Unitatea:", F(user.Department?.Name));
+                        Row("Numele și prenumele:", $"{user.FirstName} {user.LastName}");
+
+                        if (ctx.IsSsm)
+                        {
+                            Row("Domiciliul:", F(user.Address));
+                            Row("Grupa sanguină:", F(user.BloodGroup));
+                            Row("Legitimația / Marca:", F(user.BadgeNumber));
+                        }
+                        else
+                        {
+                            Row("Locul de muncă:", F(user.Department?.Name));
+                            Row("Marca:", F(user.BadgeNumber));
+                            Row("Domiciliul:", F(user.Address));
+                        }
+                    });
+
+                    col.Item().Height(20);
+
+                    col.Item().AlignCenter().Text($"Document generat: {document.GeneratedAt:dd.MM.yyyy}")
+                        .FontSize(9).FontColor(Colors.Grey.Darken1);
+                });
+
+                PageFooter(page);
+            });
+        }
+
+        // ══════════════════════════════════════════════════════
+        // PAGE 2 — DATE GENERALE + INSTRUIRE LA ANGAJARE
+        // ══════════════════════════════════════════════════════
+        private static void BuildGeneralInfoPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, DocumentRenderContext ctx)
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Content().Column(col =>
+                {
+                    BuildGeneralDataSection(col, user, ctx);
+                    col.Item().Height(8);
+                    BuildInitialTrainingSection(col, user, ctx);
+                });
+
+                PageFooter(page);
+            });
+        }
+
+        private static void BuildGeneralDataSection(ColumnDescriptor col, User user, DocumentRenderContext ctx)
+        {
+            SectionHeader(col, "DATE GENERALE", ctx.AccentColor);
+
+            col.Item().Column(data =>
+            {
+                void DataRow(string lbl, string val)
+                {
+                    data.Item().Row(r =>
+                    {
+                        r.ConstantItem(190).Text(lbl).Bold();
+                        r.RelativeItem().BorderBottom(0.5f).Text(val);
+                    });
+                    data.Item().Height(5);
+                }
+
+                DataRow("Nume, prenume:", $"{user.FirstName} {user.LastName}");
+                DataRow("Data și locul nașterii:", $"{FDate(user.DateOfBirth)}, {F(user.PlaceOfBirth)}");
+
+                if (ctx.IsSsm)
+                    DataRow("Calificarea:", F(user.Education));
+                else
+                {
+                    DataRow("Studii:", F(user.Education));
+                    DataRow("Calificarea (specialitatea, meseria):", F(user.Function?.Name));
+                }
+
+                DataRow("Funcția:", F(user.Function?.Name));
+                DataRow("Locul de muncă:", F(user.Department?.Name));
+
+                if (ctx.IsSsm)
+                {
+                    DataRow("Autorizații (ISCIR etc.):", F(user.Qualifications));
+                    DataRow("Traseul și durata deplasare la/de la serviciu:",
+                        $"{F(user.CommuteRoute)}{(user.CommuteDurationMinutes.HasValue ? $" ({user.CommuteDurationMinutes} min)" : "")}");
+                }
+            });
+        }
+
+        private static void BuildInitialTrainingSection(ColumnDescriptor col, User user, DocumentRenderContext ctx)
+        {
+            bool isSsm = ctx.IsSsm;
+            var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? "SSM" : "SU"));
+            string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
+            SectionHeader(col, sectionTitle, ctx.AccentColor);
+
+            RenderIntroductoryTrainingItem(col, ctx, it);
+            col.Item().Height(8);
+            RenderWorkplaceTrainingItem(col, user, ctx, it);
+            col.Item().Height(10);
+            RenderAdmittedToWorkItem(col, user, ctx);
+        }
+
+        // 1. Instruire introductivă generală
+        private static void RenderIntroductoryTrainingItem(ColumnDescriptor col, DocumentRenderContext ctx, UserInitialTraining? it)
+        {
+            bool isSsm = ctx.IsSsm;
+            string t1 = isSsm ? "1. Instruirea introductiv generală" : "1. Instructajul introductiv general";
+            col.Item().Text(t1).Bold();
+            col.Item().Height(3);
+            col.Item().Text(text =>
+            {
+                string verb = isSsm ? "efectuată" : "efectuat";
+                text.Span($"a fost {verb} la data ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                text.Span(" timp de ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
+                text.Span(" ore de către ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingInstructor ?? ctx.ManagerName)).Underline().FontSize(10);
+                text.Span(" având funcția de ").FontSize(10);
+                text.Span(FUnderline(it?.IntroductoryTrainingInstructorFunction ?? ctx.ManagerFunction)).Underline().FontSize(10);
+            });
+            col.Item().Height(3);
+            col.Item().Text("Conținutul instruirii:").Bold();
+            var introContent = it?.IntroductoryTrainingContent;
+            col.Item().Border(0.5f).Padding(6)
+                .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
+            // Signatures frozen from first signing — stored on UserInitialTraining
+            SignatureRow(col, isSsm,
+                it?.UserSignatureMethod, it?.UserSignatureData,
+                it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                it?.VerifierSignatureMethod, it?.VerifierSignatureData);
+        }
+
+        // 2. Instruire la locul de muncă
+        private static void RenderWorkplaceTrainingItem(ColumnDescriptor col, User user, DocumentRenderContext ctx, UserInitialTraining? it)
+        {
+            bool isSsm = ctx.IsSsm;
+            string t2 = isSsm ? "2. Instruirea la locul de muncă" : "2. Instructajul la locul de muncă";
+            col.Item().Text(t2).Bold();
+            col.Item().Height(3);
+            col.Item().Text(text =>
+            {
+                string verb = isSsm ? "efectuată" : "efectuat";
+                text.Span($"a fost {verb} la data ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
+                text.Span(" loc de muncă/post de lucru ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
+                text.Span(" timp de ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
+                text.Span(" ore, de către ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingInstructor ?? ctx.ManagerName)).Underline().FontSize(10);
+                text.Span(" având funcția de ").FontSize(10);
+                text.Span(FUnderline(it?.WorkplaceTrainingInstructorFunction ?? ctx.ManagerFunction)).Underline().FontSize(10);
+            });
+            col.Item().Height(3);
+            col.Item().Text("Conținutul instruirii:").Bold();
+            var workContent = it?.WorkplaceTrainingContent;
+            col.Item().Border(0.5f).Padding(6)
+                .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
+            // Signatures frozen from first signing — stored on UserInitialTraining
+            SignatureRow(col, isSsm,
+                it?.UserSignatureMethod, it?.UserSignatureData,
+                it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                it?.VerifierSignatureMethod, it?.VerifierSignatureData);
+        }
+
+        // 3. Admis la lucru
+        private static void RenderAdmittedToWorkItem(ColumnDescriptor col, User user, DocumentRenderContext ctx)
+        {
+            col.Item().Text("3. Admis la lucru").Bold();
+            col.Item().Height(3);
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(160).Text("Numele și prenumele:").Bold();
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByName ?? ctx.ManagerName));
+            });
+            col.Item().Height(4);
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(160).Text("Funcția (șef secție, atelier, șantier):").Bold();
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByFunction ?? ctx.ManagerFunction));
+            });
+            col.Item().Height(4);
+            col.Item().Row(r =>
+            {
+                r.ConstantItem(160).Text("Data și semnătura:").Bold();
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedDate?.ToString("dd.MM.yyyy")));
+            });
+        }
+
+        // ══════════════════════════════════════════════════════
+        // PAGE 3 — INSTRUIRE PERIODICĂ
+        // ══════════════════════════════════════════════════════
+        private static void BuildPeriodicTrainingPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, UserDocument document, DocumentRenderContext ctx, bool viewerIsAdmin)
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(1.5f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(9));
+
+                page.Content().Column(col =>
+                {
+                    string periodicTitle = ctx.IsSsm ? "3. INSTRUIRE PERIODICĂ" : "INSTRUCTAJUL PERIODIC";
+                    SectionHeader(col, periodicTitle, ctx.AccentColor);
+
+                    col.Item().Table(table => BuildPeriodicTrainingTable(table, user, document, ctx, viewerIsAdmin));
+                });
+
+                PageFooter(page);
+            });
+        }
+
+        private static IContainer PeriodicHeaderCell(IContainer c) =>
+            c.Background(Colors.Grey.Lighten2).Border(0.5f).Padding(2);
+
+        private static IContainer PeriodicDataCell(IContainer c) =>
+            c.Border(0.5f).Padding(2).MinHeight(14);
+
+        private static IContainer PeriodicHighlightCell(IContainer c) =>
+            c.Background("#FFF9C4").Border(0.5f).Padding(3).MinHeight(16);
+
+        private static void BuildPeriodicTrainingTable(TableDescriptor table, User user, UserDocument document, DocumentRenderContext ctx, bool viewerIsAdmin)
+        {
+            bool isSsm = ctx.IsSsm;
+
+            table.ColumnsDefinition(c =>
+            {
+                c.ConstantColumn(20);   // Nr. crt.
+                c.ConstantColumn(50);   // Data
+                c.ConstantColumn(35);   // Durata
+                c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
+                c.RelativeColumn(4.5f); // Material predat
+                c.RelativeColumn(1.0f); // Semnătură instruit
+                c.RelativeColumn(1.0f); // Semnătură instructor
+                if (isSsm) c.RelativeColumn(1.0f); // Semnătură verificator
+            });
+
+            table.Header(header =>
+            {
+                header.Cell().Element(PeriodicHeaderCell).Text("Nr. crt.").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Data instruirii").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Durata (h)").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Materialul predat").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\ninstruit").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\ninstructor").Bold().FontSize(7);
+                if (isSsm)
+                    header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\nverificator").Bold().FontSize(7);
+            });
+
+            // Each document is self-contained: show only its own PT rows.
+            // Order by CreatedAt: copies inherit CreatedAt from the original row,
+            // so insertion order is preserved regardless of TrainingDate.
+            // The current row (Step 2/3) always has the latest CreatedAt → naturally last.
+            var periodicTrainings = (user.PeriodicTrainings?
+                .Where(pt => pt.UserDocumentId == document.Id)
+                .OrderBy(pt => pt.CreatedAt)
+                .ToList()) ?? new List<PeriodicTraining>();
+            string occupation = user.Function?.Name ?? "";
+
+            for (int i = 0; i < periodicTrainings.Count; i++)
+            {
+                // The last row is the current (new) one; earlier rows are historical copies
+                bool isCurrentDocRow = (i == periodicTrainings.Count - 1);
+                RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, occupation, isSsm, viewerIsAdmin);
+            }
+
+            // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
+            if (periodicTrainings.Count == 0)
+                RenderEmptyPeriodicTrainingRow(table, document, occupation, isSsm, viewerIsAdmin);
+        }
+
+        private static void RenderPeriodicTrainingRow(TableDescriptor table, PeriodicTraining training, int index, bool isCurrentDocRow, string occupation, bool isSsm, bool viewerIsAdmin)
+        {
+            // Use only per-row signatures stored directly on the PeriodicTraining row.
+            // No fallback to document-level fields — those are transient; the
+            // canonical signature store is always the training row.
+            string? userSigData = training.UserSignatureData;
+            string? userSigMethod = training.UserSignatureMethod;
+            string? mgrSigData = training.InstructorSignature;
+            string? mgrSigMethod = training.InstructorSignatureMethod;
+            string? verifierSigData = training.VerifierSignature;
+            string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
+
+            // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
+            if (isSsm && !string.IsNullOrEmpty(verifierSigData) && string.IsNullOrEmpty(training.InstructorSignature))
+            {
+                mgrSigData = null;
+                mgrSigMethod = null;
+            }
+
+            // Highlight this row only if signatures are still missing and viewer is not admin
+            bool allSigned = isSsm
+                ? !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData) && !string.IsNullOrEmpty(verifierSigData)
+                : !string.IsNullOrEmpty(userSigData) && !string.IsNullOrEmpty(mgrSigData);
+
+            Func<IContainer, IContainer> rowCell = (isCurrentDocRow && !allSigned && !viewerIsAdmin) ? PeriodicHighlightCell : PeriodicDataCell;
+
+            table.Cell().Element(rowCell).Text((index + 1).ToString()).FontSize(7);
+            table.Cell().Element(rowCell).Text(training.TrainingDate?.ToString("dd.MM.yyyy") ?? "").FontSize(7);
+            table.Cell().Element(rowCell).Text(training.DurationHours?.ToString("0.#") ?? "").FontSize(7);
+            table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
+            table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(6.5f);
+
+            table.Cell().Element(rowCell).Column(c => RenderSignature(c, userSigMethod, userSigData));
+            table.Cell().Element(rowCell).Column(c => RenderSignature(c, mgrSigMethod, mgrSigData));
+
+            if (isSsm)
+                table.Cell().Element(rowCell).Column(c => RenderSignature(c, verifierSigMethod, verifierSigData));
+        }
+
+        private static void RenderEmptyPeriodicTrainingRow(TableDescriptor table, UserDocument document, string occupation, bool isSsm, bool viewerIsAdmin)
+        {
+            Func<IContainer, IContainer> rowCell = viewerIsAdmin ? PeriodicDataCell : PeriodicHighlightCell;
+
+            table.Cell().Element(rowCell).Text("1").FontSize(7);
+            table.Cell().Element(rowCell).Text(document.GeneratedAt.ToString("dd.MM.yyyy")).FontSize(7);
+            table.Cell().Element(rowCell).Text("").FontSize(7);
+            table.Cell().Element(rowCell).Text(occupation).FontSize(7);
+            table.Cell().Element(rowCell).Text("").FontSize(7);
+            table.Cell().Element(rowCell).Text(""); // employee sig — empty until signed
+            table.Cell().Element(rowCell).Text(""); // instructor sig — empty until signed
+            if (isSsm)
+                table.Cell().Element(rowCell).Text(""); // verifier sig — empty until signed
         }
 
         // ─── Public interface methods ────────────────────────────────────────────
@@ -920,6 +936,46 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<UserDocument>> GetManagerPendingSignaturesAsync(Guid managerId)
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings)
+                .Where(d => d.User != null && d.User.AssignedToId == managerId
+                    && d.Status == "PendingManager"
+                    && d.UserSignedAt != null
+                    && d.ManagerSignedAt == null)
+                .OrderByDescending(d => d.GeneratedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<UserDocument>> GetManagerSignedDocumentsAsync(Guid managerId)
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings)
+                .Where(d => d.User != null && d.User.AssignedToId == managerId
+                    && d.ManagerSignedAt != null)
+                .OrderByDescending(d => d.GeneratedAt)
+                .ToListAsync();
+        }
+
         public async Task<HashSet<Guid>> GetUserIdsWithDocumentTypeAsync(string documentType)
         {
             // Only count a user as "signed" if their LATEST document of this type has been signed by the user
@@ -964,7 +1020,34 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<bool> UpdateDocumentSignatureAsync(Guid documentId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false, Guid? periodicTrainingId = null)
         {
-            var doc = await _context.UserDocuments
+            var doc = await LoadDocumentForSignatureUpdateAsync(documentId);
+            if (doc == null) return false;
+
+            var timestamp = DateTime.UtcNow;
+            var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
+
+            ApplyDocumentLevelSignature(doc, isUserSignature, isAdminSignature, signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
+
+            // Persist signature to the specific PeriodicTraining row (by ID from token, or latest as fallback)
+            var targetTraining = FindTargetPeriodicTraining(doc, periodicTrainingId);
+            ApplySignatureToPeriodicTraining(targetTraining, doc, isUserSignature, isAdminSignature, signatureMethod, signatureData);
+
+            // Capture signature into UserInitialTraining once (first-time only, never overwritten)
+            await ApplySignatureToInitialTrainingAsync(doc, isUserSignature, isAdminSignature, signatureMethod, signatureData);
+
+            await RegenerateDocumentPdfSnapshotAsync(doc);
+
+            await _context.SaveChangesAsync();
+
+            // Propagate the signature to copies of this row in all newer documents
+            if (targetTraining != null)
+                await PropagateSignatureToNewerDocumentsAsync(targetTraining);
+
+            return true;
+        }
+
+        private Task<UserDocument?> LoadDocumentForSignatureUpdateAsync(Guid documentId) =>
+            _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
@@ -978,12 +1061,9 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
 
-            if (doc == null) return false;
-
-            var timestamp = DateTime.UtcNow;
-            var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
-            var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
-
+        private static void ApplyDocumentLevelSignature(UserDocument doc, bool isUserSignature, bool isAdminSignature,
+            string signatureMethod, string signatureData, string ipAddress, DateTime timestamp, string cryptoSignature)
+        {
             if (isUserSignature)
             {
                 doc.UserSignatureMethod = signatureMethod;
@@ -992,128 +1072,150 @@ namespace SyncApp26.Infrastructure.Services
                 doc.UserSignedAt = timestamp;
                 doc.UserCryptographicSignature = cryptoSignature;
                 doc.Status = "PendingManager";
+                return;
             }
-            else
+
+            bool isSsmAdminVerifier = isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM";
+            if (isSsmAdminVerifier)
             {
-                bool isSsmAdminVerifier = isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM";
-                if (isSsmAdminVerifier)
-                {
-                    // Admin signs last on SSM — store admin signature and mark as Completed
-                    doc.AdminSignatureMethod = signatureMethod;
-                    doc.AdminSignatureData = signatureData;
-                    doc.AdminSignatureIpAddress = ipAddress;
-                    doc.AdminSignedAt = timestamp;
-                    doc.AdminCryptographicSignature = cryptoSignature;
-                    doc.Status = "Completed";
-                }
-                else
-                {
-                    doc.ManagerSignatureMethod = signatureMethod;
-                    doc.ManagerSignatureData = signatureData;
-                    doc.ManagerSignatureIpAddress = ipAddress;
-                    doc.ManagerSignedAt = timestamp;
-                    doc.ManagerCryptographicSignature = cryptoSignature;
-                    // SSM needs admin verifier next; SU is complete after LM signs
-                    bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
-                    doc.Status = isSsm ? "PendingAdmin" : "Completed";
-                }
+                // Admin signs last on SSM — store admin signature and mark as Completed
+                doc.AdminSignatureMethod = signatureMethod;
+                doc.AdminSignatureData = signatureData;
+                doc.AdminSignatureIpAddress = ipAddress;
+                doc.AdminSignedAt = timestamp;
+                doc.AdminCryptographicSignature = cryptoSignature;
+                doc.Status = "Completed";
+                return;
             }
 
-            // Persist signature to the specific PeriodicTraining row (by ID from token, or latest as fallback)
-            var latestTraining = periodicTrainingId.HasValue
-                ? doc.User?.PeriodicTrainings?.FirstOrDefault(pt => pt.Id == periodicTrainingId.Value && pt.UserDocumentId == documentId)
-                  ?? doc.User?.PeriodicTrainings?.Where(pt => pt.UserDocumentId == documentId)
-                      .OrderByDescending(pt => pt.TrainingDate).ThenByDescending(pt => pt.CreatedAt).FirstOrDefault()
-                : doc.User?.PeriodicTrainings
-                    ?.Where(pt => pt.UserDocumentId == documentId)
-                    .OrderByDescending(pt => pt.TrainingDate)
-                    .ThenByDescending(pt => pt.CreatedAt)
-                    .FirstOrDefault();
+            doc.ManagerSignatureMethod = signatureMethod;
+            doc.ManagerSignatureData = signatureData;
+            doc.ManagerSignatureIpAddress = ipAddress;
+            doc.ManagerSignedAt = timestamp;
+            doc.ManagerCryptographicSignature = cryptoSignature;
+            // SSM needs admin verifier next; SU is complete after LM signs
+            bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
+            doc.Status = isSsm ? "PendingAdmin" : "Completed";
+        }
 
-            if (latestTraining != null)
+        private static PeriodicTraining? FindTargetPeriodicTraining(UserDocument doc, Guid? periodicTrainingId)
+        {
+            var docTrainings = doc.User?.PeriodicTrainings?.Where(pt => pt.UserDocumentId == doc.Id);
+            if (docTrainings == null) return null;
+
+            if (periodicTrainingId.HasValue)
             {
-                if (isUserSignature && string.IsNullOrEmpty(latestTraining.UserSignatureData))
-                {
-                    latestTraining.UserSignatureData = signatureData;
-                    latestTraining.UserSignatureMethod = signatureMethod;
-                }
-                else if (!isUserSignature && doc.DocumentType?.ToUpperInvariant() == "SSM" && isAdminSignature)
-                {
-                    latestTraining.VerifierSignature = signatureData;
-                    latestTraining.VerifierSignatureMethod = signatureMethod;
-                }
-                else if (!isUserSignature && string.IsNullOrEmpty(latestTraining.InstructorSignature))
-                {
-                    latestTraining.InstructorSignature = signatureData;
-                    latestTraining.InstructorSignatureMethod = signatureMethod;
-                }
+                var requested = docTrainings.FirstOrDefault(pt => pt.Id == periodicTrainingId.Value);
+                if (requested != null) return requested;
             }
 
-            // Capture signature into UserInitialTraining once (first-time only, never overwritten).
-            // If no record exists yet and this is the first document for this user+type, create it
-            // so the page-2 signature boxes are populated from the first row and then frozen.
-            var initialTraining = doc.User?.InitialTrainings
+            return docTrainings
+                .OrderByDescending(pt => pt.TrainingDate)
+                .ThenByDescending(pt => pt.CreatedAt)
+                .FirstOrDefault();
+        }
+
+        private static void ApplySignatureToPeriodicTraining(PeriodicTraining? training, UserDocument doc,
+            bool isUserSignature, bool isAdminSignature, string signatureMethod, string signatureData)
+        {
+            if (training == null) return;
+
+            if (isUserSignature && string.IsNullOrEmpty(training.UserSignatureData))
+            {
+                training.UserSignatureData = signatureData;
+                training.UserSignatureMethod = signatureMethod;
+            }
+            else if (!isUserSignature && isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM")
+            {
+                training.VerifierSignature = signatureData;
+                training.VerifierSignatureMethod = signatureMethod;
+            }
+            else if (!isUserSignature && string.IsNullOrEmpty(training.InstructorSignature))
+            {
+                training.InstructorSignature = signatureData;
+                training.InstructorSignatureMethod = signatureMethod;
+            }
+        }
+
+        private async Task ApplySignatureToInitialTrainingAsync(UserDocument doc, bool isUserSignature, bool isAdminSignature,
+            string signatureMethod, string signatureData)
+        {
+            if (doc.User == null) return;
+
+            var initialTraining = doc.User.InitialTrainings
                 ?.FirstOrDefault(t => string.Equals(t.DocumentType, doc.DocumentType, StringComparison.OrdinalIgnoreCase));
 
-            if (initialTraining == null && doc.User != null)
+            // If no record exists yet and this is the first document for this user+type, create it
+            // so the page-2 signature boxes are populated from the first row and then frozen.
+            initialTraining ??= await CreateInitialTrainingIfFirstDocumentAsync(doc);
+            if (initialTraining == null) return;
+
+            if (isUserSignature && string.IsNullOrEmpty(initialTraining.UserSignatureData))
             {
-                bool isFirstDocument = !await _context.UserDocuments
-                    .AnyAsync(d => d.UserId == doc.UserId && d.DocumentType == doc.DocumentType && d.Id != doc.Id);
-                if (isFirstDocument)
-                {
-                    initialTraining = new UserInitialTraining
-                    {
-                        UserId = doc.UserId,
-                        DocumentType = doc.DocumentType ?? string.Empty,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    _context.UserInitialTrainings.Add(initialTraining);
-                    doc.User.InitialTrainings.Add(initialTraining);
-                }
+                initialTraining.UserSignatureData = signatureData;
+                initialTraining.UserSignatureMethod = signatureMethod;
             }
-
-            if (initialTraining != null)
+            else if (!isUserSignature && isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM"
+                && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
             {
-                if (isUserSignature && string.IsNullOrEmpty(initialTraining.UserSignatureData))
-                {
-                    initialTraining.UserSignatureData = signatureData;
-                    initialTraining.UserSignatureMethod = signatureMethod;
-                }
-                else if (!isUserSignature && isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM"
-                    && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
-                {
-                    initialTraining.VerifierSignatureData = signatureData;
-                    initialTraining.VerifierSignatureMethod = signatureMethod;
-                }
-                else if (!isUserSignature && !isAdminSignature && string.IsNullOrEmpty(initialTraining.InstructorSignatureData))
-                {
-                    initialTraining.InstructorSignatureData = signatureData;
-                    initialTraining.InstructorSignatureMethod = signatureMethod;
-                }
+                initialTraining.VerifierSignatureData = signatureData;
+                initialTraining.VerifierSignatureMethod = signatureMethod;
             }
-
-            // Regenerate PDF with embedded signature image
-            if (doc.User != null && !string.IsNullOrEmpty(doc.PdfFilePath))
+            else if (!isUserSignature && !isAdminSignature && string.IsNullOrEmpty(initialTraining.InstructorSignatureData))
             {
-                try
-                {
-                    await GeneratePdfSnapshotAsync(doc.User, doc);
-                }
-                catch { /* non-fatal: keep old PDF if regeneration fails */ }
+                initialTraining.InstructorSignatureData = signatureData;
+                initialTraining.InstructorSignatureMethod = signatureMethod;
             }
+        }
 
-            await _context.SaveChangesAsync();
+        private async Task<UserInitialTraining?> CreateInitialTrainingIfFirstDocumentAsync(UserDocument doc)
+        {
+            if (doc.User == null) return null;
 
-            // Propagate the signature to copies of this row in all newer documents
-            if (latestTraining != null)
+            bool isFirstDocument = !await _context.UserDocuments
+                .AnyAsync(d => d.UserId == doc.UserId && d.DocumentType == doc.DocumentType && d.Id != doc.Id);
+            if (!isFirstDocument) return null;
+
+            var initialTraining = new UserInitialTraining
             {
-                await PropagateSignatureToNewerDocumentsAsync(latestTraining);
-            }
+                UserId = doc.UserId,
+                DocumentType = doc.DocumentType ?? string.Empty,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.UserInitialTrainings.Add(initialTraining);
+            doc.User.InitialTrainings.Add(initialTraining);
+            return initialTraining;
+        }
 
-            return true;
+        // Regenerates the PDF snapshot with the newly embedded signature; failure here must not
+        // roll back the signature itself, so a stale PDF is preferred over a lost signature.
+        private async Task RegenerateDocumentPdfSnapshotAsync(UserDocument doc)
+        {
+            if (doc.User == null || string.IsNullOrEmpty(doc.PdfFilePath)) return;
+
+            try { await GeneratePdfSnapshotAsync(doc.User, doc); }
+            catch { /* non-fatal: keep old PDF if regeneration fails */ }
         }
 
         public async Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
+        {
+            var docs = await LoadPendingDocumentsForBulkSignAsync(isAdmin, signerUserId);
+            if (docs.Count == 0) return 0;
+
+            var timestamp = DateTime.UtcNow;
+            foreach (var doc in docs)
+                await SignSingleDocumentInBulkAsync(doc, isAdmin, signatureMethod, signatureData, ipAddress, timestamp);
+
+            await _context.SaveChangesAsync();
+
+            // Propagate signatures from older documents to their copies in newer documents,
+            // then regenerate the PDF for each signed document.
+            await PropagateAndRegenerateBulkSignedDocumentsAsync(docs);
+
+            return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
+        }
+
+        private async Task<List<UserDocument>> LoadPendingDocumentsForBulkSignAsync(bool isAdmin, Guid signerUserId)
         {
             var allDocs = await _context.UserDocuments
                 .Include(d => d.User)
@@ -1135,117 +1237,55 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
 
             // Process all pending documents ordered oldest-first so signatures are applied in creation order
-            var docs = allDocs.OrderBy(d => d.GeneratedAt).ToList();
+            return allDocs.OrderBy(d => d.GeneratedAt).ToList();
+        }
 
-            if (docs.Count == 0) return 0;
+        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
+        {
+            var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
+            ApplyDocumentLevelSignature(doc, isUserSignature: false, isAdminSignature: isAdmin, signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
 
-            var timestamp = DateTime.UtcNow;
+            bool isSsmAdminVerifier = isAdmin && doc.DocumentType?.ToUpperInvariant() == "SSM";
+            var trainingForDoc = await GetLatestPeriodicTrainingForDocumentAsync(doc.Id);
+            ApplyBulkSignatureToPeriodicTraining(trainingForDoc, isSsmAdminVerifier, signatureMethod, signatureData);
 
-            foreach (var doc in docs)
+            // Capture into UserInitialTraining (first-time only, never overwritten).
+            // Create record automatically if missing and this is the first document.
+            await ApplySignatureToInitialTrainingAsync(doc, isUserSignature: false, isAdminSignature: isAdmin, signatureMethod, signatureData);
+        }
+
+        private Task<PeriodicTraining?> GetLatestPeriodicTrainingForDocumentAsync(Guid documentId) =>
+            _context.PeriodicTrainings
+                .Where(pt => pt.UserDocumentId == documentId)
+                .OrderByDescending(pt => pt.TrainingDate)
+                .ThenByDescending(pt => pt.CreatedAt)
+                .FirstOrDefaultAsync();
+
+        private static void ApplyBulkSignatureToPeriodicTraining(PeriodicTraining? training, bool isSsmAdminVerifier, string signatureMethod, string signatureData)
+        {
+            if (training == null) return;
+
+            if (isSsmAdminVerifier)
             {
-                var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
-                var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
-
-                bool isSsmAdminVerifier = isAdmin && doc.DocumentType?.ToUpperInvariant() == "SSM";
-                if (isSsmAdminVerifier)
-                {
-                    // Admin signs last — store admin signature and mark as Completed
-                    doc.AdminSignatureMethod = signatureMethod;
-                    doc.AdminSignatureData = signatureData;
-                    doc.AdminSignatureIpAddress = ipAddress;
-                    doc.AdminSignedAt = timestamp;
-                    doc.AdminCryptographicSignature = cryptoSignature;
-                    doc.Status = "Completed";
-                }
-                else
-                {
-                    doc.ManagerSignatureMethod = signatureMethod;
-                    doc.ManagerSignatureData = signatureData;
-                    doc.ManagerSignatureIpAddress = ipAddress;
-                    doc.ManagerSignedAt = timestamp;
-                    doc.ManagerCryptographicSignature = cryptoSignature;
-                    // SSM needs admin next; SU is complete after LM signs
-                    bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
-                    doc.Status = isSsm ? "PendingAdmin" : "Completed";
-                }
-
-                var trainingForDoc = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserDocumentId == doc.Id)
-                    .OrderByDescending(pt => pt.TrainingDate)
-                    .ThenByDescending(pt => pt.CreatedAt)
-                    .FirstOrDefaultAsync();
-                if (trainingForDoc != null)
-                {
-                    if (isSsmAdminVerifier)
-                    {
-                        trainingForDoc.VerifierSignature = signatureData;
-                        trainingForDoc.VerifierSignatureMethod = signatureMethod;
-                    }
-                    else
-                    {
-                        trainingForDoc.InstructorSignature = signatureData;
-                        trainingForDoc.InstructorSignatureMethod = signatureMethod;
-                    }
-                }
-
-                // Capture into UserInitialTraining (first-time only, never overwritten).
-                // Create record automatically if missing and this is the first document.
-                var initialTraining = doc.User?.InitialTrainings
-                    ?.FirstOrDefault(t => string.Equals(t.DocumentType, doc.DocumentType, StringComparison.OrdinalIgnoreCase));
-
-                if (initialTraining == null && doc.User != null)
-                {
-                    bool isFirstDocument = !await _context.UserDocuments
-                        .AnyAsync(d => d.UserId == doc.UserId && d.DocumentType == doc.DocumentType && d.Id != doc.Id);
-                    if (isFirstDocument)
-                    {
-                        initialTraining = new UserInitialTraining
-                        {
-                            UserId = doc.UserId,
-                            DocumentType = doc.DocumentType ?? string.Empty,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        _context.UserInitialTrainings.Add(initialTraining);
-                        doc.User.InitialTrainings.Add(initialTraining);
-                    }
-                }
-
-                if (initialTraining != null)
-                {
-                    if (isSsmAdminVerifier && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
-                    {
-                        initialTraining.VerifierSignatureData = signatureData;
-                        initialTraining.VerifierSignatureMethod = signatureMethod;
-                    }
-                    else if (!isSsmAdminVerifier && string.IsNullOrEmpty(initialTraining.InstructorSignatureData))
-                    {
-                        initialTraining.InstructorSignatureData = signatureData;
-                        initialTraining.InstructorSignatureMethod = signatureMethod;
-                    }
-                }
+                training.VerifierSignature = signatureData;
+                training.VerifierSignatureMethod = signatureMethod;
             }
+            else
+            {
+                training.InstructorSignature = signatureData;
+                training.InstructorSignatureMethod = signatureMethod;
+            }
+        }
 
-            await _context.SaveChangesAsync();
-
-            // Propagate signatures from older documents to their copies in newer documents,
-            // then regenerate the PDF for each signed document.
+        private async Task PropagateAndRegenerateBulkSignedDocumentsAsync(List<UserDocument> docs)
+        {
             foreach (var doc in docs)
             {
-                var signedTraining = await _context.PeriodicTrainings
-                    .Where(pt => pt.UserDocumentId == doc.Id)
-                    .OrderByDescending(pt => pt.TrainingDate)
-                    .ThenByDescending(pt => pt.CreatedAt)
-                    .FirstOrDefaultAsync();
+                var signedTraining = await GetLatestPeriodicTrainingForDocumentAsync(doc.Id);
                 if (signedTraining != null)
                     await PropagateSignatureToNewerDocumentsAsync(signedTraining);
 
-                var freshUser = await _context.Users
-                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                    .Include(u => u.Department)
-                    .Include(u => u.Function)
-                    .Include(u => u.InitialTrainings)
-                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+                var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
 
                 if (freshUser != null)
                 {
@@ -1254,11 +1294,9 @@ namespace SyncApp26.Infrastructure.Services
                 }
             }
             await _context.SaveChangesAsync();
-
-            return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
         }
 
-        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null)
+        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
         {
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
@@ -1269,6 +1307,18 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .ToListAsync();
+
+            if (restrictToAssignedToId.HasValue)
+            {
+                var myEmployeeIds = users
+                    .Where(u => u.AssignedToId == restrictToAssignedToId.Value)
+                    .Select(u => u.Id)
+                    .ToList();
+
+                selectedUserIds = selectedUserIds == null || !selectedUserIds.Any()
+                    ? myEmployeeIds
+                    : selectedUserIds.Intersect(myEmployeeIds).ToList();
+            }
 
             // Filter out admin users on client side (EF doesn't support StringComparison parameter)
             var nonAdminUsers = users
@@ -1364,13 +1414,7 @@ namespace SyncApp26.Infrastructure.Services
 
             foreach (var doc in docs)
             {
-                var freshUser = await _context.Users
-                    .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                    .Include(u => u.Department)
-                    .Include(u => u.Function)
-                    .Include(u => u.InitialTrainings)
-                    .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
-                    .FirstOrDefaultAsync(u => u.Id == doc.UserId);
+                var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
 
                 if (freshUser != null)
                 {

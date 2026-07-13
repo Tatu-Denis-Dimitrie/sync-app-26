@@ -16,6 +16,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         private readonly Mock<IDocumentService> _documentServiceMock = new();
         private readonly Mock<IEmailService> _emailServiceMock = new();
         private readonly Mock<IDocumentSignatureService> _documentSignatureServiceMock = new();
+        private readonly Mock<IDocumentSigningService> _documentSigningServiceMock = new();
         private readonly Mock<IUserService> _userServiceMock = new();
         private readonly Mock<IConfiguration> _configurationMock = new();
 
@@ -25,6 +26,7 @@ namespace SyncApp26.Tests.Controllers.Documents
                 _documentServiceMock.Object,
                 _emailServiceMock.Object,
                 _documentSignatureServiceMock.Object,
+                _documentSigningServiceMock.Object,
                 _userServiceMock.Object,
                 _configurationMock.Object);
 
@@ -73,7 +75,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task BulkGenerateDocuments_Admin_GeneratesBothTypesAndSendsEmails()
         {
             var controller = CreateController(role: Roles.Admin);
-            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>()))
+            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
                 .ReturnsAsync((2, 1));
             _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync(It.IsAny<string>()))
                 .ReturnsAsync(Array.Empty<UserDocument>());
@@ -81,28 +83,24 @@ namespace SyncApp26.Tests.Controllers.Documents
             var result = await controller.BulkGenerateDocuments(new BulkGenerateDocumentDto { DocumentType = "Both" });
 
             var ok = Assert.IsType<OkObjectResult>(result);
-            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SSM", It.IsAny<string>(), null), Times.Once);
-            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SU", It.IsAny<string>(), null), Times.Once);
+            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SSM", It.IsAny<string>(), null, null), Times.Once);
+            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SU", It.IsAny<string>(), null, null), Times.Once);
         }
 
         [Fact]
-        public async Task BulkGenerateDocuments_NonAdmin_RestrictsToOwnEmployees()
+        public async Task BulkGenerateDocuments_NonAdmin_PassesCallerIdAsRestriction()
         {
             var callerId = Guid.NewGuid();
             var controller = CreateController(callerId, role: Roles.LineManager);
-            var myEmployee = MakeUser(assignedToId: callerId);
-            var otherEmployee = MakeUser();
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });
-            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>()))
+            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
                 .ReturnsAsync((1, 0));
             _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync(It.IsAny<string>())).ReturnsAsync(Array.Empty<UserDocument>());
 
-            var request = new BulkGenerateDocumentDto { DocumentType = "SSM", SelectedUserIds = new List<Guid> { myEmployee.Id, otherEmployee.Id } };
+            var request = new BulkGenerateDocumentDto { DocumentType = "SSM" };
             var result = await controller.BulkGenerateDocuments(request);
 
             Assert.IsType<OkObjectResult>(result);
-            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SSM", It.IsAny<string>(),
-                It.Is<List<Guid>>(l => l.Count == 1 && l.Contains(myEmployee.Id))), Times.Once);
+            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SSM", It.IsAny<string>(), request.SelectedUserIds, callerId), Times.Once);
         }
 
         // ───────────────────────── GenerateDocument ─────────────────────────
@@ -226,18 +224,12 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task GetManagerPendingSignatures_ReturnsDocsAwaitingManager()
+        public async Task GetManagerPendingSignatures_ReturnsDocsFromService()
         {
             var managerId = Guid.NewGuid();
             var controller = CreateController(managerId);
-            var employee = MakeUser(assignedToId: managerId);
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { employee });
-
-            var awaiting = MakeDocument(user: employee, status: "PendingManager");
-            awaiting.UserSignedAt = DateTime.UtcNow;
-            var notYetSignedByEmployee = MakeDocument(user: employee, status: "PendingManager");
-
-            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(employee.Id)).ReturnsAsync(new[] { awaiting, notYetSignedByEmployee });
+            var awaiting = MakeDocument(status: "PendingManager");
+            _documentServiceMock.Setup(s => s.GetManagerPendingSignaturesAsync(managerId)).ReturnsAsync(new[] { awaiting });
 
             var result = await controller.GetManagerPendingSignatures();
 
@@ -264,17 +256,13 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task GetManagerSignedDocuments_ReturnsOnlySignedByManager()
+        public async Task GetManagerSignedDocuments_ReturnsDocsFromService()
         {
             var managerId = Guid.NewGuid();
             var controller = CreateController(managerId);
-            var employee = MakeUser(assignedToId: managerId);
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { employee });
-
-            var signed = MakeDocument(user: employee);
+            var signed = MakeDocument();
             signed.ManagerSignedAt = DateTime.UtcNow;
-            var unsigned = MakeDocument(user: employee);
-            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(employee.Id)).ReturnsAsync(new[] { signed, unsigned });
+            _documentServiceMock.Setup(s => s.GetManagerSignedDocumentsAsync(managerId)).ReturnsAsync(new[] { signed });
 
             var result = await controller.GetManagerSignedDocuments();
 
@@ -338,13 +326,29 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task GetSignTokenForDocument_UnrelatedNonAdmin_ReturnsForbidden()
+        public async Task GetSignTokenForDocument_UserNotFound_ReturnsNotFound()
+        {
+            var controller = CreateController();
+            var document = MakeDocument();
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(It.IsAny<Guid>())).ReturnsAsync((User?)null);
+
+            var result = await controller.GetSignTokenForDocument(document.Id);
+
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public async Task GetSignTokenForDocument_ServiceForbids_ReturnsForbidden()
         {
             var callerId = Guid.NewGuid();
             var controller = CreateController(callerId, role: Roles.BasicUser);
-            var document = MakeDocument(); // owned by someone else, no manager relation
+            var document = MakeDocument();
+            var caller = MakeUser(id: callerId);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(callerId)).ReturnsAsync(MakeUser(id: callerId));
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(callerId)).ReturnsAsync(caller);
+            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, caller, false))
+                .ReturnsAsync(new SigningTokenResult { Forbidden = true });
 
             var result = await controller.GetSignTokenForDocument(document.Id);
 
@@ -352,14 +356,15 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task GetSignTokenForDocument_UserAlreadySigned_ReturnsBadRequest()
+        public async Task GetSignTokenForDocument_ServiceReportsFailure_ReturnsBadRequest()
         {
             var owner = MakeUser();
             var controller = CreateController(owner.Id, role: Roles.BasicUser);
             var document = MakeDocument(user: owner);
-            document.UserSignedAt = DateTime.UtcNow;
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
+            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, owner, false))
+                .ReturnsAsync(new SigningTokenResult { ErrorMessage = "User already signed this document." });
 
             var result = await controller.GetSignTokenForDocument(document.Id);
 
@@ -368,55 +373,21 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task GetSignTokenForDocument_ManagerBeforeEmployeeSigned_ReturnsBadRequest()
-        {
-            var managerId = Guid.NewGuid();
-            var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: Roles.LineManager);
-            var document = MakeDocument(user: owner, status: "PendingUser");
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(managerId)).ReturnsAsync(MakeUser(id: managerId));
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Contains("Employee must sign first", badRequest.Value!.ToString());
-        }
-
-        [Fact]
-        public async Task GetSignTokenForDocument_ValidUserSignature_ReturnsToken()
+        public async Task GetSignTokenForDocument_ServiceSucceeds_ReturnsToken()
         {
             var owner = MakeUser();
             var controller = CreateController(owner.Id, role: Roles.BasicUser);
             var document = MakeDocument(user: owner, status: "PendingUser");
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
-            _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(document.Id)).ReturnsAsync((Guid?)null);
-            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(owner.Email, document.Id, It.IsAny<string>(), null))
-                .ReturnsAsync("token-123");
+            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, owner, false))
+                .ReturnsAsync(new SigningTokenResult { Success = true, Token = "token-123" });
 
             var result = await controller.GetSignTokenForDocument(document.Id);
 
             var ok = Assert.IsType<OkObjectResult>(result);
             var token = (string)ok.Value!.GetType().GetProperty("token")!.GetValue(ok.Value)!;
             Assert.Equal("token-123", token);
-        }
-
-        [Fact]
-        public async Task GetSignTokenForDocument_AdminNonSsmDocument_ReturnsBadRequest()
-        {
-            var adminId = Guid.NewGuid();
-            var controller = CreateController(adminId, role: Roles.Admin);
-            var document = MakeDocument(documentType: "SU", status: "PendingAdmin");
-            document.UserSignedAt = DateTime.UtcNow;
-            document.ManagerSignedAt = DateTime.UtcNow;
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(adminId)).ReturnsAsync(MakeUser(id: adminId));
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Contains("Admin only signs SSM", badRequest.Value!.ToString());
         }
 
         // ───────────────────────── ViewPdf ─────────────────────────
@@ -513,7 +484,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var alreadySigned = MakeDocument(user: MakeUser());
             alreadySigned.UserSignedAt = DateTime.UtcNow;
 
-            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>())).ReturnsAsync((2, 0));
+            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>())).ReturnsAsync((2, 0));
             _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync("SSM")).ReturnsAsync(new[] { needsEmail, alreadySigned });
             _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(needsEmail.Id)).ReturnsAsync((Guid?)null);
             _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(needsEmail.User!.Email, needsEmail.Id, It.IsAny<string>(), null))
@@ -533,7 +504,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var failingDoc = MakeDocument(user: MakeUser());
             var succeedingDoc = MakeDocument(user: MakeUser());
 
-            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>())).ReturnsAsync((2, 0));
+            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>())).ReturnsAsync((2, 0));
             _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync("SSM")).ReturnsAsync(new[] { failingDoc, succeedingDoc });
             _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(It.IsAny<Guid>())).ReturnsAsync((Guid?)null);
             _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(failingDoc.User!.Email, failingDoc.Id, It.IsAny<string>(), null))
@@ -599,116 +570,6 @@ namespace SyncApp26.Tests.Controllers.Documents
 
             Assert.IsType<OkObjectResult>(result);
             _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        }
-
-        // ───────────────────────── Additional GetSignTokenForDocument edge cases ─────────────────────────
-
-        [Fact]
-        public async Task GetSignTokenForDocument_ManagerAlreadySigned_ReturnsBadRequest()
-        {
-            var managerId = Guid.NewGuid();
-            var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: Roles.LineManager);
-            var document = MakeDocument(user: owner);
-            document.ManagerSignedAt = DateTime.UtcNow;
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(managerId)).ReturnsAsync(MakeUser(id: managerId));
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Contains("Manager already signed", badRequest.Value!.ToString());
-        }
-
-        [Fact]
-        public async Task GetSignTokenForDocument_UserStatusMismatch_ReturnsBadRequest()
-        {
-            var owner = MakeUser();
-            var controller = CreateController(owner.Id, role: Roles.BasicUser);
-            var document = MakeDocument(user: owner, status: "PendingManager");
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Contains("User signature not required", badRequest.Value!.ToString());
-        }
-
-        [Fact]
-        public async Task GetSignTokenForDocument_ManagerStatusMismatch_ReturnsBadRequest()
-        {
-            var managerId = Guid.NewGuid();
-            var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: Roles.LineManager);
-            var document = MakeDocument(user: owner, status: "PendingAdmin");
-            document.UserSignedAt = DateTime.UtcNow;
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(managerId)).ReturnsAsync(MakeUser(id: managerId));
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Contains("Manager signature not required", badRequest.Value!.ToString());
-        }
-
-        [Fact]
-        public async Task GetSignTokenForDocument_AdminWrongStatus_ReturnsBadRequest()
-        {
-            var adminId = Guid.NewGuid();
-            var controller = CreateController(adminId, role: Roles.Admin);
-            var document = MakeDocument(documentType: "SSM", status: "PendingManager"); // unrelated owner, wrong status for admin
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(adminId)).ReturnsAsync(MakeUser(id: adminId));
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Contains("Admin signature not required", badRequest.Value!.ToString());
-        }
-
-        [Fact]
-        public async Task GetSignTokenForDocument_ManagerValidCountersign_ReturnsToken()
-        {
-            var managerId = Guid.NewGuid();
-            var owner = MakeUser(assignedToId: managerId);
-            var controller = CreateController(managerId, role: Roles.LineManager);
-            var document = MakeDocument(user: owner, status: "PendingManager");
-            document.UserSignedAt = DateTime.UtcNow;
-            var manager = MakeUser(id: managerId);
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(managerId)).ReturnsAsync(manager);
-            _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(document.Id)).ReturnsAsync((Guid?)null);
-            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(manager.Email, document.Id, It.IsAny<string>(), null))
-                .ReturnsAsync("manager-token");
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var ok = Assert.IsType<OkObjectResult>(result);
-            var token = (string)ok.Value!.GetType().GetProperty("token")!.GetValue(ok.Value)!;
-            Assert.Equal("manager-token", token);
-        }
-
-        [Fact]
-        public async Task GetSignTokenForDocument_AdminValidSignature_ReturnsToken()
-        {
-            var adminId = Guid.NewGuid();
-            var controller = CreateController(adminId, role: Roles.Admin);
-            var document = MakeDocument(documentType: "SSM", status: "PendingAdmin"); // unrelated owner
-            document.UserSignedAt = DateTime.UtcNow;
-            document.ManagerSignedAt = DateTime.UtcNow;
-            var admin = MakeUser(id: adminId);
-            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
-            _userServiceMock.Setup(s => s.GetUserByIdAsync(adminId)).ReturnsAsync(admin);
-            _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(document.Id)).ReturnsAsync((Guid?)null);
-            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(admin.Email, document.Id, It.IsAny<string>(), null))
-                .ReturnsAsync("admin-token");
-
-            var result = await controller.GetSignTokenForDocument(document.Id);
-
-            var ok = Assert.IsType<OkObjectResult>(result);
-            var token = (string)ok.Value!.GetType().GetProperty("token")!.GetValue(ok.Value)!;
-            Assert.Equal("admin-token", token);
         }
     }
 }

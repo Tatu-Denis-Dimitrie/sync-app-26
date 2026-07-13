@@ -13,6 +13,6 @@ namespace SyncApp26.Application.IServices
         Task<IEnumerable<PeriodicTrainingResponseDTO>> GetByUserIdAsync(Guid userId);
         Task<PeriodicTrainingResponseDTO> UpdateAsync(Guid id, UpdatePeriodicTrainingDTO dto);
         Task<bool> DeleteAsync(Guid id);
-        Task<BulkCreateResultDTO> BulkCreateAsync(BulkCreatePeriodicTrainingDTO dto);
+        Task<BulkCreateResultDTO> BulkCreateAsync(BulkCreatePeriodicTrainingDTO dto, Guid? restrictToAssignedToId = null);
     }
 }

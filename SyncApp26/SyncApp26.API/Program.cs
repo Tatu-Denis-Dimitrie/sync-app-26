@@ -64,6 +64,7 @@ builder.Services.AddScoped<IFunctionRepository, FunctionRepository>();
 builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepository>();
 builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
 builder.Services.AddScoped<IDataChangeRequestRepository, DataChangeRequestRepository>();
+builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
 
 
 // Services
@@ -84,6 +85,10 @@ builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IPeriodicTrainingService, PeriodicTrainingService>();
 builder.Services.AddScoped<IUserSignatureService, UserSignatureService>();
 builder.Services.AddScoped<IDataChangeRequestService, DataChangeRequestService>();
+builder.Services.AddScoped<IUserInitialTrainingService, UserInitialTrainingService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 
 // Background Services

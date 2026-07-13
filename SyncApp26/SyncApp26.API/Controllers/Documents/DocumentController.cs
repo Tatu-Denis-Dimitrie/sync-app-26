@@ -16,6 +16,7 @@ namespace SyncApp26.API.Controllers
         private readonly IDocumentService _documentService;
         private readonly IEmailService _emailService;
         private readonly IDocumentSignatureService _documentSignatureService;
+        private readonly IDocumentSigningService _documentSigningService;
         private readonly IUserService _userService;
         private readonly IConfiguration _configuration;
 
@@ -23,12 +24,14 @@ namespace SyncApp26.API.Controllers
             IDocumentService documentService,
             IEmailService emailService,
             IDocumentSignatureService documentSignatureService,
+            IDocumentSigningService documentSigningService,
             IUserService userService,
             IConfiguration configuration)
         {
             _documentService = documentService;
             _emailService = emailService;
             _documentSignatureService = documentSignatureService;
+            _documentSigningService = documentSigningService;
             _userService = userService;
             _configuration = configuration;
         }
@@ -62,18 +65,6 @@ namespace SyncApp26.API.Controllers
             d.AdminSignedAt,
         };
 
-        private static bool IsSsmManagerSignaturePending(UserDocument d)
-        {
-            if (!string.Equals(d.DocumentType, "SSM", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            var latestTraining = d.User?.PeriodicTrainings
-                ?.OrderByDescending(pt => pt.CreatedAt)
-                .FirstOrDefault();
-
-            return latestTraining != null && string.IsNullOrEmpty(latestTraining.InstructorSignature);
-        }
-
         public class GenerateDocumentDto
         {
             public Guid UserId { get; set; }
@@ -101,29 +92,17 @@ namespace SyncApp26.API.Controllers
                 : new[] { request.DocumentType.ToUpper() };
 
             var isAdmin = User.IsInRole(Roles.Admin);
+            Guid? restrictToAssignedToId = null;
             if (!isAdmin && User.GetUserId() is { } currentUserId)
             {
-                var allUsers = await _userService.GetAllUsersAsync();
-                var myEmployees = allUsers
-                    .Where(u => u.AssignedToId == currentUserId)
-                    .Select(u => u.Id)
-                    .ToList();
-
-                if (request.SelectedUserIds == null || !request.SelectedUserIds.Any())
-                {
-                    request.SelectedUserIds = myEmployees;
-                }
-                else
-                {
-                    request.SelectedUserIds = request.SelectedUserIds.Intersect(myEmployees).ToList();
-                }
+                restrictToAssignedToId = currentUserId;
             }
 
             int totalGenerated = 0, totalSkipped = 0;
 
             foreach (var type in types)
             {
-                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds);
+                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds, restrictToAssignedToId);
                 totalGenerated += generated;
                 totalSkipped += skipped;
             }
@@ -246,20 +225,7 @@ namespace SyncApp26.API.Controllers
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
-            // Fetch documents where the current user is the manager and employee has already signed.
-            // Line managers can only sign after employee signature.
-            var allManagedUsers = await _userService.GetAllUsersAsync();
-            var myEmployees = allManagedUsers.Where(u => u.AssignedToId == userId).Select(u => u.Id).ToList();
-
-            var pendingAsManager = new List<UserDocument>();
-            foreach (var empId in myEmployees)
-            {
-                var empDocs = await _documentService.GetUserDocumentsAsync(empId);
-                pendingAsManager.AddRange(empDocs.Where(d =>
-                    d.Status == "PendingManager" &&
-                    d.UserSignedAt != null &&
-                    d.ManagerSignedAt == null));
-            }
+            var pendingAsManager = await _documentService.GetManagerPendingSignaturesAsync(userId);
 
             return Ok(pendingAsManager.Select(MapDocument));
         }
@@ -282,15 +248,7 @@ namespace SyncApp26.API.Controllers
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
-            var allManagedUsers = await _userService.GetAllUsersAsync();
-            var myEmployees = allManagedUsers.Where(u => u.AssignedToId == userId).Select(u => u.Id).ToList();
-
-            var signedAsManager = new List<UserDocument>();
-            foreach (var empId in myEmployees)
-            {
-                var empDocs = await _documentService.GetUserDocumentsAsync(empId);
-                signedAsManager.AddRange(empDocs.Where(d => d.ManagerSignedAt != null));
-            }
+            var signedAsManager = await _documentService.GetManagerSignedDocumentsAsync(userId);
 
             return Ok(signedAsManager.Select(MapDocument));
         }
@@ -341,41 +299,13 @@ namespace SyncApp26.API.Controllers
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null) return NotFound();
 
-            bool isUser = document.UserId == userId;
-            bool isManager = document.User?.AssignedToId == userId;
-            bool isAdmin = User.IsInRole(Roles.Admin);
+            var isAdmin = User.IsInRole(Roles.Admin);
+            var result = await _documentSigningService.RequestSigningTokenAsync(document, user, isAdmin);
 
-            if (!isUser && !isManager && !isAdmin)
-                return Forbid();
+            if (result.Forbidden) return Forbid();
+            if (!result.Success) return BadRequest(new { message = result.ErrorMessage });
 
-            if (isUser && document.UserSignedAt != null)
-                return BadRequest(new { message = "User already signed this document." });
-
-            if (isManager && document.ManagerSignedAt != null)
-                return BadRequest(new { message = "Manager already signed this document." });
-
-            // Enforce sequential signing: employee must sign before manager
-            if (isManager && !isAdmin && document.UserSignedAt == null)
-                return BadRequest(new { message = "Employee must sign first before manager can countersign." });
-
-            if (isUser && document.Status != "PendingUser")
-                return BadRequest(new { message = "User signature not required at this time." });
-
-            if (isManager && !isAdmin && document.Status != "PendingManager")
-                return BadRequest(new { message = "Manager signature not required at this time." });
-
-            // Admin can only sign SSM documents in PendingAdmin status
-            if (isAdmin && !isUser && !isManager)
-            {
-                if (document.Status != "PendingAdmin")
-                    return BadRequest(new { message = "Admin signature not required at this time." });
-                if (document.DocumentType?.ToUpperInvariant() != "SSM")
-                    return BadRequest(new { message = "Admin only signs SSM documents." });
-            }
-            var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
-            var token = await _documentSignatureService.GenerateSignatureTokenAsync(user.Email, document.Id, $"{document.DocumentType} Document", currentRowId);
-
-            return Ok(new { token });
+            return Ok(new { token = result.Token });
         }
 
         /// <summary>
