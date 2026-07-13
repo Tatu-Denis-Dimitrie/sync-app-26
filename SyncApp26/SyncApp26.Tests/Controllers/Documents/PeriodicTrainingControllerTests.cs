@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.Application.IServices;
-using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
 using SyncApp26.Shared.DTOs.Response.PeriodicTraining;
@@ -13,26 +12,13 @@ namespace SyncApp26.Tests.Controllers.Documents
     public class PeriodicTrainingControllerTests
     {
         private readonly Mock<IPeriodicTrainingService> _periodicTrainingServiceMock = new();
-        private readonly Mock<IUserService> _userServiceMock = new();
 
         private PeriodicTrainingController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
-            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object, _userServiceMock.Object);
+            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }
-
-        private static User MakeUser(Guid? id = null, Guid? assignedToId = null) => new()
-        {
-            Id = id ?? Guid.NewGuid(),
-            FirstName = "Jane",
-            LastName = "Roe",
-            Email = $"jane.roe.{Guid.NewGuid():N}@example.com",
-            PersonalId = Guid.NewGuid().ToString(),
-            AssignedToId = assignedToId,
-            Role = UserRole.BasicUser,
-            CreatedAt = DateTime.UtcNow
-        };
 
         // ───────────────────────── Create ─────────────────────────
 
@@ -181,7 +167,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var controller = CreateController();
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
-            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>())).ThrowsAsync(new Exception("boom"));
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>(), It.IsAny<Guid?>())).ThrowsAsync(new Exception("boom"));
 
             var result = await controller.BulkCreate(dto);
 
@@ -194,7 +180,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var controller = CreateController();
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             var resultDto = new BulkCreateResultDTO { SuccessCount = 0, FailedCount = 2, Errors = new List<string> { "err1", "err2" } };
-            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>())).ReturnsAsync(resultDto);
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>(), It.IsAny<Guid?>())).ReturnsAsync(resultDto);
 
             var result = await controller.BulkCreate(dto);
 
@@ -202,42 +188,32 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task BulkCreate_Admin_PassesDtoUnchanged()
+        public async Task BulkCreate_Admin_PassesNullRestriction()
         {
             var controller = CreateController(role: Roles.Admin);
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             var resultDto = new BulkCreateResultDTO { SuccessCount = 3 };
-            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(dto)).ReturnsAsync(resultDto);
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(dto, null)).ReturnsAsync(resultDto);
 
             var result = await controller.BulkCreate(dto);
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(resultDto, ok.Value);
-            Assert.True(dto.ApplyToAllUsers);
+            _periodicTrainingServiceMock.Verify(s => s.BulkCreateAsync(dto, null), Times.Once);
         }
 
         [Fact]
-        public async Task BulkCreate_NonAdmin_RestrictsToOwnEmployees()
+        public async Task BulkCreate_NonAdmin_PassesCallerIdAsRestriction()
         {
             var callerId = Guid.NewGuid();
             var controller = CreateController(callerId, role: Roles.LineManager);
-            var myEmployee = MakeUser(assignedToId: callerId);
-            var otherEmployee = MakeUser();
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });
-
-            BulkCreatePeriodicTrainingDTO? captured = null;
-            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>()))
-                .Callback<BulkCreatePeriodicTrainingDTO>(d => captured = d)
-                .ReturnsAsync(new BulkCreateResultDTO { SuccessCount = 1 });
-
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(dto, callerId)).ReturnsAsync(new BulkCreateResultDTO { SuccessCount = 1 });
+
             var result = await controller.BulkCreate(dto);
 
             Assert.IsType<OkObjectResult>(result);
-            Assert.NotNull(captured);
-            Assert.False(captured!.ApplyToAllUsers);
-            Assert.Single(captured.SelectedUserIds);
-            Assert.Contains(myEmployee.Id, captured.SelectedUserIds);
+            _periodicTrainingServiceMock.Verify(s => s.BulkCreateAsync(dto, callerId), Times.Once);
         }
 
         [Fact]
@@ -246,40 +222,12 @@ namespace SyncApp26.Tests.Controllers.Documents
             var controller = CreateController();
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             var resultDto = new BulkCreateResultDTO { SuccessCount = 2, FailedCount = 1, Errors = new List<string> { "one failure" } };
-            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>())).ReturnsAsync(resultDto);
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>(), It.IsAny<Guid?>())).ReturnsAsync(resultDto);
 
             var result = await controller.BulkCreate(dto);
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(resultDto, ok.Value);
-        }
-
-        [Fact]
-        public async Task BulkCreate_NonAdminWithExplicitSelectedUserIds_IntersectsWithOwnEmployees()
-        {
-            var callerId = Guid.NewGuid();
-            var controller = CreateController(callerId, role: Roles.LineManager);
-            var myEmployee = MakeUser(assignedToId: callerId);
-            var otherEmployee = MakeUser();
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { myEmployee, otherEmployee });
-
-            BulkCreatePeriodicTrainingDTO? captured = null;
-            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>()))
-                .Callback<BulkCreatePeriodicTrainingDTO>(d => captured = d)
-                .ReturnsAsync(new BulkCreateResultDTO { SuccessCount = 1 });
-
-            var dto = new BulkCreatePeriodicTrainingDTO
-            {
-                ApplyToAllUsers = false,
-                SelectedUserIds = new List<Guid> { myEmployee.Id, otherEmployee.Id }
-            };
-            var result = await controller.BulkCreate(dto);
-
-            Assert.IsType<OkObjectResult>(result);
-            Assert.NotNull(captured);
-            Assert.Single(captured!.SelectedUserIds);
-            Assert.Contains(myEmployee.Id, captured.SelectedUserIds);
-            Assert.DoesNotContain(otherEmployee.Id, captured.SelectedUserIds);
         }
     }
 }

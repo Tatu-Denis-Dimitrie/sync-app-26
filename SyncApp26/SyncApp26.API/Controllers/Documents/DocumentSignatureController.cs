@@ -18,6 +18,7 @@ namespace SyncApp26.API.Controllers
     public class DocumentSignatureController : ControllerBase
     {
         private readonly IDocumentSignatureService _documentSignatureService;
+        private readonly IDocumentSigningService _documentSigningService;
         private readonly IUserService _userService;
         private readonly IEmailService _emailService;
         private readonly IDocumentService _documentService;
@@ -29,6 +30,7 @@ namespace SyncApp26.API.Controllers
 
         public DocumentSignatureController(
             IDocumentSignatureService documentSignatureService,
+            IDocumentSigningService documentSigningService,
             IUserService userService,
             IEmailService emailService,
             IDocumentService documentService,
@@ -37,6 +39,7 @@ namespace SyncApp26.API.Controllers
             IHubContext<SyncHub> hubContext)
         {
             _documentSignatureService = documentSignatureService;
+            _documentSigningService = documentSigningService;
             _userService = userService;
             _emailService = emailService;
             _documentService = documentService;
@@ -90,36 +93,23 @@ namespace SyncApp26.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ValidateToken(string token)
         {
-            if (string.IsNullOrWhiteSpace(token))
+            var result = await _documentSigningService.GetSigningContextAsync(token);
+
+            if (!result.Success)
             {
-                return BadRequest(new { message = "Token is required." });
+                return BadRequest(new { message = result.ErrorMessage });
             }
-
-            var signatureToken = await _documentSignatureService.ValidateTokenAsync(token);
-
-            if (signatureToken == null)
-            {
-                return BadRequest(new { message = "Invalid or expired token." });
-            }
-
-            // Determine whether the signer is acting as the employee, the manager, or the admin.
-            var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
-            var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
-            bool signerIsAdmin = signerUser?.Role == UserRole.Admin;
-            bool isManagerSigning = !signerIsAdmin && (document?.User?.AssignedTo != null &&
-                string.Equals(document.User.AssignedTo.Email, signatureToken.Email, StringComparison.OrdinalIgnoreCase));
-            bool isAdminSigning = signerIsAdmin && document?.DocumentType?.ToUpperInvariant() == "SSM";
 
             // Return the necessary document info for the frontend to render the signing UI
             return Ok(new
             {
-                documentId = signatureToken.DocumentId,
-                documentName = signatureToken.DocumentName,
-                email = signatureToken.Email,
-                documentType = document?.DocumentType,
-                isManagerSigning = isManagerSigning,
-                isAdminSigning = isAdminSigning,
-                periodicTrainingId = signatureToken.PeriodicTrainingId
+                documentId = result.DocumentId,
+                documentName = result.DocumentName,
+                email = result.Email,
+                documentType = result.DocumentType,
+                isManagerSigning = result.IsManagerSigning,
+                isAdminSigning = result.IsAdminSigning,
+                periodicTrainingId = result.PeriodicTrainingId
             });
         }
 
@@ -138,125 +128,51 @@ namespace SyncApp26.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ConsumeToken([FromBody] ConsumeTokenDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Token))
-            {
-                return BadRequest(new { message = "Token is required." });
-            }
-
-            var tokenEntity = await _documentSignatureService.ValidateTokenAsync(request.Token);
-            if (tokenEntity == null)
-            {
-                return BadRequest(new { message = "Token is invalid or expired." });
-            }
-
-            var document = await _documentService.GetDocumentByIdAsync(tokenEntity.DocumentId);
-            if (document == null)
-            {
-                return BadRequest(new { message = "Document not found." });
-            }
-
-            var signerUserFromToken = await _userService.GetUserByEmailAsync(tokenEntity.Email);
-            bool signerIsAdmin = signerUserFromToken?.Role == UserRole.Admin;
-            bool isLineManager = !signerIsAdmin && (document.User?.AssignedTo != null &&
-                string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase));
-            bool isUserSignature = !signerIsAdmin && !isLineManager;
-
-            // Enforce sequential signing
-            if (isUserSignature && document.UserSignedAt != null)
-            {
-                return BadRequest(new { message = "User already signed this document." });
-            }
-
-            if (isLineManager && document.UserSignedAt == null)
-            {
-                return BadRequest(new { message = "Employee must sign this document first." });
-            }
-
-            if (isLineManager && document.ManagerSignedAt != null)
-            {
-                return BadRequest(new { message = "Manager already signed this document." });
-            }
-
-            if (signerIsAdmin)
-            {
-                if (document.UserSignedAt == null || document.ManagerSignedAt == null)
-                    return BadRequest(new { message = "Both employee and manager must sign before admin can verify." });
-                if (document.DocumentType?.ToUpperInvariant() != "SSM")
-                    return BadRequest(new { message = "Admin only signs SSM documents." });
-                if (document.Status != "PendingAdmin")
-                    return BadRequest(new { message = "Document is not pending admin signature." });
-            }
-
-            var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
-            if (!isValidAndConsumed)
-            {
-                return BadRequest(new { message = "Token could not be consumed." });
-            }
-
-            // Record signature — prefer the row ID sent explicitly by the client (matches what validate-token returned),
-            // but fall back to the one embedded in the token if the client didn't send it.
-            var periodicTrainingId = request.PeriodicTrainingId ?? tokenEntity.PeriodicTrainingId;
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
-            await _documentService.UpdateDocumentSignatureAsync(
-                document.Id,
-                isUserSignature,
-                request.SignatureMethod,
-                request.SignatureData,
-                ipAddress,
-                signerIsAdmin,
-                periodicTrainingId
-            );
-
-            // If employee signed, generate link for the manager and send email
-            if (isUserSignature && document.User?.AssignedTo != null)
+            var result = await _documentSigningService.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest
             {
-                var manager = document.User.AssignedTo;
-                var managerToken = await _documentSignatureService.GenerateSignatureTokenAsync(
-                    manager.Email,
-                    document.Id,
-                    $"{document.DocumentType} Document (Manager Approval)",
-                    tokenEntity.PeriodicTrainingId);
+                Token = request.Token,
+                SignatureMethod = request.SignatureMethod,
+                SignatureData = request.SignatureData,
+                BulkSign = request.BulkSign,
+                PeriodicTrainingId = request.PeriodicTrainingId,
+                IpAddress = ipAddress
+            });
 
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.ErrorMessage });
+            }
+
+            // If the employee just signed, notify the manager with their own signing link
+            if (result.ManagerEmail != null)
+            {
                 var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
-                var managerSecureLink = $"{frontendUrl}/sign/{managerToken}";
+                var managerSecureLink = $"{frontendUrl}/sign/{result.ManagerNotificationToken}";
 
                 try
                 {
                     await _emailService.SendDocumentSignatureEmailWithLinkAsync(
-                        manager.Email, 
-                        $"{document.DocumentType} Document (Manager Approval)", 
+                        result.ManagerEmail,
+                        result.ManagerNotificationDocumentName!,
                         managerSecureLink);
                 }
                 catch (Exception ex)
                 {
                     // Log but don't fail the signing operation
-                    Console.WriteLine($"Warning: Failed to send email to manager {manager.Email}: {ex.Message}");
+                    Console.WriteLine($"Warning: Failed to send email to manager {result.ManagerEmail}: {ex.Message}");
                 }
             }
 
-            // Bulk sign: apply the same signature to all other pending docs this signer is responsible for
-            int bulkCount = 0;
-            if (request.BulkSign && (isLineManager || signerIsAdmin))
-            {
-                if (signerUserFromToken != null)
-                {
-                    var ipAddress2 = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-                    bulkCount = await _documentService.BulkSignDocumentsAsync(
-                        signerIsAdmin, signerUserFromToken.Id,
-                        request.SignatureMethod, request.SignatureData, ipAddress2);
-                }
-            }
-
-            var totalSigned = bulkCount + 1; // +1 for the document signed individually
-            var msg = bulkCount > 0
-                ? $"Successfully signed {totalSigned} document(s)."
+            var msg = result.TotalSigned > 1
+                ? $"Successfully signed {result.TotalSigned} document(s)."
                 : "Document successfully signed using secure link.";
 
             // Notify all connected clients that a signature was recorded so dashboards can refresh
             await _hubContext.Clients.All.SendAsync("SignatureUpdated");
 
-            return Ok(new { message = msg, count = totalSigned });
+            return Ok(new { message = msg, count = result.TotalSigned });
         }
 
         public class BulkSignDto
@@ -306,7 +222,6 @@ namespace SyncApp26.API.Controllers
             bool isAdmin = User.IsInRole(Roles.Admin);
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
-            // Obține totalul documentelor de semnat
             int total = await _documentService.GetPendingSsmDocumentsForAdminAsync();
             if (total == 0)
                 return Ok(new { message = "No documents to sign.", jobId = (string?)null });
@@ -315,7 +230,6 @@ namespace SyncApp26.API.Controllers
             var progress = new BulkSignProgress { Total = total, Signed = 0, Completed = false };
             BulkSignJobs[jobId] = progress;
 
-            // Rulează semnarea în fundal cu scope nou
             _ = Task.Run(async () =>
             {
                 using var scope = _scopeFactory.CreateScope();
@@ -329,7 +243,7 @@ namespace SyncApp26.API.Controllers
                         await docService.SignSingleDocumentAsAdminAsync(doc, request.SignatureMethod, request.SignatureData, ipAddress);
                         progress.Signed++;
                         idx++;
-                        await Task.Delay(250); // delay vizibil între semnături
+                        await Task.Delay(250); 
                     }
                     progress.Completed = true;
                 }

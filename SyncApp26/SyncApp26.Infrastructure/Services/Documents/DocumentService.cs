@@ -920,6 +920,46 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<UserDocument>> GetManagerPendingSignaturesAsync(Guid managerId)
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings)
+                .Where(d => d.User != null && d.User.AssignedToId == managerId
+                    && d.Status == "PendingManager"
+                    && d.UserSignedAt != null
+                    && d.ManagerSignedAt == null)
+                .OrderByDescending(d => d.GeneratedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<UserDocument>> GetManagerSignedDocumentsAsync(Guid managerId)
+        {
+            return await _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.AssignedTo)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.InitialTrainings)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.PeriodicTrainings)
+                .Where(d => d.User != null && d.User.AssignedToId == managerId
+                    && d.ManagerSignedAt != null)
+                .OrderByDescending(d => d.GeneratedAt)
+                .ToListAsync();
+        }
+
         public async Task<HashSet<Guid>> GetUserIdsWithDocumentTypeAsync(string documentType)
         {
             // Only count a user as "signed" if their LATEST document of this type has been signed by the user
@@ -1258,7 +1298,7 @@ namespace SyncApp26.Infrastructure.Services
             return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
         }
 
-        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null)
+        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
         {
             bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
 
@@ -1269,6 +1309,18 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .ToListAsync();
+
+            if (restrictToAssignedToId.HasValue)
+            {
+                var myEmployeeIds = users
+                    .Where(u => u.AssignedToId == restrictToAssignedToId.Value)
+                    .Select(u => u.Id)
+                    .ToList();
+
+                selectedUserIds = selectedUserIds == null || !selectedUserIds.Any()
+                    ? myEmployeeIds
+                    : selectedUserIds.Intersect(myEmployeeIds).ToList();
+            }
 
             // Filter out admin users on client side (EF doesn't support StringComparison parameter)
             var nonAdminUsers = users

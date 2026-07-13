@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +15,10 @@ namespace SyncApp26.API.Controllers
     public class PeriodicTrainingController : ControllerBase
     {
         private readonly IPeriodicTrainingService _periodicTrainingService;
-        private readonly IUserService _userService;
 
-        public PeriodicTrainingController(IPeriodicTrainingService periodicTrainingService, IUserService userService)
+        public PeriodicTrainingController(IPeriodicTrainingService periodicTrainingService)
         {
             _periodicTrainingService = periodicTrainingService;
-            _userService = userService;
         }
 
         /// <summary>
@@ -107,25 +104,13 @@ namespace SyncApp26.API.Controllers
             try
             {
                 var isAdmin = User.IsInRole(Roles.Admin);
+                Guid? restrictToAssignedToId = null;
                 if (!isAdmin && User.GetUserId() is { } currentUserId)
                 {
-                    var myEmployees = (await _userService.GetAllUsersAsync())
-                        .Where(u => u.AssignedToId == currentUserId)
-                        .Select(u => u.Id)
-                        .ToList();
-
-                    if (dto.ApplyToAllUsers || dto.SelectedUserIds == null || !dto.SelectedUserIds.Any())
-                    {
-                        dto.ApplyToAllUsers = false;
-                        dto.SelectedUserIds = myEmployees;
-                    }
-                    else
-                    {
-                        dto.SelectedUserIds = dto.SelectedUserIds.Intersect(myEmployees).ToList();
-                    }
+                    restrictToAssignedToId = currentUserId;
                 }
 
-                var result = await _periodicTrainingService.BulkCreateAsync(dto);
+                var result = await _periodicTrainingService.BulkCreateAsync(dto, restrictToAssignedToId);
 
                 if (result.FailedCount > 0 && result.SuccessCount == 0)
                 {

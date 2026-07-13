@@ -89,12 +89,30 @@ namespace SyncApp26.Infrastructure.Services
             return true;
         }
 
-        public async Task<BulkCreateResultDTO> BulkCreateAsync(BulkCreatePeriodicTrainingDTO dto)
+        public async Task<BulkCreateResultDTO> BulkCreateAsync(BulkCreatePeriodicTrainingDTO dto, Guid? restrictToAssignedToId = null)
         {
             var result = new BulkCreateResultDTO();
 
             try
             {
+                if (restrictToAssignedToId.HasValue)
+                {
+                    var myEmployeeIds = await _context.Users
+                        .Where(u => u.AssignedToId == restrictToAssignedToId.Value)
+                        .Select(u => u.Id)
+                        .ToListAsync();
+
+                    if (dto.ApplyToAllUsers || dto.SelectedUserIds == null || !dto.SelectedUserIds.Any())
+                    {
+                        dto.ApplyToAllUsers = false;
+                        dto.SelectedUserIds = myEmployeeIds;
+                    }
+                    else
+                    {
+                        dto.SelectedUserIds = dto.SelectedUserIds.Intersect(myEmployeeIds).ToList();
+                    }
+                }
+
                 // Get list of users to apply training to
                 var usersQuery = _context.Users
                     .Include(u => u.Function)
