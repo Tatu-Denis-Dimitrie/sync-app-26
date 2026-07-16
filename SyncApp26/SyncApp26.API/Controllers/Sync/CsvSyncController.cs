@@ -32,16 +32,13 @@ public class CsvSyncController : ControllerBase
         _departmentService = departmentService;
         _logger = logger;
     }
-    /// <summary>
-    /// Upload CSV file and compare with database
-    /// </summary>
-    [HttpPost("upload")]
-    [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit for large CSVs
-    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file, [FromQuery] bool skipInvalidRows = false)
-    {
-        var startTime = DateTime.UtcNow;
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
+    // Progress updates are streamed over SignalR, keyed by this ID
+    private string? GetConnectionId() =>
+        Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
+
+    private BadRequestObjectResult? ValidateCsvUpload(IFormFile? file)
+    {
         if (file == null || file.Length == 0)
         {
             return BadRequest(new { error = "No file uploaded" });
@@ -52,8 +49,38 @@ public class CsvSyncController : ControllerBase
             return BadRequest(new { error = "File must be a CSV file" });
         }
 
-        // Get connection ID for SignalR progress updates
-        string? connectionId = Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
+        return null;
+    }
+
+    private static CsvConfiguration CreateCsvConfiguration() => new(CultureInfo.InvariantCulture)
+    {
+        HeaderValidated = null,
+        MissingFieldFound = null,
+        BadDataFound = null
+    };
+
+    private ObjectResult HandleCsvException(Exception ex, string logMessage, string errorPrefix)
+    {
+        _logger.LogError(ex, logMessage);
+        return StatusCode(500, new { error = $"{errorPrefix}: {ex.Message}" });
+    }
+
+    /// <summary>
+    /// Upload CSV file and compare with database
+    /// </summary>
+    [HttpPost("upload")]
+    [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit for large CSVs
+    public async Task<ActionResult<ComparisonResponseDTO>> UploadAndCompare(IFormFile file, [FromQuery] bool skipInvalidRows = false)
+    {
+        var startTime = DateTime.UtcNow;
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        if (ValidateCsvUpload(file) is { } fileError)
+        {
+            return fileError;
+        }
+
+        string? connectionId = GetConnectionId();
 
         try
         {
@@ -115,12 +142,7 @@ public class CsvSyncController : ControllerBase
 
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HeaderValidated = null,
-                MissingFieldFound = null,
-                BadDataFound = null
-            }))
+            using (var csv = new CsvReader(reader, CreateCsvConfiguration()))
             {
                 csv.Context.RegisterClassMap<CsvUserMap>();
                 csv.Read();
@@ -173,8 +195,7 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing CSV file");
-            return StatusCode(500, new { error = $"Error processing CSV: {ex.Message}" });
+            return HandleCsvException(ex, "Error processing CSV file", "Error processing CSV");
         }
     }
 
@@ -189,8 +210,7 @@ public class CsvSyncController : ControllerBase
             return BadRequest(new { error = "No sync items provided" });
         }
 
-        // Get connection ID for SignalR progress updates
-        string? connectionId = Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
+        string? connectionId = GetConnectionId();
 
         try
         {
@@ -206,22 +226,16 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error syncing users");
-            return StatusCode(500, new { error = $"Error syncing users: {ex.Message}" });
+            return HandleCsvException(ex, "Error syncing users", "Error syncing users");
         }
     }
 
     [HttpPost("upload-departments")]
     public async Task<ActionResult<List<CSVDepartmentComparisionDTO>>> UploadAndCompareDepartments(IFormFile file)
     {
-        if (file == null || file.Length == 0)
+        if (ValidateCsvUpload(file) is { } fileError)
         {
-            return BadRequest(new { error = "No file uploaded" });
-        }
-
-        if (!file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
-        {
-            return BadRequest(new { error = "File must be a CSV file" });
+            return fileError;
         }
 
         try
@@ -231,12 +245,7 @@ public class CsvSyncController : ControllerBase
 
             using (var stream = file.OpenReadStream())
             using (var reader = new StreamReader(stream, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HeaderValidated = null,
-                MissingFieldFound = null,
-                BadDataFound = null
-            }))
+            using (var csv = new CsvReader(reader, CreateCsvConfiguration()))
             {
                 csv.Context.RegisterClassMap<CsvDepartmentMap>();
                 if (!csv.Read() || !csv.ReadHeader())
@@ -286,8 +295,7 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing CSV file");
-            return StatusCode(500, new { error = $"Error processing CSV: {ex.Message}" });
+            return HandleCsvException(ex, "Error processing CSV file", "Error processing CSV");
         }
     }
 
@@ -313,8 +321,7 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error syncing departments");
-            return StatusCode(500, new { error = $"Error syncing departments: {ex.Message}" });
+            return HandleCsvException(ex, "Error syncing departments", "Error syncing departments");
         }
     }
 }

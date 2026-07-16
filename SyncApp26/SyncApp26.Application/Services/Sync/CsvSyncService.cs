@@ -394,8 +394,7 @@ public class CsvSyncService : ICsvSyncService
 
         stopwatch.Stop();
         result.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
-        result.Success = result.RecordsFailed =
-        = 0;
+        result.Success = result.RecordsFailed == 0;
         result.Message = result.Success
             ? $"Successfully synced {result.RecordsProcessed} records in {result.ProcessingTimeMs}ms"
             : $"Synced with errors: {result.RecordsFailed} failed";

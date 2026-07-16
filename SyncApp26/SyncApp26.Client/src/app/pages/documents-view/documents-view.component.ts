@@ -117,6 +117,7 @@ export class DocumentsViewComponent implements OnInit {
 
   loadDocuments(): void {
     this.loading = true;
+    this.error = null;
     this.documents$ = this.http.get<DocumentDto[]>(`${environment.apiUrl}/Document/all`).pipe(
       map(docs => {
         this.allDocuments = docs;
@@ -263,6 +264,7 @@ export class DocumentsViewComponent implements OnInit {
   }
 
   signAsAdmin(doc: DocumentDto): void {
+    this.error = null;
     this.http.get<{ token: string }>(`${environment.apiUrl}/document/token-for-document/${doc.id}`)
       .subscribe({
         next: (res) => {
@@ -275,6 +277,7 @@ export class DocumentsViewComponent implements OnInit {
   }
 
   bulkSignAsAdmin(): void {
+    this.error = null;
     // Get a token for any pending admin document, then navigate to the signing page in bulk mode
     const pendingAdminDoc = this.allDocuments.find(d => d.status === 'PendingAdmin');
     if (!pendingAdminDoc) {
@@ -297,6 +300,7 @@ export class DocumentsViewComponent implements OnInit {
   }
 
   viewPdf(doc: DocumentDto): void {
+    this.error = null;
     const url = `${environment.apiUrl}/Document/${doc.id}/view-pdf`;
     this.http.get(url, { responseType: 'blob' }).subscribe({
       next: (blob) => {

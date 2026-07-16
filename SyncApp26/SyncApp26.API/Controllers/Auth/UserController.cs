@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Shared.DTOs.Response.User;
@@ -28,6 +29,23 @@ namespace SyncApp26.API.Controllers
             _userProfileService = userProfileService;
         }
 
+        private static UserGETResponseDTO MapToUserGETResponseDTO(User user) => new UserGETResponseDTO
+        {
+            Id = user.Id,
+            PersonalId = user.PersonalId,
+            Role = user.Role,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            DepartmentId = user.DepartmentId ?? Guid.Empty,
+            DepartmentName = user.Department?.Name ?? "Unknown",
+            AssignedToId = user.AssignedToId,
+            AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
+            Function = user.Function?.Name ?? "Unknown",
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt
+        };
+
         [HttpGet("{id}")]
         public async Task<ActionResult<UserGETResponseDTO>> GetUserById(Guid id)
         {
@@ -37,22 +55,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound();
             }
 
-            return Ok(new UserGETResponseDTO
-            {
-                Id = user.Id,
-                PersonalId = user.PersonalId,
-                Role = user.Role,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                DepartmentId = user.DepartmentId ?? Guid.Empty,
-                DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
-                AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "Unknown",
-                CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
-            });
+            return Ok(MapToUserGETResponseDTO(user));
         }
 
         [HttpGet("personal-id/{personalId}")]
@@ -64,22 +67,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound();
             }
 
-            return Ok(new UserGETResponseDTO
-            {
-                Id = user.Id,
-                PersonalId = user.PersonalId,
-                Role = user.Role,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                DepartmentId = user.DepartmentId ?? Guid.Empty,
-                DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
-                AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "Unknown",
-                CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
-            });
+            return Ok(MapToUserGETResponseDTO(user));
         }
 
         [HttpGet]
@@ -99,25 +87,14 @@ namespace SyncApp26.API.Controllers
             var unsignedSsmIds = await _documentService.GetUserIdsWithUnsignedDocumentTypeAsync("SSM");
             var unsignedSuIds = await _documentService.GetUserIdsWithUnsignedDocumentTypeAsync("SU");
 
-            var responseList = users.Select(user => new UserGETResponseDTO
+            var responseList = users.Select(user =>
             {
-                Id = user.Id,
-                PersonalId = user.PersonalId,
-                Role = user.Role,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                DepartmentId = user.DepartmentId ?? Guid.Empty,
-                DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
-                AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "Unknown",
-                CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt,
-                HasSignedSsm = ssmIds.Contains(user.Id),
-                HasSignedSu = suIds.Contains(user.Id),
-                HasUnsignedSsm = unsignedSsmIds.Contains(user.Id),
-                HasUnsignedSu = unsignedSuIds.Contains(user.Id)
+                var dto = MapToUserGETResponseDTO(user);
+                dto.HasSignedSsm = ssmIds.Contains(user.Id);
+                dto.HasSignedSu = suIds.Contains(user.Id);
+                dto.HasUnsignedSsm = unsignedSsmIds.Contains(user.Id);
+                dto.HasUnsignedSu = unsignedSuIds.Contains(user.Id);
+                return dto;
             }).ToList();
 
             return Ok(responseList);
@@ -138,22 +115,7 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
-            var responseList = usersList.Select(user => new UserGETResponseDTO
-            {
-                Id = user.Id,
-                PersonalId = user.PersonalId,
-                Role = user.Role,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                DepartmentId = user.DepartmentId ?? Guid.Empty,
-                DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
-                AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
-                Function = user.Function?.Name ?? "Unknown",
-                CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
-            }).ToList();
+            var responseList = usersList.Select(MapToUserGETResponseDTO).ToList();
 
             return Ok(responseList);
         }
@@ -168,21 +130,11 @@ namespace SyncApp26.API.Controllers
             }
 
             var users = await _userService.GetUsersAssignedToAsync(assignedToId);
-            var responseList = users.Select(user => new UserGETResponseDTO
+            var responseList = users.Select(user =>
             {
-                Id = user.Id,
-                PersonalId = user.PersonalId,
-                Role = user.Role,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                DepartmentId = user.DepartmentId ?? Guid.Empty,
-                DepartmentName = user.Department?.Name ?? "Unknown",
-                AssignedToId = user.AssignedToId,
-                AssignedToName = $"{lineManager.FirstName} {lineManager.LastName}",
-                Function = user.Function?.Name ?? "Unknown",
-                CreatedAt = user.CreatedAt,
-                UpdatedAt = user.UpdatedAt
+                var dto = MapToUserGETResponseDTO(user);
+                dto.AssignedToName = $"{lineManager.FirstName} {lineManager.LastName}";
+                return dto;
             }).ToList();
 
             return Ok(responseList);
