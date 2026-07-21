@@ -131,7 +131,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
         await DatabaseSeeder.SeedAsync(context);
     }
     catch (Exception ex)

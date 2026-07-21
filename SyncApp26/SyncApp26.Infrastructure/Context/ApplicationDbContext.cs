@@ -46,6 +46,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<UserSignature> UserSignatures { get; set; }
         public DbSet<UserSignatureHistory> UserSignatureHistories { get; set; }
         public DbSet<DataChangeRequest> DataChangeRequests { get; set; }
+        public DbSet<SignatureRecord> SignatureRecords { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -300,6 +301,38 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasIndex(e => new { e.UserId, e.DocumentType })
                     .IsUnique()
                     .HasDatabaseName("IX_UserInitialTrainings_UserId_DocumentType");
+            });
+
+            // Configure SignatureRecord entity
+            modelBuilder.Entity<SignatureRecord>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.SignerRole).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.SignerFullNameSnapshot).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.SignerPositionSnapshot).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.SignatureData).IsRequired();
+
+                entity.HasOne(e => e.UserDocument)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserDocumentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.PeriodicTraining)
+                    .WithMany()
+                    .HasForeignKey(e => e.PeriodicTrainingId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.SignerUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.SignerUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.UserDocumentId).HasDatabaseName("IX_SignatureRecords_UserDocumentId");
+
+                // Chain lookups walk "the last SignatureRecord for this signer" in signing order.
+                entity.HasIndex(e => new { e.SignerUserId, e.SignedAt })
+                    .HasDatabaseName("IX_SignatureRecords_SignerUserId_SignedAt");
             });
         }
 
