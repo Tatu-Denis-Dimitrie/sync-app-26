@@ -90,6 +90,8 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
+builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
+builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();
