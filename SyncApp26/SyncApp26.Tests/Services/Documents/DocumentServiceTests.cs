@@ -181,6 +181,80 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
+        public async Task UpdateDocumentSignatureAsync_SameSignerTwice_SecondRecordChainsToFirst()
+        {
+            var service = CreateService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+
+            var owner1 = SeedUser("Adela", "Popescu", employeeFunction);
+            owner1.AssignedToId = manager.Id;
+            var owner2 = SeedUser("Ion", "Vasile", employeeFunction);
+            owner2.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc1 = SeedDocument(owner1, "SU", "PendingManager");
+            doc1.UserSignedAt = DateTime.UtcNow;
+            var doc2 = SeedDocument(owner2, "SU", "PendingManager");
+            doc2.UserSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+
+            // Same manager signs two different employees' documents — the chain is per-signer,
+            // not per-document, so the second signature must link to the first regardless.
+            await service.UpdateDocumentSignatureAsync(
+                doc1.Id, manager.Id, isUserSignature: false, "Type", "Radu Stanescu", "9.9.9.9");
+            await service.UpdateDocumentSignatureAsync(
+                doc2.Id, manager.Id, isUserSignature: false, "Type", "Radu Stanescu", "9.9.9.9");
+
+            var firstRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc1.Id);
+            var secondRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc2.Id);
+
+            Assert.Null(firstRecord.PreviousSignatureHash);
+            Assert.False(string.IsNullOrEmpty(firstRecord.SignatureHmac));
+            Assert.Equal(firstRecord.SignatureHmac, secondRecord.PreviousSignatureHash);
+            Assert.NotEqual(firstRecord.SignatureHmac, secondRecord.SignatureHmac);
+        }
+
+        [Fact]
+        public async Task BulkSignDocumentsAsync_SameSignerAcrossLoop_ChainsWithinTheSameBatch()
+        {
+            var service = CreateService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+
+            var owner1 = SeedUser("Adela", "Popescu", employeeFunction);
+            owner1.AssignedToId = manager.Id;
+            var owner2 = SeedUser("Ion", "Vasile", employeeFunction);
+            owner2.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc1 = SeedDocument(owner1, "SU", "PendingManager");
+            doc1.UserSignedAt = DateTime.UtcNow;
+            var doc2 = SeedDocument(owner2, "SU", "PendingManager");
+            doc2.UserSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+
+            // A single bulk-sign call processes both documents in one in-memory loop before the
+            // caller's own SaveChanges — this proves the chain lookup sees records created
+            // earlier in the *same* loop, not just ones from a prior, already-saved request.
+            await service.BulkSignDocumentsAsync(false, manager.Id, "Type", "Radu Stanescu", "9.9.9.9");
+
+            var records = _dbFixture.Context.SignatureRecords
+                .Where(r => r.SignerUserId == manager.Id)
+                .ToList();
+
+            // Both documents share the same SignedAt timestamp (set once for the whole bulk
+            // call), so processing order — not the timestamp — is what determines the chain;
+            // assert on the link itself rather than assuming which document was processed first.
+            Assert.Equal(2, records.Count);
+            var withoutPrevious = Assert.Single(records, r => r.PreviousSignatureHash == null);
+            var withPrevious = Assert.Single(records, r => r.PreviousSignatureHash != null);
+            Assert.Equal(withoutPrevious.SignatureHmac, withPrevious.PreviousSignatureHash);
+        }
+
+        [Fact]
         public async Task SignSingleDocumentAsAdminAsync_CreatesSignatureRecordWithAdminRole()
         {
             var service = CreateService();

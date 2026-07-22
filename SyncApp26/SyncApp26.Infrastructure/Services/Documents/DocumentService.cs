@@ -1223,6 +1223,17 @@ namespace SyncApp26.Infrastructure.Services
             var positionSnapshot = signerUser.Function?.Name ?? string.Empty;
             var signedAtOffset = new DateTimeOffset(signedAt, TimeSpan.Zero);
 
+            // Links to the same signer's most recent signature across all their documents, not
+            // just this one. SQLite's EF provider can't order by DateTimeOffset server-side, so
+            // the (already small, per-signer-filtered) results are sorted client-side.
+            var previousRecord = (await _context.SignatureRecords
+                    .Where(r => r.SignerUserId == signerUserId)
+                    .ToListAsync())
+                .OrderByDescending(r => r.SignedAt)
+                .ThenByDescending(r => r.CreatedAt)
+                .FirstOrDefault();
+            var previousHash = previousRecord?.SignatureHmac;
+
             var canonicalInput = new SignatureCanonicalInput(
                 signerUserId,
                 fullNameSnapshot,
@@ -1231,7 +1242,7 @@ namespace SyncApp26.Infrastructure.Services
                 training?.DurationHours,
                 training?.TrainingDate,
                 signedAtOffset,
-                PreviousSignatureHash: null);
+                previousHash);
 
             var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
             var hmac = await _hmacSignatureService.ComputeHmacAsync(canonical);
@@ -1251,10 +1262,14 @@ namespace SyncApp26.Infrastructure.Services
                 TrainingDateSnapshot = training?.TrainingDate,
                 IpAddress = ipAddress,
                 SignedAt = signedAtOffset,
-                PreviousSignatureHash = null,
+                PreviousSignatureHash = previousHash,
                 SignatureHmac = hmac,
                 IsLegacyUnverified = false
             });
+
+            // Committed immediately, not left for the caller's own SaveChanges, so that multiple
+            // signatures by the same signer within one operation still chain correctly.
+            await _context.SaveChangesAsync();
         }
 
         private static PeriodicTraining? FindTargetPeriodicTraining(UserDocument doc, Guid? periodicTrainingId)
