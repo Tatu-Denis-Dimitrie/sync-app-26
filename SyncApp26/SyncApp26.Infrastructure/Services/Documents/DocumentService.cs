@@ -12,6 +12,9 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Security.Cryptography;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace SyncApp26.Infrastructure.Services
 {
@@ -354,44 +357,29 @@ namespace SyncApp26.Infrastructure.Services
         private static string FDate(DateTime? dt) => dt.HasValue ? dt.Value.ToString("dd.MM.yyyy") : "___________";
         private static string FUnderline(string? val) => val?.Trim() is { Length: > 0 } v ? v : "___________";
 
-        private static void SignatureRow(ColumnDescriptor col, bool isSsm,
+        private static void SignatureRow(ColumnDescriptor col, bool isSsm, User user,
+            string? instructorName = null, string? instructorPosition = null,
             string? userSigMethod = null, string? userSigData = null,
             string? instructorSigMethod = null, string? instructorSigData = null,
             string? verifierSigMethod = null, string? verifierSigData = null)
         {
             col.Item().PaddingTop(6).Row(row =>
             {
-                row.RelativeItem().Column(c =>
-                {
-                    c.Item().Text(isSsm ? "Semnătura celui instruit:" : "Semnătura persoanei instruite:").FontSize(8);
-                    if (!string.IsNullOrWhiteSpace(userSigData))
-                        RenderSignature(c, userSigMethod, userSigData);
-                    else
-                        c.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
-                });
+                row.RelativeItem().Column(c => RenderSignatureBlock(c,
+                    isSsm ? "Semnătura celui instruit:" : "Semnătura persoanei instruite:",
+                    new SignatureBlockData($"{user.FirstName} {user.LastName}", user.Function?.Name, userSigMethod, userSigData)));
+
                 row.ConstantItem(10);
-                row.RelativeItem().Column(c =>
-                {
-                    c.Item().Text("Semnătura celui care a efectuat instruirea:").FontSize(8);
-                    if (!string.IsNullOrWhiteSpace(instructorSigData))
-                        RenderSignature(c, instructorSigMethod, instructorSigData);
-                    else
-                        c.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
-                });
+                row.RelativeItem().Column(c => RenderSignatureBlock(c,
+                    "Semnătura celui care a efectuat instruirea:",
+                    new SignatureBlockData(instructorName, instructorPosition, instructorSigMethod, instructorSigData)));
+
                 if (isSsm)
                 {
                     row.ConstantItem(10);
-                    row.RelativeItem().Column(c =>
-                    {
-                        c.Item().Text("Semnătura celui care a verificat:").FontSize(8);
-                        // DEBUG LOG: Verifier signature info
-                        Console.WriteLine($"[PDF] VerifierSignatureMethod: {verifierSigMethod}");
-                        Console.WriteLine($"[PDF] VerifierSignatureData: {(verifierSigData != null ? verifierSigData.Substring(0, Math.Min(100, verifierSigData.Length)) : "null")}");
-                        if (!string.IsNullOrWhiteSpace(verifierSigData))
-                            RenderSignature(c, verifierSigMethod, verifierSigData);
-                        else
-                            c.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
-                    });
+                    row.RelativeItem().Column(c => RenderSignatureBlock(c,
+                        "Semnătura celui care a verificat:",
+                        new SignatureBlockData(null, null, verifierSigMethod, verifierSigData)));
                 }
             });
         }
@@ -411,9 +399,57 @@ namespace SyncApp26.Infrastructure.Services
                     .Replace("data:image/png;base64,", "")
                     .Replace("data:image/jpeg;base64,", "")
                     .Replace("data:image/svg+xml;base64,", "");
-                return Convert.FromBase64String(clean);
+                var rawBytes = Convert.FromBase64String(clean);
+                return CropToInk(rawBytes) ?? rawBytes;
             }
             catch { return null; }
+        }
+
+        private static byte[]? CropToInk(byte[] pngBytes)
+        {
+            try
+            {
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(pngBytes);
+
+                int minX = image.Width, minY = image.Height, maxX = -1, maxY = -1;
+                const byte alphaThreshold = 10;
+
+                image.ProcessPixelRows(accessor =>
+                {
+                    for (int y = 0; y < accessor.Height; y++)
+                    {
+                        var row = accessor.GetRowSpan(y);
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            if (row[x].A > alphaThreshold)
+                            {
+                                if (x < minX) minX = x;
+                                if (x > maxX) maxX = x;
+                                if (y < minY) minY = y;
+                                if (y > maxY) maxY = y;
+                            }
+                        }
+                    }
+                });
+
+                if (maxX < minX || maxY < minY) return null; // nothing drawn — fall back
+
+                const int margin = 6;
+                int cropX = Math.Max(0, minX - margin);
+                int cropY = Math.Max(0, minY - margin);
+                int cropWidth = Math.Min(image.Width, maxX + 1 + margin) - cropX;
+                int cropHeight = Math.Min(image.Height, maxY + 1 + margin) - cropY;
+
+                image.Mutate(ctx => ctx.Crop(new SixLabors.ImageSharp.Rectangle(cropX, cropY, cropWidth, cropHeight)));
+
+                using var ms = new MemoryStream();
+                image.SaveAsPng(ms);
+                return ms.ToArray();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         // Renders a signature into a column descriptor item — image for Draw, text for Type.
@@ -428,12 +464,64 @@ namespace SyncApp26.Infrastructure.Services
             if (data.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
             {
                 var imgBytes = TryDecodeSignature(data);
-                if (imgBytes != null) c.Item().Image(imgBytes).FitWidth();
+                if (imgBytes != null) c.Item().Image(imgBytes).FitArea();
             }
             else
             {
-                c.Item().PaddingTop(2).AlignCenter().Text(data).FontSize(9).Italic();
+                c.Item().PaddingTop(2).AlignCenter().Text(data).FontSize(14).Italic();
             }
+        }
+
+        // Input for the Adobe-style signature block
+        private readonly record struct SignatureBlockData(
+            string? FullName,
+            string? Position,
+            string? SignatureMethod,
+            string? SignatureData,
+            DateTime? SignedAtUtc = null);
+
+        // Adobe-Sign-style signature block (matches Acrobat's certificate-of-completion
+        // layout): the drawn/typed signature alongside "Digitally signed by <name>" +
+        // "Date: <timestamp>"
+        private static void RenderSignatureBlock(ColumnDescriptor col, string label, SignatureBlockData data, bool stacked = false)
+        {
+            if (!string.IsNullOrEmpty(label))
+                col.Item().Text(label).FontSize(8);
+
+            bool hasContent = !string.IsNullOrWhiteSpace(data.SignatureData);
+            if (!hasContent)
+            {
+                col.Item().PaddingTop(20).BorderBottom(0.5f).Text("");
+                return;
+            }
+
+            string dateText = data.SignedAtUtc.HasValue
+                ? data.SignedAtUtc.Value.ToString("yyyy.MM.dd HH:mm:ss")
+                : "-";
+
+            if (stacked)
+            {
+                col.Item().PaddingTop(3).Border(0.5f).Padding(4).Column(inner =>
+                {
+                    inner.Item().Height(50).AlignMiddle().Column(sigCol => RenderSignature(sigCol, data.SignatureMethod, data.SignatureData));
+                    inner.Item().PaddingTop(3).Text($"Digitally signed by {F(data.FullName)}").FontSize(8.5f);
+                    inner.Item().Text($"Date: {dateText}").FontSize(8.5f);
+                });
+                return;
+            }
+
+            col.Item().PaddingTop(3).Border(0.5f).Padding(4).Row(row =>
+            {
+                row.RelativeItem(1.6f).Height(66).AlignMiddle().Column(sigCol => RenderSignature(sigCol, data.SignatureMethod, data.SignatureData));
+
+                row.ConstantItem(6);
+
+                row.RelativeItem(1.0f).AlignMiddle().Column(inner =>
+                {
+                    inner.Item().Text($"Digitally signed by {F(data.FullName)}").FontSize(8.5f);
+                    inner.Item().Text($"Date: {dateText}").FontSize(8.5f);
+                });
+            });
         }
 
         // ─── Core PDF builder ────────────────────────────────────────────────────
@@ -616,7 +704,7 @@ namespace SyncApp26.Infrastructure.Services
             string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
             SectionHeader(col, sectionTitle, ctx.AccentColor);
 
-            RenderIntroductoryTrainingItem(col, ctx, it);
+            RenderIntroductoryTrainingItem(col, user, ctx, it);
             col.Item().Height(8);
             RenderWorkplaceTrainingItem(col, user, ctx, it);
             col.Item().Height(10);
@@ -624,7 +712,7 @@ namespace SyncApp26.Infrastructure.Services
         }
 
         // 1. Instruire introductivă generală
-        private static void RenderIntroductoryTrainingItem(ColumnDescriptor col, DocumentRenderContext ctx, UserInitialTraining? it)
+        private static void RenderIntroductoryTrainingItem(ColumnDescriptor col, User user, DocumentRenderContext ctx, UserInitialTraining? it)
         {
             bool isSsm = ctx.IsSsm;
             string t1 = isSsm ? "1. Instruirea introductiv generală" : "1. Instructajul introductiv general";
@@ -648,7 +736,8 @@ namespace SyncApp26.Infrastructure.Services
             col.Item().Border(0.5f).Padding(6)
                 .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
             // Signatures frozen from first signing — stored on UserInitialTraining
-            SignatureRow(col, isSsm,
+            SignatureRow(col, isSsm, user,
+                it?.IntroductoryTrainingInstructor, it?.IntroductoryTrainingInstructorFunction,
                 it?.UserSignatureMethod, it?.UserSignatureData,
                 it?.InstructorSignatureMethod, it?.InstructorSignatureData,
                 it?.VerifierSignatureMethod, it?.VerifierSignatureData);
@@ -681,7 +770,8 @@ namespace SyncApp26.Infrastructure.Services
             col.Item().Border(0.5f).Padding(6)
                 .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
             // Signatures frozen from first signing — stored on UserInitialTraining
-            SignatureRow(col, isSsm,
+            SignatureRow(col, isSsm, user,
+                it?.WorkplaceTrainingInstructor, it?.WorkplaceTrainingInstructorFunction,
                 it?.UserSignatureMethod, it?.UserSignatureData,
                 it?.InstructorSignatureMethod, it?.InstructorSignatureData,
                 it?.VerifierSignatureMethod, it?.VerifierSignatureData);
@@ -754,10 +844,10 @@ namespace SyncApp26.Infrastructure.Services
                 c.ConstantColumn(50);   // Data
                 c.ConstantColumn(35);   // Durata
                 c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
-                c.RelativeColumn(4.5f); // Material predat
-                c.RelativeColumn(1.0f); // Semnătură instruit
-                c.RelativeColumn(1.0f); // Semnătură instructor
-                if (isSsm) c.RelativeColumn(1.0f); // Semnătură verificator
+                c.RelativeColumn(3.8f); // Material predat
+                c.RelativeColumn(1.2f); // Semnătură instruit
+                c.RelativeColumn(1.2f); // Semnătură instructor
+                if (isSsm) c.RelativeColumn(1.2f); // Semnătură verificator
             });
 
             table.Header(header =>
@@ -782,12 +872,13 @@ namespace SyncApp26.Infrastructure.Services
                 .OrderBy(pt => pt.CreatedAt)
                 .ToList()) ?? new List<PeriodicTraining>();
             string occupation = user.Function?.Name ?? "";
+            string employeeFullName = $"{user.FirstName} {user.LastName}";
 
             for (int i = 0; i < periodicTrainings.Count; i++)
             {
                 // The last row is the current (new) one; earlier rows are historical copies
                 bool isCurrentDocRow = (i == periodicTrainings.Count - 1);
-                RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, occupation, isSsm, viewerIsAdmin);
+                RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, employeeFullName, occupation, isSsm, viewerIsAdmin);
             }
 
             // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
@@ -795,7 +886,7 @@ namespace SyncApp26.Infrastructure.Services
                 RenderEmptyPeriodicTrainingRow(table, document, occupation, isSsm, viewerIsAdmin);
         }
 
-        private static void RenderPeriodicTrainingRow(TableDescriptor table, PeriodicTraining training, int index, bool isCurrentDocRow, string occupation, bool isSsm, bool viewerIsAdmin)
+        private static void RenderPeriodicTrainingRow(TableDescriptor table, PeriodicTraining training, int index, bool isCurrentDocRow, string employeeFullName, string occupation, bool isSsm, bool viewerIsAdmin)
         {
             // Use only per-row signatures stored directly on the PeriodicTraining row.
             // No fallback to document-level fields — those are transient; the
@@ -827,11 +918,14 @@ namespace SyncApp26.Infrastructure.Services
             table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
             table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(6.5f);
 
-            table.Cell().Element(rowCell).Column(c => RenderSignature(c, userSigMethod, userSigData));
-            table.Cell().Element(rowCell).Column(c => RenderSignature(c, mgrSigMethod, mgrSigData));
+            table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
+                new SignatureBlockData(employeeFullName, occupation, userSigMethod, userSigData), stacked: true));
+            table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
+                new SignatureBlockData(training.InstructorName, null, mgrSigMethod, mgrSigData), stacked: true));
 
             if (isSsm)
-                table.Cell().Element(rowCell).Column(c => RenderSignature(c, verifierSigMethod, verifierSigData));
+                table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
+                    new SignatureBlockData(training.VerifierName, null, verifierSigMethod, verifierSigData), stacked: true));
         }
 
         private static void RenderEmptyPeriodicTrainingRow(TableDescriptor table, UserDocument document, string occupation, bool isSsm, bool viewerIsAdmin)

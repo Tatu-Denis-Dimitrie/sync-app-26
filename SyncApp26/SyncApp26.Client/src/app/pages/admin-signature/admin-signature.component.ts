@@ -13,6 +13,9 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./admin-signature.component.css']
 })
 export class AdminSignatureComponent {
+
+  private static readonly MIN_SUPERSAMPLE = 2;
+
   @ViewChild('signaturePad') signaturePad?: ElementRef<HTMLCanvasElement>;
   private ctx?: CanvasRenderingContext2D;
   private drawing = false;
@@ -35,9 +38,22 @@ export class AdminSignatureComponent {
 
   private initCanvas() {
     if (this.signatureMethod === 'draw' && this.signaturePad && this.signaturePad.nativeElement) {
-      this.ctx = this.signaturePad.nativeElement.getContext('2d')!;
+      const canvas = this.signaturePad.nativeElement;
+      const rect = canvas.getBoundingClientRect();
+      const cssWidth = rect.width || canvas.width;
+      const cssHeight = rect.height || canvas.height;
+      const scale = Math.max(window.devicePixelRatio || 1, AdminSignatureComponent.MIN_SUPERSAMPLE);
+      const targetWidth = Math.round(cssWidth * scale);
+      const targetHeight = Math.round(cssHeight * scale);
+
+      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+      }
+
+      this.ctx = canvas.getContext('2d')!;
       this.ctx.strokeStyle = '#0f766e';
-      this.ctx.lineWidth = 2.5;
+      this.ctx.lineWidth = 2.5 * scale;
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
     }

@@ -2,6 +2,9 @@
 // (scaled pointer coordinates, stroke rendering). Components keep their own ViewChild,
 // mode toggle, confirmation flag and save flow, and delegate only the drawing here.
 export class CanvasSignaturePad {
+
+  private static readonly MIN_SUPERSAMPLE = 2;
+
   private ctx: CanvasRenderingContext2D | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private drawing = false;
@@ -11,9 +14,16 @@ export class CanvasSignaturePad {
   attach(canvas: HTMLCanvasElement | undefined): void {
     if (!canvas) return;
     this.canvas = canvas;
+    const rect = canvas.getBoundingClientRect();
+    const cssWidth = rect.width || canvas.width;
+    const cssHeight = rect.height || canvas.height;
+    const scale = Math.max(window.devicePixelRatio || 1, CanvasSignaturePad.MIN_SUPERSAMPLE);
+    canvas.width = Math.round(cssWidth * scale);
+    canvas.height = Math.round(cssHeight * scale);
+
     this.ctx = canvas.getContext('2d');
     if (this.ctx) {
-      this.ctx.lineWidth = 2.5;
+      this.ctx.lineWidth = 2.5 * scale;
       this.ctx.lineCap = 'round';
       this.ctx.lineJoin = 'round';
       this.ctx.strokeStyle = '#0f766e';
