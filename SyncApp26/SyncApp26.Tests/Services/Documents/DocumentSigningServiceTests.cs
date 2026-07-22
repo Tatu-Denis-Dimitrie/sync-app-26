@@ -472,7 +472,7 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Equal(1, result.TotalSigned);
             Assert.Equal(manager.Email, result.ManagerEmail);
             Assert.Equal("manager-tok", result.ManagerNotificationToken);
-            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, true, "Draw", "data", "1.2.3.4", false, null), Times.Once);
+            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, owner.Id, true, "Draw", "data", "1.2.3.4", false, null), Times.Once);
         }
 
         [Fact]
@@ -516,7 +516,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
 
             Assert.True(result.Success);
-            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, false, "Draw", "data", It.IsAny<string>(), true, null), Times.Once);
+            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, admin.Id, false, "Draw", "data", It.IsAny<string>(), true, null), Times.Once);
         }
 
         [Fact]

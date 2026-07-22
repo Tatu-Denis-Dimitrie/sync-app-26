@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SyncApp26.Application.IServices;
+using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
@@ -22,11 +23,13 @@ namespace SyncApp26.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ICryptographyService _cryptographyService;
+        private readonly IHmacSignatureService _hmacSignatureService;
 
-        public DocumentService(ApplicationDbContext context, ICryptographyService cryptographyService)
+        public DocumentService(ApplicationDbContext context, ICryptographyService cryptographyService, IHmacSignatureService hmacSignatureService)
         {
             _context = context;
             _cryptographyService = cryptographyService;
+            _hmacSignatureService = hmacSignatureService;
         }
 
         // Returnează numărul de documente SSM ce trebuie semnate de admin (verificator)
@@ -226,7 +229,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
-        public async Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress)
+        public async Task SignSingleDocumentAsAdminAsync(UserDocument doc, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
             var timestamp = DateTime.UtcNow;
             var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
@@ -260,6 +263,8 @@ namespace SyncApp26.Infrastructure.Services
                 initialTraining.VerifierSignatureData = signatureData;
                 initialTraining.VerifierSignatureMethod = signatureMethod;
             }
+
+            await CreateSignatureRecordAsync(doc, latestTraining, "Admin", signerUserId, signatureMethod, signatureData, ipAddress, timestamp);
 
             await _context.SaveChangesAsync();
 
@@ -1112,7 +1117,7 @@ namespace SyncApp26.Infrastructure.Services
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<bool> UpdateDocumentSignatureAsync(Guid documentId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false, Guid? periodicTrainingId = null)
+        public async Task<bool> UpdateDocumentSignatureAsync(Guid documentId, Guid signerUserId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false, Guid? periodicTrainingId = null)
         {
             var doc = await LoadDocumentForSignatureUpdateAsync(documentId);
             if (doc == null) return false;
@@ -1128,6 +1133,9 @@ namespace SyncApp26.Infrastructure.Services
 
             // Capture signature into UserInitialTraining once (first-time only, never overwritten)
             await ApplySignatureToInitialTrainingAsync(doc, isUserSignature, isAdminSignature, signatureMethod, signatureData);
+
+            var signerRole = DetermineSignerRole(doc, isUserSignature, isAdminSignature);
+            await CreateSignatureRecordAsync(doc, targetTraining, signerRole, signerUserId, signatureMethod, signatureData, ipAddress, timestamp);
 
             await RegenerateDocumentPdfSnapshotAsync(doc);
 
@@ -1190,6 +1198,63 @@ namespace SyncApp26.Infrastructure.Services
             // SSM needs admin verifier next; SU is complete after LM signs
             bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
             doc.Status = isSsm ? "PendingAdmin" : "Completed";
+        }
+
+        private static string DetermineSignerRole(UserDocument doc, bool isUserSignature, bool isAdminSignature)
+        {
+            if (isUserSignature) return "User";
+            bool isSsmAdminVerifier = isAdminSignature && doc.DocumentType?.ToUpperInvariant() == "SSM";
+            return isSsmAdminVerifier ? "Admin" : "Manager";
+        }
+
+        // Snapshots the signer's identity and the relevant training content at the moment of
+        // signing, then computes an HMAC over those frozen values. Later verification recomputes
+        // from these same stored columns — never from the live User/PeriodicTraining rows — so a
+        // legitimate edit to either afterwards cannot silently "reattach" itself to this signature.
+        private async Task CreateSignatureRecordAsync(UserDocument doc, PeriodicTraining? training, string signerRole,
+            Guid signerUserId, string signatureMethod, string signatureData, string ipAddress, DateTime signedAt)
+        {
+            var signerUser = await _context.Users
+                .Include(u => u.Function)
+                .FirstOrDefaultAsync(u => u.Id == signerUserId);
+            if (signerUser == null) return;
+
+            var fullNameSnapshot = $"{signerUser.FirstName} {signerUser.LastName}";
+            var positionSnapshot = signerUser.Function?.Name ?? string.Empty;
+            var signedAtOffset = new DateTimeOffset(signedAt, TimeSpan.Zero);
+
+            var canonicalInput = new SignatureCanonicalInput(
+                signerUserId,
+                fullNameSnapshot,
+                positionSnapshot,
+                training?.MaterialTaught,
+                training?.DurationHours,
+                training?.TrainingDate,
+                signedAtOffset,
+                PreviousSignatureHash: null);
+
+            var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
+            var hmac = await _hmacSignatureService.ComputeHmacAsync(canonical);
+
+            _context.SignatureRecords.Add(new SignatureRecord
+            {
+                UserDocumentId = doc.Id,
+                PeriodicTrainingId = training?.Id,
+                SignerRole = signerRole,
+                SignerUserId = signerUserId,
+                SignerFullNameSnapshot = fullNameSnapshot,
+                SignerPositionSnapshot = positionSnapshot,
+                SignatureMethod = signatureMethod,
+                SignatureData = signatureData,
+                MaterialTaughtSnapshot = training?.MaterialTaught,
+                DurationHoursSnapshot = training?.DurationHours,
+                TrainingDateSnapshot = training?.TrainingDate,
+                IpAddress = ipAddress,
+                SignedAt = signedAtOffset,
+                PreviousSignatureHash = null,
+                SignatureHmac = hmac,
+                IsLegacyUnverified = false
+            });
         }
 
         private static PeriodicTraining? FindTargetPeriodicTraining(UserDocument doc, Guid? periodicTrainingId)
@@ -1298,7 +1363,7 @@ namespace SyncApp26.Infrastructure.Services
 
             var timestamp = DateTime.UtcNow;
             foreach (var doc in docs)
-                await SignSingleDocumentInBulkAsync(doc, isAdmin, signatureMethod, signatureData, ipAddress, timestamp);
+                await SignSingleDocumentInBulkAsync(doc, isAdmin, signerUserId, signatureMethod, signatureData, ipAddress, timestamp);
 
             await _context.SaveChangesAsync();
 
@@ -1334,7 +1399,7 @@ namespace SyncApp26.Infrastructure.Services
             return allDocs.OrderBy(d => d.GeneratedAt).ToList();
         }
 
-        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
+        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
         {
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
             ApplyDocumentLevelSignature(doc, isUserSignature: false, isAdminSignature: isAdmin, signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
@@ -1346,6 +1411,9 @@ namespace SyncApp26.Infrastructure.Services
             // Capture into UserInitialTraining (first-time only, never overwritten).
             // Create record automatically if missing and this is the first document.
             await ApplySignatureToInitialTrainingAsync(doc, isUserSignature: false, isAdminSignature: isAdmin, signatureMethod, signatureData);
+
+            var signerRole = DetermineSignerRole(doc, isUserSignature: false, isAdminSignature: isAdmin);
+            await CreateSignatureRecordAsync(doc, trainingForDoc, signerRole, signerUserId, signatureMethod, signatureData, ipAddress, timestamp);
         }
 
         private Task<PeriodicTraining?> GetLatestPeriodicTrainingForDocumentAsync(Guid documentId) =>

@@ -97,6 +97,9 @@ namespace SyncApp26.Application.Services
                 return new ConsumeSigningTokenResult { ErrorMessage = "Document not found." };
 
             var signerUserFromToken = await _userService.GetUserByEmailAsync(tokenEntity.Email);
+            if (signerUserFromToken == null)
+                return new ConsumeSigningTokenResult { ErrorMessage = "Signer account not found." };
+
             bool signerIsAdmin = signerUserFromToken?.Role == UserRole.Admin;
             bool isLineManager = !signerIsAdmin && (document.User?.AssignedTo != null &&
                 string.Equals(document.User.AssignedTo.Email, tokenEntity.Email, StringComparison.OrdinalIgnoreCase));
@@ -129,6 +132,7 @@ namespace SyncApp26.Application.Services
 
             await _documentService.UpdateDocumentSignatureAsync(
                 document.Id,
+                signerUserFromToken.Id,
                 isUserSignature,
                 request.SignatureMethod,
                 request.SignatureData,
