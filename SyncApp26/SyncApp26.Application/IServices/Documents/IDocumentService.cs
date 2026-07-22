@@ -14,7 +14,7 @@ namespace SyncApp26.Application.IServices
         Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType);
         Task<IEnumerable<UserDocument>> GetAllDocumentsAsync();
         Task<UserDocument?> GetDocumentByIdAsync(Guid documentId);
-        Task<bool> UpdateDocumentSignatureAsync(Guid documentId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false, Guid? periodicTrainingId = null);
+        Task<bool> UpdateDocumentSignatureAsync(Guid documentId, Guid signerUserId, bool isUserSignature, string signatureMethod, string signatureData, string ipAddress, bool isAdminSignature = false, Guid? periodicTrainingId = null);
         Task<Guid?> GetCurrentTrainingIdForDocumentAsync(Guid documentId);
         Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress);
         Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null);
@@ -25,7 +25,7 @@ namespace SyncApp26.Application.IServices
         Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false);
         Task<int> GetPendingSsmDocumentsForAdminAsync();
         Task<List<UserDocument>> GetPendingSsmDocumentsForAdminListAsync();
-        Task SignSingleDocumentAsAdminAsync(UserDocument doc, string signatureMethod, string signatureData, string ipAddress);
+        Task SignSingleDocumentAsAdminAsync(UserDocument doc, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress);
         Task<List<UserDocument>> GetAdminPendingDocumentsAsync();
         Task<List<UserDocument>> GetAdminSignedDocumentsAsync();
         Task<int> RegenerateDocumentsAsync();

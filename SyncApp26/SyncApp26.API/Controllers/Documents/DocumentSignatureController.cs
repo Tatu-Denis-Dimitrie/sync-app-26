@@ -240,7 +240,7 @@ namespace SyncApp26.API.Controllers
                     int idx = 0;
                     foreach (var doc in baseQuery)
                     {
-                        await docService.SignSingleDocumentAsAdminAsync(doc, request.SignatureMethod, request.SignatureData, ipAddress);
+                        await docService.SignSingleDocumentAsAdminAsync(doc, userId, request.SignatureMethod, request.SignatureData, ipAddress);
                         progress.Signed++;
                         idx++;
                         await Task.Delay(250); 
