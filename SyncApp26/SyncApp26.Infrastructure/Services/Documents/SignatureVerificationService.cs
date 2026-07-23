@@ -12,10 +12,14 @@ using SyncApp26.Shared.DTOs.Response.SignatureVerification;
 namespace SyncApp26.Infrastructure.Services
 {
     /// <summary>
-    /// Recomputes SignatureRecord.SignatureHmac from each record's own frozen snapshot fields
-    /// (never from live User/PeriodicTraining rows) and checks the per-signer hash chain that
-    /// DocumentService.CreateSignatureRecordAsync builds — a record's stored PreviousSignatureHash
-    /// must match its signer's actual prior SignatureHmac.
+    /// Recomputes SignatureRecord.SignatureHmac from each record's frozen signer-identity fields
+    /// (SignerFullNameSnapshot/SignerPositionSnapshot — never re-derived from the live User row,
+    /// so a later name change never retroactively invalidates a past signature) combined with the
+    /// LIVE training-content values (MaterialTaught/DurationHours/TrainingDate) when the record is
+    /// linked to a PeriodicTraining — so editing that content after signing changes the recomputed
+    /// hash and correctly fails verification, forcing a re-sign. Also checks the per-signer hash
+    /// chain that DocumentService.CreateSignatureRecordAsync builds — a record's stored
+    /// PreviousSignatureHash must match its signer's actual prior SignatureHmac.
     /// </summary>
     public class SignatureVerificationService : ISignatureVerificationService
     {
@@ -35,7 +39,10 @@ namespace SyncApp26.Infrastructure.Services
 
             var signerChain = await LoadSignerChainAsync(record.SignerUserId);
             var previous = FindPreviousRecord(record, signerChain);
-            return await ComputeStatusAsync(record, previous);
+            var liveTraining = record.PeriodicTrainingId.HasValue
+                ? await _context.PeriodicTrainings.FirstOrDefaultAsync(t => t.Id == record.PeriodicTrainingId.Value)
+                : null;
+            return await ComputeStatusAsync(record, previous, liveTraining);
         }
 
         public async Task<List<SignatureVerificationStatusResponseDTO>> GetVerificationStatusBatchAsync(IEnumerable<Guid> signatureIds)
@@ -49,6 +56,12 @@ namespace SyncApp26.Infrastructure.Services
             {
                 chainsBySigner[signerId] = await LoadSignerChainAsync(signerId);
             }
+
+            var trainingIds = records.Where(r => r.PeriodicTrainingId.HasValue).Select(r => r.PeriodicTrainingId!.Value).Distinct().ToList();
+            var trainingsById = trainingIds.Count == 0
+                ? new Dictionary<Guid, PeriodicTraining>()
+                : (await _context.PeriodicTrainings.Where(t => trainingIds.Contains(t.Id)).ToListAsync())
+                    .ToDictionary(t => t.Id);
 
             var results = new List<SignatureVerificationStatusResponseDTO>();
             foreach (var id in ids)
@@ -69,7 +82,10 @@ namespace SyncApp26.Infrastructure.Services
                 }
 
                 var previous = FindPreviousRecord(record, chainsBySigner[record.SignerUserId]);
-                results.Add(await ComputeStatusAsync(record, previous));
+                var liveTraining = record.PeriodicTrainingId.HasValue
+                    ? trainingsById.GetValueOrDefault(record.PeriodicTrainingId.Value)
+                    : null;
+                results.Add(await ComputeStatusAsync(record, previous, liveTraining));
             }
 
             return results;
@@ -92,7 +108,7 @@ namespace SyncApp26.Infrastructure.Services
             return signerChainDescending[index + 1];
         }
 
-        private async Task<SignatureVerificationStatusResponseDTO> ComputeStatusAsync(SignatureRecord record, SignatureRecord? previous)
+        private async Task<SignatureVerificationStatusResponseDTO> ComputeStatusAsync(SignatureRecord record, SignatureRecord? previous, PeriodicTraining? liveTraining)
         {
             var now = DateTimeOffset.UtcNow;
 
@@ -110,13 +126,23 @@ namespace SyncApp26.Infrastructure.Services
                 };
             }
 
+            // Signer identity stays frozen (a later rename must not retroactively invalidate a
+            // past signature), but training content tracks the LIVE row when linked to one, so
+            // editing it after signing changes the recomputed hash and correctly fails
+            // verification — forcing a re-sign instead of silently going stale. Chosen per
+            // triplet, not per field via `??`, so a live field cleared to null is itself treated
+            // as a change rather than silently falling back to the frozen value.
+            var materialTaught = liveTraining != null ? liveTraining.MaterialTaught : record.MaterialTaughtSnapshot;
+            var durationHours = liveTraining != null ? liveTraining.DurationHours : record.DurationHoursSnapshot;
+            var trainingDate = liveTraining != null ? liveTraining.TrainingDate : record.TrainingDateSnapshot;
+
             var canonicalInput = new SignatureCanonicalInput(
                 record.SignerUserId,
                 record.SignerFullNameSnapshot,
                 record.SignerPositionSnapshot,
-                record.MaterialTaughtSnapshot,
-                record.DurationHoursSnapshot,
-                record.TrainingDateSnapshot,
+                materialTaught,
+                durationHours,
+                trainingDate,
                 record.SignedAt,
                 record.PreviousSignatureHash);
             var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);

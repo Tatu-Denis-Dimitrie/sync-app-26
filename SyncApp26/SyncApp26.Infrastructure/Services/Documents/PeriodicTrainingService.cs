@@ -64,6 +64,13 @@ namespace SyncApp26.Infrastructure.Services
             if (training == null)
                 throw new ArgumentException("Periodic training not found");
 
+            bool contentChanged = training.MaterialTaught != dto.MaterialTaught
+                || training.DurationHours != dto.DurationHours
+                || training.TrainingDate != dto.TrainingDate;
+
+            if (contentChanged && IsSigned(training))
+                await InvalidateSignatureForRevisionAsync(training);
+
             training.TrainingDate = dto.TrainingDate;
             training.DurationHours = dto.DurationHours;
             training.Occupation = dto.Occupation;
@@ -83,10 +90,65 @@ namespace SyncApp26.Infrastructure.Services
             if (training == null)
                 return false;
 
+            if (IsSigned(training))
+                await InvalidateSignatureForRevisionAsync(training);
+
             _context.PeriodicTrainings.Remove(training);
             await _context.SaveChangesAsync();
 
             return true;
+        }
+
+        private static bool IsSigned(PeriodicTraining training) =>
+            !string.IsNullOrEmpty(training.UserSignatureData)
+            || !string.IsNullOrEmpty(training.InstructorSignature)
+            || !string.IsNullOrEmpty(training.VerifierSignature);
+
+        // Revising a signed training's content must force a fresh signature — the row's own
+        // signature fields are cleared, and if this is the linked document's current training
+        // row, the document itself is reset back into the pending-signature queue. The
+        // SignatureRecord audit rows already written are never touched: past signatures stay
+        // immutable history, this only changes what's currently authoritative going forward.
+        private async Task InvalidateSignatureForRevisionAsync(PeriodicTraining training)
+        {
+            training.UserSignatureData = null;
+            training.UserSignatureMethod = null;
+            training.InstructorSignature = null;
+            training.InstructorSignatureMethod = null;
+            training.VerifierSignature = null;
+            training.VerifierSignatureMethod = null;
+
+            if (!training.UserDocumentId.HasValue)
+                return;
+
+            var currentRow = (await _context.PeriodicTrainings
+                    .Where(pt => pt.UserDocumentId == training.UserDocumentId.Value)
+                    .ToListAsync())
+                .OrderByDescending(pt => pt.CreatedAt)
+                .FirstOrDefault();
+            if (currentRow?.Id != training.Id)
+                return;
+
+            var document = await _context.UserDocuments.FindAsync(training.UserDocumentId.Value);
+            if (document == null)
+                return;
+
+            document.Status = "PendingUser";
+            document.UserSignatureMethod = null;
+            document.UserSignatureData = null;
+            document.UserSignatureIpAddress = null;
+            document.UserSignedAt = null;
+            document.UserCryptographicSignature = null;
+            document.ManagerSignatureMethod = null;
+            document.ManagerSignatureData = null;
+            document.ManagerSignatureIpAddress = null;
+            document.ManagerSignedAt = null;
+            document.ManagerCryptographicSignature = null;
+            document.AdminSignatureMethod = null;
+            document.AdminSignatureData = null;
+            document.AdminSignatureIpAddress = null;
+            document.AdminSignedAt = null;
+            document.AdminCryptographicSignature = null;
         }
 
         public async Task<BulkCreateResultDTO> BulkCreateAsync(BulkCreatePeriodicTrainingDTO dto, Guid? restrictToAssignedToId = null)
