@@ -9,5 +9,6 @@ namespace SyncApp26.Application.IServices
     {
         Task<SignatureVerificationStatusResponseDTO?> GetVerificationStatusAsync(Guid signatureId);
         Task<List<SignatureVerificationStatusResponseDTO>> GetVerificationStatusBatchAsync(IEnumerable<Guid> signatureIds);
+        Task<Dictionary<Guid, DocumentSignatureIdsDTO>> GetLatestSignatureRecordIdsAsync(IEnumerable<Guid> documentIds);
     }
 }

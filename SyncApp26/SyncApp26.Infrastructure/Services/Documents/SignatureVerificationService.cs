@@ -91,6 +91,47 @@ namespace SyncApp26.Infrastructure.Services
             return results;
         }
 
+        public async Task<Dictionary<Guid, DocumentSignatureIdsDTO>> GetLatestSignatureRecordIdsAsync(IEnumerable<Guid> documentIds)
+        {
+            var ids = documentIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<Guid, DocumentSignatureIdsDTO>();
+
+            // Picks the current authoritative signature per (document, role) regardless of which
+            // PeriodicTraining (if any) it was captured against — this answers "what's currently
+            // filling this document's User/Manager/Admin sign-off slot," the same question the
+            // document list/pending-queue endpoints already answer via UserSignedAt etc.
+            var records = (await _context.SignatureRecords
+                    .Where(r => ids.Contains(r.UserDocumentId))
+                    .ToListAsync())
+                .OrderByDescending(r => r.SignedAt)
+                .ThenByDescending(r => r.CreatedAt)
+                .ToList();
+
+            var result = new Dictionary<Guid, DocumentSignatureIdsDTO>();
+            foreach (var group in records.GroupBy(r => r.UserDocumentId))
+            {
+                var dto = new DocumentSignatureIdsDTO();
+                foreach (var record in group)
+                {
+                    switch (record.SignerRole)
+                    {
+                        case "User" when dto.UserSignatureId == null:
+                            dto.UserSignatureId = record.Id;
+                            break;
+                        case "Manager" when dto.ManagerSignatureId == null:
+                            dto.ManagerSignatureId = record.Id;
+                            break;
+                        case "Admin" when dto.AdminSignatureId == null:
+                            dto.AdminSignatureId = record.Id;
+                            break;
+                    }
+                }
+                result[group.Key] = dto;
+            }
+
+            return result;
+        }
+
         private async Task<List<SignatureRecord>> LoadSignerChainAsync(Guid signerUserId)
         {
             return (await _context.SignatureRecords

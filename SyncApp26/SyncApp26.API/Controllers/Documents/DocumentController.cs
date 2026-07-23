@@ -4,6 +4,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.API.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Shared.DTOs.Response.SignatureVerification;
 using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
@@ -18,6 +19,7 @@ namespace SyncApp26.API.Controllers
         private readonly IDocumentSignatureService _documentSignatureService;
         private readonly IDocumentSigningService _documentSigningService;
         private readonly IUserService _userService;
+        private readonly ISignatureVerificationService _signatureVerificationService;
         private readonly IConfiguration _configuration;
 
         public DocumentController(
@@ -26,6 +28,7 @@ namespace SyncApp26.API.Controllers
             IDocumentSignatureService documentSignatureService,
             IDocumentSigningService documentSigningService,
             IUserService userService,
+            ISignatureVerificationService signatureVerificationService,
             IConfiguration configuration)
         {
             _documentService = documentService;
@@ -33,11 +36,12 @@ namespace SyncApp26.API.Controllers
             _documentSignatureService = documentSignatureService;
             _documentSigningService = documentSigningService;
             _userService = userService;
+            _signatureVerificationService = signatureVerificationService;
             _configuration = configuration;
         }
 
         // Flat DTO — avoids serializing deep User navigation property chains
-        private static object MapDocument(UserDocument d) => new
+        private static object MapDocument(UserDocument d, DocumentSignatureIdsDTO? signatureIds) => new
         {
             d.Id,
             d.UserId,
@@ -63,7 +67,19 @@ namespace SyncApp26.API.Controllers
             d.AdminSignatureData,
             d.AdminSignatureIpAddress,
             d.AdminSignedAt,
+            UserSignatureId = signatureIds?.UserSignatureId,
+            ManagerSignatureId = signatureIds?.ManagerSignatureId,
+            AdminSignatureId = signatureIds?.AdminSignatureId,
         };
+
+        // Resolves and attaches each document's current signature-record ids in one batched
+        // lookup, then maps — every list endpoint funnels through this single helper.
+        private async Task<IEnumerable<object>> MapDocumentsAsync(IEnumerable<UserDocument> documents)
+        {
+            var docs = documents as IList<UserDocument> ?? documents.ToList();
+            var lookup = await _signatureVerificationService.GetLatestSignatureRecordIdsAsync(docs.Select(d => d.Id));
+            return docs.Select(d => MapDocument(d, lookup.GetValueOrDefault(d.Id)));
+        }
 
         public class GenerateDocumentDto
         {
@@ -188,7 +204,7 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> GetUserDocuments(Guid userId)
         {
             var documents = await _documentService.GetUserDocumentsAsync(userId);
-            return Ok(documents.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(documents));
         }
 
         [HttpGet("all")]
@@ -203,7 +219,7 @@ namespace SyncApp26.API.Controllers
                 documents = documents.Where(d => d.User?.AssignedToId == currentUserId || d.UserId == currentUserId);
             }
 
-            return Ok(documents.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(documents));
         }
 
         [HttpGet("my-pending-signatures")]
@@ -216,7 +232,7 @@ namespace SyncApp26.API.Controllers
             var myDocuments = await _documentService.GetUserDocumentsAsync(userId);
             var pendingAsUser = myDocuments.Where(d => d.Status == "PendingUser");
 
-            return Ok(pendingAsUser.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(pendingAsUser));
         }
 
         [HttpGet("manager-pending-signatures")]
@@ -227,7 +243,7 @@ namespace SyncApp26.API.Controllers
 
             var pendingAsManager = await _documentService.GetManagerPendingSignaturesAsync(userId);
 
-            return Ok(pendingAsManager.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(pendingAsManager));
         }
 
         [HttpGet("my-signed-documents")]
@@ -239,7 +255,7 @@ namespace SyncApp26.API.Controllers
             var myDocuments = await _documentService.GetUserDocumentsAsync(userId);
             var signedAsUser = myDocuments.Where(d => d.UserSignedAt != null);
 
-            return Ok(signedAsUser.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(signedAsUser));
         }
 
         [HttpGet("manager-signed-documents")]
@@ -250,7 +266,7 @@ namespace SyncApp26.API.Controllers
 
             var signedAsManager = await _documentService.GetManagerSignedDocumentsAsync(userId);
 
-            return Ok(signedAsManager.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(signedAsManager));
         }
 
         /// <summary>
@@ -261,7 +277,7 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> GetAdminPendingSignatures()
         {
             var docs = await _documentService.GetAdminPendingDocumentsAsync();
-            return Ok(docs.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(docs));
         }
 
         /// <summary>
@@ -272,7 +288,7 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> GetAdminSignedDocuments()
         {
             var docs = await _documentService.GetAdminSignedDocumentsAsync();
-            return Ok(docs.Select(MapDocument));
+            return Ok(await MapDocumentsAsync(docs));
         }
 
         [HttpPost("regenerate-documents")]
