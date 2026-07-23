@@ -82,6 +82,7 @@ builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>(
 builder.Services.AddScoped<IFunctionService, FunctionService>();
 builder.Services.AddScoped<IDepartmentFunctionService, DepartmentFunctionService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<ISignatureVerificationService, SignatureVerificationService>();
 builder.Services.AddScoped<IPeriodicTrainingService, PeriodicTrainingService>();
 builder.Services.AddScoped<IUserSignatureService, UserSignatureService>();
 builder.Services.AddScoped<IDataChangeRequestService, DataChangeRequestService>();
