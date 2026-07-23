@@ -4,6 +4,9 @@ namespace SyncApp26.Shared.DTOs.Response.SignatureVerification
     {
         public Guid SignatureId { get; set; }
 
+        /// <summary>Empty (Guid.Empty) when Status is "NotFound" — there is no record to attribute a signer to.</summary>
+        public Guid SignerUserId { get; set; }
+
         /// <summary>"Valid", "Invalid", "ChainBroken", "Legacy", or "NotFound".</summary>
         public string Status { get; set; } = string.Empty;
 

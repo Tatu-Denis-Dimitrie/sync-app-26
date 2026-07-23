@@ -58,6 +58,7 @@ namespace SyncApp26.Infrastructure.Services
                     results.Add(new SignatureVerificationStatusResponseDTO
                     {
                         SignatureId = id,
+                        SignerUserId = Guid.Empty,
                         Status = "NotFound",
                         IsHashValid = false,
                         IsChainValid = false,
@@ -100,6 +101,7 @@ namespace SyncApp26.Infrastructure.Services
                 return new SignatureVerificationStatusResponseDTO
                 {
                     SignatureId = record.Id,
+                    SignerUserId = record.SignerUserId,
                     Status = "Legacy",
                     IsHashValid = false,
                     IsChainValid = false,
@@ -127,6 +129,7 @@ namespace SyncApp26.Infrastructure.Services
             return new SignatureVerificationStatusResponseDTO
             {
                 SignatureId = record.Id,
+                SignerUserId = record.SignerUserId,
                 Status = status,
                 IsHashValid = isHashValid,
                 IsChainValid = isChainValid,
