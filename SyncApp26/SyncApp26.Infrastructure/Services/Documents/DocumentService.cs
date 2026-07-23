@@ -362,29 +362,42 @@ namespace SyncApp26.Infrastructure.Services
         private static string FDate(DateTime? dt) => dt.HasValue ? dt.Value.ToString("dd.MM.yyyy") : "___________";
         private static string FUnderline(string? val) => val?.Trim() is { Length: > 0 } v ? v : "___________";
 
-        private static void SignatureRow(ColumnDescriptor col, bool isSsm, User user,
+        private static void SignatureRow(ColumnDescriptor col, bool isSsm, User user, DocumentRenderContext ctx,
             string? instructorName = null, string? instructorPosition = null,
             string? userSigMethod = null, string? userSigData = null,
             string? instructorSigMethod = null, string? instructorSigData = null,
             string? verifierSigMethod = null, string? verifierSigData = null)
         {
+            var userRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("User");
+            var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+            var verifierRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Admin");
+
             col.Item().PaddingTop(6).Row(row =>
             {
                 row.RelativeItem().Column(c => RenderSignatureBlock(c,
                     isSsm ? "Semnătura celui instruit:" : "Semnătura persoanei instruite:",
-                    new SignatureBlockData($"{user.FirstName} {user.LastName}", user.Function?.Name, userSigMethod, userSigData)));
+                    new SignatureBlockData(
+                        userRecord?.SignerFullNameSnapshot ?? $"{user.FirstName} {user.LastName}",
+                        userRecord?.SignerPositionSnapshot ?? user.Function?.Name,
+                        userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime)));
 
                 row.ConstantItem(10);
                 row.RelativeItem().Column(c => RenderSignatureBlock(c,
                     "Semnătura celui care a efectuat instruirea:",
-                    new SignatureBlockData(instructorName, instructorPosition, instructorSigMethod, instructorSigData)));
+                    new SignatureBlockData(
+                        managerRecord?.SignerFullNameSnapshot ?? instructorName,
+                        managerRecord?.SignerPositionSnapshot ?? instructorPosition,
+                        instructorSigMethod, instructorSigData, managerRecord?.SignedAt.UtcDateTime)));
 
                 if (isSsm)
                 {
                     row.ConstantItem(10);
                     row.RelativeItem().Column(c => RenderSignatureBlock(c,
                         "Semnătura celui care a verificat:",
-                        new SignatureBlockData(null, null, verifierSigMethod, verifierSigData)));
+                        new SignatureBlockData(
+                            verifierRecord?.SignerFullNameSnapshot,
+                            verifierRecord?.SignerPositionSnapshot,
+                            verifierSigMethod, verifierSigData, verifierRecord?.SignedAt.UtcDateTime)));
                 }
             });
         }
@@ -532,6 +545,9 @@ namespace SyncApp26.Infrastructure.Services
         // ─── Core PDF builder ────────────────────────────────────────────────────
 
         // Shared per-document styling/values computed once and threaded through each page builder.
+        // PeriodicSignatures/InitialTrainingSignatures are pre-fetched once (see LoadPeriodicSignatureLookupAsync/
+        // LoadInitialTrainingSignatureLookupAsync) so the otherwise-synchronous QuestPDF composition tree never
+        // needs to touch the DB itself.
         private readonly record struct DocumentRenderContext(
             bool IsSsm,
             string FormTitle,
@@ -539,13 +555,18 @@ namespace SyncApp26.Infrastructure.Services
             string HeaderColor,
             string CoverBg,
             string ManagerName,
-            string ManagerFunction);
+            string ManagerFunction,
+            Dictionary<(Guid TrainingId, string Role), SignatureRecord> PeriodicSignatures,
+            Dictionary<string, SignatureRecord> InitialTrainingSignatures);
 
-        private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document, bool viewerIsAdmin = false)
+        private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document,
+            Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures,
+            Dictionary<string, SignatureRecord> initialTrainingSignatures,
+            bool viewerIsAdmin = false)
         {
             QuestPDF.Settings.License = LicenseType.Community;
 
-            var ctx = CreateRenderContext(user, document);
+            var ctx = CreateRenderContext(user, document, periodicSignatures, initialTrainingSignatures);
 
             return QuestPDF.Fluent.Document.Create(container =>
             {
@@ -555,7 +576,9 @@ namespace SyncApp26.Infrastructure.Services
             });
         }
 
-        private static DocumentRenderContext CreateRenderContext(User user, UserDocument document)
+        private static DocumentRenderContext CreateRenderContext(User user, UserDocument document,
+            Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures,
+            Dictionary<string, SignatureRecord> initialTrainingSignatures)
         {
             bool isSsm = document.DocumentType?.ToUpper() == "SSM";
             string formTitle = isSsm
@@ -570,7 +593,57 @@ namespace SyncApp26.Infrastructure.Services
                 : F(user.AdmittedByName);
             string managerFunction = user.AssignedTo?.Function?.Name ?? F(user.AdmittedByFunction);
 
-            return new DocumentRenderContext(isSsm, formTitle, accentColor, headerColor, coverBg, managerName, managerFunction);
+            return new DocumentRenderContext(isSsm, formTitle, accentColor, headerColor, coverBg, managerName, managerFunction,
+                periodicSignatures, initialTrainingSignatures);
+        }
+
+        // One SignatureRecord per (training, role) for this document — keyed by the same
+        // PeriodicTrainingId/SignerRole that CreateSignatureRecordAsync stamps on every record,
+        // picking the latest per key (a training row can be re-signed after Step 2's revision reset).
+        private async Task<Dictionary<(Guid TrainingId, string Role), SignatureRecord>> LoadPeriodicSignatureLookupAsync(Guid documentId)
+        {
+            var records = (await _context.SignatureRecords
+                    .Where(r => r.UserDocumentId == documentId && r.PeriodicTrainingId != null)
+                    .ToListAsync())
+                .OrderByDescending(r => r.SignedAt)
+                .ThenByDescending(r => r.CreatedAt)
+                .ToList();
+
+            var result = new Dictionary<(Guid, string), SignatureRecord>();
+            foreach (var record in records)
+            {
+                var key = (record.PeriodicTrainingId!.Value, record.SignerRole);
+                if (!result.ContainsKey(key)) result[key] = record; // first hit per key = latest, by the sort above
+            }
+            return result;
+        }
+
+        // UserInitialTraining has no UserDocumentId of its own — its signature fields are written
+        // once ever, on whichever document happens to be this user's first of this type, and never
+        // touched again. The correlating SignatureRecord is therefore the EARLIEST one (by SignedAt)
+        // per role across all of this user's documents of this type — deterministic, not a guess,
+        // because of that same "first-time only" write rule.
+        private async Task<Dictionary<string, SignatureRecord>> LoadInitialTrainingSignatureLookupAsync(Guid userId, string? documentType)
+        {
+            var docIds = await _context.UserDocuments
+                .Where(d => d.UserId == userId && d.DocumentType == documentType)
+                .Select(d => d.Id)
+                .ToListAsync();
+            if (docIds.Count == 0) return new Dictionary<string, SignatureRecord>();
+
+            var records = (await _context.SignatureRecords
+                    .Where(r => docIds.Contains(r.UserDocumentId))
+                    .ToListAsync())
+                .OrderBy(r => r.SignedAt)
+                .ThenBy(r => r.CreatedAt)
+                .ToList();
+
+            var result = new Dictionary<string, SignatureRecord>();
+            foreach (var record in records)
+            {
+                if (!result.ContainsKey(record.SignerRole)) result[record.SignerRole] = record; // first hit per role = earliest
+            }
+            return result;
         }
 
         private static void PageFooter(PageDescriptor page)
@@ -740,8 +813,9 @@ namespace SyncApp26.Infrastructure.Services
             var introContent = it?.IntroductoryTrainingContent;
             col.Item().Border(0.5f).Padding(6)
                 .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
-            // Signatures frozen from first signing — stored on UserInitialTraining
-            SignatureRow(col, isSsm, user,
+            // Signatures frozen from first signing — stored on UserInitialTraining, name/timestamp
+            // resolved from the correlating SignatureRecord where available (see ctx)
+            SignatureRow(col, isSsm, user, ctx,
                 it?.IntroductoryTrainingInstructor, it?.IntroductoryTrainingInstructorFunction,
                 it?.UserSignatureMethod, it?.UserSignatureData,
                 it?.InstructorSignatureMethod, it?.InstructorSignatureData,
@@ -774,8 +848,9 @@ namespace SyncApp26.Infrastructure.Services
             var workContent = it?.WorkplaceTrainingContent;
             col.Item().Border(0.5f).Padding(6)
                 .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
-            // Signatures frozen from first signing — stored on UserInitialTraining
-            SignatureRow(col, isSsm, user,
+            // Signatures frozen from first signing — stored on UserInitialTraining, name/timestamp
+            // resolved from the correlating SignatureRecord where available (see ctx)
+            SignatureRow(col, isSsm, user, ctx,
                 it?.WorkplaceTrainingInstructor, it?.WorkplaceTrainingInstructorFunction,
                 it?.UserSignatureMethod, it?.UserSignatureData,
                 it?.InstructorSignatureMethod, it?.InstructorSignatureData,
@@ -883,7 +958,7 @@ namespace SyncApp26.Infrastructure.Services
             {
                 // The last row is the current (new) one; earlier rows are historical copies
                 bool isCurrentDocRow = (i == periodicTrainings.Count - 1);
-                RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, employeeFullName, occupation, isSsm, viewerIsAdmin);
+                RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, employeeFullName, occupation, isSsm, viewerIsAdmin, ctx.PeriodicSignatures);
             }
 
             // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
@@ -891,7 +966,8 @@ namespace SyncApp26.Infrastructure.Services
                 RenderEmptyPeriodicTrainingRow(table, document, occupation, isSsm, viewerIsAdmin);
         }
 
-        private static void RenderPeriodicTrainingRow(TableDescriptor table, PeriodicTraining training, int index, bool isCurrentDocRow, string employeeFullName, string occupation, bool isSsm, bool viewerIsAdmin)
+        private static void RenderPeriodicTrainingRow(TableDescriptor table, PeriodicTraining training, int index, bool isCurrentDocRow, string employeeFullName, string occupation, bool isSsm, bool viewerIsAdmin,
+            Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures)
         {
             // Use only per-row signatures stored directly on the PeriodicTraining row.
             // No fallback to document-level fields — those are transient; the
@@ -923,14 +999,30 @@ namespace SyncApp26.Infrastructure.Services
             table.Cell().Element(rowCell).Text(training.Occupation ?? occupation).FontSize(7);
             table.Cell().Element(rowCell).Text(training.MaterialTaught ?? "").FontSize(6.5f);
 
+            // Name/position/timestamp come from the frozen SignatureRecord for this exact
+            // (training, role) when one exists; falls back to live/row data otherwise (e.g. rows
+            // predating this table, or not yet signed).
+            var userRecord = periodicSignatures.GetValueOrDefault((training.Id, "User"));
+            var mgrRecord = periodicSignatures.GetValueOrDefault((training.Id, "Manager"));
+            var verifierRecord = periodicSignatures.GetValueOrDefault((training.Id, "Admin"));
+
             table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
-                new SignatureBlockData(employeeFullName, occupation, userSigMethod, userSigData), stacked: true));
+                new SignatureBlockData(
+                    userRecord?.SignerFullNameSnapshot ?? employeeFullName,
+                    userRecord?.SignerPositionSnapshot ?? occupation,
+                    userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime), stacked: true));
             table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
-                new SignatureBlockData(training.InstructorName, null, mgrSigMethod, mgrSigData), stacked: true));
+                new SignatureBlockData(
+                    mgrRecord?.SignerFullNameSnapshot ?? training.InstructorName,
+                    mgrRecord?.SignerPositionSnapshot,
+                    mgrSigMethod, mgrSigData, mgrRecord?.SignedAt.UtcDateTime), stacked: true));
 
             if (isSsm)
                 table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
-                    new SignatureBlockData(training.VerifierName, null, verifierSigMethod, verifierSigData), stacked: true));
+                    new SignatureBlockData(
+                        verifierRecord?.SignerFullNameSnapshot ?? training.VerifierName,
+                        verifierRecord?.SignerPositionSnapshot,
+                        verifierSigMethod, verifierSigData, verifierRecord?.SignedAt.UtcDateTime), stacked: true));
         }
 
         private static void RenderEmptyPeriodicTrainingRow(TableDescriptor table, UserDocument document, string occupation, bool isSsm, bool viewerIsAdmin)
@@ -950,7 +1042,7 @@ namespace SyncApp26.Infrastructure.Services
 
         // ─── Public interface methods ────────────────────────────────────────────
 
-        public Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document)
+        public async Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document)
         {
             var docsFolder = Path.Combine(Directory.GetCurrentDirectory(), "GeneratedDocuments");
             if (!Directory.Exists(docsFolder)) Directory.CreateDirectory(docsFolder);
@@ -959,21 +1051,26 @@ namespace SyncApp26.Infrastructure.Services
             var fileName = $"{timestamp}_{document.DocumentType}_{user.FirstName}_{user.LastName}_{document.Id}.pdf";
             var filePath = Path.Combine(docsFolder, fileName);
 
+            var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.Id);
+            var initialTrainingSignatures = await LoadInitialTrainingSignatureLookupAsync(document.UserId, document.DocumentType);
+
             // Generate to memory first — if layout throws, the existing file on disk is NOT corrupted
-            var pdfBytes = BuildDocument(user, document).GeneratePdf();
+            var pdfBytes = BuildDocument(user, document, periodicSignatures, initialTrainingSignatures).GeneratePdf();
             File.WriteAllBytes(filePath, pdfBytes);
 
             using var sha256 = SHA256.Create();
             var hashBytes = sha256.ComputeHash(pdfBytes);
             document.DocumentHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
 
-            return Task.FromResult(filePath);
+            return filePath;
         }
 
-        public Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false)
+        public async Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false)
         {
-            var bytes = BuildDocument(user, document, viewerIsAdmin).GeneratePdf();
-            return Task.FromResult(bytes);
+            var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.Id);
+            var initialTrainingSignatures = await LoadInitialTrainingSignatureLookupAsync(document.UserId, document.DocumentType);
+
+            return BuildDocument(user, document, periodicSignatures, initialTrainingSignatures, viewerIsAdmin).GeneratePdf();
         }
 
 
