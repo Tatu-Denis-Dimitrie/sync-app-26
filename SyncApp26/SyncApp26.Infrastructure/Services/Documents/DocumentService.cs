@@ -1136,7 +1136,7 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<IEnumerable<UserDocument>> GetManagerPendingSignaturesAsync(Guid managerId)
         {
-            return await _context.UserDocuments
+            var candidates = await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
@@ -1147,16 +1147,25 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
-                .Where(d => d.User != null && d.User.AssignedToId == managerId
-                    && d.Status == "PendingManager"
+                .Where(d => d.Status == "PendingManager"
                     && d.UserSignedAt != null
                     && d.ManagerSignedAt == null)
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
+
+            return candidates.Where(d => ResolveSecondSignerId(d, null) == managerId);
         }
 
         public async Task<IEnumerable<UserDocument>> GetManagerSignedDocumentsAsync(Guid managerId)
         {
+            var signedDocIds = await _context.SignatureRecords
+                .Where(r => r.SignerUserId == managerId && r.SignerRole == "Manager")
+                .Select(r => r.UserDocumentId)
+                .Distinct()
+                .ToListAsync();
+
+            if (signedDocIds.Count == 0) return new List<UserDocument>();
+
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
@@ -1168,8 +1177,7 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
-                .Where(d => d.User != null && d.User.AssignedToId == managerId
-                    && d.ManagerSignedAt != null)
+                .Where(d => signedDocIds.Contains(d.Id))
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
         }
@@ -1434,6 +1442,11 @@ namespace SyncApp26.Infrastructure.Services
                 .FirstOrDefault();
         }
 
+        // Resolves who is authorized for the second-signature ("instructor") slot
+
+        private static Guid? ResolveSecondSignerId(UserDocument doc, Guid? periodicTrainingId) =>
+            FindTargetPeriodicTraining(doc, periodicTrainingId)?.InstructorId ?? doc.User?.AssignedToId;
+
         private static void ApplySignatureToPeriodicTraining(PeriodicTraining? training, UserDocument doc,
             bool isUserSignature, bool isAdminSignature, string signatureMethod, string signatureData)
         {
@@ -1551,12 +1564,17 @@ namespace SyncApp26.Infrastructure.Services
                 .Where(d =>
                     (isAdmin
                         ? d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.User != null && d.User.Role != UserRole.Admin && d.Status == "PendingAdmin"
-                        : d.Status == "PendingManager" && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User != null && d.User.AssignedToId == signerUserId)
+                        : d.Status == "PendingManager" && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User != null)
                 )
                 .ToListAsync();
 
+            // Instructor-scoped bulk-sign
+            var scopedDocs = isAdmin
+                ? allDocs
+                : allDocs.Where(d => ResolveSecondSignerId(d, null) == signerUserId).ToList();
+
             // Process all pending documents ordered oldest-first so signatures are applied in creation order
-            return allDocs.OrderBy(d => d.GeneratedAt).ToList();
+            return scopedDocs.OrderBy(d => d.GeneratedAt).ToList();
         }
 
         private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)

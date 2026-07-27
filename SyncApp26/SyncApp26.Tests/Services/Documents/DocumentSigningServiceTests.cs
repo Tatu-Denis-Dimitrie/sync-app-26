@@ -94,7 +94,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.RequestSigningTokenAsync(document, manager, callerIsAdmin: false);
 
             Assert.False(result.Success);
-            Assert.Contains("Manager already signed", result.ErrorMessage);
+            Assert.Contains("Instructor already signed", result.ErrorMessage);
         }
 
         [Fact]
@@ -122,7 +122,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.RequestSigningTokenAsync(document, manager, callerIsAdmin: false);
 
             Assert.False(result.Success);
-            Assert.Contains("Manager signature not required", result.ErrorMessage);
+            Assert.Contains("Instructor signature not required", result.ErrorMessage);
         }
 
         [Fact]
@@ -367,7 +367,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
 
             Assert.False(result.Success);
-            Assert.Contains("Manager already signed", result.ErrorMessage);
+            Assert.Contains("Instructor already signed", result.ErrorMessage);
         }
 
         [Fact]
@@ -462,6 +462,7 @@ namespace SyncApp26.Tests.Services.Documents
             _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(owner.Email)).ReturnsAsync(owner);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(manager.Id)).ReturnsAsync(manager);
             _documentSignatureServiceMock.Setup(s => s.ConsumeTokenAsync("tok")).ReturnsAsync(true);
             _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(manager.Email, document.Id, It.IsAny<string>(), null))
                 .ReturnsAsync("manager-tok");
