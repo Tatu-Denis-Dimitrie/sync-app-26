@@ -207,6 +207,9 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<decimal?>("DurationHours")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("InstructorId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("InstructorName")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
@@ -260,6 +263,8 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("InstructorId");
 
                     b.HasIndex("UserDocumentId");
 
@@ -856,6 +861,11 @@ namespace SyncApp26.Infrastructure.Migrations
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.PeriodicTraining", b =>
                 {
+                    b.HasOne("SyncApp26.Domain.Entities.User", "Instructor")
+                        .WithMany()
+                        .HasForeignKey("InstructorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SyncApp26.Domain.Entities.UserDocument", "Document")
                         .WithMany()
                         .HasForeignKey("UserDocumentId");
@@ -867,6 +877,8 @@ namespace SyncApp26.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Document");
+
+                    b.Navigation("Instructor");
 
                     b.Navigation("User");
                 });

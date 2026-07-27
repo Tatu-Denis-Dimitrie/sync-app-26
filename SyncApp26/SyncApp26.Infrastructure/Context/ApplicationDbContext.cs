@@ -284,6 +284,21 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasIndex(e => e.Status);
             });
 
+            // Configure PeriodicTraining entity
+            modelBuilder.Entity<PeriodicTraining>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Linked instructor account — restrict deletion of a user still referenced as an
+                // instructor
+                entity.HasOne(e => e.Instructor)
+                    .WithMany()
+                    .HasForeignKey(e => e.InstructorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.InstructorId);
+            });
+
             // Configure UserInitialTraining entity — one row per (UserId, DocumentType)
             modelBuilder.Entity<UserInitialTraining>(entity =>
             {

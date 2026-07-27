@@ -22,6 +22,8 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<PeriodicTrainingResponseDTO> CreateAsync(CreatePeriodicTrainingDTO dto)
         {
+            var instructor = await ResolveInstructorAsync(dto.InstructorId, dto.UserId);
+
             var training = new PeriodicTraining
             {
                 UserId = dto.UserId,
@@ -29,7 +31,8 @@ namespace SyncApp26.Infrastructure.Services
                 DurationHours = dto.DurationHours,
                 Occupation = dto.Occupation,
                 MaterialTaught = dto.MaterialTaught,
-                InstructorName = dto.InstructorName,
+                InstructorId = instructor.Id,
+                InstructorName = $"{instructor.FirstName} {instructor.LastName}",
                 VerifierName = dto.VerifierName,
                 CreatedAt = DateTime.UtcNow
             };
@@ -38,6 +41,20 @@ namespace SyncApp26.Infrastructure.Services
             await _context.SaveChangesAsync();
 
             return MapToDTO(training);
+        }
+
+        // Looks up and validates the instructor account for a training row: must exist and must
+        // not be the same person as the trainee.
+        private async Task<User> ResolveInstructorAsync(Guid instructorId, Guid traineeUserId)
+        {
+            if (instructorId == traineeUserId)
+                throw new ArgumentException("An employee cannot be their own instructor.");
+
+            var instructor = await _context.Users.FindAsync(instructorId);
+            if (instructor == null)
+                throw new ArgumentException("Instructor not found.");
+
+            return instructor;
         }
 
         public async Task<PeriodicTrainingResponseDTO?> GetByIdAsync(Guid id)
@@ -64,9 +81,12 @@ namespace SyncApp26.Infrastructure.Services
             if (training == null)
                 throw new ArgumentException("Periodic training not found");
 
+            var instructor = await ResolveInstructorAsync(dto.InstructorId, training.UserId);
+
             bool contentChanged = training.MaterialTaught != dto.MaterialTaught
                 || training.DurationHours != dto.DurationHours
-                || training.TrainingDate != dto.TrainingDate;
+                || training.TrainingDate != dto.TrainingDate
+                || training.InstructorId != instructor.Id;
 
             if (contentChanged && IsSigned(training))
                 await InvalidateSignatureForRevisionAsync(training);
@@ -75,7 +95,8 @@ namespace SyncApp26.Infrastructure.Services
             training.DurationHours = dto.DurationHours;
             training.Occupation = dto.Occupation;
             training.MaterialTaught = dto.MaterialTaught;
-            training.InstructorName = dto.InstructorName;
+            training.InstructorId = instructor.Id;
+            training.InstructorName = $"{instructor.FirstName} {instructor.LastName}";
             training.VerifierName = dto.VerifierName;
             training.UpdatedAt = DateTime.UtcNow;
 
@@ -198,6 +219,14 @@ namespace SyncApp26.Infrastructure.Services
                     return result;
                 }
 
+                var instructor = await _context.Users.FindAsync(dto.InstructorId);
+                if (instructor == null)
+                {
+                    result.Errors.Add("Instructor not found.");
+                    return result;
+                }
+                var instructorFullName = $"{instructor.FirstName} {instructor.LastName}";
+
                 // Determine which document types to create rows for
                 var docTypes = dto.DocumentType == "Both"
                     ? new[] { "SSM", "SU" }
@@ -208,6 +237,9 @@ namespace SyncApp26.Infrastructure.Services
                 {
                     try
                     {
+                        if (user.Id == instructor.Id)
+                            throw new InvalidOperationException("An employee cannot be their own instructor.");
+
                         foreach (var docType in docTypes)
                         {
                             // Check if there's already an unsigned, unlinked row for this user+type
@@ -230,7 +262,8 @@ namespace SyncApp26.Infrastructure.Services
                                     ? dto.Occupation
                                     : user.Function?.Name;
                                 existingUnsigned.MaterialTaught = dto.MaterialTaught;
-                                existingUnsigned.InstructorName = dto.InstructorName;
+                                existingUnsigned.InstructorId = instructor.Id;
+                                existingUnsigned.InstructorName = instructorFullName;
                                 existingUnsigned.VerifierName = dto.VerifierName;
                                 existingUnsigned.DocumentType = docType;
                                 existingUnsigned.UpdatedAt = DateTime.UtcNow;
@@ -247,7 +280,8 @@ namespace SyncApp26.Infrastructure.Services
                                         ? dto.Occupation
                                         : user.Function?.Name,
                                     MaterialTaught = dto.MaterialTaught,
-                                    InstructorName = dto.InstructorName,
+                                    InstructorId = instructor.Id,
+                                    InstructorName = instructorFullName,
                                     VerifierName = dto.VerifierName,
                                     CreatedAt = DateTime.UtcNow
                                 };
@@ -284,6 +318,7 @@ namespace SyncApp26.Infrastructure.Services
                 DurationHours = training.DurationHours,
                 Occupation = training.Occupation,
                 MaterialTaught = training.MaterialTaught,
+                InstructorId = training.InstructorId,
                 InstructorName = training.InstructorName,
                 // map signature fields
                 UserSignatureData = training.UserSignatureData,

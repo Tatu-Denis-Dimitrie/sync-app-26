@@ -83,7 +83,17 @@ namespace SyncApp26.Domain.Entities
         public string? VerifierSignatureMethod { get; set; }
 
         /// <summary>
-        /// Instructor name
+        /// Linked instructor account 
+        /// </summary>
+        public Guid? InstructorId { get; set; }
+
+        [ForeignKey("InstructorId")]
+        public virtual User? Instructor { get; set; }
+
+        /// <summary>
+        /// Instructor full-name snapshot, taken from the linked <see cref="Instructor"/> at
+        /// assignment time. Kept even if the account is later renamed, and is also the fallback
+        /// display value for legacy rows where <see cref="InstructorId"/> is null.
         /// </summary>
         [MaxLength(200)]
         public string? InstructorName { get; set; }
