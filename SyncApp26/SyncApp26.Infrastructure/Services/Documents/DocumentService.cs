@@ -1343,6 +1343,7 @@ namespace SyncApp26.Infrastructure.Services
 
             var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
             var hmac = await _hmacSignatureService.ComputeHmacAsync(canonical);
+            var version = await ComputeNextSignatureVersionAsync(doc.Id, training?.Id, signerRole);
 
             _context.SignatureRecords.Add(new SignatureRecord
             {
@@ -1361,12 +1362,24 @@ namespace SyncApp26.Infrastructure.Services
                 SignedAt = signedAtOffset,
                 PreviousSignatureHash = previousHash,
                 SignatureHmac = hmac,
-                IsLegacyUnverified = false
+                IsLegacyUnverified = false,
+                Version = version
             });
 
             // Committed immediately, not left for the caller's own SaveChanges, so that multiple
             // signatures by the same signer within one operation still chain correctly.
             await _context.SaveChangesAsync();
+        }
+
+        // Version is scoped to this signing slot — (PeriodicTrainingId, SignerRole) when the
+        // record is linked to a training row, otherwise (UserDocumentId, SignerRole) — not to the
+        // signer's cross-document HMAC chain, which serves a different purpose (tamper evidence).
+        private async Task<int> ComputeNextSignatureVersionAsync(Guid userDocumentId, Guid? periodicTrainingId, string signerRole)
+        {
+            var count = periodicTrainingId.HasValue
+                ? await _context.SignatureRecords.CountAsync(r => r.PeriodicTrainingId == periodicTrainingId.Value && r.SignerRole == signerRole)
+                : await _context.SignatureRecords.CountAsync(r => r.PeriodicTrainingId == null && r.UserDocumentId == userDocumentId && r.SignerRole == signerRole);
+            return count + 1;
         }
 
         private static PeriodicTraining? FindTargetPeriodicTraining(UserDocument doc, Guid? periodicTrainingId)

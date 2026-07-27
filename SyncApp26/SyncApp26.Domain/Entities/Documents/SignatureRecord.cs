@@ -76,6 +76,14 @@ namespace SyncApp26.Domain.Entities
         /// <summary>True for backfilled rows with no real HMAC — never treat these as verified.</summary>
         public bool IsLegacyUnverified { get; set; } = false;
 
+        /// <summary>
+        /// 1-based ordinal among SignatureRecords sharing this record's (PeriodicTrainingId,
+        /// SignerRole) — or (UserDocumentId, SignerRole) when PeriodicTrainingId is null.
+        /// Bookkeeping only, computed once at insert time: never part of SignatureCanonicalInput,
+        /// so it is never hashed and never affects HMAC verification.
+        /// </summary>
+        public int Version { get; set; } = 1;
+
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     }
 }

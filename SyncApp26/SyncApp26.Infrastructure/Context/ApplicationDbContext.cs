@@ -333,6 +333,10 @@ namespace SyncApp26.Infrastructure.Context
                 // Chain lookups walk "the last SignatureRecord for this signer" in signing order.
                 entity.HasIndex(e => new { e.SignerUserId, e.SignedAt })
                     .HasDatabaseName("IX_SignatureRecords_SignerUserId_SignedAt");
+
+                // Version-history lookups walk all records for one (training, role) slot.
+                entity.HasIndex(e => new { e.PeriodicTrainingId, e.SignerRole, e.Version })
+                    .HasDatabaseName("IX_SignatureRecords_PeriodicTrainingId_SignerRole_Version");
             });
         }
 
