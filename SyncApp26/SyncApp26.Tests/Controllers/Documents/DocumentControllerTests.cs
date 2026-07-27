@@ -18,16 +18,22 @@ namespace SyncApp26.Tests.Controllers.Documents
         private readonly Mock<IDocumentSignatureService> _documentSignatureServiceMock = new();
         private readonly Mock<IDocumentSigningService> _documentSigningServiceMock = new();
         private readonly Mock<IUserService> _userServiceMock = new();
+        private readonly Mock<ISignatureVerificationService> _signatureVerificationServiceMock = new();
         private readonly Mock<IConfiguration> _configurationMock = new();
 
         private DocumentController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
+            _signatureVerificationServiceMock
+                .Setup(s => s.GetLatestSignatureRecordIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, SyncApp26.Shared.DTOs.Response.SignatureVerification.DocumentSignatureIdsDTO>());
+
             var controller = new DocumentController(
                 _documentServiceMock.Object,
                 _emailServiceMock.Object,
                 _documentSignatureServiceMock.Object,
                 _documentSigningServiceMock.Object,
                 _userServiceMock.Object,
+                _signatureVerificationServiceMock.Object,
                 _configurationMock.Object);
 
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
