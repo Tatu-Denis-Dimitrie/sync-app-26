@@ -388,6 +388,11 @@ Response: DocumentView[]
 Role: Admin
 Response: { message, regenerated }
 
+### POST /document/backfill-signature-versions
+Role: Admin
+One-off repair for SignatureRecords created before the Version column existed (see docs/03_data-model.md and docs/08_signature-safety.md). Safe to run more than once.
+Response: { message, updated }
+
 ### GET /document/token-for-document/{documentId}
 Response: { token }
 
@@ -556,6 +561,25 @@ Response: UserSignatureHistoryResponseDTO[]
 
 ### GET /usersignature/my/history
 Response: UserSignatureHistoryResponseDTO[]
+
+## Signature verification (protected)
+See docs/08_signature-safety.md for the HMAC chaining and Version model behind these endpoints.
+
+### GET /signatures/{id}/verification-status
+Recomputes and returns the HMAC/chain verification status of one SignatureRecord.
+Access: self, any admin, or the line manager of the signer.
+
+Response:
+- signatureId, signerUserId
+- status (Valid | Invalid | ChainBroken | Legacy | NotFound)
+- isHashValid, isChainValid, isLegacy
+- verifiedAt
+
+### POST /signatures/verification-status/batch
+Request body (BatchVerificationStatusRequestDTO):
+- signatureIds[] (max 100 per call)
+
+Response: array of the same shape as above. Ids the caller is not allowed to see are silently omitted (NotFound entries are returned to any authenticated caller since they carry no signer-attributable data).
 
 ## Version
 

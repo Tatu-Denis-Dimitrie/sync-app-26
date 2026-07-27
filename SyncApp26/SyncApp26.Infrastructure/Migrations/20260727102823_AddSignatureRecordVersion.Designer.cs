@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SyncApp26.Infrastructure.Context;
 
@@ -10,9 +11,11 @@ using SyncApp26.Infrastructure.Context;
 namespace SyncApp26.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260727102823_AddSignatureRecordVersion")]
+    partial class AddSignatureRecordVersion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -350,14 +353,7 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasDatabaseName("IX_SignatureRecords_SignerUserId_SignedAt");
 
                     b.HasIndex("PeriodicTrainingId", "SignerRole", "Version")
-                        .IsUnique()
-                        .HasDatabaseName("UX_SignatureRecords_Training_Role_Version")
-                        .HasFilter("\"PeriodicTrainingId\" IS NOT NULL");
-
-                    b.HasIndex("UserDocumentId", "SignerRole", "Version")
-                        .IsUnique()
-                        .HasDatabaseName("UX_SignatureRecords_Document_Role_Version")
-                        .HasFilter("\"PeriodicTrainingId\" IS NULL");
+                        .HasDatabaseName("IX_SignatureRecords_PeriodicTrainingId_SignerRole_Version");
 
                     b.ToTable("SignatureRecords");
                 });

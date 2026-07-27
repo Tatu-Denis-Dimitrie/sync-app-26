@@ -303,6 +303,22 @@ namespace SyncApp26.API.Controllers
             });
         }
 
+        /// <summary>
+        /// One-off repair for SignatureRecords created before the Version column existed.
+        /// Safe to run more than once.
+        /// </summary>
+        [HttpPost("backfill-signature-versions")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> BackfillSignatureVersions()
+        {
+            var count = await _documentService.BackfillSignatureRecordVersionsAsync();
+            return Ok(new
+            {
+                message = $"S-au recalculat {count} versiune(i) de semnătură.",
+                updated = count
+            });
+        }
+
         [HttpGet("token-for-document/{documentId}")]
         public async Task<IActionResult> GetSignTokenForDocument(Guid documentId)
         {

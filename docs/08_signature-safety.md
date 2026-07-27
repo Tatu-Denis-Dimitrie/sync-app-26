@@ -8,6 +8,7 @@ This document describes how SyncApp26 handles signatures, the safety mechanisms 
 - Document signature workflow (SSM/SU)
 - Signature tokens and one-time links
 - Cryptographic proof and hashing
+- Signature records, HMAC chaining, and version history
 - Audit trail and traceability
 - Known limitations and recommended hardening
 
@@ -90,6 +91,26 @@ Current flow:
 
 This provides a tamper-evident hash for the stored PDF snapshot and enables downstream integrity checks.
 
+## Signature records, HMAC chaining, and version history
+Beyond the flat per-document/per-training signature fields described above, every signing event also writes an immutable SignatureRecord row — the authoritative audit trail for document and training signatures, distinct from the personal-signature audit trail (UserSignatureHistory).
+
+Frozen at signing time and never re-derived from live data on verification:
+- SignerFullNameSnapshot, SignerPositionSnapshot: the signer's identity as of that moment, so a later name change never retroactively invalidates a past signature.
+- MaterialTaughtSnapshot, DurationHoursSnapshot, TrainingDateSnapshot: the training content, when the record is linked to a PeriodicTraining row.
+
+### HMAC chaining
+Each record stores:
+- SignatureHmac: HMAC-SHA256 over a canonical serialization of the frozen fields above (SignatureCanonicalSerializer).
+- PreviousSignatureHash: the same signer's previous SignatureHmac, across all of their documents, in signing order.
+
+This forms a per-signer hash chain. Verification recomputes the HMAC from the frozen snapshot (plus the live training content when the record is still linked to one, so an edit after signing is detected) and confirms it matches the stored value, and separately confirms PreviousSignatureHash matches the prior record's SignatureHmac. IsLegacyUnverified marks rows backfilled before this mechanism existed; these are never treated as verified.
+
+### Version
+Each SignatureRecord also carries a Version: a 1-based ordinal counting how many times its signing slot — (PeriodicTrainingId, SignerRole), or (UserDocumentId, SignerRole) when not linked to a training row — has been (re-)signed. A slot is re-signed when its content is edited after signing: PeriodicTrainingService detects this and invalidates the prior signature, forcing a fresh sign. Version is bookkeeping only — it is never part of the hashed canonical input, so it has no bearing on HMAC verification. A unique database index enforces one record per (slot, Version), so two signing requests racing to sign the same slot fail loudly instead of silently producing two records that both claim the same version.
+
+### Verification service
+SignatureVerificationService recomputes each record's status on demand (never cached), returning one of: Valid, Invalid (recomputed hash no longer matches, e.g. training content changed since signing), ChainBroken (PreviousSignatureHash does not match the signer's actual prior record), Legacy (IsLegacyUnverified), or NotFound. Exposed via `GET /api/signatures/{id}/verification-status` and `POST /api/signatures/verification-status/batch`, access-controlled the same way as document signatures (self, any admin, or the signer's line manager).
+
 ## Audit trail
 The system records a durable audit trail for user signatures:
 - UserSignatureHistory records Created, Updated, and Revoked actions.
@@ -146,3 +167,6 @@ If higher legal or compliance guarantees are required, consider:
 - Confirm signing order enforcement (user -> manager -> admin for SSM).
 - Confirm DocumentHash changes after signature and PDF regeneration.
 - Confirm signature metadata is captured on UserDocument and PeriodicTraining.
+- Confirm SignatureRecord.Version increments correctly when a training slot is re-signed after a content edit.
+- Confirm a duplicate Version for the same signing slot is rejected by the database, not silently accepted.
+- Confirm GET /api/signatures/{id}/verification-status and the batch endpoint return the expected status for Valid/Invalid/ChainBroken/Legacy cases.

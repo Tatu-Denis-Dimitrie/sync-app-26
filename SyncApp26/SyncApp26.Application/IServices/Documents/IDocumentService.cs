@@ -30,5 +30,6 @@ namespace SyncApp26.Application.IServices
         Task<List<UserDocument>> GetAdminSignedDocumentsAsync();
         Task<int> RegenerateDocumentsAsync();
         Task<bool> DeleteDocumentAsync(Guid documentId);
+        Task<int> BackfillSignatureRecordVersionsAsync();
     }
 }

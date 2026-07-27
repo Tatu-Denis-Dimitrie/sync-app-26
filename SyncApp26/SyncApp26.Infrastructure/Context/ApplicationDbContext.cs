@@ -333,6 +333,23 @@ namespace SyncApp26.Infrastructure.Context
                 // Chain lookups walk "the last SignatureRecord for this signer" in signing order.
                 entity.HasIndex(e => new { e.SignerUserId, e.SignedAt })
                     .HasDatabaseName("IX_SignatureRecords_SignerUserId_SignedAt");
+
+                // Version-history lookups walk all records for one (training, role) slot. Unique
+                // (rather than a plain index) so two records racing to compute the same next
+                // Version for the same slot fail loudly at SaveChanges instead of silently
+                // producing a duplicate version number. Split into two filtered indexes because
+                // SQLite treats NULL as distinct in unique indexes, so a single index on
+                // PeriodicTrainingId wouldn't constrain the unlinked (PeriodicTrainingId == null)
+                // fallback slots at all.
+                entity.HasIndex(e => new { e.PeriodicTrainingId, e.SignerRole, e.Version })
+                    .IsUnique()
+                    .HasFilter("\"PeriodicTrainingId\" IS NOT NULL")
+                    .HasDatabaseName("UX_SignatureRecords_Training_Role_Version");
+
+                entity.HasIndex(e => new { e.UserDocumentId, e.SignerRole, e.Version })
+                    .IsUnique()
+                    .HasFilter("\"PeriodicTrainingId\" IS NULL")
+                    .HasDatabaseName("UX_SignatureRecords_Document_Role_Version");
             });
         }
 
