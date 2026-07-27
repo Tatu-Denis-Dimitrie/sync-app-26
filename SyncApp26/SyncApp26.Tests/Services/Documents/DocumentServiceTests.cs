@@ -307,5 +307,62 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.All(records, r => Assert.Equal("Manager", r.SignerRole));
             Assert.All(records, r => Assert.Equal("Radu Stanescu", r.SignerFullNameSnapshot));
         }
+
+        [Fact]
+        public async Task UpdateDocumentSignatureAsync_SameSlotSignedTwice_VersionIncrements()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            // Simulates a revision cycle: the same (training, role) slot is signed, then signed
+            // again later (e.g. after the prior signature was invalidated by a content edit).
+            // Version must track which attempt this is, not just mirror the chronological order.
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, isUserSignature: true, "Draw", "sig-v1", "1.2.3.4");
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, isUserSignature: true, "Draw", "sig-v2", "1.2.3.4");
+
+            var versions = _dbFixture.Context.SignatureRecords
+                .Where(r => r.UserDocumentId == doc.Id && r.SignerRole == "User")
+                .Select(r => r.Version)
+                .OrderBy(v => v)
+                .ToList();
+
+            Assert.Equal(new[] { 1, 2 }, versions);
+        }
+
+        [Fact]
+        public void SignatureRecords_DuplicateVersionForSameTrainingAndRole_ViolatesUniqueConstraint()
+        {
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            _dbFixture.Context.SignatureRecords.Add(NewSignatureRecordRow(doc, training, owner, version: 1));
+            _dbFixture.Context.SaveChanges();
+
+            _dbFixture.Context.SignatureRecords.Add(NewSignatureRecordRow(doc, training, owner, version: 1));
+
+            // UX_SignatureRecords_Training_Role_Version exists specifically so that two records
+            // racing to compute the same next Version for the same slot fail loudly here, instead
+            // of silently leaving two rows that both claim to be the same version.
+            Assert.Throws<DbUpdateException>(() => _dbFixture.Context.SaveChanges());
+        }
+
+        private static SignatureRecord NewSignatureRecordRow(UserDocument doc, PeriodicTraining training, User signer, int version) => new()
+        {
+            Id = Guid.NewGuid(),
+            UserDocumentId = doc.Id,
+            PeriodicTrainingId = training.Id,
+            SignerRole = "User",
+            SignerUserId = signer.Id,
+            SignerFullNameSnapshot = $"{signer.FirstName} {signer.LastName}",
+            SignerPositionSnapshot = "Operator",
+            SignatureData = "sig",
+            SignedAt = DateTimeOffset.UtcNow,
+            Version = version
+        };
     }
 }

@@ -1382,6 +1382,39 @@ namespace SyncApp26.Infrastructure.Services
             return count + 1;
         }
 
+        // One-off repair for SignatureRecords created before the Version column existed (they were
+        // all backfilled to 0 by the migration). Renumbers each signing slot — (PeriodicTrainingId,
+        // SignerRole), or (UserDocumentId, SignerRole) when unlinked — in chronological order.
+        // Idempotent: re-running it on already-correct data changes nothing.
+        public async Task<int> BackfillSignatureRecordVersionsAsync()
+        {
+            var allRecords = await _context.SignatureRecords.ToListAsync();
+            var updated = 0;
+
+            var groups = allRecords.GroupBy(r => r.PeriodicTrainingId.HasValue
+                ? $"pt:{r.PeriodicTrainingId}|{r.SignerRole}"
+                : $"doc:{r.UserDocumentId}|{r.SignerRole}");
+
+            foreach (var group in groups)
+            {
+                var ordered = group.OrderBy(r => r.SignedAt).ThenBy(r => r.CreatedAt).ToList();
+                for (int i = 0; i < ordered.Count; i++)
+                {
+                    var expectedVersion = i + 1;
+                    if (ordered[i].Version != expectedVersion)
+                    {
+                        ordered[i].Version = expectedVersion;
+                        updated++;
+                    }
+                }
+            }
+
+            if (updated > 0)
+                await _context.SaveChangesAsync();
+
+            return updated;
+        }
+
         private static PeriodicTraining? FindTargetPeriodicTraining(UserDocument doc, Guid? periodicTrainingId)
         {
             var docTrainings = doc.User?.PeriodicTrainings?.Where(pt => pt.UserDocumentId == doc.Id);
