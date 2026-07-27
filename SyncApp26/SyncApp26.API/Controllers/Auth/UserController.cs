@@ -100,6 +100,32 @@ namespace SyncApp26.API.Controllers
             return Ok(responseList);
         }
 
+        /// <summary>
+        /// Paginated user search for dropdowns (e.g. selecting an instructor when generating
+        /// documents). Unlike GET /User, this skips the per-user document-status mapping.
+        /// </summary>
+        [HttpGet("lookup")]
+        public async Task<ActionResult<UserLookupPageDTO>> LookupUsers([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var (items, totalCount) = await _userService.SearchUsersAsync(search, page, pageSize);
+
+            return Ok(new UserLookupPageDTO
+            {
+                TotalCount = totalCount,
+                Items = items.Select(u => new UserLookupResponseDTO
+                {
+                    Id = u.Id,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    DepartmentName = u.Department?.Name
+                }).ToList()
+            });
+        }
+
         [HttpGet("department/{departmentId}")]
         public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetUsersByDepartment(Guid departmentId)
         {

@@ -13,5 +13,6 @@ namespace SyncApp26.Application.IServices
         Task DeleteUserAsync(Guid userId);
         Task<User?> GetUserByPersonalIdAsync(string personalId);
         Task<User?> GetUserByEmailAsync(string email);
+        Task<(List<User> Items, int TotalCount)> SearchUsersAsync(string? search, int page, int pageSize);
     }
 }
