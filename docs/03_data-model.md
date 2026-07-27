@@ -24,6 +24,9 @@ erDiagram
 
 	USER_DOCUMENT ||--o{ DOCUMENT_SIGNATURE_TOKEN : signs_with
 	USER_DOCUMENT ||--o{ PERIODIC_TRAINING : related
+	USER_DOCUMENT ||--o{ SIGNATURE_RECORD : signed_by
+	PERIODIC_TRAINING ||--o{ SIGNATURE_RECORD : signed_by
+	USER ||--o{ SIGNATURE_RECORD : signs
 
 	IMPORT_HISTORY ||--o{ USER_CHANGE_HISTORY : audit
 ```
@@ -130,6 +133,18 @@ Immutable audit log for signature changes.
 - PerformedByUserId, PerformedByEmail
 - CreatedAt
 
+### SignatureRecord
+Immutable audit row written on every document/training signing event, separate from the flat signature fields on UserDocument/PeriodicTraining above.
+- Id, UserDocumentId, PeriodicTrainingId (nullable)
+- SignerRole (User, Manager, Admin), SignerUserId
+- SignerFullNameSnapshot, SignerPositionSnapshot (signer identity frozen at signing time)
+- SignatureMethod, SignatureData
+- MaterialTaughtSnapshot, DurationHoursSnapshot, TrainingDateSnapshot (training content frozen at signing time, when linked to a PeriodicTraining)
+- IpAddress, SignedAt, CreatedAt
+- PreviousSignatureHash, SignatureHmac (per-signer HMAC chain; see docs/08_signature-safety.md)
+- IsLegacyUnverified (true for rows backfilled before HMAC chaining existed; never treated as verified)
+- Version (1-based ordinal of this signing attempt within its (PeriodicTrainingId, SignerRole) slot, or (UserDocumentId, SignerRole) when unlinked; bookkeeping only, not part of the hashed input)
+
 ### ImportHistory
 - Id, ImportDate, FileName
 
@@ -155,6 +170,8 @@ User-initiated change request requiring admin approval.
 - User -> UserDocument (one-to-many)
 - User -> UserSignature and UserSignatureHistory (one active, many history)
 - User -> PeriodicTraining and UserInitialTraining (one-to-many)
+- UserDocument -> SignatureRecord (one-to-many, one row per signing event)
+- PeriodicTraining -> SignatureRecord (optional, one-to-many)
 
 ## Indexes and constraints
 - Users: unique Email and PersonalId; indexes on DepartmentId and DeletedAt
@@ -162,3 +179,4 @@ User-initiated change request requiring admin approval.
 - DepartmentFunction: composite key (DepartmentId, FunctionId)
 - UserInitialTraining: unique (UserId, DocumentType)
 - UserSignature: index on UserId (one active record per user)
+- SignatureRecord: unique (PeriodicTrainingId, SignerRole, Version) when PeriodicTrainingId is set; unique (UserDocumentId, SignerRole, Version) when it is null; index on (SignerUserId, SignedAt) for HMAC chain lookups
