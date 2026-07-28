@@ -304,6 +304,8 @@ namespace SyncApp26.Infrastructure.Services
             var durationHours = liveTraining != null ? liveTraining.DurationHours : record.DurationHoursSnapshot;
             var trainingDate = liveTraining != null ? liveTraining.TrainingDate : record.TrainingDateSnapshot;
 
+            // Reserialize with the schema this exact record was signed under (record.Version),
+            // never today's schema — that's the whole point of storing Version.
             var canonicalInput = new SignatureCanonicalInput(
                 record.SignerUserId,
                 record.SignerFullNameSnapshot,
@@ -312,10 +314,9 @@ namespace SyncApp26.Infrastructure.Services
                 durationHours,
                 trainingDate,
                 record.SignedAt,
-                record.PreviousSignatureHash);
-            // Reserialize with the schema this exact record was signed under, never today's
-            // schema — that's the whole point of storing Version.
-            var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput, record.Version);
+                record.PreviousSignatureHash,
+                record.Version);
+            var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
 
             var isHashValid = await _hmacSignatureService.VerifyHmacAsync(canonical, record.SignatureHmac);
             var isChainValid = record.PreviousSignatureHash == previous?.SignatureHmac;

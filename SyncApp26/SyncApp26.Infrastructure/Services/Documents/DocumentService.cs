@@ -1341,6 +1341,7 @@ namespace SyncApp26.Infrastructure.Services
                 .FirstOrDefault();
             var previousHash = previousRecord?.SignatureHmac;
 
+            var version = SignatureCanonicalSerializer.CurrentVersion;
             var canonicalInput = new SignatureCanonicalInput(
                 signerUserId,
                 fullNameSnapshot,
@@ -1349,10 +1350,10 @@ namespace SyncApp26.Infrastructure.Services
                 training?.DurationHours,
                 training?.TrainingDate,
                 signedAtOffset,
-                previousHash);
+                previousHash,
+                version);
 
-            var version = SignatureCanonicalSerializer.CurrentVersion;
-            var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput, version);
+            var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
             var hmac = await _hmacSignatureService.ComputeHmacAsync(canonical);
 
             _context.SignatureRecords.Add(new SignatureRecord

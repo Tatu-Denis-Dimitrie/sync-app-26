@@ -36,8 +36,8 @@ namespace SyncApp26.Tests.Services.Documents
         private static string ExpectedHmac(Guid signerUserId, string fullName, string position,
             string? material, decimal? duration, DateTime? trainingDate, DateTimeOffset signedAt)
         {
-            var input = new SignatureCanonicalInput(signerUserId, fullName, position, material, duration, trainingDate, signedAt, null);
-            var canonical = SignatureCanonicalSerializer.Serialize(input, SignatureCanonicalSerializer.CurrentVersion);
+            var input = new SignatureCanonicalInput(signerUserId, fullName, position, material, duration, trainingDate, signedAt, null, SignatureCanonicalSerializer.CurrentVersion);
+            var canonical = SignatureCanonicalSerializer.Serialize(input);
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(TestKey));
             return Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
         }

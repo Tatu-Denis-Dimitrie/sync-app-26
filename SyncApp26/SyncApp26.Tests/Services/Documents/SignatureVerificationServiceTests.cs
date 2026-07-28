@@ -242,8 +242,9 @@ namespace SyncApp26.Tests.Services.Documents
                 secondRecord.DurationHoursSnapshot,
                 secondRecord.TrainingDateSnapshot,
                 secondRecord.SignedAt,
-                forgedPreviousHash);
-            var forgedCanonical = SignatureCanonicalSerializer.Serialize(forgedInput, SignatureCanonicalSerializer.CurrentVersion);
+                forgedPreviousHash,
+                secondRecord.Version);
+            var forgedCanonical = SignatureCanonicalSerializer.Serialize(forgedInput);
             secondRecord.PreviousSignatureHash = forgedPreviousHash;
             secondRecord.SignatureHmac = await _hmacService.ComputeHmacAsync(forgedCanonical);
             _dbFixture.Context.SaveChanges();
@@ -508,6 +509,128 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Single(result.VersionsByRole["Manager"]);
             Assert.Equal(userRecord.Id, result.VersionsByRole["User"][0].SignatureId);
             Assert.Equal(managerRecord.Id, result.VersionsByRole["Manager"][0].SignatureId);
+        }
+
+        // ───────────────────────── Mixed schema versions ─────────────────────────
+
+        // Hand-builds a SignatureRecord with a real, correctly-computed HMAC under an explicit
+        // schema version — the normal signing flow always stamps
+        // SignatureCanonicalSerializer.CurrentVersion, so this is the only way to simulate "a
+        // signature made after a hypothetical schema bump" without waiting for a real one to exist.
+        private async Task<SignatureRecord> SeedManuallySignedRecordAsync(UserDocument doc, PeriodicTraining? training,
+            string signerRole, User signer, string position, int version)
+        {
+            var signedAt = DateTimeOffset.UtcNow;
+            var fullName = $"{signer.FirstName} {signer.LastName}";
+            var input = new SignatureCanonicalInput(
+                signer.Id,
+                fullName,
+                position,
+                training?.MaterialTaught,
+                training?.DurationHours,
+                training?.TrainingDate,
+                signedAt,
+                PreviousSignatureHash: null,
+                version);
+            var hmac = await _hmacService.ComputeHmacAsync(SignatureCanonicalSerializer.Serialize(input));
+
+            var record = new SignatureRecord
+            {
+                Id = Guid.NewGuid(),
+                UserDocumentId = doc.Id,
+                PeriodicTrainingId = training?.Id,
+                SignerRole = signerRole,
+                SignerUserId = signer.Id,
+                SignerFullNameSnapshot = fullName,
+                SignerPositionSnapshot = position,
+                SignatureMethod = "Draw",
+                SignatureData = "sig-manual",
+                MaterialTaughtSnapshot = training?.MaterialTaught,
+                DurationHoursSnapshot = training?.DurationHours,
+                TrainingDateSnapshot = training?.TrainingDate,
+                SignedAt = signedAt,
+                PreviousSignatureHash = null,
+                SignatureHmac = hmac,
+                IsLegacyUnverified = false,
+                Version = version
+            };
+            _dbFixture.Context.SignatureRecords.Add(record);
+            _dbFixture.Context.SaveChanges();
+            return record;
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_MixedSchemaVersionsOnSameDocument_BothVerifyAsValid()
+        {
+            // Proves the per-record Version dispatch works on a real mix, not just in isolation:
+            // one signature made under schema V1 through the normal signing flow, another
+            // hand-built under V2 (simulating a schema bump that happened in between), both on the
+            // SAME document — each must verify using its own stored Version, never a shared one.
+            var docService = CreateDocumentService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+            var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
+            var doc = SeedDocument(owner, "SU", "PendingManager");
+            var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            var v1Record = SignDocument(docService, doc, owner, isUserSignature: true);
+            Assert.Equal(1, v1Record.Version);
+
+            var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
+
+            var v1Status = await CreateVerificationService().GetVerificationStatusAsync(v1Record.Id);
+            var v2Status = await CreateVerificationService().GetVerificationStatusAsync(v2Record.Id);
+
+            Assert.Equal("Valid", v1Status!.Status);
+            Assert.True(v1Status.IsHashValid);
+            Assert.Equal("Valid", v2Status!.Status);
+            Assert.True(v2Status.IsHashValid);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusBatchAsync_MixedSchemaVersions_BothVerifyIndependently()
+        {
+            var docService = CreateDocumentService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+            var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
+            var doc = SeedDocument(owner, "SU", "PendingManager");
+            var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            var v1Record = SignDocument(docService, doc, owner, isUserSignature: true);
+            var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
+
+            var results = await CreateVerificationService()
+                .GetVerificationStatusBatchAsync(new[] { v1Record.Id, v2Record.Id });
+
+            Assert.Equal("Valid", results.Single(r => r.SignatureId == v1Record.Id).Status);
+            Assert.Equal("Valid", results.Single(r => r.SignatureId == v2Record.Id).Status);
+        }
+
+        [Fact]
+        public async Task GetSignatureHistoryForTrainingAsync_MixedSchemaVersions_BothReportValidStatus()
+        {
+            var docService = CreateDocumentService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+            var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
+            var doc = SeedDocument(owner, "SU", "PendingManager");
+            var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            var v1Record = SignDocument(docService, doc, owner, isUserSignature: true);
+            var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
+
+            var result = await CreateVerificationService().GetSignatureHistoryForTrainingAsync(training.Id);
+
+            var userEntry = result!.VersionsByRole["User"].Single(v => v.SignatureId == v1Record.Id);
+            var managerEntry = result.VersionsByRole["Manager"].Single(v => v.SignatureId == v2Record.Id);
+            Assert.Equal(1, userEntry.Version);
+            Assert.Equal("Valid", userEntry.Status);
+            Assert.Equal(2, managerEntry.Version);
+            Assert.Equal("Valid", managerEntry.Status);
         }
     }
 }
