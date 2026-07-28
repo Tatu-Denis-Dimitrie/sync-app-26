@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.SignatureVerification;
+using SyncApp26.Shared.DTOs.Response.SignatureVerification;
 using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
@@ -13,6 +14,7 @@ namespace SyncApp26.API.Controllers
     public class SignatureVerificationController : ControllerBase
     {
         private const int MaxBatchSize = 100;
+        private const int MaxUsersPerRequest = 200;
 
         private readonly ISignatureVerificationService _verificationService;
         private readonly IUserService _userService;
@@ -126,6 +128,42 @@ namespace SyncApp26.API.Controllers
                 return Forbid();
 
             return Ok(history);
+        }
+
+        // ── POST verification status grouped by employee ────────────────────────────────
+
+        /// <summary>
+        /// Recomputes and returns the verification status of every SignatureRecord belonging to
+        /// each requested employee's documents (their own signature and any manager/admin
+        /// countersignatures) — the real-time check for "did launching a new session break any of
+        /// this employee's existing signatures." UserIds the caller is not allowed to see are
+        /// silently omitted from the result; employees with no signatures yet get an empty list,
+        /// not an error.
+        /// </summary>
+        [HttpPost("verification-status/by-users")]
+        public async Task<IActionResult> GetVerificationStatusForUsers([FromBody] VerificationStatusForUsersRequestDTO request)
+        {
+            if (!TryGetCallerId(out var callerId))
+                return Unauthorized();
+
+            var userIds = request.UserIds.Distinct().ToList();
+
+            if (userIds.Count == 0)
+                return BadRequest(new { message = "UserIds must contain at least one id." });
+
+            if (userIds.Count > MaxUsersPerRequest)
+                return BadRequest(new { message = $"UserIds must not contain more than {MaxUsersPerRequest} ids." });
+
+            var statusesByUser = await _verificationService.GetVerificationStatusForUsersAsync(userIds);
+
+            var allowed = new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>();
+            foreach (var userId in userIds)
+            {
+                if (await CanAccessSignaturesOfAsync(userId, callerId))
+                    allowed[userId] = statusesByUser.GetValueOrDefault(userId, new List<SignatureVerificationStatusResponseDTO>());
+            }
+
+            return Ok(allowed);
         }
     }
 }

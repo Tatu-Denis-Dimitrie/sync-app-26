@@ -339,5 +339,120 @@ namespace SyncApp26.Tests.Controllers.Documents
 
             Assert.IsType<ForbidResult>(result);
         }
+
+        // ───────────────────────── GetVerificationStatusForUsers ─────────────────────────
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_NoUserClaim_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            controller.SetAnonymousUser();
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid> { Guid.NewGuid() } });
+
+            Assert.IsType<UnauthorizedResult>(result);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_EmptyList_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid>() });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_TooManyIds_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            var ids = Enumerable.Range(0, 201).Select(_ => Guid.NewGuid()).ToList();
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = ids });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_FiltersOutUsersCallerCannotAccess()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId, role: Roles.BasicUser);
+            var otherId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusForUsersAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>
+                {
+                    [callerId] = new List<SignatureVerificationStatusResponseDTO> { MakeStatus(Guid.NewGuid(), callerId) },
+                    [otherId] = new List<SignatureVerificationStatusResponseDTO> { MakeStatus(Guid.NewGuid(), otherId) }
+                });
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid> { callerId, otherId } });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var dto = Assert.IsType<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>>(ok.Value);
+            Assert.True(dto.ContainsKey(callerId));
+            Assert.False(dto.ContainsKey(otherId));
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_Admin_ReturnsAllUsers()
+        {
+            var controller = CreateController(role: Roles.Admin);
+            var userA = Guid.NewGuid();
+            var userB = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusForUsersAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>
+                {
+                    [userA] = new List<SignatureVerificationStatusResponseDTO>(),
+                    [userB] = new List<SignatureVerificationStatusResponseDTO>()
+                });
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid> { userA, userB } });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var dto = Assert.IsType<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>>(ok.Value);
+            Assert.Equal(2, dto.Count);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_LineManagerOfEmployee_IncludesEmployee()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController(managerId, role: Roles.LineManager);
+            var employee = MakeUser(assignedToId: managerId);
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusForUsersAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>
+                {
+                    [employee.Id] = new List<SignatureVerificationStatusResponseDTO>()
+                });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(employee.Id)).ReturnsAsync(employee);
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid> { employee.Id } });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var dto = Assert.IsType<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>>(ok.Value);
+            Assert.True(dto.ContainsKey(employee.Id));
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_LineManagerNotManagingEmployee_ExcludesEmployee()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController(managerId, role: Roles.LineManager);
+            var employee = MakeUser(); // not assigned to this manager
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusForUsersAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>
+                {
+                    [employee.Id] = new List<SignatureVerificationStatusResponseDTO>()
+                });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(employee.Id)).ReturnsAsync(employee);
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid> { employee.Id } });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var dto = Assert.IsType<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>>(ok.Value);
+            Assert.False(dto.ContainsKey(employee.Id));
+        }
     }
 }

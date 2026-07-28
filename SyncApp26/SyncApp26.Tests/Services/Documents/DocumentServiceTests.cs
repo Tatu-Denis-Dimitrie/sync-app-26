@@ -477,5 +477,161 @@ namespace SyncApp26.Tests.Services.Documents
             SignedAt = DateTimeOffset.UtcNow,
             Version = version
         };
+
+        private SignatureVerificationService CreateVerificationService()
+        {
+            var keyProviderMock = new Mock<ISignatureKeyProvider>();
+            keyProviderMock.Setup(p => p.GetCurrentKeyAsync()).ReturnsAsync(Encoding.UTF8.GetBytes(TestKey));
+            return new SignatureVerificationService(_dbFixture.Context, new HmacSignatureService(keyProviderMock.Object));
+        }
+
+        // ───────────────────────── GenerateDocumentAsync regression ─────────────────────────
+
+        [Fact]
+        public async Task GenerateDocumentAsync_NewSessionForUserWithSignedHistory_DoesNotDisturbOldSignatureRecord()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc1 = SeedDocument(owner, "SU", "PendingUser");
+            var training1 = SeedTraining(owner, doc1, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(doc1.Id, owner.Id, isUserSignature: true, "Draw", "sig-v1", "1.2.3.4");
+
+            var oldRecordBefore = _dbFixture.Context.SignatureRecords
+                .AsNoTracking()
+                .Single(r => r.UserDocumentId == doc1.Id);
+
+            // Launch a new session: generate a new document of the same type for the same user —
+            // this is the real production path (CopyHistoricalPeriodicTrainingRowsAsync +
+            // LinkOrCreateCurrentPeriodicTrainingRowAsync), not a hand-simulated approximation.
+            var doc2 = await service.GenerateDocumentAsync(owner.Id, "SU", "admin@example.com");
+
+            var oldRecordAfter = _dbFixture.Context.SignatureRecords
+                .AsNoTracking()
+                .Single(r => r.Id == oldRecordBefore.Id);
+
+            // Byte-identical, not just "still exists" — every field verification depends on must
+            // survive generating a new document/session for this user untouched.
+            Assert.Equal(oldRecordBefore.SignatureHmac, oldRecordAfter.SignatureHmac);
+            Assert.Equal(oldRecordBefore.PreviousSignatureHash, oldRecordAfter.PreviousSignatureHash);
+            Assert.Equal(oldRecordBefore.Version, oldRecordAfter.Version);
+            Assert.Equal(oldRecordBefore.SignedAt, oldRecordAfter.SignedAt);
+            Assert.Equal(oldRecordBefore.SignerFullNameSnapshot, oldRecordAfter.SignerFullNameSnapshot);
+            Assert.Equal(oldRecordBefore.SignerPositionSnapshot, oldRecordAfter.SignerPositionSnapshot);
+            Assert.Equal(oldRecordBefore.MaterialTaughtSnapshot, oldRecordAfter.MaterialTaughtSnapshot);
+            Assert.Equal(oldRecordBefore.DurationHoursSnapshot, oldRecordAfter.DurationHoursSnapshot);
+            Assert.Equal(oldRecordBefore.TrainingDateSnapshot, oldRecordAfter.TrainingDateSnapshot);
+            Assert.Equal(oldRecordBefore.IsLegacyUnverified, oldRecordAfter.IsLegacyUnverified);
+
+            // The copied historical row on the new document is a display copy only — it must NOT
+            // get its own SignatureRecord, or the audit trail would fork. Known behavior, not a bug.
+            var copiedRow = _dbFixture.Context.PeriodicTrainings
+                .Single(pt => pt.UserDocumentId == doc2.Id && pt.SourceRowId == training1.Id);
+            Assert.False(_dbFixture.Context.SignatureRecords.Any(r => r.PeriodicTrainingId == copiedRow.Id));
+
+            var statuses = await CreateVerificationService().GetVerificationStatusForUsersAsync(new[] { owner.Id });
+            Assert.Contains(statuses[owner.Id], s => s.SignatureId == oldRecordBefore.Id && s.Status == "Valid");
+        }
+
+        [Fact]
+        public async Task UpdateDocumentSignatureAsync_NewPeriodicTrainingAddedUnderNewerSchemaVersion_BothSignaturesValidate()
+        {
+            // Realistic combination: the employee already signed one training session on this
+            // document, then a second periodic training session gets added to the SAME document
+            // and signed later — after a (simulated) HMAC schema version bump — and both must
+            // still validate correctly and independently.
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            var training1 = SeedTraining(owner, doc, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(
+                documentId: doc.Id,
+                signerUserId: owner.Id,
+                isUserSignature: true,
+                signatureMethod: "Draw",
+                signatureData: "sig-v1",
+                ipAddress: "1.2.3.4",
+                periodicTrainingId: training1.Id);
+            var record1 = _dbFixture.Context.SignatureRecords.Single(r => r.PeriodicTrainingId == training1.Id);
+            Assert.Equal(SignatureCanonicalSerializer.CurrentVersion, record1.Version);
+
+            // A new instructaj session gets added to the SAME document.
+            var training2 = SeedTraining(owner, doc, "Norme SSM v2 - sesiune noua", 3m, new DateTime(2026, 3, 1));
+
+            // Signed later by the SAME employee, simulating a schema version bump having happened
+            // in between — the real signing flow always stamps CurrentVersion, so a genuinely
+            // different version has to be hand-built here, with a properly computed HMAC (not just
+            // a relabeled one), and correctly chained to record1 (same signer, so this record's
+            // PreviousSignatureHash must be record1's SignatureHmac, or it would show ChainBroken).
+            var record2 = await SeedManuallySignedRecordAsync(doc, training2, "User", owner, "Operator",
+                version: 2, previousSignatureHash: record1.SignatureHmac);
+
+            var verificationService = CreateVerificationService();
+            var status1 = await verificationService.GetVerificationStatusAsync(record1.Id);
+            var status2 = await verificationService.GetVerificationStatusAsync(record2.Id);
+
+            Assert.Equal("Valid", status1!.Status);
+            Assert.True(status1.IsChainValid);
+            Assert.Equal("Valid", status2!.Status);
+            Assert.True(status2.IsChainValid);
+
+            // Both must also show up correctly through the by-users endpoint used in Task 3's flow.
+            var statusesByUser = await verificationService.GetVerificationStatusForUsersAsync(new[] { owner.Id });
+            Assert.Contains(statusesByUser[owner.Id], s => s.SignatureId == record1.Id && s.Status == "Valid");
+            Assert.Contains(statusesByUser[owner.Id], s => s.SignatureId == record2.Id && s.Status == "Valid");
+        }
+
+        // Hand-builds a SignatureRecord with a real, correctly-computed HMAC under an explicit
+        // schema version — the normal signing flow always stamps
+        // SignatureCanonicalSerializer.CurrentVersion, so this is the only way to simulate "a
+        // signature made after a hypothetical schema bump" without waiting for a real one to exist.
+        private async Task<SignatureRecord> SeedManuallySignedRecordAsync(UserDocument doc, PeriodicTraining training,
+            string signerRole, User signer, string position, int version, string? previousSignatureHash = null)
+        {
+            var signedAt = DateTimeOffset.UtcNow;
+            var fullName = $"{signer.FirstName} {signer.LastName}";
+            var input = new SignatureCanonicalInput(
+                signer.Id,
+                fullName,
+                position,
+                training.MaterialTaught,
+                training.DurationHours,
+                training.TrainingDate,
+                signedAt,
+                previousSignatureHash,
+                version);
+
+            var keyProviderMock = new Mock<ISignatureKeyProvider>();
+            keyProviderMock.Setup(p => p.GetCurrentKeyAsync()).ReturnsAsync(Encoding.UTF8.GetBytes(TestKey));
+            var hmacService = new HmacSignatureService(keyProviderMock.Object);
+            var hmac = await hmacService.ComputeHmacAsync(SignatureCanonicalSerializer.Serialize(input));
+
+            var record = new SignatureRecord
+            {
+                Id = Guid.NewGuid(),
+                UserDocumentId = doc.Id,
+                PeriodicTrainingId = training.Id,
+                SignerRole = signerRole,
+                SignerUserId = signer.Id,
+                SignerFullNameSnapshot = fullName,
+                SignerPositionSnapshot = position,
+                SignatureMethod = "Draw",
+                SignatureData = "sig-manual",
+                MaterialTaughtSnapshot = training.MaterialTaught,
+                DurationHoursSnapshot = training.DurationHours,
+                TrainingDateSnapshot = training.TrainingDate,
+                SignedAt = signedAt,
+                PreviousSignatureHash = previousSignatureHash,
+                SignatureHmac = hmac,
+                IsLegacyUnverified = false,
+                Version = version
+            };
+            _dbFixture.Context.SignatureRecords.Add(record);
+            _dbFixture.Context.SaveChanges();
+            return record;
+        }
     }
 }

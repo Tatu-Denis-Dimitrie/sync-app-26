@@ -632,5 +632,104 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Equal(2, managerEntry.Version);
             Assert.Equal("Valid", managerEntry.Status);
         }
+
+        // ───────────────────────── GetVerificationStatusForUsersAsync ─────────────────────────
+
+        [Fact]
+        public async Task GetVerificationStatusForUsersAsync_EmptyList_ReturnsEmptyDictionary()
+        {
+            var result = await CreateVerificationService().GetVerificationStatusForUsersAsync(Array.Empty<Guid>());
+
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsersAsync_EmployeeWithNoSignaturesYet_ReturnsEmptyListNotMissing()
+        {
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            SeedDocument(owner, "SU", "PendingUser"); // generated but not signed yet
+
+            var result = await CreateVerificationService().GetVerificationStatusForUsersAsync(new[] { owner.Id });
+
+            Assert.True(result.ContainsKey(owner.Id));
+            Assert.Empty(result[owner.Id]);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsersAsync_UnknownUserId_ReturnsEmptyListNotError()
+        {
+            var unknownId = Guid.NewGuid();
+
+            var result = await CreateVerificationService().GetVerificationStatusForUsersAsync(new[] { unknownId });
+
+            Assert.True(result.ContainsKey(unknownId));
+            Assert.Empty(result[unknownId]);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsersAsync_ManagerCountersignature_AttributedToEmployeeNotSigner()
+        {
+            // Scoped by the document's owner, not the signer — requesting only the employee must
+            // surface BOTH their own signature and the manager's countersignature on their
+            // document, and nothing should appear under the manager's own id.
+            var docService = CreateDocumentService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+            var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
+            var doc = SeedDocument(owner, "SU", "PendingManager");
+
+            var userRecord = SignDocument(docService, doc, owner, isUserSignature: true);
+            await docService.UpdateDocumentSignatureAsync(doc.Id, manager.Id, isUserSignature: false, "Draw", "sig-data", "1.2.3.4");
+            var managerRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id && r.SignerRole == "Manager");
+
+            var result = await CreateVerificationService().GetVerificationStatusForUsersAsync(new[] { owner.Id });
+
+            Assert.True(result.ContainsKey(owner.Id));
+            Assert.Equal(2, result[owner.Id].Count);
+            Assert.Contains(result[owner.Id], s => s.SignatureId == userRecord.Id && s.Status == "Valid");
+            Assert.Contains(result[owner.Id], s => s.SignatureId == managerRecord.Id && s.Status == "Valid");
+            Assert.False(result.ContainsKey(manager.Id));
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsersAsync_MultipleEmployees_EachGetsOwnStatuses()
+        {
+            var docService = CreateDocumentService();
+            var functionA = SeedFunction("Operator");
+            var functionB = SeedFunction("Tehnician");
+            var ownerA = SeedUser("Adela", "Popescu", functionA);
+            var ownerB = SeedUser("Bogdan", "Ionescu", functionB);
+            var docA = SeedDocument(ownerA, "SU", "PendingUser");
+            var docB = SeedDocument(ownerB, "SU", "PendingUser");
+            var recordA = SignDocument(docService, docA, ownerA);
+            var recordB = SignDocument(docService, docB, ownerB);
+
+            var result = await CreateVerificationService().GetVerificationStatusForUsersAsync(new[] { ownerA.Id, ownerB.Id });
+
+            Assert.Single(result[ownerA.Id]);
+            Assert.Equal(recordA.Id, result[ownerA.Id][0].SignatureId);
+            Assert.Single(result[ownerB.Id]);
+            Assert.Equal(recordB.Id, result[ownerB.Id][0].SignatureId);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsersAsync_TrainingContentEditedAfterSigning_ReportsInvalidForThatEmployee()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            var training = SeedTraining(owner, doc, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+            var record = SignDocument(docService, doc, owner);
+
+            training.MaterialTaught = "Norme SSM v2 - schimbat";
+            _dbFixture.Context.SaveChanges();
+
+            var result = await CreateVerificationService().GetVerificationStatusForUsersAsync(new[] { owner.Id });
+
+            Assert.Equal("Invalid", result[owner.Id].Single(s => s.SignatureId == record.Id).Status);
+        }
     }
 }

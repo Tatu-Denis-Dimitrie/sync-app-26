@@ -11,5 +11,6 @@ namespace SyncApp26.Application.IServices
         Task<List<SignatureVerificationStatusResponseDTO>> GetVerificationStatusBatchAsync(IEnumerable<Guid> signatureIds);
         Task<Dictionary<Guid, DocumentSignatureIdsDTO>> GetLatestSignatureRecordIdsAsync(IEnumerable<Guid> documentIds);
         Task<PeriodicTrainingSignatureHistoryDTO?> GetSignatureHistoryForTrainingAsync(Guid periodicTrainingId);
+        Task<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>> GetVerificationStatusForUsersAsync(IEnumerable<Guid> userIds);
     }
 }

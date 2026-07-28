@@ -593,6 +593,16 @@ Response (PeriodicTrainingSignatureHistoryDTO):
 
 404 if no periodic training exists with this id.
 
+### POST /signatures/verification-status/by-users
+Recomputes and returns the verification status of every SignatureRecord belonging to each requested employee's documents (their own signature and any manager/admin countersignatures) — grouped by the document's owner, not the signer. This is the real-time check for "did launching a new session break any of this employee's existing signatures."
+
+Request body (VerificationStatusForUsersRequestDTO):
+- userIds[] (max 200 per call)
+
+Response: object keyed by userId, each value an array of SignatureVerificationStatusResponseDTO (same shape as the single/batch endpoints above). UserIds the caller is not allowed to see are silently omitted from the response. Employees with no signatures yet get an empty array, not an error or a missing key.
+
+400 if userIds is empty or exceeds the cap.
+
 ## Version
 
 ### GET /version

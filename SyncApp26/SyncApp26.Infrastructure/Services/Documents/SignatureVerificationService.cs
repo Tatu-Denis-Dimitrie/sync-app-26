@@ -259,6 +259,61 @@ namespace SyncApp26.Infrastructure.Services
             };
         }
 
+        // "Did launching a new session break any of this employee's existing signatures" — scoped
+        // by the document's owner (UserDocument.UserId), not the signer, so a manager's
+        // countersignature is reported under the employee whose document it's on, not the manager.
+        public async Task<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>> GetVerificationStatusForUsersAsync(IEnumerable<Guid> userIds)
+        {
+            var ids = userIds.Distinct().ToList();
+            var result = ids.ToDictionary(id => id, _ => new List<SignatureVerificationStatusResponseDTO>());
+            if (ids.Count == 0) return result;
+
+            // Resolves employees -> their document ids first, so the SignatureRecords query below
+            // is a single plain UserDocumentId filter — bounded queries, not one per requested user.
+            var employeeIdByDocumentId = await _context.UserDocuments
+                .Where(d => ids.Contains(d.UserId))
+                .Select(d => new { d.Id, d.UserId })
+                .ToDictionaryAsync(d => d.Id, d => d.UserId);
+            if (employeeIdByDocumentId.Count == 0) return result;
+
+            var docIds = employeeIdByDocumentId.Keys.ToList();
+            var records = await _context.SignatureRecords
+                .Where(r => docIds.Contains(r.UserDocumentId))
+                .ToListAsync();
+            if (records.Count == 0) return result;
+
+            var chainsBySigner = new Dictionary<Guid, List<SignatureRecord>>();
+            foreach (var signerId in records.Select(r => r.SignerUserId).Distinct())
+            {
+                chainsBySigner[signerId] = await LoadSignerChainAsync(signerId);
+            }
+
+            var trainingIds = records.Where(r => r.PeriodicTrainingId.HasValue).Select(r => r.PeriodicTrainingId!.Value).Distinct().ToList();
+            var trainingsById = trainingIds.Count == 0
+                ? new Dictionary<Guid, PeriodicTraining>()
+                : (await _context.PeriodicTrainings.Where(t => trainingIds.Contains(t.Id)).ToListAsync())
+                    .ToDictionary(t => t.Id);
+
+            var (mostRecentIdByTraining, mostRecentIdByDocument) = await LoadMostRecentIdsBySlotAsync(records);
+
+            foreach (var record in records)
+            {
+                var previous = FindPreviousRecord(record, chainsBySigner[record.SignerUserId]);
+                var mostRecentId = record.PeriodicTrainingId.HasValue
+                    ? mostRecentIdByTraining[(record.PeriodicTrainingId.Value, record.SignerRole)]
+                    : mostRecentIdByDocument[(record.UserDocumentId, record.SignerRole)];
+                var isMostRecent = record.Id == mostRecentId;
+                var liveTraining = isMostRecent && record.PeriodicTrainingId.HasValue
+                    ? trainingsById.GetValueOrDefault(record.PeriodicTrainingId.Value)
+                    : null;
+                var status = await ComputeStatusAsync(record, previous, liveTraining);
+
+                result[employeeIdByDocumentId[record.UserDocumentId]].Add(status);
+            }
+
+            return result;
+        }
+
         private async Task<List<SignatureRecord>> LoadSignerChainAsync(Guid signerUserId)
         {
             return (await _context.SignatureRecords
