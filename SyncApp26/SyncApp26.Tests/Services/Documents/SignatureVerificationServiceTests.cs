@@ -87,6 +87,38 @@ namespace SyncApp26.Tests.Services.Documents
             return _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id);
         }
 
+        private PeriodicTraining SeedTraining(User owner, UserDocument doc, string material, decimal duration, DateTime trainingDate)
+        {
+            var training = new PeriodicTraining
+            {
+                Id = Guid.NewGuid(),
+                UserId = owner.Id,
+                UserDocumentId = doc.Id,
+                DocumentType = doc.DocumentType,
+                MaterialTaught = material,
+                DurationHours = duration,
+                TrainingDate = trainingDate,
+                CreatedAt = DateTime.UtcNow
+            };
+            _dbFixture.Context.PeriodicTrainings.Add(training);
+            _dbFixture.Context.SaveChanges();
+            return training;
+        }
+
+        // Re-signs the same document+role a second time — CreateSignatureRecordAsync always fires
+        // regardless of whether the flat PeriodicTraining signature field was already set, so this
+        // produces a second SignatureRecord (Version 2) in the same (PeriodicTrainingId, SignerRole)
+        // slot without needing the full edit-then-invalidate production flow.
+        private SignatureRecord SignDocumentAgain(DocumentService docService, UserDocument doc, User signer, bool isUserSignature = true)
+        {
+            docService.UpdateDocumentSignatureAsync(doc.Id, signer.Id, isUserSignature, "Draw", "sig-data-2", "1.2.3.4")
+                .GetAwaiter().GetResult();
+            return _dbFixture.Context.SignatureRecords
+                .Where(r => r.UserDocumentId == doc.Id)
+                .OrderByDescending(r => r.Version)
+                .First();
+        }
+
         // ───────────────────────── GetVerificationStatusAsync ─────────────────────────
 
         [Fact]
@@ -249,6 +281,58 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.False(status.IsChainValid);
         }
 
+        [Fact]
+        public async Task GetVerificationStatusAsync_OnlyVersion_TrainingContentEditedAfterSigning_ReturnsInvalid()
+        {
+            // Regression guard: a single-version signature must still fail verification when its
+            // linked training content is edited afterwards — this is the pre-existing, intentional
+            // "force a re-sign" behavior and must survive the historical-vs-live fix below.
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            var training = SeedTraining(owner, doc, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+            var record = SignDocument(docService, doc, owner);
+
+            training.MaterialTaught = "Norme SSM v2 - schimbat dupa semnare";
+            _dbFixture.Context.SaveChanges();
+
+            var status = await CreateVerificationService().GetVerificationStatusAsync(record.Id);
+
+            Assert.Equal("Invalid", status!.Status);
+            Assert.False(status.IsHashValid);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_OlderVersion_StaysValidAfterTrainingEditedFollowingNewerSignature()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+            var olderRecord = SignDocument(docService, doc, owner);
+            var newerRecord = SignDocumentAgain(docService, doc, owner);
+
+            Assert.Equal(1, olderRecord.Version);
+            Assert.Equal(2, newerRecord.Version);
+
+            // Edited after BOTH signatures — the newer (latest) version must detect this, but the
+            // older, superseded version must keep verifying against what it actually signed.
+            var training = _dbFixture.Context.PeriodicTrainings.Single(t => t.UserDocumentId == doc.Id);
+            training.MaterialTaught = "Norme SSM v2 - schimbat dupa ambele semnaturi";
+            _dbFixture.Context.SaveChanges();
+
+            var olderStatus = await CreateVerificationService().GetVerificationStatusAsync(olderRecord.Id);
+            var newerStatus = await CreateVerificationService().GetVerificationStatusAsync(newerRecord.Id);
+
+            Assert.Equal("Valid", olderStatus!.Status);
+            Assert.True(olderStatus.IsHashValid);
+
+            Assert.Equal("Invalid", newerStatus!.Status);
+            Assert.False(newerStatus.IsHashValid);
+        }
+
         // ───────────────────────── GetVerificationStatusBatchAsync ─────────────────────────
 
         [Fact]
@@ -304,6 +388,28 @@ namespace SyncApp26.Tests.Services.Documents
 
             Assert.All(results, r => Assert.Equal("Valid", r.Status));
             Assert.All(results, r => Assert.True(r.IsChainValid));
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusBatchAsync_OldAndNewVersionInSameSlot_EachEvaluatedIndependently()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+            var olderRecord = SignDocument(docService, doc, owner);
+            var newerRecord = SignDocumentAgain(docService, doc, owner);
+
+            var training = _dbFixture.Context.PeriodicTrainings.Single(t => t.UserDocumentId == doc.Id);
+            training.MaterialTaught = "Norme SSM v2 - schimbat dupa ambele semnaturi";
+            _dbFixture.Context.SaveChanges();
+
+            var results = await CreateVerificationService()
+                .GetVerificationStatusBatchAsync(new[] { olderRecord.Id, newerRecord.Id });
+
+            Assert.Equal("Valid", results.Single(r => r.SignatureId == olderRecord.Id).Status);
+            Assert.Equal("Invalid", results.Single(r => r.SignatureId == newerRecord.Id).Status);
         }
     }
 }
