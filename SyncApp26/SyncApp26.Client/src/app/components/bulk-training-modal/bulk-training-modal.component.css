@@ -115,6 +115,15 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+/* button.form-input (e.g. the instructor picker trigger) needs the reset that <input>/<textarea> get for free */
+button.form-input {
+  width: 100%;
+  background: white;
+  font-family: inherit;
+  color: #111827;
+  cursor: pointer;
+}
+
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
@@ -274,6 +283,17 @@
 
 .user-row:hover {
   background-color: #f9fafb;
+}
+
+/* button.user-row (e.g. instructor picker results, which are single-click-select rather than
+   checkbox-toggle) needs the reset that the checkbox <label> version gets for free */
+button.user-row {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  font-family: inherit;
+  text-align: left;
 }
 
 .user-meta {
