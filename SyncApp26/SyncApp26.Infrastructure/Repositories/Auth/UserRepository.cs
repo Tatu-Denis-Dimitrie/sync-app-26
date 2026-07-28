@@ -130,5 +130,31 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin)
                 .FirstOrDefaultAsync(u => u.PersonalId == personalId);
         }
+
+        public async Task<(List<User> Items, int TotalCount)> SearchUsersAsync(string? search, int page, int pageSize)
+        {
+            var query = _context.Users
+                .Include(u => u.Department)
+                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                query = query.Where(u =>
+                    EF.Functions.Like(u.FirstName, $"%{term}%")
+                    || EF.Functions.Like(u.LastName, $"%{term}%")
+                    || EF.Functions.Like(u.Email, $"%{term}%"));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
     }
 }

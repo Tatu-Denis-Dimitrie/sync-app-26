@@ -181,11 +181,6 @@ namespace SyncApp26.API.Controllers
             public string SignatureData { get; set; } = string.Empty;
         }
 
-        /// <summary>
-        /// Applies a manager/instructor signature to all documents that are currently
-        /// awaiting the caller's countersignature (Status == "PendingManager").
-        /// Admins sign all pending documents; Line Managers sign only their employees' documents.
-        /// </summary>
         [HttpPost("bulk-sign")]
         [Authorize]
         public async Task<IActionResult> BulkSign([FromBody] BulkSignDto request)
@@ -197,10 +192,6 @@ namespace SyncApp26.API.Controllers
                 return Unauthorized();
 
             bool isAdmin = User.IsInRole(Roles.Admin);
-            bool isLineManager = User.IsInRole(Roles.LineManager);
-
-            if (!isAdmin && !isLineManager)
-                return Forbid();
 
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 

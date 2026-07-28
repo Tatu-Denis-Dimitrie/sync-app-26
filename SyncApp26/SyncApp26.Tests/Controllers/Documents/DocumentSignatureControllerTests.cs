@@ -267,13 +267,19 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task BulkSign_NotAdminOrLineManager_ReturnsForbidden()
+        public async Task BulkSign_BasicUser_NotAnyonesInstructor_ScopedToZero()
         {
-            var controller = CreateController(role: Roles.BasicUser);
+            // Instructors aren't restricted to the LineManager role, so a BasicUser is allowed to
+            // call bulk-sign — BulkSignDocumentsAsync itself scopes to documents where the caller
+            // is the resolved instructor, so a caller who isn't anyone's instructor just signs 0.
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId, role: Roles.BasicUser);
+            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(false, callerId, "Draw", "data", It.IsAny<string>())).ReturnsAsync(0);
 
-            var result = await controller.BulkSign(new BulkSignDto { SignatureData = "data" });
+            var result = await controller.BulkSign(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
 
-            Assert.IsType<ForbidResult>(result);
+            var ok = Assert.IsType<OkObjectResult>(result);
+            _documentServiceMock.Verify(s => s.BulkSignDocumentsAsync(false, callerId, "Draw", "data", It.IsAny<string>()), Times.Once);
         }
 
         [Fact]

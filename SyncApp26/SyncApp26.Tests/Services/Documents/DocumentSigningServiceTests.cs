@@ -40,6 +40,23 @@ namespace SyncApp26.Tests.Services.Documents
             };
         }
 
+        // Attaches a PeriodicTraining row to the document's owner, linked via UserDocumentId —
+        // mirrors how DocumentService.FindTargetPeriodicTraining/ResolveSecondSignerId locate it.
+        private static PeriodicTraining MakeTraining(UserDocument doc, Guid? instructorId, DateTime? trainingDate = null)
+        {
+            var training = new PeriodicTraining
+            {
+                Id = Guid.NewGuid(),
+                UserId = doc.UserId,
+                UserDocumentId = doc.Id,
+                InstructorId = instructorId,
+                TrainingDate = trainingDate ?? DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+            doc.User!.PeriodicTrainings.Add(training);
+            return training;
+        }
+
         // ───────────────────────── RequestSigningTokenAsync ─────────────────────────
 
         [Fact]
@@ -94,7 +111,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.RequestSigningTokenAsync(document, manager, callerIsAdmin: false);
 
             Assert.False(result.Success);
-            Assert.Contains("Manager already signed", result.ErrorMessage);
+            Assert.Contains("Instructor already signed", result.ErrorMessage);
         }
 
         [Fact]
@@ -122,7 +139,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.RequestSigningTokenAsync(document, manager, callerIsAdmin: false);
 
             Assert.False(result.Success);
-            Assert.Contains("Manager signature not required", result.ErrorMessage);
+            Assert.Contains("Instructor signature not required", result.ErrorMessage);
         }
 
         [Fact]
@@ -177,6 +194,64 @@ namespace SyncApp26.Tests.Services.Documents
             var owner = MakeUser(assignedToId: manager.Id);
             var document = MakeDocument(user: owner, status: "PendingManager");
             document.UserSignedAt = DateTime.UtcNow;
+            _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(document.Id)).ReturnsAsync((Guid?)null);
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(manager.Email, document.Id, It.IsAny<string>(), null))
+                .ReturnsAsync("manager-token");
+
+            var result = await service.RequestSigningTokenAsync(document, manager, callerIsAdmin: false);
+
+            Assert.True(result.Success);
+            Assert.Equal("manager-token", result.Token);
+        }
+
+        [Fact]
+        public async Task RequestSigningTokenAsync_LinkedInstructorDifferentFromAssignedManager_ReturnsToken()
+        {
+            var service = CreateService();
+            var assignedManager = MakeUser();
+            var instructor = MakeUser();
+            var owner = MakeUser(assignedToId: assignedManager.Id);
+            var document = MakeDocument(user: owner, status: "PendingManager");
+            document.UserSignedAt = DateTime.UtcNow;
+            MakeTraining(document, instructorId: instructor.Id);
+            _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(document.Id)).ReturnsAsync((Guid?)null);
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(instructor.Email, document.Id, It.IsAny<string>(), null))
+                .ReturnsAsync("instructor-token");
+
+            var result = await service.RequestSigningTokenAsync(document, instructor, callerIsAdmin: false);
+
+            Assert.True(result.Success);
+            Assert.Equal("instructor-token", result.Token);
+        }
+
+        [Fact]
+        public async Task RequestSigningTokenAsync_AssignedManagerNotLinkedInstructor_ReturnsForbidden()
+        {
+            // Once a training row has its own linked instructor, the employee's line manager
+            // (AssignedTo) is no longer automatically authorized — only the fallback (no
+            // InstructorId at all) grants that.
+            var service = CreateService();
+            var assignedManager = MakeUser();
+            var instructor = MakeUser();
+            var owner = MakeUser(assignedToId: assignedManager.Id);
+            var document = MakeDocument(user: owner, status: "PendingManager");
+            document.UserSignedAt = DateTime.UtcNow;
+            MakeTraining(document, instructorId: instructor.Id);
+
+            var result = await service.RequestSigningTokenAsync(document, assignedManager, callerIsAdmin: false);
+
+            Assert.True(result.Forbidden);
+        }
+
+        [Fact]
+        public async Task RequestSigningTokenAsync_LegacyTrainingRowNoInstructorId_FallsBackToAssignedManager()
+        {
+            var service = CreateService();
+            var manager = MakeUser();
+            var owner = MakeUser(assignedToId: manager.Id);
+            var document = MakeDocument(user: owner, status: "PendingManager");
+            document.UserSignedAt = DateTime.UtcNow;
+            MakeTraining(document, instructorId: null);
             _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(document.Id)).ReturnsAsync((Guid?)null);
             _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(manager.Email, document.Id, It.IsAny<string>(), null))
                 .ReturnsAsync("manager-token");
@@ -249,6 +324,36 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.True(result.Success);
             Assert.True(result.IsManagerSigning);
             Assert.False(result.IsAdminSigning);
+        }
+
+        [Fact]
+        public async Task GetSigningContextAsync_LinkedInstructorSigning_ReturnsIsManagerSigningTrue()
+        {
+            var service = CreateService();
+            var assignedManager = MakeUser(email: "manager@example.com");
+            var instructor = MakeUser(email: "instructor@example.com");
+            var owner = MakeUser(assignedToId: assignedManager.Id);
+            owner.AssignedTo = assignedManager;
+            var document = MakeDocument(user: owner);
+            var training = MakeTraining(document, instructorId: instructor.Id);
+            var token = new DocumentSignatureToken { DocumentId = document.Id, Email = instructor.Email, PeriodicTrainingId = training.Id };
+
+            _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(instructor.Email)).ReturnsAsync(instructor);
+
+            var result = await service.GetSigningContextAsync("tok");
+
+            Assert.True(result.Success);
+            Assert.True(result.IsManagerSigning);
+
+            // The employee's line manager is a different account entirely and must NOT be
+            // recognized as the signer for this training row's instructor slot.
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(assignedManager.Email)).ReturnsAsync(assignedManager);
+            var managerToken = new DocumentSignatureToken { DocumentId = document.Id, Email = assignedManager.Email, PeriodicTrainingId = training.Id };
+            _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("mgr-tok")).ReturnsAsync(managerToken);
+            var managerResult = await service.GetSigningContextAsync("mgr-tok");
+            Assert.False(managerResult.IsManagerSigning);
         }
 
         [Fact]
@@ -367,7 +472,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
 
             Assert.False(result.Success);
-            Assert.Contains("Manager already signed", result.ErrorMessage);
+            Assert.Contains("Instructor already signed", result.ErrorMessage);
         }
 
         [Fact]
@@ -462,6 +567,7 @@ namespace SyncApp26.Tests.Services.Documents
             _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(owner.Email)).ReturnsAsync(owner);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(manager.Id)).ReturnsAsync(manager);
             _documentSignatureServiceMock.Setup(s => s.ConsumeTokenAsync("tok")).ReturnsAsync(true);
             _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(manager.Email, document.Id, It.IsAny<string>(), null))
                 .ReturnsAsync("manager-tok");
@@ -473,6 +579,36 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Equal(manager.Email, result.ManagerEmail);
             Assert.Equal("manager-tok", result.ManagerNotificationToken);
             _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, owner.Id, true, "Draw", "data", "1.2.3.4", false, null), Times.Once);
+        }
+
+        [Fact]
+        public async Task ConsumeSigningTokenAsync_EmployeeSignature_NotifiesLinkedInstructor_NotAssignedManager()
+        {
+            // The training row has its own linked instructor, distinct from the employee's line
+            // manager — the post-signature notification must go to the instructor, not AssignedTo.
+            var service = CreateService();
+            var assignedManager = MakeUser(email: "manager@example.com");
+            var instructor = MakeUser(email: "instructor@example.com");
+            var owner = MakeUser(assignedToId: assignedManager.Id);
+            owner.AssignedTo = assignedManager;
+            var document = MakeDocument(user: owner, status: "PendingUser");
+            var training = MakeTraining(document, instructorId: instructor.Id);
+            var token = new DocumentSignatureToken { DocumentId = document.Id, Email = owner.Email, PeriodicTrainingId = training.Id };
+
+            _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(owner.Email)).ReturnsAsync(owner);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(instructor.Id)).ReturnsAsync(instructor);
+            _documentSignatureServiceMock.Setup(s => s.ConsumeTokenAsync("tok")).ReturnsAsync(true);
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(instructor.Email, document.Id, It.IsAny<string>(), training.Id))
+                .ReturnsAsync("instructor-tok");
+
+            var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", IpAddress = "1.2.3.4" });
+
+            Assert.True(result.Success);
+            Assert.Equal(instructor.Email, result.ManagerEmail);
+            Assert.Equal("instructor-tok", result.ManagerNotificationToken);
+            _userServiceMock.Verify(s => s.GetUserByIdAsync(assignedManager.Id), Times.Never);
         }
 
         [Fact]

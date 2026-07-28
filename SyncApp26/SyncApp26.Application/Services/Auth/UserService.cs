@@ -57,5 +57,10 @@ namespace SyncApp26.Application.Services
         {
             return await _userRepository.GetUserByEmailAsync(email);
         }
+
+        public async Task<(List<User> Items, int TotalCount)> SearchUsersAsync(string? search, int page, int pageSize)
+        {
+            return await _userRepository.SearchUsersAsync(search, page, pageSize);
+        }
     }
 }

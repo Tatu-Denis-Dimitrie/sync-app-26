@@ -10,6 +10,7 @@ namespace SyncApp26.Shared.DTOs.Response.PeriodicTraining
         public decimal? DurationHours { get; set; }
         public string? Occupation { get; set; }
         public string? MaterialTaught { get; set; }
+        public Guid? InstructorId { get; set; }
         public string? InstructorName { get; set; }
         public string? VerifierName { get; set; }
         // Signature data (base64 or typed text) and signature method when available

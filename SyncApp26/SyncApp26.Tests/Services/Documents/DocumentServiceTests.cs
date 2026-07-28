@@ -85,7 +85,7 @@ namespace SyncApp26.Tests.Services.Documents
             return doc;
         }
 
-        private PeriodicTraining SeedTraining(User owner, UserDocument doc, string material, decimal duration, DateTime trainingDate)
+        private PeriodicTraining SeedTraining(User owner, UserDocument doc, string material, decimal duration, DateTime trainingDate, Guid? instructorId = null)
         {
             var training = new PeriodicTraining
             {
@@ -96,6 +96,7 @@ namespace SyncApp26.Tests.Services.Documents
                 MaterialTaught = material,
                 DurationHours = duration,
                 TrainingDate = trainingDate,
+                InstructorId = instructorId,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.PeriodicTrainings.Add(training);
@@ -330,6 +331,114 @@ namespace SyncApp26.Tests.Services.Documents
                 .ToList();
 
             Assert.Equal(new[] { 1, 2 }, versions);
+        }
+
+        // ───────────────────────── Instructor-scoped queues ─────────────────────────
+
+        [Fact]
+        public async Task GetManagerPendingSignaturesAsync_ScopesByLinkedInstructor_NotAssignedManager()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var assignedManager = SeedUser("Radu", "Stanescu", function);
+            var instructor = SeedUser("Elena", "Marin", function);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = assignedManager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SU", "PendingManager");
+            doc.UserSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructor.Id);
+
+            var forInstructor = await service.GetManagerPendingSignaturesAsync(instructor.Id);
+            var forAssignedManager = await service.GetManagerPendingSignaturesAsync(assignedManager.Id);
+
+            Assert.Single(forInstructor);
+            Assert.Empty(forAssignedManager);
+        }
+
+        [Fact]
+        public async Task GetManagerPendingSignaturesAsync_LegacyRowNoInstructorId_FallsBackToAssignedManager()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var manager = SeedUser("Radu", "Stanescu", function);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SU", "PendingManager");
+            doc.UserSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15)); // no instructorId
+
+            var forManager = await service.GetManagerPendingSignaturesAsync(manager.Id);
+
+            Assert.Single(forManager);
+        }
+
+        [Fact]
+        public async Task GetManagerSignedDocumentsAsync_UsesSignatureRecordHistory_NotCurrentInstructorId()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var originalInstructor = SeedUser("Elena", "Marin", function);
+            var reassignedInstructor = SeedUser("Ion", "Dobre", function);
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "Completed");
+            doc.ManagerSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: reassignedInstructor.Id);
+
+            // The historical fact: originalInstructor actually signed this — even though the row's
+            // InstructorId has since been reassigned to someone else.
+            _dbFixture.Context.SignatureRecords.Add(new SignatureRecord
+            {
+                Id = Guid.NewGuid(),
+                UserDocumentId = doc.Id,
+                PeriodicTrainingId = training.Id,
+                SignerRole = "Manager",
+                SignerUserId = originalInstructor.Id,
+                SignerFullNameSnapshot = "Elena Marin",
+                SignerPositionSnapshot = "Operator",
+                SignatureData = "sig",
+                SignedAt = DateTimeOffset.UtcNow,
+                Version = 1
+            });
+            _dbFixture.Context.SaveChanges();
+
+            var forOriginal = await service.GetManagerSignedDocumentsAsync(originalInstructor.Id);
+            var forReassigned = await service.GetManagerSignedDocumentsAsync(reassignedInstructor.Id);
+
+            Assert.Single(forOriginal);
+            Assert.Empty(forReassigned);
+        }
+
+        [Fact]
+        public async Task BulkSignDocumentsAsync_ScopesToLinkedInstructor_NotOtherInstructorsDocuments()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var instructorA = SeedUser("Elena", "Marin", function);
+            var instructorB = SeedUser("Ion", "Dobre", function);
+            var owner1 = SeedUser("Adela", "Popescu", function);
+            var owner2 = SeedUser("Vlad", "Georgescu", function);
+            _dbFixture.Context.SaveChanges();
+
+            var doc1 = SeedDocument(owner1, "SU", "PendingManager");
+            doc1.UserSignedAt = DateTime.UtcNow;
+            var doc2 = SeedDocument(owner2, "SU", "PendingManager");
+            doc2.UserSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            SeedTraining(owner1, doc1, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructorA.Id);
+            SeedTraining(owner2, doc2, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructorB.Id);
+
+            var count = await service.BulkSignDocumentsAsync(false, instructorA.Id, "Type", "Elena Marin", "9.9.9.9");
+
+            Assert.Equal(1, count);
+            Assert.NotNull(_dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == doc1.Id));
+            Assert.Null(_dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == doc2.Id));
         }
 
         [Fact]
