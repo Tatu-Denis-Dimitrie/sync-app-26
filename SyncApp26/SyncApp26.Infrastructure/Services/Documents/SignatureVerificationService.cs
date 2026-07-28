@@ -16,12 +16,15 @@ namespace SyncApp26.Infrastructure.Services
     /// (SignerFullNameSnapshot/SignerPositionSnapshot — never re-derived from the live User row,
     /// so a later name change never retroactively invalidates a past signature) combined with
     /// training-content values (MaterialTaught/DurationHours/TrainingDate) when the record is
-    /// linked to a PeriodicTraining. Only the LATEST Version in a record's signing slot — see
-    /// SignatureRecord.Version — compares against the LIVE training row, so editing content after
-    /// signing correctly fails verification for the current signature and forces a re-sign. Older,
-    /// superseded versions always compare against their own frozen snapshot instead: they must stay
+    /// linked to a PeriodicTraining, reserializing with the SAME SignatureCanonicalSerializer
+    /// schema version the record was originally signed under (SignatureRecord.Version) — never
+    /// today's schema — so a later schema change never retroactively invalidates a past signature.
+    /// Only the MOST RECENT signature in a record's signing slot — determined by SignedAt, not by
+    /// Version — compares against the LIVE training row, so editing content after signing correctly
+    /// fails verification for the current signature and forces a re-sign. Older, superseded
+    /// signatures always compare against their own frozen snapshot instead: they must stay
     /// verifiable as "what was actually signed at the time" regardless of later edits, which is the
-    /// entire point of keeping version history. Also checks the per-signer hash chain that
+    /// entire point of keeping signature history. Also checks the per-signer hash chain that
     /// DocumentService.CreateSignatureRecordAsync builds — a record's stored PreviousSignatureHash
     /// must match its signer's actual prior SignatureHmac.
     /// </summary>
@@ -43,29 +46,37 @@ namespace SyncApp26.Infrastructure.Services
 
             var signerChain = await LoadSignerChainAsync(record.SignerUserId);
             var previous = FindPreviousRecord(record, signerChain);
-            var isLatestVersion = await IsLatestVersionAsync(record);
-            var liveTraining = isLatestVersion && record.PeriodicTrainingId.HasValue
+            var isMostRecent = await IsMostRecentInSlotAsync(record);
+            var liveTraining = isMostRecent && record.PeriodicTrainingId.HasValue
                 ? await _context.PeriodicTrainings.FirstOrDefaultAsync(t => t.Id == record.PeriodicTrainingId.Value)
                 : null;
             return await ComputeStatusAsync(record, previous, liveTraining);
         }
 
-        // True when no sibling SignatureRecord in this record's signing slot — (PeriodicTrainingId,
-        // SignerRole), or (UserDocumentId, SignerRole) when unlinked — has a higher Version. Drives
-        // whether ComputeStatusAsync compares against live training content (latest version only)
-        // or strictly against the record's own frozen snapshot (every superseded version).
-        private async Task<bool> IsLatestVersionAsync(SignatureRecord record)
+        // True when this record is the most recently signed one in its signing slot —
+        // (PeriodicTrainingId, SignerRole), or (UserDocumentId, SignerRole) when unlinked — going by
+        // SignedAt/CreatedAt, not by Version (which records an HMAC schema, not a signing order).
+        // Drives whether ComputeStatusAsync compares against live training content (most recent
+        // signature only) or strictly against the record's own frozen snapshot (every superseded
+        // signature). SQLite's EF provider can't order by DateTimeOffset server-side, so the
+        // (already small, slot-filtered) results are sorted client-side — same pattern as
+        // LoadSignerChainAsync below.
+        private async Task<bool> IsMostRecentInSlotAsync(SignatureRecord record)
         {
-            return record.PeriodicTrainingId.HasValue
-                ? !await _context.SignatureRecords.AnyAsync(r =>
-                    r.PeriodicTrainingId == record.PeriodicTrainingId.Value
-                    && r.SignerRole == record.SignerRole
-                    && r.Version > record.Version)
-                : !await _context.SignatureRecords.AnyAsync(r =>
-                    r.PeriodicTrainingId == null
-                    && r.UserDocumentId == record.UserDocumentId
-                    && r.SignerRole == record.SignerRole
-                    && r.Version > record.Version);
+            var siblings = record.PeriodicTrainingId.HasValue
+                ? await _context.SignatureRecords
+                    .Where(r => r.PeriodicTrainingId == record.PeriodicTrainingId.Value && r.SignerRole == record.SignerRole)
+                    .ToListAsync()
+                : await _context.SignatureRecords
+                    .Where(r => r.PeriodicTrainingId == null && r.UserDocumentId == record.UserDocumentId && r.SignerRole == record.SignerRole)
+                    .ToListAsync();
+
+            var mostRecent = siblings
+                .OrderByDescending(r => r.SignedAt)
+                .ThenByDescending(r => r.CreatedAt)
+                .First();
+
+            return mostRecent.Id == record.Id;
         }
 
         public async Task<List<SignatureVerificationStatusResponseDTO>> GetVerificationStatusBatchAsync(IEnumerable<Guid> signatureIds)
@@ -86,7 +97,7 @@ namespace SyncApp26.Infrastructure.Services
                 : (await _context.PeriodicTrainings.Where(t => trainingIds.Contains(t.Id)).ToListAsync())
                     .ToDictionary(t => t.Id);
 
-            var (maxVersionByTraining, maxVersionByDocument) = await LoadMaxVersionsBySlotAsync(records);
+            var (mostRecentIdByTraining, mostRecentIdByDocument) = await LoadMostRecentIdsBySlotAsync(records);
 
             var results = new List<SignatureVerificationStatusResponseDTO>();
             foreach (var id in ids)
@@ -107,11 +118,11 @@ namespace SyncApp26.Infrastructure.Services
                 }
 
                 var previous = FindPreviousRecord(record, chainsBySigner[record.SignerUserId]);
-                var maxVersion = record.PeriodicTrainingId.HasValue
-                    ? maxVersionByTraining[(record.PeriodicTrainingId.Value, record.SignerRole)]
-                    : maxVersionByDocument[(record.UserDocumentId, record.SignerRole)];
-                var isLatestVersion = record.Version >= maxVersion;
-                var liveTraining = isLatestVersion && record.PeriodicTrainingId.HasValue
+                var mostRecentId = record.PeriodicTrainingId.HasValue
+                    ? mostRecentIdByTraining[(record.PeriodicTrainingId.Value, record.SignerRole)]
+                    : mostRecentIdByDocument[(record.UserDocumentId, record.SignerRole)];
+                var isMostRecent = record.Id == mostRecentId;
+                var liveTraining = isMostRecent && record.PeriodicTrainingId.HasValue
                     ? trainingsById.GetValueOrDefault(record.PeriodicTrainingId.Value)
                     : null;
                 results.Add(await ComputeStatusAsync(record, previous, liveTraining));
@@ -120,29 +131,30 @@ namespace SyncApp26.Infrastructure.Services
             return results;
         }
 
-        // Grouped max-Version-per-slot lookup for a batch, so determining "is this the latest
-        // version" for every record costs two queries total instead of one AnyAsync per record
-        // (which IsLatestVersionAsync does for the single-record path, where that cost is fine).
-        private async Task<(Dictionary<(Guid, string), int> ByTraining, Dictionary<(Guid, string), int> ByDocument)> LoadMaxVersionsBySlotAsync(List<SignatureRecord> batchRecords)
+        // Grouped most-recent-signature-per-slot lookup for a batch, so determining "is this the
+        // most recent signature in its slot" for every record costs two queries total instead of
+        // one fetch per record (which IsMostRecentInSlotAsync does for the single-record path,
+        // where that cost is fine).
+        private async Task<(Dictionary<(Guid, string), Guid> ByTraining, Dictionary<(Guid, string), Guid> ByDocument)> LoadMostRecentIdsBySlotAsync(List<SignatureRecord> batchRecords)
         {
             var trainingIds = batchRecords.Where(r => r.PeriodicTrainingId.HasValue).Select(r => r.PeriodicTrainingId!.Value).Distinct().ToList();
             var docIds = batchRecords.Where(r => !r.PeriodicTrainingId.HasValue).Select(r => r.UserDocumentId).Distinct().ToList();
 
             var byTraining = trainingIds.Count == 0
-                ? new Dictionary<(Guid, string), int>()
+                ? new Dictionary<(Guid, string), Guid>()
                 : (await _context.SignatureRecords
                         .Where(r => r.PeriodicTrainingId.HasValue && trainingIds.Contains(r.PeriodicTrainingId.Value))
                         .ToListAsync())
                     .GroupBy(r => (r.PeriodicTrainingId!.Value, r.SignerRole))
-                    .ToDictionary(g => g.Key, g => g.Max(r => r.Version));
+                    .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.SignedAt).ThenByDescending(r => r.CreatedAt).First().Id);
 
             var byDocument = docIds.Count == 0
-                ? new Dictionary<(Guid, string), int>()
+                ? new Dictionary<(Guid, string), Guid>()
                 : (await _context.SignatureRecords
                         .Where(r => r.PeriodicTrainingId == null && docIds.Contains(r.UserDocumentId))
                         .ToListAsync())
                     .GroupBy(r => (r.UserDocumentId, r.SignerRole))
-                    .ToDictionary(g => g.Key, g => g.Max(r => r.Version));
+                    .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.SignedAt).ThenByDescending(r => r.CreatedAt).First().Id);
 
             return (byTraining, byDocument);
         }
@@ -186,6 +198,65 @@ namespace SyncApp26.Infrastructure.Services
             }
 
             return result;
+        }
+
+        public async Task<PeriodicTrainingSignatureHistoryDTO?> GetSignatureHistoryForTrainingAsync(Guid periodicTrainingId)
+        {
+            var training = await _context.PeriodicTrainings.FirstOrDefaultAsync(t => t.Id == periodicTrainingId);
+            if (training == null) return null;
+
+            var records = (await _context.SignatureRecords
+                    .Where(r => r.PeriodicTrainingId == periodicTrainingId)
+                    .ToListAsync())
+                .OrderBy(r => r.SignerRole)
+                .ThenBy(r => r.SignedAt)
+                .ThenBy(r => r.CreatedAt)
+                .ToList();
+
+            var mostRecentIdByRole = records
+                .GroupBy(r => r.SignerRole)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.SignedAt).ThenByDescending(r => r.CreatedAt).First().Id);
+
+            var signerChainsBySignerId = new Dictionary<Guid, List<SignatureRecord>>();
+            var versionsByRole = new Dictionary<string, List<SignatureVersionSummaryDTO>>();
+
+            foreach (var record in records)
+            {
+                var isMostRecent = record.Id == mostRecentIdByRole[record.SignerRole];
+
+                if (!signerChainsBySignerId.TryGetValue(record.SignerUserId, out var signerChain))
+                {
+                    signerChain = await LoadSignerChainAsync(record.SignerUserId);
+                    signerChainsBySignerId[record.SignerUserId] = signerChain;
+                }
+                var previous = FindPreviousRecord(record, signerChain);
+                var status = await ComputeStatusAsync(record, previous, isMostRecent ? training : null);
+
+                if (!versionsByRole.TryGetValue(record.SignerRole, out var roleVersions))
+                {
+                    roleVersions = new List<SignatureVersionSummaryDTO>();
+                    versionsByRole[record.SignerRole] = roleVersions;
+                }
+
+                roleVersions.Add(new SignatureVersionSummaryDTO
+                {
+                    SignatureId = record.Id,
+                    Version = record.Version,
+                    IsMostRecentSignature = isMostRecent,
+                    SignerRole = record.SignerRole,
+                    SignerUserId = record.SignerUserId,
+                    SignerFullNameSnapshot = record.SignerFullNameSnapshot,
+                    SignedAt = record.SignedAt,
+                    Status = status.Status
+                });
+            }
+
+            return new PeriodicTrainingSignatureHistoryDTO
+            {
+                PeriodicTrainingId = periodicTrainingId,
+                UserId = training.UserId,
+                VersionsByRole = versionsByRole
+            };
         }
 
         private async Task<List<SignatureRecord>> LoadSignerChainAsync(Guid signerUserId)
@@ -242,7 +313,9 @@ namespace SyncApp26.Infrastructure.Services
                 trainingDate,
                 record.SignedAt,
                 record.PreviousSignatureHash);
-            var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
+            // Reserialize with the schema this exact record was signed under, never today's
+            // schema — that's the whole point of storing Version.
+            var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput, record.Version);
 
             var isHashValid = await _hmacSignatureService.VerifyHmacAsync(canonical, record.SignatureHmac);
             var isChainValid = record.PreviousSignatureHash == previous?.SignatureHmac;

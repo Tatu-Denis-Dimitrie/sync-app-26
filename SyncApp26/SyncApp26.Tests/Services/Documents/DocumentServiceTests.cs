@@ -37,7 +37,7 @@ namespace SyncApp26.Tests.Services.Documents
             string? material, decimal? duration, DateTime? trainingDate, DateTimeOffset signedAt)
         {
             var input = new SignatureCanonicalInput(signerUserId, fullName, position, material, duration, trainingDate, signedAt, null);
-            var canonical = SignatureCanonicalSerializer.Serialize(input);
+            var canonical = SignatureCanonicalSerializer.Serialize(input, SignatureCanonicalSerializer.CurrentVersion);
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(TestKey));
             return Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
         }
@@ -310,7 +310,7 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
-        public async Task UpdateDocumentSignatureAsync_SameSlotSignedTwice_VersionIncrements()
+        public async Task UpdateDocumentSignatureAsync_SameSlotSignedTwice_BothStampCurrentSchemaVersion()
         {
             var service = CreateService();
             var function = SeedFunction("Operator");
@@ -320,17 +320,19 @@ namespace SyncApp26.Tests.Services.Documents
 
             // Simulates a revision cycle: the same (training, role) slot is signed, then signed
             // again later (e.g. after the prior signature was invalidated by a content edit).
-            // Version must track which attempt this is, not just mirror the chronological order.
+            // Version records which HMAC canonical schema computed the hash, not which attempt
+            // this is — both signatures were made under today's (only) schema, so both get the
+            // same Version, and that's correct, not a bug.
             await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, isUserSignature: true, "Draw", "sig-v1", "1.2.3.4");
             await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, isUserSignature: true, "Draw", "sig-v2", "1.2.3.4");
 
             var versions = _dbFixture.Context.SignatureRecords
                 .Where(r => r.UserDocumentId == doc.Id && r.SignerRole == "User")
                 .Select(r => r.Version)
-                .OrderBy(v => v)
                 .ToList();
 
-            Assert.Equal(new[] { 1, 2 }, versions);
+            Assert.Equal(2, versions.Count);
+            Assert.All(versions, v => Assert.Equal(SignatureCanonicalSerializer.CurrentVersion, v));
         }
 
         // ───────────────────────── Instructor-scoped queues ─────────────────────────
@@ -442,8 +444,11 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
-        public void SignatureRecords_DuplicateVersionForSameTrainingAndRole_ViolatesUniqueConstraint()
+        public void SignatureRecords_SameVersionForSameTrainingAndRole_IsAllowed()
         {
+            // Version records an HMAC schema, not a resign ordinal — many SignatureRecords for the
+            // same (training, role) slot legitimately share the same Version (they were all signed
+            // under today's only schema), so no uniqueness constraint should reject this.
             var function = SeedFunction("Operator");
             var owner = SeedUser("Adela", "Popescu", function);
             var doc = SeedDocument(owner, "SU", "PendingUser");
@@ -453,11 +458,10 @@ namespace SyncApp26.Tests.Services.Documents
             _dbFixture.Context.SaveChanges();
 
             _dbFixture.Context.SignatureRecords.Add(NewSignatureRecordRow(doc, training, owner, version: 1));
+            _dbFixture.Context.SaveChanges();
 
-            // UX_SignatureRecords_Training_Role_Version exists specifically so that two records
-            // racing to compute the same next Version for the same slot fail loudly here, instead
-            // of silently leaving two rows that both claim to be the same version.
-            Assert.Throws<DbUpdateException>(() => _dbFixture.Context.SaveChanges());
+            var count = _dbFixture.Context.SignatureRecords.Count(r => r.PeriodicTrainingId == training.Id);
+            Assert.Equal(2, count);
         }
 
         private static SignatureRecord NewSignatureRecordRow(UserDocument doc, PeriodicTraining training, User signer, int version) => new()

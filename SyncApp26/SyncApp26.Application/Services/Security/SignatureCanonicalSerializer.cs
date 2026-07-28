@@ -24,10 +24,32 @@ namespace SyncApp26.Application.Services
     /// Turns a SignatureCanonicalInput into a deterministic byte sequence suitable for keyed
     /// hashing: fixed field order, invariant formatting, and length-prefixed fields so that no
     /// two distinct inputs can ever serialize to the same output.
+    ///
+    /// Versioned: SignatureRecord.Version records which schema below produced a given signature's
+    /// hash, so verification can always reconstruct the exact format used at signing time — even
+    /// after this schema evolves (e.g. a field gets added). A version's private SerializeVN method
+    /// must never change once any real signature has been created under it; add a new version
+    /// instead of editing an old one.
     /// </summary>
     public static class SignatureCanonicalSerializer
     {
-        public static string Serialize(SignatureCanonicalInput input)
+        /// <summary>The schema version new signatures are created with. Bump this — and add a new
+        /// SerializeVN case below — when the field set changes; never edit an existing case.</summary>
+        public const int CurrentVersion = 1;
+
+        public static string Serialize(SignatureCanonicalInput input, int version)
+        {
+            return version switch
+            {
+                1 => SerializeV1(input),
+                _ => throw new NotSupportedException($"Unknown signature canonical schema version {version}.")
+            };
+        }
+
+        public static byte[] SerializeToUtf8Bytes(SignatureCanonicalInput input, int version) =>
+            Encoding.UTF8.GetBytes(Serialize(input, version));
+
+        private static string SerializeV1(SignatureCanonicalInput input)
         {
             var sb = new StringBuilder();
             AppendField(sb, input.SignerUserId.ToString("D"));
@@ -40,9 +62,6 @@ namespace SyncApp26.Application.Services
             AppendField(sb, input.PreviousSignatureHash);
             return sb.ToString();
         }
-
-        public static byte[] SerializeToUtf8Bytes(SignatureCanonicalInput input) =>
-            Encoding.UTF8.GetBytes(Serialize(input));
 
         // Length-prefixing (byte count, not char count) makes field boundaries unambiguous
         // regardless of what characters the values themselves contain.

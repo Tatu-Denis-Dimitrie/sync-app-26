@@ -581,6 +581,18 @@ Request body (BatchVerificationStatusRequestDTO):
 
 Response: array of the same shape as above. Ids the caller is not allowed to see are silently omitted (NotFound entries are returned to any authenticated caller since they carry no signer-attributable data).
 
+### GET /signatures/training/{periodicTrainingId}/history
+Returns every signature made for a periodic training, grouped by signer role and ordered by signing date. Access follows the training's employee, not any individual signer (self, any admin, or the employee's line manager).
+
+Response (PeriodicTrainingSignatureHistoryDTO):
+- periodicTrainingId, userId
+- versionsByRole: object keyed by signer role ("User"/"Manager"/"Admin"), each an array (ordered by signedAt ascending) of:
+	- signatureId, version (which HMAC canonical schema signed this — not a resign counter), isMostRecentSignature
+	- signerRole, signerUserId, signerFullNameSnapshot, signedAt
+	- status (Valid | Invalid | ChainBroken | Legacy)
+
+404 if no periodic training exists with this id.
+
 ## Version
 
 ### GET /version

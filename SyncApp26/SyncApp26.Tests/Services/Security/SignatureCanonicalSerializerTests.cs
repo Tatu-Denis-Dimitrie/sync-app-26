@@ -27,8 +27,8 @@ namespace SyncApp26.Tests.Services.Security
         {
             var input = MakeInput();
 
-            var first = SignatureCanonicalSerializer.Serialize(input);
-            var second = SignatureCanonicalSerializer.Serialize(input);
+            var first = SignatureCanonicalSerializer.Serialize(input, SignatureCanonicalSerializer.CurrentVersion);
+            var second = SignatureCanonicalSerializer.Serialize(input, SignatureCanonicalSerializer.CurrentVersion);
 
             Assert.Equal(first, second);
         }
@@ -39,7 +39,9 @@ namespace SyncApp26.Tests.Services.Security
             var utc = MakeInput(signedAt: new DateTimeOffset(2026, 1, 15, 12, 30, 0, TimeSpan.Zero));
             var plusTwo = MakeInput(signedAt: new DateTimeOffset(2026, 1, 15, 14, 30, 0, TimeSpan.FromHours(2)));
 
-            Assert.Equal(SignatureCanonicalSerializer.Serialize(utc), SignatureCanonicalSerializer.Serialize(plusTwo));
+            Assert.Equal(
+                SignatureCanonicalSerializer.Serialize(utc, SignatureCanonicalSerializer.CurrentVersion),
+                SignatureCanonicalSerializer.Serialize(plusTwo, SignatureCanonicalSerializer.CurrentVersion));
         }
 
         [Fact]
@@ -50,8 +52,8 @@ namespace SyncApp26.Tests.Services.Security
             var second = MakeInput(fullName: "a", position: "bc");
 
             Assert.NotEqual(
-                SignatureCanonicalSerializer.Serialize(first),
-                SignatureCanonicalSerializer.Serialize(second));
+                SignatureCanonicalSerializer.Serialize(first, SignatureCanonicalSerializer.CurrentVersion),
+                SignatureCanonicalSerializer.Serialize(second, SignatureCanonicalSerializer.CurrentVersion));
         }
 
         [Fact]
@@ -59,8 +61,8 @@ namespace SyncApp26.Tests.Services.Security
         {
             var input = MakeInput(material: null, duration: null, trainingDate: null, previousHash: null);
 
-            var first = SignatureCanonicalSerializer.Serialize(input);
-            var second = SignatureCanonicalSerializer.Serialize(input);
+            var first = SignatureCanonicalSerializer.Serialize(input, SignatureCanonicalSerializer.CurrentVersion);
+            var second = SignatureCanonicalSerializer.Serialize(input, SignatureCanonicalSerializer.CurrentVersion);
 
             Assert.Equal(first, second);
         }
@@ -72,8 +74,8 @@ namespace SyncApp26.Tests.Services.Security
             var oneHour = MakeInput(duration: 1m);
 
             Assert.NotEqual(
-                SignatureCanonicalSerializer.Serialize(twoHours),
-                SignatureCanonicalSerializer.Serialize(oneHour));
+                SignatureCanonicalSerializer.Serialize(twoHours, SignatureCanonicalSerializer.CurrentVersion),
+                SignatureCanonicalSerializer.Serialize(oneHour, SignatureCanonicalSerializer.CurrentVersion));
         }
 
         [Fact]
@@ -81,10 +83,18 @@ namespace SyncApp26.Tests.Services.Security
         {
             var input = MakeInput(fullName: "Ștefan Ionescu");
 
-            var bytes = SignatureCanonicalSerializer.SerializeToUtf8Bytes(input);
-            var expected = System.Text.Encoding.UTF8.GetBytes(SignatureCanonicalSerializer.Serialize(input));
+            var bytes = SignatureCanonicalSerializer.SerializeToUtf8Bytes(input, SignatureCanonicalSerializer.CurrentVersion);
+            var expected = System.Text.Encoding.UTF8.GetBytes(SignatureCanonicalSerializer.Serialize(input, SignatureCanonicalSerializer.CurrentVersion));
 
             Assert.Equal(expected, bytes);
+        }
+
+        [Fact]
+        public void Serialize_UnknownVersion_Throws()
+        {
+            var input = MakeInput();
+
+            Assert.Throws<NotSupportedException>(() => SignatureCanonicalSerializer.Serialize(input, 999));
         }
     }
 }
