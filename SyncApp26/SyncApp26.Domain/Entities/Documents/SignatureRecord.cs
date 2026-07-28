@@ -77,10 +77,12 @@ namespace SyncApp26.Domain.Entities
         public bool IsLegacyUnverified { get; set; } = false;
 
         /// <summary>
-        /// 1-based ordinal among SignatureRecords sharing this record's (PeriodicTrainingId,
-        /// SignerRole) — or (UserDocumentId, SignerRole) when PeriodicTrainingId is null.
-        /// Bookkeeping only, computed once at insert time: never part of SignatureCanonicalInput,
-        /// so it is never hashed and never affects HMAC verification.
+        /// Which SignatureCanonicalSerializer schema version computed this record's SignatureHmac
+        /// — set once at insert time to SignatureCanonicalSerializer.CurrentVersion, never
+        /// recomputed. Lets verification reconstruct the exact canonical format used at signing
+        /// time even after the schema evolves (e.g. a field is added), instead of hashing today's
+        /// field set against a signature made under an older one. Unrelated to how many times this
+        /// slot has been (re-)signed — that's derived from SignedAt, not from this field.
         /// </summary>
         public int Version { get; set; } = 1;
 

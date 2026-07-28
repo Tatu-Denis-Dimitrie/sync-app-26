@@ -104,5 +104,28 @@ namespace SyncApp26.API.Controllers
 
             return Ok(allowed);
         }
+
+        // ── GET signature history for a periodic training slot ──────────────────────────
+
+        /// <summary>
+        /// Returns every SignatureRecord version for a periodic training, grouped by signer role.
+        /// Access follows the training's employee, not any individual signer: self, any admin, or
+        /// the employee's line manager.
+        /// </summary>
+        [HttpGet("training/{periodicTrainingId:guid}/history")]
+        public async Task<IActionResult> GetTrainingSignatureHistory(Guid periodicTrainingId)
+        {
+            if (!TryGetCallerId(out var callerId))
+                return Unauthorized();
+
+            var history = await _verificationService.GetSignatureHistoryForTrainingAsync(periodicTrainingId);
+            if (history == null)
+                return NotFound(new { message = "No periodic training found with this id." });
+
+            if (!await CanAccessSignaturesOfAsync(history.UserId, callerId))
+                return Forbid();
+
+            return Ok(history);
+        }
     }
 }
