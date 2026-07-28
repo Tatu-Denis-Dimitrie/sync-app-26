@@ -33,6 +33,13 @@ namespace SyncApp26.Tests.Controllers.Documents
             VerifiedAt = DateTimeOffset.UtcNow
         };
 
+        private static PeriodicTrainingSignatureHistoryDTO MakeHistory(Guid periodicTrainingId, Guid userId) => new()
+        {
+            PeriodicTrainingId = periodicTrainingId,
+            UserId = userId,
+            VersionsByRole = new Dictionary<string, List<SignatureVersionSummaryDTO>>()
+        };
+
         private static User MakeUser(Guid? id = null, Guid? assignedToId = null) => new()
         {
             Id = id ?? Guid.NewGuid(),
@@ -231,6 +238,106 @@ namespace SyncApp26.Tests.Controllers.Documents
             var ok = Assert.IsType<OkObjectResult>(result);
             var list = Assert.IsAssignableFrom<IEnumerable<object>>(ok.Value);
             Assert.Equal(2, list.Count());
+        }
+
+        // ───────────────────────── GetTrainingSignatureHistory ─────────────────────────
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_NoUserClaim_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            controller.SetAnonymousUser();
+
+            var result = await controller.GetTrainingSignatureHistory(Guid.NewGuid());
+
+            Assert.IsType<UnauthorizedResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_UnknownTraining_ReturnsNotFound()
+        {
+            var controller = CreateController();
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync((PeriodicTrainingSignatureHistoryDTO?)null);
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_Self_ReturnsOk()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId);
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync(MakeHistory(trainingId, callerId));
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var dto = Assert.IsType<PeriodicTrainingSignatureHistoryDTO>(ok.Value);
+            Assert.Equal(trainingId, dto.PeriodicTrainingId);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_UnrelatedNonAdmin_ReturnsForbidden()
+        {
+            var controller = CreateController(role: Roles.BasicUser);
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync(MakeHistory(trainingId, Guid.NewGuid()));
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_Admin_ReturnsOk()
+        {
+            var controller = CreateController(role: Roles.Admin);
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync(MakeHistory(trainingId, Guid.NewGuid()));
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_LineManagerOfEmployee_ReturnsOk()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController(managerId, role: Roles.LineManager);
+            var employee = MakeUser(assignedToId: managerId);
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync(MakeHistory(trainingId, employee.Id));
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(employee.Id)).ReturnsAsync(employee);
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_LineManagerNotManagingEmployee_ReturnsForbidden()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController(managerId, role: Roles.LineManager);
+            var employee = MakeUser(); // not assigned to this manager
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync(MakeHistory(trainingId, employee.Id));
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(employee.Id)).ReturnsAsync(employee);
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            Assert.IsType<ForbidResult>(result);
         }
     }
 }

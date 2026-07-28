@@ -143,7 +143,7 @@ Immutable audit row written on every document/training signing event, separate f
 - IpAddress, SignedAt, CreatedAt
 - PreviousSignatureHash, SignatureHmac (per-signer HMAC chain; see docs/08_signature-safety.md)
 - IsLegacyUnverified (true for rows backfilled before HMAC chaining existed; never treated as verified)
-- Version (1-based ordinal of this signing attempt within its (PeriodicTrainingId, SignerRole) slot, or (UserDocumentId, SignerRole) when unlinked; bookkeeping only, not part of the hashed input)
+- Version (which SignatureCanonicalSerializer schema computed this record's SignatureHmac — not a resign counter; unrelated to how many times the slot has been re-signed, which is derived from SignedAt)
 
 ### ImportHistory
 - Id, ImportDate, FileName
@@ -179,4 +179,4 @@ User-initiated change request requiring admin approval.
 - DepartmentFunction: composite key (DepartmentId, FunctionId)
 - UserInitialTraining: unique (UserId, DocumentType)
 - UserSignature: index on UserId (one active record per user)
-- SignatureRecord: unique (PeriodicTrainingId, SignerRole, Version) when PeriodicTrainingId is set; unique (UserDocumentId, SignerRole, Version) when it is null; index on (SignerUserId, SignedAt) for HMAC chain lookups
+- SignatureRecord: index on (PeriodicTrainingId, SignerRole) and on (UserDocumentId, SignerRole) for signing-slot lookups (signature history, most-recent-signature checks); index on (SignerUserId, SignedAt) for HMAC chain lookups
