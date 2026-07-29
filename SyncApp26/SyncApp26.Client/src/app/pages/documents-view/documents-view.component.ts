@@ -4,11 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
-import { map, catchError, shareReplay } from 'rxjs/operators';
+import { map, catchError, shareReplay, take } from 'rxjs/operators';
 import { AuthenticationService } from '../../services/authentication.service';
 import { PaginationComponent } from '../../components/pagination/pagination.component';
 import { BulkTrainingModalComponent } from '../../components/bulk-training-modal/bulk-training-modal.component';
 import { BulkInitialTrainingModalComponent } from '../../components/bulk-initial-training-modal/bulk-initial-training-modal.component';
+import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
+import { SignatureVerificationService, SignatureVerificationStatus, SignatureVerificationStatusValue } from '../../services/signature-verification.service';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
@@ -26,13 +28,18 @@ interface DocumentDto {
   pdfFilePath: string;
   userSignedAt: string | null;
   managerSignedAt: string | null;
+  instructorSignedAt: string | null;
   adminSignedAt: string | null;
+  userSignatureId: string | null;
+  managerSignatureId: string | null;
+  instructorSignatureId: string | null;
+  adminSignatureId: string | null;
 }
 
 @Component({
   selector: 'app-documents-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent, BulkInitialTrainingModalComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent, BulkInitialTrainingModalComponent, SignatureStatusBadgeComponent],
   templateUrl: './documents-view.component.html',
   styleUrl: './documents-view.component.css'
 })
@@ -92,12 +99,18 @@ export class DocumentsViewComponent implements OnInit {
   isRegenerating = false;
   regenerateResult: { message: string; regenerated: number } | null = null;
 
+  // Signature validation (keyed by SignatureRecord id)
+  signatureStatuses = new Map<string, SignatureVerificationStatus>();
+  validatingDocId: string | null = null;
+  isBulkValidating = false;
+  signatureValidationError: string | null = null;
 
   constructor(
     private http: HttpClient,
     private router: Router,
     private authService: AuthenticationService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private signatureVerificationService: SignatureVerificationService
   ) {}
 
   ngOnInit(): void {
@@ -245,6 +258,7 @@ export class DocumentsViewComponent implements OnInit {
     switch (status) {
       case 'PendingUser': return 'Pending User';
       case 'PendingManager': return 'Pending Manager';
+      case 'PendingInstructor': return 'Pending Instructor';
       case 'PendingAdmin': return 'Pending Admin';
       case 'Completed': return 'Completed';
       case 'Superseded': return 'Superseded';
@@ -256,6 +270,7 @@ export class DocumentsViewComponent implements OnInit {
     switch (status) {
       case 'PendingUser': return 'bg-yellow-100 text-yellow-800';
       case 'PendingManager': return 'bg-blue-100 text-blue-800';
+      case 'PendingInstructor': return 'bg-purple-100 text-purple-800';
       case 'PendingAdmin': return 'bg-orange-100 text-orange-800';
       case 'Completed': return 'bg-green-100 text-green-800';
       case 'Superseded': return 'bg-gray-200 text-gray-500';
@@ -297,6 +312,56 @@ export class DocumentsViewComponent implements OnInit {
 
   getTypeClass(type: string): string {
     return type === 'SSM' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-red-50 text-red-700 border-red-200';
+  }
+
+  private docSignatureIds(doc: DocumentDto): string[] {
+    return [doc.userSignatureId, doc.managerSignatureId, doc.instructorSignatureId, doc.adminSignatureId]
+      .filter((id): id is string => !!id);
+  }
+
+  getSignatureStatus(signatureId: string | null): SignatureVerificationStatusValue | null {
+    if (!signatureId) return null;
+    return this.signatureStatuses.get(signatureId)?.status ?? null;
+  }
+
+  validateDocument(doc: DocumentDto): void {
+    if (this.validatingDocId) return;
+    const ids = this.docSignatureIds(doc);
+    if (ids.length === 0) return;
+
+    this.validatingDocId = doc.id;
+    this.signatureValidationError = null;
+    this.signatureVerificationService.getVerificationStatusBatch(ids).subscribe({
+      next: (results) => {
+        results.forEach(r => this.signatureStatuses.set(r.signatureId, r));
+        this.validatingDocId = null;
+      },
+      error: () => {
+        this.signatureValidationError = 'Failed to validate signatures for this document.';
+        this.validatingDocId = null;
+      }
+    });
+  }
+
+  validateAllVisible(): void {
+    if (this.isBulkValidating) return;
+    this.paginatedDocuments$.pipe(take(1)).subscribe(docs => {
+      const ids = Array.from(new Set(docs.flatMap(d => this.docSignatureIds(d))));
+      if (ids.length === 0) return;
+
+      this.isBulkValidating = true;
+      this.signatureValidationError = null;
+      this.signatureVerificationService.getVerificationStatusBatch(ids).subscribe({
+        next: (results) => {
+          results.forEach(r => this.signatureStatuses.set(r.signatureId, r));
+          this.isBulkValidating = false;
+        },
+        error: () => {
+          this.signatureValidationError = 'Failed to validate signatures.';
+          this.isBulkValidating = false;
+        }
+      });
+    });
   }
 
   viewPdf(doc: DocumentDto): void {

@@ -512,7 +512,7 @@ namespace SyncApp26.Tests.Services.Documents
             var doc1 = SeedDocument(owner, "SU", "PendingUser");
             var training1 = SeedTraining(owner, doc1, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
 
-            await service.UpdateDocumentSignatureAsync(doc1.Id, owner.Id, isUserSignature: true, "Draw", "sig-v1", "1.2.3.4");
+            await service.UpdateDocumentSignatureAsync(doc1.Id, owner.Id, "User", "Draw", "sig-v1", "1.2.3.4");
 
             var oldRecordBefore = _dbFixture.Context.SignatureRecords
                 .AsNoTracking()
@@ -566,7 +566,7 @@ namespace SyncApp26.Tests.Services.Documents
             await service.UpdateDocumentSignatureAsync(
                 documentId: doc.Id,
                 signerUserId: owner.Id,
-                isUserSignature: true,
+                signerRole: "User",
                 signatureMethod: "Draw",
                 signatureData: "sig-v1",
                 ipAddress: "1.2.3.4",

@@ -6,6 +6,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { AuthenticationService, AuthRole } from '../../services/authentication.service';
+import { SignatureVerificationService, SignatureVersionSummary } from '../../services/signature-verification.service';
+import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
 
 interface InitialTrainingEntry {
   documentType: string;
@@ -58,7 +60,7 @@ interface UserSSMSUForm {
 @Component({
   selector: 'app-ssm-su-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SignatureStatusBadgeComponent],
   templateUrl: './ssm-su-form.component.html',
   styleUrl: './ssm-su-form.component.css'
 })
@@ -113,12 +115,19 @@ export class SsmSuFormComponent implements OnInit {
     }
   };
 
+  // Signature history panel (per periodic training row) — one expanded at a time.
+  expandedHistoryTrainingId: string | null = null;
+  private historyByTrainingId = new Map<string, SignatureVersionSummary[]>();
+  private historyLoadingId: string | null = null;
+  private historyErrorByTrainingId = new Map<string, string>();
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private http: HttpClient,
     private sanitizer: DomSanitizer,
-    private authService: AuthenticationService
+    private authService: AuthenticationService,
+    private signatureVerificationService: SignatureVerificationService
   ) {}
 
   ngOnInit() {
@@ -162,6 +171,49 @@ export class SsmSuFormComponent implements OnInit {
     if (!data) return null;
     const prefixed = data.startsWith('data:') ? data : `data:image/png;base64,${data}`;
     return this.sanitizer.bypassSecurityTrustUrl(prefixed);
+  }
+
+  isHistoryExpanded(t: any): boolean {
+    return this.expandedHistoryTrainingId === t.id;
+  }
+
+  isHistoryLoading(t: any): boolean {
+    return this.historyLoadingId === t.id;
+  }
+
+  getHistoryError(t: any): string | undefined {
+    return this.historyErrorByTrainingId.get(t.id);
+  }
+
+  // Combined, chronological (by signedAt) view across all signer roles for one training row.
+  getHistoryEntries(t: any): SignatureVersionSummary[] {
+    return this.historyByTrainingId.get(t.id) || [];
+  }
+
+  toggleHistory(t: any): void {
+    if (this.expandedHistoryTrainingId === t.id) {
+      this.expandedHistoryTrainingId = null;
+      return;
+    }
+
+    this.expandedHistoryTrainingId = t.id;
+    if (this.historyByTrainingId.has(t.id) || this.historyLoadingId === t.id) return;
+
+    this.historyErrorByTrainingId.delete(t.id);
+    this.historyLoadingId = t.id;
+    this.signatureVerificationService.getSignatureHistory(t.id).subscribe({
+      next: (history) => {
+        const entries = Object.values(history.versionsByRole)
+          .flat()
+          .sort((a, b) => new Date(a.signedAt).getTime() - new Date(b.signedAt).getTime());
+        this.historyByTrainingId.set(t.id, entries);
+        this.historyLoadingId = null;
+      },
+      error: () => {
+        this.historyErrorByTrainingId.set(t.id, 'Failed to load signature history for this session.');
+        this.historyLoadingId = null;
+      }
+    });
   }
 
   populateFormData() {

@@ -459,6 +459,47 @@
                                     <strong>{{ submittedCount }}</strong> user(s).<br />
                                     Would you like to generate documents for them now?
                                   </p>
+
+                                  <!-- Task 3: confirm the new session didn't break any of the affected employees' existing signatures -->
+                                  @if (isValidatingExistingSignatures) {
+                                    <div class="flex items-center justify-center gap-2 text-sm text-gray-500 w-full">
+                                      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600"></div>
+                                      Checking existing signatures for affected employees...
+                                    </div>
+                                  }
+                                  @if (existingSignaturesValidationError && !isValidatingExistingSignatures) {
+                                    <p class="text-sm text-red-600 text-center w-full">
+                                      {{ existingSignaturesValidationError }}
+                                    </p>
+                                  }
+                                  @if (existingSignaturesValidation && !isValidatingExistingSignatures) {
+                                    <div
+                                      class="w-full rounded-md border p-3 text-sm text-center"
+                                      [class.border-red-200]="existingSignaturesValidation.invalid > 0 || existingSignaturesValidation.chainBroken > 0"
+                                      [class.bg-red-50]="existingSignaturesValidation.invalid > 0 || existingSignaturesValidation.chainBroken > 0"
+                                      [class.border-green-200]="existingSignaturesValidation.invalid === 0 && existingSignaturesValidation.chainBroken === 0"
+                                      [class.bg-green-50]="existingSignaturesValidation.invalid === 0 && existingSignaturesValidation.chainBroken === 0"
+                                      >
+                                      @if (existingSignaturesValidation.total === 0) {
+                                        <p class="text-gray-600">No prior signatures found for the affected employees — nothing to invalidate.</p>
+                                      }
+                                      @if (existingSignaturesValidation.total > 0 && existingSignaturesValidation.invalid === 0 && existingSignaturesValidation.chainBroken === 0) {
+                                        <p class="text-green-700">
+                                          All {{ existingSignaturesValidation.total }} existing signature(s) for the affected employees are still valid.
+                                        </p>
+                                      }
+                                      @if (existingSignaturesValidation.total > 0 && (existingSignaturesValidation.invalid > 0 || existingSignaturesValidation.chainBroken > 0)) {
+                                        <p class="text-red-700">
+                                          {{ existingSignaturesValidation.invalid }} invalid and {{ existingSignaturesValidation.chainBroken }} chain-broken
+                                          signature(s) out of {{ existingSignaturesValidation.total }} for the affected employees.
+                                        </p>
+                                      }
+                                      @if (existingSignaturesValidation.truncated) {
+                                        <p class="text-xs text-gray-500 mt-1">Only the first {{ existingSignaturesValidation.checkedUserCount }} affected employees were checked.</p>
+                                      }
+                                    </div>
+                                  }
+
                                   @if (errorMessage) {
                                     <p class="text-sm text-red-600 text-center w-full">
                                       ❌ {{ errorMessage }}

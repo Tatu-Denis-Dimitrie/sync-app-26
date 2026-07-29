@@ -5,6 +5,20 @@ import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { SignatureVerificationService } from '../../services/signature-verification.service';
+
+// Endpoint cap on SyncApp26.API/Controllers/Documents/SignatureVerificationController.cs (MaxUsersPerRequest).
+const MAX_VALIDATION_USERS = 200;
+
+interface ExistingSignaturesValidationSummary {
+  total: number;
+  valid: number;
+  invalid: number;
+  chainBroken: number;
+  legacy: number;
+  checkedUserCount: number;
+  truncated: boolean;
+}
 
 interface DepartmentOption {
   id: string;
@@ -89,6 +103,10 @@ export class BulkTrainingModalComponent implements OnInit, OnDestroy {
   selectedInstructor: UserLookupOption | null = null;
   private instructorSearch$ = new Subject<string>();
 
+  isValidatingExistingSignatures = false;
+  existingSignaturesValidation: ExistingSignaturesValidationSummary | null = null;
+  existingSignaturesValidationError = '';
+
   formData: BulkTrainingData = {
     trainingDate: '',
     durationHours: null,
@@ -101,7 +119,7 @@ export class BulkTrainingModalComponent implements OnInit, OnDestroy {
     selectedUserIds: []
   };
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private signatureVerificationService: SignatureVerificationService) {
     this.instructorSearch$
       .pipe(
         debounceTime(300),
@@ -359,6 +377,9 @@ export class BulkTrainingModalComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.validationMessage = '';
     this.pastDateWarning = false;
+    this.isValidatingExistingSignatures = false;
+    this.existingSignaturesValidation = null;
+    this.existingSignaturesValidationError = '';
   }
 
   submitBulkTraining() {
@@ -409,6 +430,7 @@ export class BulkTrainingModalComponent implements OnInit, OnDestroy {
           setTimeout(() => {
             this.modalContentRef?.nativeElement?.scrollTo({ top: this.modalContentRef.nativeElement.scrollHeight, behavior: 'smooth' });
           }, 50);
+          this.validateExistingSignaturesFor(this.affectedUserIds());
         },
         error: (err) => {
           this.isSubmitting = false;
@@ -416,6 +438,48 @@ export class BulkTrainingModalComponent implements OnInit, OnDestroy {
           this.errorMessage = err?.error?.message || 'Error creating bulk training records. Please try again.';
         }
       });
+  }
+
+  // Mirrors the department/selection filtering PeriodicTrainingService.BulkCreateAsync applies
+  // server-side, so the validation banner checks exactly the employees the submission touched.
+  private affectedUserIds(): string[] {
+    if (!this.formData.applyToAllUsers) {
+      return [...this.formData.selectedUserIds];
+    }
+    return this.users
+      .filter(u => !this.formData.selectedDepartmentId || u.departmentId === this.formData.selectedDepartmentId)
+      .map(u => u.id);
+  }
+
+  private validateExistingSignaturesFor(userIds: string[]): void {
+    this.existingSignaturesValidation = null;
+    this.existingSignaturesValidationError = '';
+
+    if (userIds.length === 0) return;
+
+    const truncated = userIds.length > MAX_VALIDATION_USERS;
+    const idsToCheck = truncated ? userIds.slice(0, MAX_VALIDATION_USERS) : userIds;
+
+    this.isValidatingExistingSignatures = true;
+    this.signatureVerificationService.getVerificationStatusForUsers(idsToCheck).subscribe({
+      next: (statusesByUser) => {
+        const all = Object.values(statusesByUser).flat();
+        this.existingSignaturesValidation = {
+          total: all.length,
+          valid: all.filter(s => s.status === 'Valid').length,
+          invalid: all.filter(s => s.status === 'Invalid').length,
+          chainBroken: all.filter(s => s.status === 'ChainBroken').length,
+          legacy: all.filter(s => s.status === 'Legacy').length,
+          checkedUserCount: idsToCheck.length,
+          truncated
+        };
+        this.isValidatingExistingSignatures = false;
+      },
+      error: () => {
+        this.existingSignaturesValidationError = 'Could not verify the affected employees\' existing signatures.';
+        this.isValidatingExistingSignatures = false;
+      }
+    });
   }
 
   generateDocuments() {

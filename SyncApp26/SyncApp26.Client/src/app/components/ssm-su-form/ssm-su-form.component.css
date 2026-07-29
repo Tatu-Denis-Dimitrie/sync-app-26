@@ -314,6 +314,61 @@ textarea.edit-input {
   border-radius: 0;
 }
 
+.history-toggle {
+  padding: 4px 10px;
+  background: #088395;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.history-toggle:hover {
+  background: #09637E;
+}
+
+.history-row td {
+  background: #f9f9f9;
+  text-align: left;
+}
+
+.history-status {
+  font-size: 13px;
+  color: #444;
+  font-style: italic;
+}
+
+.history-error {
+  color: #dc2626;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.history-table th,
+.history-table td {
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.history-table th {
+  background: #eee;
+  font-weight: bold;
+}
+
+.history-latest-tag {
+  margin-left: 6px;
+  font-size: 10px;
+  color: #088395;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
 /* Print styles */
 @media print {
   .tabs,
@@ -322,7 +377,9 @@ textarea.edit-input {
   .save-button,
   .cancel-button,
   .back-button,
-  .print-button {
+  .print-button,
+  .no-print,
+  .history-row {
     display: none !important;
   }
 

@@ -43,6 +43,7 @@
             <option value="all">All statuses</option>
             <option value="PendingUser">Pending User</option>
             <option value="PendingManager">Pending Manager</option>
+            <option value="PendingInstructor">Pending Instructor</option>
             <option value="PendingAdmin">Pending Admin</option>
             <option value="Completed">Completed</option>
           </select>
@@ -94,6 +95,22 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               Regenerate Documents
+            </button>
+
+            <button
+              (click)="validateAllVisible()"
+              [disabled]="isBulkValidating"
+              class="px-4 py-2 border border-primary/30 text-primary rounded-md text-sm font-medium hover:bg-primary/10 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+              @if (isBulkValidating) {
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              }
+              @if (!isBulkValidating) {
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+              Validate All (this page)
             </button>
 
           </div>
@@ -281,6 +298,14 @@
           </div>
         }
 
+        @if (signatureValidationError) {
+          <div
+            class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6"
+            >
+            <p class="text-red-700 text-sm">{{ signatureValidationError }}</p>
+          </div>
+        }
+
         <!-- Stats -->
         @if (!loading) {
           <div class="mb-4 text-sm text-muted-foreground">
@@ -340,6 +365,11 @@
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
+                      Signed by Instructor
+                    </th>
+                    <th
+                      class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
+                      >
                       Signed by Admin
                     </th>
                     <th
@@ -395,9 +425,14 @@
                       </td>
                       <td class="px-4 py-3 text-center">
                         @if (doc.userSignedAt) {
-                          <span class="text-green-600 text-sm">{{
-                            doc.userSignedAt | date: "dd.MM.yyyy"
-                          }}</span>
+                          <div class="flex flex-col items-center gap-1">
+                            <span class="text-green-600 text-sm">{{
+                              doc.userSignedAt | date: "dd.MM.yyyy"
+                            }}</span>
+                            @if (getSignatureStatus(doc.userSignatureId)) {
+                              <app-signature-status-badge [status]="getSignatureStatus(doc.userSignatureId)"></app-signature-status-badge>
+                            }
+                          </div>
                         }
                         @if (!doc.userSignedAt) {
                           <span
@@ -408,10 +443,15 @@
                       </td>
                       <td class="px-4 py-3 text-center">
                         @if (doc.managerSignedAt) {
-                          <span
-                            class="text-green-600 text-sm"
-                            >{{ doc.managerSignedAt | date: "dd.MM.yyyy" }}</span
-                            >
+                          <div class="flex flex-col items-center gap-1">
+                            <span
+                              class="text-green-600 text-sm"
+                              >{{ doc.managerSignedAt | date: "dd.MM.yyyy" }}</span
+                              >
+                            @if (getSignatureStatus(doc.managerSignatureId)) {
+                              <app-signature-status-badge [status]="getSignatureStatus(doc.managerSignatureId)"></app-signature-status-badge>
+                            }
+                          </div>
                           }
                           @if (!doc.managerSignedAt) {
                             <span
@@ -421,10 +461,33 @@
                             }
                           </td>
                           <td class="px-4 py-3 text-center">
+                            @if (doc.instructorSignedAt) {
+                              <div class="flex flex-col items-center gap-1">
+                                <span class="text-green-600 text-sm">{{
+                                  doc.instructorSignedAt | date: "dd.MM.yyyy"
+                                }}</span>
+                                @if (getSignatureStatus(doc.instructorSignatureId)) {
+                                  <app-signature-status-badge [status]="getSignatureStatus(doc.instructorSignatureId)"></app-signature-status-badge>
+                                }
+                              </div>
+                            }
+                            @if (!doc.instructorSignedAt) {
+                              <span
+                                class="text-muted-foreground text-sm"
+                                >—</span
+                                >
+                            }
+                          </td>
+                          <td class="px-4 py-3 text-center">
                             @if (doc.adminSignedAt) {
-                              <span class="text-green-600 text-sm">{{
-                                doc.adminSignedAt | date: "dd.MM.yyyy"
-                              }}</span>
+                              <div class="flex flex-col items-center gap-1">
+                                <span class="text-green-600 text-sm">{{
+                                  doc.adminSignedAt | date: "dd.MM.yyyy"
+                                }}</span>
+                                @if (getSignatureStatus(doc.adminSignatureId)) {
+                                  <app-signature-status-badge [status]="getSignatureStatus(doc.adminSignatureId)"></app-signature-status-badge>
+                                }
+                              </div>
                             }
                             @if (!doc.adminSignedAt && doc.status === 'PendingAdmin') {
                               <button
@@ -445,31 +508,48 @@
                               }
                             </td>
                             <td class="px-4 py-3 text-center">
-                              <button
-                                (click)="viewPdf(doc)"
-                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors"
-                                >
-                                <svg
-                                  class="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+                              <div class="flex items-center justify-center gap-2">
+                                <button
+                                  (click)="viewPdf(doc)"
+                                  class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors"
                                   >
-                                  <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                  ></path>
-                                  <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                  ></path>
-                                </svg>
-                                PDF
-                              </button>
+                                  <svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    >
+                                    <path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    ></path>
+                                    <path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    ></path>
+                                  </svg>
+                                  PDF
+                                </button>
+                                <button
+                                  (click)="validateDocument(doc)"
+                                  [disabled]="validatingDocId === doc.id"
+                                  class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-foreground border border-border rounded-md hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                  >
+                                  @if (validatingDocId === doc.id) {
+                                    <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-foreground"></div>
+                                  }
+                                  @if (validatingDocId !== doc.id) {
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                  }
+                                  Validate
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         }

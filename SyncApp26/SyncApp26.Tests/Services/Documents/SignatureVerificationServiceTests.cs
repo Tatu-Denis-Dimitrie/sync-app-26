@@ -680,8 +680,8 @@ namespace SyncApp26.Tests.Services.Documents
             var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
             var doc = SeedDocument(owner, "SU", "PendingManager");
 
-            var userRecord = SignDocument(docService, doc, owner, isUserSignature: true);
-            await docService.UpdateDocumentSignatureAsync(doc.Id, manager.Id, isUserSignature: false, "Draw", "sig-data", "1.2.3.4");
+            var userRecord = SignDocument(docService, doc, owner, signerRole: "User");
+            await docService.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Draw", "sig-data", "1.2.3.4");
             var managerRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id && r.SignerRole == "Manager");
 
             var result = await CreateVerificationService().GetVerificationStatusForUsersAsync(new[] { owner.Id });
