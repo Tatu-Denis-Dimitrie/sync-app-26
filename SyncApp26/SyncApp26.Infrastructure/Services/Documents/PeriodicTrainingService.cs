@@ -314,6 +314,8 @@ namespace SyncApp26.Infrastructure.Services
             {
                 Id = training.Id,
                 UserId = training.UserId,
+                DocumentType = training.DocumentType,
+                SourceRowId = training.SourceRowId,
                 TrainingDate = training.TrainingDate,
                 DurationHours = training.DurationHours,
                 Occupation = training.Occupation,

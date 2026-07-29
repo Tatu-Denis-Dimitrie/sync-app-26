@@ -7,6 +7,7 @@ namespace SyncApp26.API.Services
     /// Opt-in: disabled unless SignatureVerificationSweep:Enabled is true, because a full sweep
     /// recomputes an HMAC per signature and its cost has not been load-validated yet. Turn it on
     /// only after running the performance tests. Interval comes from
+    /// SignatureVerificationSweep:IntervalMinutes if set (handy for testing), otherwise
     /// SignatureVerificationSweep:IntervalHours (default 24).
     /// </summary>
     public class SignatureVerificationSweepService : BackgroundService
@@ -34,11 +35,20 @@ namespace SyncApp26.API.Services
                 return;
             }
 
-            var intervalHours = _configuration.GetValue<int?>("SignatureVerificationSweep:IntervalHours") ?? 24;
-            if (intervalHours < 1) intervalHours = 24;
-            var interval = TimeSpan.FromHours(intervalHours);
-
-            _logger.LogInformation("Signature Verification Sweep starting; interval {IntervalHours}h.", intervalHours);
+            var intervalMinutes = _configuration.GetValue<int?>("SignatureVerificationSweep:IntervalMinutes");
+            TimeSpan interval;
+            if (intervalMinutes.HasValue && intervalMinutes.Value >= 1)
+            {
+                interval = TimeSpan.FromMinutes(intervalMinutes.Value);
+                _logger.LogInformation("Signature Verification Sweep starting; interval {IntervalMinutes}min.", intervalMinutes.Value);
+            }
+            else
+            {
+                var intervalHours = _configuration.GetValue<int?>("SignatureVerificationSweep:IntervalHours") ?? 24;
+                if (intervalHours < 1) intervalHours = 24;
+                interval = TimeSpan.FromHours(intervalHours);
+                _logger.LogInformation("Signature Verification Sweep starting; interval {IntervalHours}h.", intervalHours);
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {

@@ -6,6 +6,12 @@ namespace SyncApp26.Shared.DTOs.Response.PeriodicTraining
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
+        /// <summary>"SSM" or "SU" — which document type this training row belongs to.</summary>
+        public string? DocumentType { get; set; }
+        /// <summary>Set when this row is a display copy carried over from an earlier session by
+        /// CopyHistoricalPeriodicTrainingRowsAsync — the copy has no SignatureRecord of its own;
+        /// the row identified by this id is the one with the real signature history.</summary>
+        public Guid? SourceRowId { get; set; }
         public DateTime? TrainingDate { get; set; }
         public decimal? DurationHours { get; set; }
         public string? Occupation { get; set; }

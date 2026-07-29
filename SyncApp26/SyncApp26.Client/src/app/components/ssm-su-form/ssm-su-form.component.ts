@@ -162,9 +162,21 @@ export class SsmSuFormComponent implements OnInit {
     return this.trainings && this.trainings.length ? this.trainings[this.trainings.length - 1] : null;
   }
 
-  get displayedTrainings(): any[] {
-    const start = Math.max(0, this.trainings.length - 5);
-    return this.trainings.slice(start);
+  // Excludes rows carried over from an earlier session (sourceRowId set) — those exist only so a
+  // regenerated document's PDF still shows the historical log; they're never independently signed,
+  // so showing them here as separate, no-history entries is just noise.
+  private displayedTrainingsFor(documentType: 'SSM' | 'SU'): any[] {
+    const filtered = this.trainings.filter(t => (t.documentType || '').toUpperCase() === documentType && !t.sourceRowId);
+    const start = Math.max(0, filtered.length - 5);
+    return filtered.slice(start);
+  }
+
+  get displayedSsmTrainings(): any[] {
+    return this.displayedTrainingsFor('SSM');
+  }
+
+  get displayedSuTrainings(): any[] {
+    return this.displayedTrainingsFor('SU');
   }
 
   getSafeImage(data?: string): SafeUrl | null {

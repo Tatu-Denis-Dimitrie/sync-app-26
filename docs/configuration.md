@@ -21,8 +21,8 @@ Key settings:
   - Used by SmtpEmailService for verification, password reset, and signature emails.
 - Logging:LogLevel
   - Controls log verbosity (Information and Warning by default).
-- SignatureVerificationSweep:Enabled (bool, default false), SignatureVerificationSweep:IntervalHours (int, default 24)
-  - Opt-in background safety-net that periodically re-verifies every SignatureRecord and logs any that no longer verify (Invalid / ChainBroken). Disabled by default; the sweep recomputes an HMAC per signature, so enable it only after validating the cost at your data volume. Read-only — it never mutates data.
+- SignatureVerificationSweep:Enabled (bool, default false), SignatureVerificationSweep:IntervalHours (int, default 24), SignatureVerificationSweep:IntervalMinutes (int, optional)
+  - Opt-in background safety-net that periodically re-verifies every SignatureRecord and logs any that no longer verify (Invalid / ChainBroken). Disabled by default; the sweep recomputes an HMAC per signature, so enable it only after validating the cost at your data volume. Read-only — it never mutates data. IntervalMinutes overrides IntervalHours when set — useful for quickly observing a sweep run during testing; leave it unset in normal use.
 
 Operational guidance:
 - Do not commit real SMTP credentials or production JWT secrets.

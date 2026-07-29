@@ -581,7 +581,7 @@
                         </tr>
                       </thead>
                       <tbody>
-                        @for (t of displayedTrainings; track t) {
+                        @for (t of displayedSsmTrainings; track t) {
                           <tr>
                             <td>
                               {{
@@ -700,7 +700,7 @@
                                     </tr>
                                   }
                                 }
-                                @if (trainings.length === 0) {
+                                @if (displayedSsmTrainings.length === 0) {
                                   <tr>
                                     <td [attr.colspan]="8">
                                       No periodic trainings recorded.
@@ -1091,7 +1091,7 @@
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    @for (t of displayedTrainings; track t) {
+                                    @for (t of displayedSuTrainings; track t) {
                                       <tr>
                                         <td>
                                           {{
@@ -1190,7 +1190,7 @@
                                               </tr>
                                             }
                                           }
-                                          @if (trainings.length === 0) {
+                                          @if (displayedSuTrainings.length === 0) {
                                             <tr>
                                               <td colspan="7">No periodic trainings recorded.</td>
                                             </tr>
