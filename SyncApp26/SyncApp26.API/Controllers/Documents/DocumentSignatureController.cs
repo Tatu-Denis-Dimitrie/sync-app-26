@@ -108,6 +108,7 @@ namespace SyncApp26.API.Controllers
                 email = result.Email,
                 documentType = result.DocumentType,
                 isManagerSigning = result.IsManagerSigning,
+                isInstructorSigning = result.IsInstructorSigning,
                 isAdminSigning = result.IsAdminSigning,
                 periodicTrainingId = result.PeriodicTrainingId
             });

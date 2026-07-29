@@ -114,7 +114,7 @@ namespace SyncApp26.Tests.Services.Documents
             SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
             var result = await service.UpdateDocumentSignatureAsync(
-                doc.Id, owner.Id, isUserSignature: true, "Draw", "signature-png-data", "1.2.3.4");
+                doc.Id, owner.Id, "User", "Draw", "signature-png-data", "1.2.3.4");
 
             Assert.True(result);
 
@@ -143,7 +143,7 @@ namespace SyncApp26.Tests.Services.Documents
             var doc = SeedDocument(owner, "SU", "PendingUser");
             SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, isUserSignature: true, "Draw", "sig", "1.2.3.4");
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Draw", "sig", "1.2.3.4");
             var hmacBeforeRename = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id).SignatureHmac;
 
             // A legitimate change to the live User row after signing must not affect what was already signed.
@@ -172,7 +172,7 @@ namespace SyncApp26.Tests.Services.Documents
             SeedTraining(owner, doc, "Norme SSM generale", 3m, new DateTime(2026, 2, 1));
 
             await service.UpdateDocumentSignatureAsync(
-                doc.Id, manager.Id, isUserSignature: false, "Type", "Radu Stanescu", "9.9.9.9", isAdminSignature: false);
+                doc.Id, manager.Id, "Manager", "Type", "Radu Stanescu", "9.9.9.9");
 
             var record = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id);
             Assert.Equal("Manager", record.SignerRole);
@@ -204,9 +204,9 @@ namespace SyncApp26.Tests.Services.Documents
             // Same manager signs two different employees' documents — the chain is per-signer,
             // not per-document, so the second signature must link to the first regardless.
             await service.UpdateDocumentSignatureAsync(
-                doc1.Id, manager.Id, isUserSignature: false, "Type", "Radu Stanescu", "9.9.9.9");
+                doc1.Id, manager.Id, "Manager", "Type", "Radu Stanescu", "9.9.9.9");
             await service.UpdateDocumentSignatureAsync(
-                doc2.Id, manager.Id, isUserSignature: false, "Type", "Radu Stanescu", "9.9.9.9");
+                doc2.Id, manager.Id, "Manager", "Type", "Radu Stanescu", "9.9.9.9");
 
             var firstRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc1.Id);
             var secondRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc2.Id);
@@ -323,8 +323,8 @@ namespace SyncApp26.Tests.Services.Documents
             // Version records which HMAC canonical schema computed the hash, not which attempt
             // this is — both signatures were made under today's (only) schema, so both get the
             // same Version, and that's correct, not a bug.
-            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, isUserSignature: true, "Draw", "sig-v1", "1.2.3.4");
-            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, isUserSignature: true, "Draw", "sig-v2", "1.2.3.4");
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Draw", "sig-v1", "1.2.3.4");
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Draw", "sig-v2", "1.2.3.4");
 
             var versions = _dbFixture.Context.SignatureRecords
                 .Where(r => r.UserDocumentId == doc.Id && r.SignerRole == "User")
@@ -335,11 +335,13 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.All(versions, v => Assert.Equal(SignatureCanonicalSerializer.CurrentVersion, v));
         }
 
-        // ───────────────────────── Instructor-scoped queues ─────────────────────────
+        // ───────────────────────── Manager/Instructor-scoped queues ─────────────────────────
 
         [Fact]
-        public async Task GetManagerPendingSignaturesAsync_ScopesByLinkedInstructor_NotAssignedManager()
+        public async Task GetManagerPendingSignaturesAsync_ScopesByAssignedManager_NotLinkedInstructor()
         {
+            // Manager is resolved purely via AssignedTo — a training row's (unrelated) linked
+            // instructor must not affect who sees this in their manager queue.
             var service = CreateService();
             var function = SeedFunction("Operator");
             var assignedManager = SeedUser("Radu", "Stanescu", function);
@@ -353,31 +355,11 @@ namespace SyncApp26.Tests.Services.Documents
             _dbFixture.Context.SaveChanges();
             SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructor.Id);
 
-            var forInstructor = await service.GetManagerPendingSignaturesAsync(instructor.Id);
             var forAssignedManager = await service.GetManagerPendingSignaturesAsync(assignedManager.Id);
+            var forInstructor = await service.GetManagerPendingSignaturesAsync(instructor.Id);
 
-            Assert.Single(forInstructor);
-            Assert.Empty(forAssignedManager);
-        }
-
-        [Fact]
-        public async Task GetManagerPendingSignaturesAsync_LegacyRowNoInstructorId_FallsBackToAssignedManager()
-        {
-            var service = CreateService();
-            var function = SeedFunction("Operator");
-            var manager = SeedUser("Radu", "Stanescu", function);
-            var owner = SeedUser("Adela", "Popescu", function);
-            owner.AssignedToId = manager.Id;
-            _dbFixture.Context.SaveChanges();
-
-            var doc = SeedDocument(owner, "SU", "PendingManager");
-            doc.UserSignedAt = DateTime.UtcNow;
-            _dbFixture.Context.SaveChanges();
-            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15)); // no instructorId
-
-            var forManager = await service.GetManagerPendingSignaturesAsync(manager.Id);
-
-            Assert.Single(forManager);
+            Assert.Single(forAssignedManager);
+            Assert.Empty(forInstructor);
         }
 
         [Fact]
@@ -428,10 +410,12 @@ namespace SyncApp26.Tests.Services.Documents
             var owner2 = SeedUser("Vlad", "Georgescu", function);
             _dbFixture.Context.SaveChanges();
 
-            var doc1 = SeedDocument(owner1, "SU", "PendingManager");
+            var doc1 = SeedDocument(owner1, "SU", "PendingInstructor");
             doc1.UserSignedAt = DateTime.UtcNow;
-            var doc2 = SeedDocument(owner2, "SU", "PendingManager");
+            doc1.ManagerSignedAt = DateTime.UtcNow;
+            var doc2 = SeedDocument(owner2, "SU", "PendingInstructor");
             doc2.UserSignedAt = DateTime.UtcNow;
+            doc2.ManagerSignedAt = DateTime.UtcNow;
             _dbFixture.Context.SaveChanges();
             SeedTraining(owner1, doc1, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructorA.Id);
             SeedTraining(owner2, doc2, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructorB.Id);
@@ -439,8 +423,40 @@ namespace SyncApp26.Tests.Services.Documents
             var count = await service.BulkSignDocumentsAsync(false, instructorA.Id, "Type", "Elena Marin", "9.9.9.9");
 
             Assert.Equal(1, count);
-            Assert.NotNull(_dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == doc1.Id));
+            var record1 = _dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == doc1.Id);
+            Assert.NotNull(record1);
+            Assert.Equal("Instructor", record1!.SignerRole);
             Assert.Null(_dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == doc2.Id));
+        }
+
+        [Fact]
+        public async Task BulkSignDocumentsAsync_CoversBothManagerAndInstructorSteps_ForSameCaller()
+        {
+            // The same person can be someone's line manager (PendingManager) and someone else's
+            // linked instructor (PendingInstructor) at once — a single bulk-sign call covers both.
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var person = SeedUser("Radu", "Stanescu", function);
+            var managedOwner = SeedUser("Adela", "Popescu", function);
+            managedOwner.AssignedToId = person.Id;
+            var instructedOwner = SeedUser("Vlad", "Georgescu", function);
+            _dbFixture.Context.SaveChanges();
+
+            var managerDoc = SeedDocument(managedOwner, "SU", "PendingManager");
+            managerDoc.UserSignedAt = DateTime.UtcNow;
+            var instructorDoc = SeedDocument(instructedOwner, "SU", "PendingInstructor");
+            instructorDoc.UserSignedAt = DateTime.UtcNow;
+            instructorDoc.ManagerSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            SeedTraining(instructedOwner, instructorDoc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: person.Id);
+
+            var count = await service.BulkSignDocumentsAsync(false, person.Id, "Type", "Radu Stanescu", "9.9.9.9");
+
+            Assert.Equal(2, count);
+            var managerRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == managerDoc.Id);
+            var instructorRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == instructorDoc.Id);
+            Assert.Equal("Manager", managerRecord.SignerRole);
+            Assert.Equal("Instructor", instructorRecord.SignerRole);
         }
 
         [Fact]

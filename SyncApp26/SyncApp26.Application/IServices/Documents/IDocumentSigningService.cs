@@ -19,6 +19,7 @@ namespace SyncApp26.Application.IServices
         public string? Email { get; init; }
         public string? DocumentType { get; init; }
         public bool IsManagerSigning { get; init; }
+        public bool IsInstructorSigning { get; init; }
         public bool IsAdminSigning { get; init; }
         public Guid? PeriodicTrainingId { get; init; }
     }

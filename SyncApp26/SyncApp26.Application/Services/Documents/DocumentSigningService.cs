@@ -4,6 +4,8 @@ using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.Application.Services
 {
+    // Workflow: User -> Manager (AssignedTo) -> Instructor (training.InstructorId) -> Admin (SSM
+    // only) / Completed (SU, after Instructor)
     public class DocumentSigningService : IDocumentSigningService
     {
         private readonly IDocumentService _documentService;
@@ -20,32 +22,46 @@ namespace SyncApp26.Application.Services
         public async Task<SigningTokenResult> RequestSigningTokenAsync(UserDocument document, User caller, bool callerIsAdmin)
         {
             bool isUser = document.UserId == caller.Id;
-            bool isInstructor = ResolveSecondSignerId(document, null) == caller.Id;
+            bool isManager = document.User?.AssignedToId == caller.Id;
+            bool isInstructor = ResolveInstructorId(document, null) == caller.Id;
 
-            if (!isUser && !isInstructor && !callerIsAdmin)
+            if (!isUser && !isManager && !isInstructor && !callerIsAdmin)
                 return new SigningTokenResult { Forbidden = true };
 
-            if (isUser && document.UserSignedAt != null)
-                return new SigningTokenResult { ErrorMessage = "User already signed this document." };
-
-            if (isInstructor && document.ManagerSignedAt != null)
-                return new SigningTokenResult { ErrorMessage = "Instructor already signed this document." };
-
-            if (isInstructor && !callerIsAdmin && document.UserSignedAt == null)
-                return new SigningTokenResult { ErrorMessage = "Employee must sign first before the instructor can countersign." };
-
-            if (isUser && document.Status != "PendingUser")
-                return new SigningTokenResult { ErrorMessage = "User signature not required at this time." };
-
-            if (isInstructor && !callerIsAdmin && document.Status != "PendingManager")
-                return new SigningTokenResult { ErrorMessage = "Instructor signature not required at this time." };
-
-            if (callerIsAdmin && !isUser && !isInstructor)
+            switch (document.Status)
             {
-                if (document.Status != "PendingAdmin")
-                    return new SigningTokenResult { ErrorMessage = "Admin signature not required at this time." };
-                if (document.DocumentType?.ToUpperInvariant() != "SSM")
-                    return new SigningTokenResult { ErrorMessage = "Admin only signs SSM documents." };
+                case "PendingUser":
+                    if (isUser && document.UserSignedAt != null)
+                        return new SigningTokenResult { ErrorMessage = "User already signed this document." };
+                    if (!isUser)
+                        return new SigningTokenResult { ErrorMessage = "User signature not required at this time." };
+                    break;
+
+                case "PendingManager":
+                    if (isUser && document.UserSignedAt != null)
+                        return new SigningTokenResult { ErrorMessage = "User already signed this document." };
+                    if (!isManager && !callerIsAdmin)
+                        return new SigningTokenResult { ErrorMessage = "Manager signature not required at this time." };
+                    break;
+
+                case "PendingInstructor":
+                    if (isManager && document.ManagerSignedAt != null)
+                        return new SigningTokenResult { ErrorMessage = "Manager already signed this document." };
+                    if (!isInstructor && !callerIsAdmin)
+                        return new SigningTokenResult { ErrorMessage = "Instructor signature not required at this time." };
+                    break;
+
+                case "PendingAdmin":
+                    if (isInstructor && document.InstructorSignedAt != null)
+                        return new SigningTokenResult { ErrorMessage = "Instructor already signed this document." };
+                    if (!callerIsAdmin)
+                        return new SigningTokenResult { ErrorMessage = "Admin signature not required at this time." };
+                    if (document.DocumentType?.ToUpperInvariant() != "SSM")
+                        return new SigningTokenResult { ErrorMessage = "Admin only signs SSM documents." };
+                    break;
+
+                default:
+                    return new SigningTokenResult { ErrorMessage = "This document does not require a signature at this time." };
             }
 
             var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
@@ -66,9 +82,29 @@ namespace SyncApp26.Application.Services
             var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
             var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
             bool signerIsAdmin = signerUser?.Role == UserRole.Admin;
-            bool isManagerSigning = !signerIsAdmin && signerUser != null && document != null
-                && ResolveSecondSignerId(document, signatureToken.PeriodicTrainingId) == signerUser.Id;
-            bool isAdminSigning = signerIsAdmin && document?.DocumentType?.ToUpperInvariant() == "SSM";
+
+            bool isManagerSigning = false;
+            bool isInstructorSigning = false;
+            bool isAdminSigning = false;
+
+            if (document != null && signerUser != null)
+            {
+                bool isManager = document.User?.AssignedToId == signerUser.Id;
+                bool isInstructor = ResolveInstructorId(document, signatureToken.PeriodicTrainingId) == signerUser.Id;
+
+                switch (document.Status)
+                {
+                    case "PendingManager":
+                        isManagerSigning = isManager || (signerIsAdmin && !isInstructor);
+                        break;
+                    case "PendingInstructor":
+                        isInstructorSigning = isInstructor || (signerIsAdmin && !isManager);
+                        break;
+                    case "PendingAdmin":
+                        isAdminSigning = signerIsAdmin && document.DocumentType?.ToUpperInvariant() == "SSM";
+                        break;
+                }
+            }
 
             return new SigningContextResult
             {
@@ -78,6 +114,7 @@ namespace SyncApp26.Application.Services
                 Email = signatureToken.Email,
                 DocumentType = document?.DocumentType,
                 IsManagerSigning = isManagerSigning,
+                IsInstructorSigning = isInstructorSigning,
                 IsAdminSigning = isAdminSigning,
                 PeriodicTrainingId = signatureToken.PeriodicTrainingId
             };
@@ -103,27 +140,24 @@ namespace SyncApp26.Application.Services
             var periodicTrainingId = request.PeriodicTrainingId ?? tokenEntity.PeriodicTrainingId;
 
             bool signerIsAdmin = signerUserFromToken.Role == UserRole.Admin;
-            bool isInstructor = !signerIsAdmin && ResolveSecondSignerId(document, periodicTrainingId) == signerUserFromToken.Id;
-            bool isUserSignature = !signerIsAdmin && !isInstructor;
+            bool isUser = document.UserId == signerUserFromToken.Id;
+            bool isManager = document.User?.AssignedToId == signerUserFromToken.Id;
+            bool isInstructor = ResolveInstructorId(document, periodicTrainingId) == signerUserFromToken.Id;
 
-            if (isUserSignature && document.UserSignedAt != null)
-                return new ConsumeSigningTokenResult { ErrorMessage = "User already signed this document." };
-
-            if (isInstructor && document.UserSignedAt == null)
-                return new ConsumeSigningTokenResult { ErrorMessage = "Employee must sign this document first." };
-
-            if (isInstructor && document.ManagerSignedAt != null)
-                return new ConsumeSigningTokenResult { ErrorMessage = "Instructor already signed this document." };
-
-            if (signerIsAdmin)
+            string? signerRole = document.Status switch
             {
-                if (document.UserSignedAt == null || document.ManagerSignedAt == null)
-                    return new ConsumeSigningTokenResult { ErrorMessage = "Both employee and manager must sign before admin can verify." };
-                if (document.DocumentType?.ToUpperInvariant() != "SSM")
-                    return new ConsumeSigningTokenResult { ErrorMessage = "Admin only signs SSM documents." };
-                if (document.Status != "PendingAdmin")
-                    return new ConsumeSigningTokenResult { ErrorMessage = "Document is not pending admin signature." };
-            }
+                "PendingUser" when isUser => "User",
+                "PendingManager" when isManager || signerIsAdmin => "Manager",
+                "PendingInstructor" when isInstructor || signerIsAdmin => "Instructor",
+                "PendingAdmin" when signerIsAdmin => "Admin",
+                _ => null
+            };
+
+            if (signerRole == null)
+                return new ConsumeSigningTokenResult { ErrorMessage = "This document is not awaiting your signature at this time." };
+
+            if (signerRole == "Admin" && document.DocumentType?.ToUpperInvariant() != "SSM")
+                return new ConsumeSigningTokenResult { ErrorMessage = "Admin only signs SSM documents." };
 
             var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
             if (!isValidAndConsumed)
@@ -132,36 +166,41 @@ namespace SyncApp26.Application.Services
             await _documentService.UpdateDocumentSignatureAsync(
                 document.Id,
                 signerUserFromToken.Id,
-                isUserSignature,
+                signerRole,
                 request.SignatureMethod,
                 request.SignatureData,
                 request.IpAddress,
-                signerIsAdmin,
                 periodicTrainingId
             );
 
-            string? managerEmail = null;
-            string? managerNotificationDocumentName = null;
-            string? managerNotificationToken = null;
+            // Notify the next person in the chain
+            string? nextEmail = null;
+            string? nextNotificationDocumentName = null;
+            string? nextNotificationToken = null;
 
-            if (isUserSignature)
+            if (signerRole == "User" && document.User?.AssignedTo != null)
             {
-                var instructorId = ResolveSecondSignerId(document, periodicTrainingId);
+                var manager = document.User.AssignedTo;
+                nextNotificationDocumentName = $"{document.DocumentType} Document (Manager Approval)";
+                nextNotificationToken = await _documentSignatureService.GenerateSignatureTokenAsync(
+                    manager.Email, document.Id, nextNotificationDocumentName, periodicTrainingId);
+                nextEmail = manager.Email;
+            }
+            else if (signerRole == "Manager")
+            {
+                var instructorId = ResolveInstructorId(document, periodicTrainingId);
                 var instructor = instructorId.HasValue ? await _userService.GetUserByIdAsync(instructorId.Value) : null;
                 if (instructor != null)
                 {
-                    managerNotificationDocumentName = $"{document.DocumentType} Document (Instructor Signature)";
-                    managerNotificationToken = await _documentSignatureService.GenerateSignatureTokenAsync(
-                        instructor.Email,
-                        document.Id,
-                        managerNotificationDocumentName,
-                        periodicTrainingId);
-                    managerEmail = instructor.Email;
+                    nextNotificationDocumentName = $"{document.DocumentType} Document (Instructor Signature)";
+                    nextNotificationToken = await _documentSignatureService.GenerateSignatureTokenAsync(
+                        instructor.Email, document.Id, nextNotificationDocumentName, periodicTrainingId);
+                    nextEmail = instructor.Email;
                 }
             }
 
             int bulkCount = 0;
-            if (request.BulkSign && (isInstructor || signerIsAdmin) && signerUserFromToken != null)
+            if (request.BulkSign && (signerRole == "Manager" || signerRole == "Instructor" || signerIsAdmin))
             {
                 bulkCount = await _documentService.BulkSignDocumentsAsync(
                     signerIsAdmin, signerUserFromToken.Id,
@@ -172,17 +211,14 @@ namespace SyncApp26.Application.Services
             {
                 Success = true,
                 TotalSigned = bulkCount + 1,
-                ManagerEmail = managerEmail,
-                ManagerNotificationDocumentName = managerNotificationDocumentName,
-                ManagerNotificationToken = managerNotificationToken
+                ManagerEmail = nextEmail,
+                ManagerNotificationDocumentName = nextNotificationDocumentName,
+                ManagerNotificationToken = nextNotificationToken
             };
         }
 
-        // Resolves who is authorized for the second-signature ("instructor") slot on this
-        // document: the specific PeriodicTraining row's linked InstructorId when set, falling
-        // back to the employee's line manager (AssignedToId) only for legacy rows created before
-        // instructor accounts existed — so documents already in flight don't become unsignable.
-        private static Guid? ResolveSecondSignerId(UserDocument document, Guid? periodicTrainingId)
+        // Resolves the training row's linked instructor account
+        private static Guid? ResolveInstructorId(UserDocument document, Guid? periodicTrainingId)
         {
             var trainings = document.User?.PeriodicTrainings?.Where(pt => pt.UserDocumentId == document.Id);
 
@@ -194,7 +230,7 @@ namespace SyncApp26.Application.Services
                 .ThenByDescending(pt => pt.CreatedAt)
                 .FirstOrDefault();
 
-            return training?.InstructorId ?? document.User?.AssignedToId;
+            return training?.InstructorId;
         }
     }
 }

@@ -180,22 +180,22 @@
                         <div class="h-2 bg-gray-100 rounded w-2/3"></div>
                       </div>
                       <!-- Signature placement row -->
-                      <div class="px-5 py-3 flex items-end justify-between gap-4">
+                      <div class="px-5 py-3 flex items-end justify-between gap-3">
                         <!-- Employee signature box -->
                         <div class="flex-1 rounded-lg p-3 flex flex-col items-center gap-1"
                 [ngClass]="{
-                  'border-2 border-dashed border-teal-400 bg-teal-50/60': !documentData.isManagerSigning && !documentData.isAdminSigning,
-                  'border border-dashed border-gray-300 bg-gray-50 opacity-60': documentData.isManagerSigning || documentData.isAdminSigning
+                  'border-2 border-dashed border-teal-400 bg-teal-50/60': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
+                  'border border-dashed border-gray-300 bg-gray-50 opacity-60': documentData.isManagerSigning || documentData.isInstructorSigning || documentData.isAdminSigning
                 }">
                           <p class="text-xs font-semibold uppercase tracking-wide"
                   [ngClass]="{
-                    'text-teal-700': !documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'text-gray-500': documentData.isManagerSigning || documentData.isAdminSigning
+                    'text-teal-700': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
+                    'text-gray-500': documentData.isManagerSigning || documentData.isInstructorSigning || documentData.isAdminSigning
                   }">Employee Signature</p>
                           <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
                   <svg class="w-5 h-5" [ngClass]="{
-                    'text-teal-300': !documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'text-gray-300': documentData.isManagerSigning || documentData.isAdminSigning
+                    'text-teal-300': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
+                    'text-gray-300': documentData.isManagerSigning || documentData.isInstructorSigning || documentData.isAdminSigning
                   }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -203,17 +203,17 @@
                             </div>
                             <div class="w-full pt-1 text-center"
                   [ngClass]="{
-                    'border-t border-teal-300': !documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'border-t border-gray-200': documentData.isManagerSigning || documentData.isAdminSigning
+                    'border-t border-teal-300': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
+                    'border-t border-gray-200': documentData.isManagerSigning || documentData.isInstructorSigning || documentData.isAdminSigning
                   }">
                   <p class="text-xs truncate" [ngClass]="{
-                    'text-teal-600': !documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'text-gray-400': documentData.isManagerSigning || documentData.isAdminSigning
+                    'text-teal-600': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
+                    'text-gray-400': documentData.isManagerSigning || documentData.isInstructorSigning || documentData.isAdminSigning
                   }">
                                 {{ 'Awaiting employee' }}
                               </p>
                             </div>
-                            @if (!documentData.isManagerSigning && !documentData.isAdminSigning) {
+                            @if (!documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning) {
                               <span
                                 class="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -224,21 +224,21 @@
                                 </span>
                               }
                             </div>
-                            <!-- Manager countersignature box -->
+                            <!-- Manager signature box (Admis la lucru) -->
                             <div class="flex-1 rounded-lg p-3 flex flex-col items-center gap-1"
                 [ngClass]="{
-                  'border-2 border-dashed border-teal-400 bg-teal-50/60': documentData.isManagerSigning && !documentData.isAdminSigning,
-                  'border border-dashed border-gray-300 bg-gray-50 opacity-60': !documentData.isManagerSigning || documentData.isAdminSigning
+                  'border-2 border-dashed border-teal-400 bg-teal-50/60': documentData.isManagerSigning,
+                  'border border-dashed border-gray-300 bg-gray-50 opacity-60': !documentData.isManagerSigning
                 }">
                               <p class="text-xs font-semibold uppercase tracking-wide"
                   [ngClass]="{
-                    'text-teal-700': documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'text-gray-500': !documentData.isManagerSigning || documentData.isAdminSigning
-                  }">Manager Countersignature</p>
+                    'text-teal-700': documentData.isManagerSigning,
+                    'text-gray-500': !documentData.isManagerSigning
+                  }">Manager Signature</p>
                               <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
                   <svg class="w-5 h-5" [ngClass]="{
-                    'text-teal-300': documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'text-gray-300': !documentData.isManagerSigning || documentData.isAdminSigning
+                    'text-teal-300': documentData.isManagerSigning,
+                    'text-gray-300': !documentData.isManagerSigning
                   }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                     d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -246,17 +246,17 @@
                                 </div>
                                 <div class="w-full pt-1 text-center"
                   [ngClass]="{
-                    'border-t border-teal-300': documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'border-t border-gray-200': !documentData.isManagerSigning || documentData.isAdminSigning
+                    'border-t border-teal-300': documentData.isManagerSigning,
+                    'border-t border-gray-200': !documentData.isManagerSigning
                   }">
                   <p class="text-xs truncate" [ngClass]="{
-                    'text-teal-600': documentData.isManagerSigning && !documentData.isAdminSigning,
-                    'text-gray-400': !documentData.isManagerSigning || documentData.isAdminSigning
+                    'text-teal-600': documentData.isManagerSigning,
+                    'text-gray-400': !documentData.isManagerSigning
                   }">
                                     {{ 'Awaiting manager' }}
                                   </p>
                                 </div>
-                                @if (documentData.isManagerSigning && !documentData.isAdminSigning) {
+                                @if (documentData.isManagerSigning) {
                                   <span
                                     class="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
                                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -267,43 +267,86 @@
                                     </span>
                                   }
                                 </div>
-                                <!-- Verifier (Admin) signature box -->
+                                <!-- Instructor signature box -->
                                 <div class="flex-1 rounded-lg p-3 flex flex-col items-center gap-1"
                 [ngClass]="{
-                  'border-2 border-dashed border-teal-400 bg-teal-50/60': documentData.isAdminSigning,
-                  'border border-dashed border-gray-300 bg-gray-50 opacity-60': !documentData.isAdminSigning
+                  'border-2 border-dashed border-teal-400 bg-teal-50/60': documentData.isInstructorSigning,
+                  'border border-dashed border-gray-300 bg-gray-50 opacity-60': !documentData.isInstructorSigning
                 }">
                                   <p class="text-xs font-semibold uppercase tracking-wide"
                   [ngClass]="{
-                    'text-teal-700': documentData.isAdminSigning,
-                    'text-gray-500': !documentData.isAdminSigning
-                  }">Verifier (Admin) Signature</p>
+                    'text-teal-700': documentData.isInstructorSigning,
+                    'text-gray-500': !documentData.isInstructorSigning
+                  }">Instructor Signature</p>
                                   <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
                   <svg class="w-5 h-5" [ngClass]="{
-                    'text-teal-300': documentData.isAdminSigning,
-                    'text-gray-300': !documentData.isAdminSigning
+                    'text-teal-300': documentData.isInstructorSigning,
+                    'text-gray-300': !documentData.isInstructorSigning
                   }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                       </svg>
                                     </div>
-                                    <div class="w-full pt-1 text-center border-t border-teal-300">
-                                      <p class="text-xs truncate text-teal-600">Admin</p>
-                                    </div>
-                                    @if (documentData.isAdminSigning) {
-                                      <span
-                                        class="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                          </svg>
-                                          Your signature goes here
-                                        </span>
-                                      }
+                                    <div class="w-full pt-1 text-center"
+                  [ngClass]="{
+                    'border-t border-teal-300': documentData.isInstructorSigning,
+                    'border-t border-gray-200': !documentData.isInstructorSigning
+                  }">
+                  <p class="text-xs truncate" [ngClass]="{
+                    'text-teal-600': documentData.isInstructorSigning,
+                    'text-gray-400': !documentData.isInstructorSigning
+                  }">
+                                      {{ 'Awaiting instructor' }}
+                                    </p>
+                                  </div>
+                                  @if (documentData.isInstructorSigning) {
+                                    <span
+                                      class="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
+                                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Your signature goes here
+                                      </span>
+                                    }
+                                  </div>
+                                  <!-- Verifier (Admin) signature box -->
+                                  <div class="flex-1 rounded-lg p-3 flex flex-col items-center gap-1"
+                [ngClass]="{
+                  'border-2 border-dashed border-teal-400 bg-teal-50/60': documentData.isAdminSigning,
+                  'border border-dashed border-gray-300 bg-gray-50 opacity-60': !documentData.isAdminSigning
+                }">
+                                    <p class="text-xs font-semibold uppercase tracking-wide"
+                  [ngClass]="{
+                    'text-teal-700': documentData.isAdminSigning,
+                    'text-gray-500': !documentData.isAdminSigning
+                  }">Verifier (Admin) Signature</p>
+                                    <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
+                  <svg class="w-5 h-5" [ngClass]="{
+                    'text-teal-300': documentData.isAdminSigning,
+                    'text-gray-300': !documentData.isAdminSigning
+                  }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                      </div>
+                                      <div class="w-full pt-1 text-center border-t border-teal-300">
+                                        <p class="text-xs truncate text-teal-600">Admin</p>
+                                      </div>
+                                      @if (documentData.isAdminSigning) {
+                                        <span
+                                          class="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">
+                                          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            Your signature goes here
+                                          </span>
+                                        }
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
                               <!-- Signature Section -->
                               <div class="px-6 py-5">
                                 <h3 class="text-base font-semibold text-gray-900 mb-4">Your Signature</h3>

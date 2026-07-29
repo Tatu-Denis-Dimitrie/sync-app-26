@@ -80,9 +80,9 @@ namespace SyncApp26.Tests.Services.Documents
             return doc;
         }
 
-        private SignatureRecord SignDocument(DocumentService docService, UserDocument doc, User signer, bool isUserSignature = true)
+        private SignatureRecord SignDocument(DocumentService docService, UserDocument doc, User signer, string signerRole = "User")
         {
-            docService.UpdateDocumentSignatureAsync(doc.Id, signer.Id, isUserSignature, "Draw", "sig-data", "1.2.3.4")
+            docService.UpdateDocumentSignatureAsync(doc.Id, signer.Id, signerRole, "Draw", "sig-data", "1.2.3.4")
                 .GetAwaiter().GetResult();
             return _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id);
         }
@@ -111,14 +111,14 @@ namespace SyncApp26.Tests.Services.Documents
         // without needing the full edit-then-invalidate production flow. Identifies the new record
         // by exclusion (which id wasn't there before), not by Version or timestamp ordering — both
         // records share the same schema Version, so neither reliably distinguishes them.
-        private SignatureRecord SignDocumentAgain(DocumentService docService, UserDocument doc, User signer, bool isUserSignature = true)
+        private SignatureRecord SignDocumentAgain(DocumentService docService, UserDocument doc, User signer, string signerRole = "User")
         {
             var existingIds = _dbFixture.Context.SignatureRecords
                 .Where(r => r.UserDocumentId == doc.Id)
                 .Select(r => r.Id)
                 .ToHashSet();
 
-            docService.UpdateDocumentSignatureAsync(doc.Id, signer.Id, isUserSignature, "Draw", "sig-data-2", "1.2.3.4")
+            docService.UpdateDocumentSignatureAsync(doc.Id, signer.Id, signerRole, "Draw", "sig-data-2", "1.2.3.4")
                 .GetAwaiter().GetResult();
 
             return _dbFixture.Context.SignatureRecords
@@ -205,8 +205,8 @@ namespace SyncApp26.Tests.Services.Documents
             var doc1 = SeedDocument(owner1, "SU", "PendingManager");
             var doc2 = SeedDocument(owner2, "SU", "PendingManager");
 
-            SignDocument(docService, doc1, manager, isUserSignature: false);
-            var secondRecord = SignDocument(docService, doc2, manager, isUserSignature: false);
+            SignDocument(docService, doc1, manager, signerRole: "Manager");
+            var secondRecord = SignDocument(docService, doc2, manager, signerRole: "Manager");
 
             var status = await CreateVerificationService().GetVerificationStatusAsync(secondRecord.Id);
 
@@ -227,8 +227,8 @@ namespace SyncApp26.Tests.Services.Documents
             var doc1 = SeedDocument(owner1, "SU", "PendingManager");
             var doc2 = SeedDocument(owner2, "SU", "PendingManager");
 
-            SignDocument(docService, doc1, manager, isUserSignature: false);
-            var secondRecord = SignDocument(docService, doc2, manager, isUserSignature: false);
+            SignDocument(docService, doc1, manager, signerRole: "Manager");
+            var secondRecord = SignDocument(docService, doc2, manager, signerRole: "Manager");
 
             // Simulate an attacker who knows the signing key: relink the record to a
             // nonexistent predecessor and recompute a self-consistent HMAC over the forgery.
@@ -498,8 +498,8 @@ namespace SyncApp26.Tests.Services.Documents
             var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
             var doc = SeedDocument(owner, "SU", "PendingManager");
             var training = SeedTraining(owner, doc, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
-            var userRecord = SignDocument(docService, doc, owner, isUserSignature: true);
-            await docService.UpdateDocumentSignatureAsync(doc.Id, manager.Id, isUserSignature: false, "Draw", "sig-data", "1.2.3.4");
+            var userRecord = SignDocument(docService, doc, owner);
+            await docService.UpdateDocumentSignatureAsync(doc.Id, manager.Id, signerRole: "Manager", "Draw", "sig-data", "1.2.3.4");
             var managerRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id && r.SignerRole == "Manager");
 
             var result = await CreateVerificationService().GetSignatureHistoryForTrainingAsync(training.Id);
@@ -574,7 +574,7 @@ namespace SyncApp26.Tests.Services.Documents
             var doc = SeedDocument(owner, "SU", "PendingManager");
             var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            var v1Record = SignDocument(docService, doc, owner, isUserSignature: true);
+            var v1Record = SignDocument(docService, doc, owner);
             Assert.Equal(1, v1Record.Version);
 
             var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
@@ -599,7 +599,7 @@ namespace SyncApp26.Tests.Services.Documents
             var doc = SeedDocument(owner, "SU", "PendingManager");
             var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            var v1Record = SignDocument(docService, doc, owner, isUserSignature: true);
+            var v1Record = SignDocument(docService, doc, owner);
             var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
 
             var results = await CreateVerificationService()
@@ -620,7 +620,7 @@ namespace SyncApp26.Tests.Services.Documents
             var doc = SeedDocument(owner, "SU", "PendingManager");
             var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            var v1Record = SignDocument(docService, doc, owner, isUserSignature: true);
+            var v1Record = SignDocument(docService, doc, owner);
             var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
 
             var result = await CreateVerificationService().GetSignatureHistoryForTrainingAsync(training.Id);

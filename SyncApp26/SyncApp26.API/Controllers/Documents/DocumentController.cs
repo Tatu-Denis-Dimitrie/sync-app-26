@@ -63,12 +63,17 @@ namespace SyncApp26.API.Controllers
             d.ManagerSignatureData,
             d.ManagerSignatureIpAddress,
             d.ManagerSignedAt,
+            d.InstructorSignatureMethod,
+            d.InstructorSignatureData,
+            d.InstructorSignatureIpAddress,
+            d.InstructorSignedAt,
             d.AdminSignatureMethod,
             d.AdminSignatureData,
             d.AdminSignatureIpAddress,
             d.AdminSignedAt,
             UserSignatureId = signatureIds?.UserSignatureId,
             ManagerSignatureId = signatureIds?.ManagerSignatureId,
+            InstructorSignatureId = signatureIds?.InstructorSignatureId,
             AdminSignatureId = signatureIds?.AdminSignatureId,
         };
 
@@ -269,6 +274,28 @@ namespace SyncApp26.API.Controllers
             return Ok(await MapDocumentsAsync(signedAsManager));
         }
 
+        [HttpGet("instructor-pending-signatures")]
+        public async Task<IActionResult> GetInstructorPendingSignatures()
+        {
+            if (User.GetUserId() is not { } userId)
+                return Unauthorized();
+
+            var pendingAsInstructor = await _documentService.GetInstructorPendingSignaturesAsync(userId);
+
+            return Ok(await MapDocumentsAsync(pendingAsInstructor));
+        }
+
+        [HttpGet("instructor-signed-documents")]
+        public async Task<IActionResult> GetInstructorSignedDocuments()
+        {
+            if (User.GetUserId() is not { } userId)
+                return Unauthorized();
+
+            var signedAsInstructor = await _documentService.GetInstructorSignedDocumentsAsync(userId);
+
+            return Ok(await MapDocumentsAsync(signedAsInstructor));
+        }
+
         /// <summary>
         /// Returns SSM documents pending admin signature (PendingAdmin status — signed by both employee and LM).
         /// </summary>
@@ -356,9 +383,14 @@ namespace SyncApp26.API.Controllers
 
             bool isDocOwner = document.UserId == userId;
             bool isManager = document.User?.AssignedToId == userId;
+            bool isInstructor = document.User?.PeriodicTrainings?
+                .Where(pt => pt.UserDocumentId == document.Id)
+                .OrderByDescending(pt => pt.TrainingDate)
+                .ThenByDescending(pt => pt.CreatedAt)
+                .FirstOrDefault()?.InstructorId == userId;
             bool isAdmin = User.IsInRole(Roles.Admin);
 
-            if (!isDocOwner && !isManager && !isAdmin)
+            if (!isDocOwner && !isManager && !isInstructor && !isAdmin)
                 return Forbid();
 
             var docUser = document.User;

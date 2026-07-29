@@ -85,7 +85,7 @@
             Request Data Change
           </button>
         </div>
-        @if (pendingUserSignatures.length > 0 || pendingManagerSignatures.length > 0) {
+        @if (pendingUserSignatures.length > 0 || pendingManagerSignatures.length > 0 || pendingInstructorSignatures.length > 0) {
           <div
             class="mt-8 border-t border-border pt-6">
             <h3 class="text-xl font-bold text-foreground mb-4">Documents Pending Signature</h3>
@@ -142,11 +142,38 @@
                   </div>
                 </div>
               }
+              @for (doc of pendingInstructorSignatures; track doc) {
+                <div
+                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-purple-200 bg-purple-50 rounded-lg shadow-sm">
+                  <div>
+                    <h4 class="font-semibold text-purple-900">{{ doc.documentType }} File (Training)
+                    </h4>
+                    <p class="text-sm text-purple-700">Requires your signature as instructor</p>
+                    <p class="text-xs text-purple-600 mt-1">Manager signed: {{ formatDate(doc.managerSignedAt) }}
+                    </p>
+                  </div>
+                  <div class="flex gap-2 mt-3 sm:mt-0">
+                    <button (click)="viewDocument(doc.id)"
+                      class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                        </path>
+                      </svg>
+                      View
+                    </button>
+                    <button (click)="signDocument(doc.id)"
+                      class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+                      Sign
+                    </button>
+                  </div>
+                </div>
+              }
             </div>
           </div>
         }
         <!-- COMPLETED SIGNATURES -->
-        @if (signedUserSignatures.length > 0 || signedManagerSignatures.length > 0) {
+        @if (signedUserSignatures.length > 0 || signedManagerSignatures.length > 0 || signedInstructorSignatures.length > 0) {
           <div
             class="mt-8 border-t border-border pt-6">
             <h3 class="text-xl font-bold text-foreground mb-4">Signed Documents</h3>
@@ -189,6 +216,39 @@
                     <h4 class="font-semibold text-green-900">{{ doc.documentType }} File (Subordinate Employee)
                     </h4>
                     <p class="text-sm text-green-700">Countersigned by you on {{ formatDate(doc.managerSignedAt)
+                    }}</p>
+                    <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                        </path>
+                      </svg>
+                      <span>Secured &amp; Verified</span>
+                    </div>
+                  </div>
+                  <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
+                    <button (click)="viewDocument(doc.id)"
+                      class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                        </path>
+                      </svg>
+                      View PDF
+                    </button>
+                    <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                      Completed
+                    </span>
+                  </div>
+                </div>
+              }
+              @for (doc of signedInstructorSignatures; track doc) {
+                <div
+                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+                  <div>
+                    <h4 class="font-semibold text-green-900">{{ doc.documentType }} File (Training)
+                    </h4>
+                    <p class="text-sm text-green-700">Signed as instructor on {{ formatDate(doc.instructorSignedAt)
                     }}</p>
                     <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
                       <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
