@@ -577,6 +577,7 @@
                               Semnătura verificator (admin)
                             </th>
                           }
+                          <th class="no-print">History</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -648,11 +649,60 @@
                                         }
                                       </td>
                                     }
+                                    <td class="no-print">
+                                      <button type="button" class="history-toggle" (click)="toggleHistory(t)">
+                                        {{ isHistoryExpanded(t) ? 'Hide' : 'History' }}
+                                      </button>
+                                    </td>
                                   </tr>
+                                  @if (isHistoryExpanded(t)) {
+                                    <tr class="no-print history-row">
+                                      <td [attr.colspan]="8">
+                                        @if (isHistoryLoading(t)) {
+                                          <span class="history-status">Loading signature history...</span>
+                                        }
+                                        @if (getHistoryError(t)) {
+                                          <span class="history-status history-error">{{ getHistoryError(t) }}</span>
+                                        }
+                                        @if (!isHistoryLoading(t) && !getHistoryError(t) && getHistoryEntries(t).length === 0) {
+                                          <span class="history-status">No signatures recorded for this session.</span>
+                                        }
+                                        @if (!isHistoryLoading(t) && getHistoryEntries(t).length > 0) {
+                                          <table class="history-table">
+                                            <thead>
+                                              <tr>
+                                                <th>Role</th>
+                                                <th>Signer</th>
+                                                <th>Signed At</th>
+                                                <th>Schema</th>
+                                                <th>Status</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              @for (entry of getHistoryEntries(t); track entry.signatureId) {
+                                                <tr>
+                                                  <td>{{ entry.signerRole }}</td>
+                                                  <td>{{ entry.signerFullNameSnapshot }}</td>
+                                                  <td>
+                                                    {{ entry.signedAt | date: "dd.MM.yyyy HH:mm" }}
+                                                    @if (entry.isMostRecentSignature) {
+                                                      <span class="history-latest-tag">most recent</span>
+                                                    }
+                                                  </td>
+                                                  <td>v{{ entry.version }}</td>
+                                                  <td><app-signature-status-badge [status]="entry.status"></app-signature-status-badge></td>
+                                                </tr>
+                                              }
+                                            </tbody>
+                                          </table>
+                                        }
+                                      </td>
+                                    </tr>
+                                  }
                                 }
                                 @if (trainings.length === 0) {
                                   <tr>
-                                    <td [attr.colspan]="selectedTab === 'ssm' ? 7 : 6">
+                                    <td [attr.colspan]="8">
                                       No periodic trainings recorded.
                                     </td>
                                   </tr>
@@ -1037,6 +1087,7 @@
                                       <th>Durata (h)</th>
                                       <th>Semnătura instruit (angajat)</th>
                                       <th>Semnătura instructor (manager)</th>
+                                      <th class="no-print">History</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -1088,11 +1139,60 @@
                                                   —
                                                 }
                                               </td>
+                                              <td class="no-print">
+                                                <button type="button" class="history-toggle" (click)="toggleHistory(t)">
+                                                  {{ isHistoryExpanded(t) ? 'Hide' : 'History' }}
+                                                </button>
+                                              </td>
                                             </tr>
+                                            @if (isHistoryExpanded(t)) {
+                                              <tr class="no-print history-row">
+                                                <td [attr.colspan]="7">
+                                                  @if (isHistoryLoading(t)) {
+                                                    <span class="history-status">Loading signature history...</span>
+                                                  }
+                                                  @if (getHistoryError(t)) {
+                                                    <span class="history-status history-error">{{ getHistoryError(t) }}</span>
+                                                  }
+                                                  @if (!isHistoryLoading(t) && !getHistoryError(t) && getHistoryEntries(t).length === 0) {
+                                                    <span class="history-status">No signatures recorded for this session.</span>
+                                                  }
+                                                  @if (!isHistoryLoading(t) && getHistoryEntries(t).length > 0) {
+                                                    <table class="history-table">
+                                                      <thead>
+                                                        <tr>
+                                                          <th>Role</th>
+                                                          <th>Signer</th>
+                                                          <th>Signed At</th>
+                                                          <th>Schema</th>
+                                                          <th>Status</th>
+                                                        </tr>
+                                                      </thead>
+                                                      <tbody>
+                                                        @for (entry of getHistoryEntries(t); track entry.signatureId) {
+                                                          <tr>
+                                                            <td>{{ entry.signerRole }}</td>
+                                                            <td>{{ entry.signerFullNameSnapshot }}</td>
+                                                            <td>
+                                                              {{ entry.signedAt | date: "dd.MM.yyyy HH:mm" }}
+                                                              @if (entry.isMostRecentSignature) {
+                                                                <span class="history-latest-tag">most recent</span>
+                                                              }
+                                                            </td>
+                                                            <td>v{{ entry.version }}</td>
+                                                            <td><app-signature-status-badge [status]="entry.status"></app-signature-status-badge></td>
+                                                          </tr>
+                                                        }
+                                                      </tbody>
+                                                    </table>
+                                                  }
+                                                </td>
+                                              </tr>
+                                            }
                                           }
                                           @if (trainings.length === 0) {
                                             <tr>
-                                              <td colspan="6">No periodic trainings recorded.</td>
+                                              <td colspan="7">No periodic trainings recorded.</td>
                                             </tr>
                                           }
                                         </tbody>
