@@ -59,18 +59,32 @@ namespace SyncApp26.Domain.Entities
         
         public DateTime? ManagerSignedAt { get; set; }
 
+        // --- Instructor Signature Metadata ---
+
+        public string? InstructorCryptographicSignature { get; set; } // RSA signature of (Hash + IP + Timestamp)
+
+        [MaxLength(50)]
+        public string? InstructorSignatureMethod { get; set; } // "Draw", "Type", "AdobeSign"
+
+        public string? InstructorSignatureData { get; set; } // Base64 image
+
+        [MaxLength(50)]
+        public string? InstructorSignatureIpAddress { get; set; }
+
+        public DateTime? InstructorSignedAt { get; set; }
+
         // --- Admin Signature Metadata ---
-        
+
         public string? AdminCryptographicSignature { get; set; }
-        
+
         [MaxLength(50)]
         public string? AdminSignatureMethod { get; set; }
-        
+
         public string? AdminSignatureData { get; set; }
-        
+
         [MaxLength(50)]
         public string? AdminSignatureIpAddress { get; set; }
-        
+
         public DateTime? AdminSignedAt { get; set; }
     }
 }

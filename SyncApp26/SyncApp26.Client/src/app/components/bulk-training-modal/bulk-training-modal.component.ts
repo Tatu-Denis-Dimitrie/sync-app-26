@@ -1,7 +1,9 @@
-import { Component, ElementRef, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 interface DepartmentOption {
@@ -19,11 +21,24 @@ interface UserOption {
   departmentName: string;
 }
 
+interface UserLookupOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  departmentName: string | null;
+}
+
+interface UserLookupPage {
+  items: UserLookupOption[];
+  totalCount: number;
+}
+
 interface BulkTrainingData {
   trainingDate: string;
   durationHours: number | null;
   materialTaught: string;
-  instructorName: string;
+  instructorId: string | null;
   verifierName: string;
   documentType: string;
   selectedDepartmentId: string | null;
@@ -38,7 +53,7 @@ interface BulkTrainingData {
   templateUrl: './bulk-training-modal.component.html',
   styleUrls: ['./bulk-training-modal.component.css']
 })
-export class BulkTrainingModalComponent implements OnInit {
+export class BulkTrainingModalComponent implements OnInit, OnDestroy {
   @Output() close = new EventEmitter<void>();
   @Output() success = new EventEmitter<void>();
   @ViewChild('modalContent') modalContentRef!: ElementRef<HTMLElement>;
@@ -62,11 +77,23 @@ export class BulkTrainingModalComponent implements OnInit {
   pickerDepartmentId: string | null = null;
   pickerShowSelectedOnly = false;
 
+  // Instructor picker: paginated + searched server-side via GET /User/lookup, unlike the
+  // "select users" picker above which filters an already-loaded full list client-side.
+  isInstructorPickerVisible = false;
+  instructorSearchQuery = '';
+  instructorResults: UserLookupOption[] = [];
+  isLoadingInstructors = false;
+  instructorPage = 1;
+  instructorPageSize = 20;
+  instructorTotalCount = 0;
+  selectedInstructor: UserLookupOption | null = null;
+  private instructorSearch$ = new Subject<string>();
+
   formData: BulkTrainingData = {
     trainingDate: '',
     durationHours: null,
     materialTaught: '',
-    instructorName: '',
+    instructorId: null,
     verifierName: '',
     documentType: 'Both',
     selectedDepartmentId: null,
@@ -74,11 +101,27 @@ export class BulkTrainingModalComponent implements OnInit {
     selectedUserIds: []
   };
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    this.instructorSearch$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap((query) => {
+          this.isLoadingInstructors = true;
+          this.instructorPage = 1;
+          return this.fetchInstructorPage(query, 1);
+        })
+      )
+      .subscribe((page) => this.applyInstructorPage(page));
+  }
 
   ngOnInit(): void {
     this.loadDepartments();
     this.loadUsers();
+  }
+
+  ngOnDestroy(): void {
+    this.instructorSearch$.complete();
   }
 
   private loadDepartments(): void {
@@ -149,6 +192,16 @@ export class BulkTrainingModalComponent implements OnInit {
     return this.formData.selectedUserIds.length;
   }
 
+  get instructorTotalPages(): number {
+    return Math.max(1, Math.ceil(this.instructorTotalCount / this.instructorPageSize));
+  }
+
+  get selectedInstructorLabel(): string {
+    if (!this.selectedInstructor) return '';
+    const name = `${this.selectedInstructor.firstName} ${this.selectedInstructor.lastName}`.trim();
+    return this.selectedInstructor.departmentName ? `${name} (${this.selectedInstructor.departmentName})` : name;
+  }
+
   onDepartmentChanged(): void {
     // Department filter only affects the user picker display; existing selections are preserved.
   }
@@ -193,6 +246,61 @@ export class BulkTrainingModalComponent implements OnInit {
     this.formData.selectedUserIds = this.formData.selectedUserIds.filter((id) => !filteredIds.has(id));
   }
 
+  // ───────────────────────── Instructor picker ─────────────────────────
+
+  openInstructorPicker(): void {
+    this.isInstructorPickerVisible = true;
+    this.instructorSearchQuery = '';
+    this.instructorPage = 1;
+    this.loadInstructorPage(1, '');
+  }
+
+  closeInstructorPicker(): void {
+    this.isInstructorPickerVisible = false;
+  }
+
+  onInstructorSearchChanged(): void {
+    this.instructorSearch$.next(this.instructorSearchQuery.trim());
+  }
+
+  private fetchInstructorPage(search: string, page: number) {
+    let params: Record<string, string> = { page: String(page), pageSize: String(this.instructorPageSize) };
+    if (search) params['search'] = search;
+    return this.http.get<UserLookupPage>(`${environment.apiUrl}/User/lookup`, { params });
+  }
+
+  private loadInstructorPage(page: number, search: string): void {
+    this.isLoadingInstructors = true;
+    this.fetchInstructorPage(search, page).subscribe({
+      next: (result) => this.applyInstructorPage(result),
+      error: (err) => {
+        console.error('Error loading instructors:', err);
+        this.instructorResults = [];
+        this.isLoadingInstructors = false;
+      }
+    });
+  }
+
+  private applyInstructorPage(result: UserLookupPage): void {
+    this.instructorResults = result?.items ?? [];
+    this.instructorTotalCount = result?.totalCount ?? 0;
+    this.isLoadingInstructors = false;
+  }
+
+  goToInstructorPage(page: number): void {
+    if (page < 1 || page > this.instructorTotalPages) return;
+    this.instructorPage = page;
+    this.loadInstructorPage(page, this.instructorSearchQuery.trim());
+  }
+
+  selectInstructor(user: UserLookupOption): void {
+    this.selectedInstructor = user;
+    this.formData.instructorId = user.id;
+    this.closeInstructorPicker();
+  }
+
+  // ───────────────────────────────────────────────────────────────────
+
   onDocumentTypeChanged(): void {
     this.formData.durationHours = this.formData.documentType === 'SU' ? 1 : 2;
   }
@@ -223,6 +331,7 @@ export class BulkTrainingModalComponent implements OnInit {
   closeModal() {
     this.isVisible = false;
     this.isUserPickerVisible = false;
+    this.isInstructorPickerVisible = false;
     this.resetForm();
     this.close.emit();
   }
@@ -232,13 +341,15 @@ export class BulkTrainingModalComponent implements OnInit {
       trainingDate: '',
       durationHours: 2,
       materialTaught: '',
-      instructorName: '',
+      instructorId: null,
       verifierName: '',
       documentType: 'Both',
       selectedDepartmentId: null,
       applyToAllUsers: true,
       selectedUserIds: []
     };
+    this.selectedInstructor = null;
+    this.instructorSearchQuery = '';
     this.userSearchQuery = '';
     this.submitted = false;
     this.submittedCount = 0;
@@ -266,8 +377,8 @@ export class BulkTrainingModalComponent implements OnInit {
       this.validationMessage = 'Please enter the material taught.';
       return;
     }
-    if (!this.formData.instructorName?.trim()) {
-      this.validationMessage = 'Please enter the instructor name.';
+    if (!this.formData.instructorId) {
+      this.validationMessage = 'Please select an instructor.';
       return;
     }
     if (this.formData.documentType !== 'SU' && !this.formData.verifierName?.trim()) {

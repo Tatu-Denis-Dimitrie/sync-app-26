@@ -30,8 +30,10 @@ export class LineManagerComponent implements OnInit {
 
   pendingUserSignatures: any[] = [];
   pendingManagerSignatures: any[] = [];
+  pendingInstructorSignatures: any[] = [];
   signedUserSignatures: any[] = [];
   signedManagerSignatures: any[] = [];
+  signedInstructorSignatures: any[] = [];
 
   assignedUsers$!: Observable<User[]>;
   paginatedAssignedUsers$!: Observable<User[]>;
@@ -126,7 +128,17 @@ export class LineManagerComponent implements OnInit {
       error: (err) => console.error('Failed to load pending manager signatures', err)
     });
 
-    // 3. Fetch documents completed by user
+    // 3. Fetch documents where the user is the linked instructor and needs to sign. Any user can
+    // be selected as an instructor regardless of role, so this is fetched unconditionally, same
+    // as the manager queue above — it's just empty for anyone not currently an instructor.
+    this.http.get<any[]>(`${environment.apiUrl}/Document/instructor-pending-signatures`).subscribe({
+      next: (docs) => {
+        this.pendingInstructorSignatures = docs;
+      },
+      error: (err) => console.error('Failed to load pending instructor signatures', err)
+    });
+
+    // 4. Fetch documents completed by user
     this.http.get<any[]>(`${environment.apiUrl}/Document/my-signed-documents`).subscribe({
       next: (docs) => {
         this.signedUserSignatures = docs;
@@ -134,12 +146,20 @@ export class LineManagerComponent implements OnInit {
       error: (err) => console.error('Failed to load signed user documents', err)
     });
 
-    // 4. Fetch documents completed by manager
+    // 5. Fetch documents completed by manager
     this.http.get<any[]>(`${environment.apiUrl}/Document/manager-signed-documents`).subscribe({
       next: (docs) => {
         this.signedManagerSignatures = docs;
       },
       error: (err) => console.error('Failed to load signed manager documents', err)
+    });
+
+    // 6. Fetch documents completed as instructor
+    this.http.get<any[]>(`${environment.apiUrl}/Document/instructor-signed-documents`).subscribe({
+      next: (docs) => {
+        this.signedInstructorSignatures = docs;
+      },
+      error: (err) => console.error('Failed to load signed instructor documents', err)
     });
   }
 
@@ -345,7 +365,9 @@ export class LineManagerComponent implements OnInit {
   }
 
   signAllDocuments(): void {
-    const firstDoc = this.pendingManagerSignatures[0];
+    // BulkSignDocumentsAsync covers both the Manager and Instructor queues for the caller in one
+    // call, so a single "Sign All Pending" entry point works regardless of which queue has items.
+    const firstDoc = this.pendingManagerSignatures[0] || this.pendingInstructorSignatures[0];
     if (!firstDoc?.id) return;
     this.http.get<any>(`${environment.apiUrl}/document/token-for-document/${firstDoc.id}`).subscribe({
       next: (res) => {

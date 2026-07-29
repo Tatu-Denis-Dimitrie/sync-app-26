@@ -189,6 +189,9 @@ namespace SyncApp26.Infrastructure.Services
                         case "Manager" when dto.ManagerSignatureId == null:
                             dto.ManagerSignatureId = record.Id;
                             break;
+                        case "Instructor" when dto.InstructorSignatureId == null:
+                            dto.InstructorSignatureId = record.Id;
+                            break;
                         case "Admin" when dto.AdminSignatureId == null:
                             dto.AdminSignatureId = record.Id;
                             break;

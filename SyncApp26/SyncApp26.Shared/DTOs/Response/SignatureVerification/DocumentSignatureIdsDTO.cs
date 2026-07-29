@@ -4,6 +4,7 @@ namespace SyncApp26.Shared.DTOs.Response.SignatureVerification
     {
         public Guid? UserSignatureId { get; set; }
         public Guid? ManagerSignatureId { get; set; }
+        public Guid? InstructorSignatureId { get; set; }
         public Guid? AdminSignatureId { get; set; }
     }
 }

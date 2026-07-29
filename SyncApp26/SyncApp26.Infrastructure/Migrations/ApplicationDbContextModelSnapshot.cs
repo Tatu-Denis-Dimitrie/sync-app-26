@@ -569,6 +569,23 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<DateTime>("GeneratedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("InstructorCryptographicSignature")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstructorSignatureData")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstructorSignatureIpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InstructorSignatureMethod")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("InstructorSignedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ManagerCryptographicSignature")
                         .HasColumnType("TEXT");
 
