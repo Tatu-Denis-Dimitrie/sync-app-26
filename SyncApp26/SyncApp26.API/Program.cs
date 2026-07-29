@@ -96,6 +96,8 @@ builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();
+builder.Services.AddScoped<SignatureVerificationSweeper>();
+builder.Services.AddHostedService<SignatureVerificationSweepService>();
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
