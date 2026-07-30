@@ -256,6 +256,7 @@ textarea.edit-input {
 
 .instruction-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin: 20px 0;
   font-size: 14px;
@@ -266,6 +267,7 @@ textarea.edit-input {
   border: 1px solid #000;
   padding: 6px 8px;
   text-align: left;
+  overflow-wrap: break-word;
 }
 
 .instruction-table th {
@@ -276,6 +278,52 @@ textarea.edit-input {
 .instruction-table td {
   min-height: 28px;
   vertical-align: middle;
+}
+
+/* Column widths: keep date/duration/occupation/material narrow so the
+   signature columns get more room for images/typed names. */
+.col-date {
+  width: 9%;
+}
+
+.col-duration {
+  width: 6%;
+}
+
+.col-occupation {
+  width: 10%;
+}
+
+.col-material {
+  width: 4%;
+}
+
+.col-sig-user,
+.col-sig-instructor {
+  width: 22%;
+}
+
+.col-sig-verifier {
+  width: 21%;
+}
+
+.col-history {
+  width: 6%;
+}
+
+/* SU table has only two signature columns (no verifier), so give them
+   even more of the freed-up width. */
+.col-specialty {
+  width: 11%;
+}
+
+.col-material-wide {
+  width: 10%;
+}
+
+.col-sig-user-wide,
+.col-sig-instructor-wide {
+  width: 29%;
 }
 
 /* Signature thumbnail styling */

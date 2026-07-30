@@ -564,6 +564,18 @@
                   <div class="page">
                     <h2>3. Instruire periodică</h2>
                     <table class="instruction-table">
+                      <colgroup>
+                        <col class="col-date" />
+                        <col class="col-duration" />
+                        <col class="col-occupation" />
+                        <col class="col-material" />
+                        <col class="col-sig-user" />
+                        <col class="col-sig-instructor" />
+                        @if (selectedTab === 'ssm') {
+                          <col class="col-sig-verifier" />
+                        }
+                        <col class="col-history" />
+                      </colgroup>
                       <thead>
                         <tr>
                           <th>Data instruirii</th>
@@ -1079,6 +1091,15 @@
                               <div class="page">
                                 <h2>Instructajul periodic</h2>
                                 <table class="instruction-table">
+                                  <colgroup>
+                                    <col class="col-date" />
+                                    <col class="col-specialty" />
+                                    <col class="col-material-wide" />
+                                    <col class="col-duration" />
+                                    <col class="col-sig-user-wide" />
+                                    <col class="col-sig-instructor-wide" />
+                                    <col class="col-history" />
+                                  </colgroup>
                                   <thead>
                                     <tr>
                                       <th>Data</th>
