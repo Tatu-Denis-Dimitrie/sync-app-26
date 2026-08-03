@@ -8,6 +8,7 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { AuthenticationService, AuthRole } from '../../services/authentication.service';
 import { SignatureVerificationService, SignatureVersionSummary } from '../../services/signature-verification.service';
 import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
+import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 
 interface InitialTrainingEntry {
   documentType: string;
@@ -272,8 +273,40 @@ export class SsmSuFormComponent implements OnInit {
     }
   }
 
+  private optionalNameValid(value?: string): boolean {
+    return !value || isValidName(value);
+  }
+
+  private optionalFunctionValid(value?: string): boolean {
+    return !value || isValidFunction(value);
+  }
+
   saveForm() {
     if (!this.userId) return;
+
+    const nameFields = [
+      this.formData.admittedByName,
+      this.formData.ssmTraining.introductoryTrainingInstructor,
+      this.formData.ssmTraining.workplaceTrainingInstructor,
+      this.formData.suTraining.introductoryTrainingInstructor,
+      this.formData.suTraining.workplaceTrainingInstructor
+    ];
+    if (nameFields.some(v => !this.optionalNameValid(v))) {
+      alert(`Instructor/admitted-by name: ${NAME_ERROR_MESSAGE}`);
+      return;
+    }
+
+    const functionFields = [
+      this.formData.admittedByFunction,
+      this.formData.ssmTraining.introductoryTrainingInstructorFunction,
+      this.formData.ssmTraining.workplaceTrainingInstructorFunction,
+      this.formData.suTraining.introductoryTrainingInstructorFunction,
+      this.formData.suTraining.workplaceTrainingInstructorFunction
+    ];
+    if (functionFields.some(v => !this.optionalFunctionValid(v))) {
+      alert(`Instructor/admitted-by function: ${FUNCTION_ERROR_MESSAGE}`);
+      return;
+    }
 
     this.saving = true;
 

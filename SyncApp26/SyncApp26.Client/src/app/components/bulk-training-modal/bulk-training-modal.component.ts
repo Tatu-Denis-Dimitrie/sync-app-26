@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { SignatureVerificationService } from '../../services/signature-verification.service';
+import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 
 // Endpoint cap on SyncApp26.API/Controllers/Documents/SignatureVerificationController.cs (MaxUsersPerRequest).
 const MAX_VALIDATION_USERS = 200;
@@ -404,6 +405,10 @@ export class BulkTrainingModalComponent implements OnInit, OnDestroy {
     }
     if (this.formData.documentType !== 'SU' && !this.formData.verifierName?.trim()) {
       this.validationMessage = 'Please enter the verifier name (required for SSM documents).';
+      return;
+    }
+    if (this.formData.verifierName?.trim() && !isValidName(this.formData.verifierName.trim())) {
+      this.validationMessage = `Verifier name: ${NAME_ERROR_MESSAGE}`;
       return;
     }
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {

@@ -11,6 +11,7 @@ import { NotificationService } from '../../services/notification.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
+import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 
 interface SignatureStats {
   total: number;
@@ -507,6 +508,11 @@ export class UsersListComponent implements OnInit {
 
   saveUser(): void {
     if (!this.selectedUser) return;
+
+    if (!isValidName(this.editForm.firstName) || !isValidName(this.editForm.lastName)) {
+      this.showToast(`First/last name: ${NAME_ERROR_MESSAGE}`, 'error');
+      return;
+    }
 
     const payload = {
       firstName: this.editForm.firstName,

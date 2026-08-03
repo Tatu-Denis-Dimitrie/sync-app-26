@@ -936,7 +936,7 @@ namespace SyncApp26.Infrastructure.Services
                 c.ConstantColumn(50);   // Data
                 c.ConstantColumn(35);   // Durata
                 c.RelativeColumn(1.0f); // Ocupatia / Specialitatea
-                c.RelativeColumn(3.8f); // Material predat
+                c.RelativeColumn(1.9f); // Material predat
                 c.RelativeColumn(1.2f); // Semnătură instruit
                 c.RelativeColumn(1.2f); // Semnătură instructor
                 if (isSsm) c.RelativeColumn(1.2f); // Semnătură verificator

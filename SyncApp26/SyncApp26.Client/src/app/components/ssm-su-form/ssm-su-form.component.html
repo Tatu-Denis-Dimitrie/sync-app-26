@@ -345,6 +345,7 @@
                             [(ngModel)]="formData.ssmTraining.introductoryTrainingInstructor"
                             class="edit-input"
                             placeholder="Numele instructorului"
+                            maxlength="100"
                             />
                         }
                       </p>
@@ -365,6 +366,7 @@
               "
                             class="edit-input"
                             placeholder="Funcția instructorului"
+                            maxlength="100"
                             />
                         }
                       </p>
@@ -458,6 +460,7 @@
                             [(ngModel)]="formData.ssmTraining.workplaceTrainingInstructor"
                             class="edit-input"
                             placeholder="Numele instructorului"
+                            maxlength="100"
                             />
                         }
                       </p>
@@ -478,6 +481,7 @@
               "
                             class="edit-input"
                             placeholder="Funcția instructorului"
+                            maxlength="100"
                             />
                         }
                       </p>
@@ -522,6 +526,7 @@
                             [(ngModel)]="formData.admittedByName"
                             class="edit-input"
                             placeholder="Numele și prenumele"
+                            maxlength="100"
                             />
                         }
                       </p>
@@ -540,6 +545,7 @@
                             [(ngModel)]="formData.admittedByFunction"
                             class="edit-input"
                             placeholder="Funcția"
+                            maxlength="100"
                             />
                         }
                       </p>
@@ -564,6 +570,18 @@
                   <div class="page">
                     <h2>3. Instruire periodică</h2>
                     <table class="instruction-table">
+                      <colgroup>
+                        <col class="col-date" />
+                        <col class="col-duration" />
+                        <col class="col-occupation" />
+                        <col class="col-material" />
+                        <col class="col-sig-user" />
+                        <col class="col-sig-instructor" />
+                        @if (selectedTab === 'ssm') {
+                          <col class="col-sig-verifier" />
+                        }
+                        <col class="col-history" />
+                      </colgroup>
                       <thead>
                         <tr>
                           <th>Data instruirii</th>
@@ -856,6 +874,7 @@
                                         [(ngModel)]="formData.suTraining.introductoryTrainingInstructor"
                                         class="edit-input"
                                         placeholder="Numele instructorului"
+                                        maxlength="100"
                                         />
                                     }
                                   </p>
@@ -875,6 +894,7 @@
               "
                                         class="edit-input"
                                         placeholder="Funcția"
+                                        maxlength="100"
                                         />
                                     }
                                   </p>
@@ -971,6 +991,7 @@
                                         [(ngModel)]="formData.suTraining.workplaceTrainingInstructor"
                                         class="edit-input"
                                         placeholder="Numele instructorului"
+                                        maxlength="100"
                                         />
                                     }
                                   </p>
@@ -991,6 +1012,7 @@
               "
                                         class="edit-input"
                                         placeholder="Funcția instructorului"
+                                        maxlength="100"
                                         />
                                     }
                                   </p>
@@ -1037,6 +1059,7 @@
                                         [(ngModel)]="formData.admittedByName"
                                         class="edit-input"
                                         placeholder="Numele și prenumele"
+                                        maxlength="100"
                                         />
                                     }
                                   </p>
@@ -1055,6 +1078,7 @@
                                         [(ngModel)]="formData.admittedByFunction"
                                         class="edit-input"
                                         placeholder="Funcția"
+                                        maxlength="100"
                                         />
                                     }
                                   </p>
@@ -1079,6 +1103,15 @@
                               <div class="page">
                                 <h2>Instructajul periodic</h2>
                                 <table class="instruction-table">
+                                  <colgroup>
+                                    <col class="col-date" />
+                                    <col class="col-specialty" />
+                                    <col class="col-material-wide" />
+                                    <col class="col-duration" />
+                                    <col class="col-sig-user-wide" />
+                                    <col class="col-sig-instructor-wide" />
+                                    <col class="col-history" />
+                                  </colgroup>
                                   <thead>
                                     <tr>
                                       <th>Data</th>
