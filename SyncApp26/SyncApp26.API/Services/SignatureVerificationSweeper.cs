@@ -4,8 +4,11 @@ using SyncApp26.Infrastructure.Context;
 
 namespace SyncApp26.API.Services
 {
+    /// <summary>One anomalous signature found during a sweep, for building admin alerts.</summary>
+    public sealed record SweepAnomaly(Guid SignatureId, Guid SignerUserId, string Status);
+
     /// <summary>Outcome of one full sweep, for logging and for tests to assert on.</summary>
-    public sealed record SweepSummary(int RecordsChecked, int AnomaliesFound, int BatchesFailed);
+    public sealed record SweepSummary(int RecordsChecked, int AnomaliesFound, int BatchesFailed, IReadOnlyList<SweepAnomaly> Anomalies);
 
     /// <summary>
     /// Read-only safety-net sweep: walks every SignatureRecord in fixed-size pages, recomputes each
@@ -32,12 +35,15 @@ namespace SyncApp26.API.Services
             _pageSize = pageSize;
         }
 
+        private const int MaxAnomaliesReported = 20;
+
         public async Task<SweepSummary> RunAsync(CancellationToken cancellationToken)
         {
             var recordsChecked = 0;
             var anomaliesFound = 0;
             var batchesFailed = 0;
             var offset = 0;
+            var anomalies = new List<SweepAnomaly>();
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -67,6 +73,13 @@ namespace SyncApp26.API.Services
                             _logger.LogWarning(
                                 "Signature sweep found {Status} signature {SignatureId} by signer {SignerUserId}.",
                                 status.Status, status.SignatureId, status.SignerUserId);
+
+                            // Capped so a mass-anomaly event can't blow up the admin alert email; the
+                            // full count is still reflected in anomaliesFound and every one is logged above.
+                            if (anomalies.Count < MaxAnomaliesReported)
+                            {
+                                anomalies.Add(new SweepAnomaly(status.SignatureId, status.SignerUserId, status.Status));
+                            }
                         }
                     }
                 }
@@ -84,7 +97,7 @@ namespace SyncApp26.API.Services
                 "Signature sweep complete: {RecordsChecked} checked, {AnomaliesFound} anomalies, {BatchesFailed} batches failed.",
                 recordsChecked, anomaliesFound, batchesFailed);
 
-            return new SweepSummary(recordsChecked, anomaliesFound, batchesFailed);
+            return new SweepSummary(recordsChecked, anomaliesFound, batchesFailed, anomalies);
         }
     }
 }

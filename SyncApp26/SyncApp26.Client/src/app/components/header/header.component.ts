@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthenticationService, User, AuthRole, authRoleLabel } from '../../services/authentication.service';
 import { DocumentSignatureService } from '../../services/document-signature.service';
-import { UserSyncSignalrService } from '../../services/user-sync.signalr.service';
+import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/user-sync.signalr.service';
 import { filter, Subscription } from 'rxjs';
 
 @Component({
@@ -21,10 +21,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isAdmin = false;
   isMenuOpen = false;
   isProfileOpen = false;
+  isAnomalyPopoverOpen = false;
   isScrolled = false;
   pendingSignatureCount = 0;
+  anomalyAlert: SignatureAnomalyAlert | null = null;
   private routerSubscription!: Subscription;
   private signatureCountSubscription!: Subscription;
+  private anomalyAlertSubscription!: Subscription;
 
   constructor(
     private authService: AuthenticationService,
@@ -42,6 +45,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     ).subscribe(() => {
       this.isMenuOpen = false;
       this.isProfileOpen = false;
+      this.isAnomalyPopoverOpen = false;
       this.checkAuthStatus();
       if (this.isAdmin) {
         this.loadPendingSignatureCount();
@@ -58,6 +62,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
       );
       this.loadPendingSignatureCount();
       this.documentSignatureService.startPollingPendingDocuments(30000);
+
+      this.anomalyAlertSubscription = this.signalrService.signatureAnomalyAlert$.subscribe(
+        alert => this.anomalyAlert = alert
+      );
     }
   }
 
@@ -68,6 +76,22 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (this.signatureCountSubscription) {
       this.signatureCountSubscription.unsubscribe();
     }
+    if (this.anomalyAlertSubscription) {
+      this.anomalyAlertSubscription.unsubscribe();
+    }
+  }
+
+  toggleAnomalyPopover(): void {
+    this.isAnomalyPopoverOpen = !this.isAnomalyPopoverOpen;
+    if (this.isAnomalyPopoverOpen) {
+      this.isProfileOpen = false;
+      this.isMenuOpen = false;
+    }
+  }
+
+  dismissAnomalyAlert(): void {
+    this.anomalyAlert = null;
+    this.isAnomalyPopoverOpen = false;
   }
 
   checkAuthStatus(): void {
@@ -84,12 +108,18 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   toggleMenu(): void {
     this.isMenuOpen = !this.isMenuOpen;
-    if (this.isMenuOpen) this.isProfileOpen = false;
+    if (this.isMenuOpen) {
+      this.isProfileOpen = false;
+      this.isAnomalyPopoverOpen = false;
+    }
   }
 
   toggleProfile(): void {
     this.isProfileOpen = !this.isProfileOpen;
-    if (this.isProfileOpen) this.isMenuOpen = false;
+    if (this.isProfileOpen) {
+      this.isMenuOpen = false;
+      this.isAnomalyPopoverOpen = false;
+    }
   }
 
   logout(): void {
@@ -99,6 +129,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isAdmin = false;
     this.isMenuOpen = false;
     this.isProfileOpen = false;
+    this.isAnomalyPopoverOpen = false;
   }
 
   getUserInitials(): string {

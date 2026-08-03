@@ -9,5 +9,6 @@ namespace SyncApp26.API.Services
         Task SendDocumentSignatureEmailForRegisteredUserAsync(string toEmail, string documentName, string loginLink);
         Task SendMissingSignatureToUserEmailAsync(string toEmail, string firstName, string documentName, DateTime? trainingDate, string? signLink = null);
         Task SendMissingSignatureToManagerEmailAsync(string toEmail, string managerName, string documentName, int unsignedCount);
+        Task SendSignatureAnomalyAlertEmailAsync(string toEmail, string adminName, int recordsChecked, int anomaliesFound, IReadOnlyList<SweepAnomaly> anomalies);
     }
 }
