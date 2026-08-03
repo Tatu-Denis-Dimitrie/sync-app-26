@@ -93,6 +93,7 @@ builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
 builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();
+builder.Services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
 
 // Background Services
 builder.Services.AddHostedService<DepartmentCleanupService>();
