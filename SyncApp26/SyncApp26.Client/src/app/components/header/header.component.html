@@ -81,6 +81,36 @@
 
         <div class="flex items-center gap-2 sm:gap-4">
           @if (isLoggedIn) {
+            @if (isAdmin && anomalyAlert) {
+              <div class="relative">
+                <button (click)="toggleAnomalyPopover()"
+                  class="relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 transition-all hover:bg-white/10 focus:outline-none backdrop-blur-sm"
+                  [ngClass]="{'h-8 w-8': isScrolled}"
+                  [class.ring-2]="isAnomalyPopoverOpen" [class.ring-destructive]="isAnomalyPopoverOpen">
+                  <svg class="h-5 w-5 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  <span
+                    class="signature-badge absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {{ anomalyAlert.anomaliesFound }}
+                  </span>
+                </button>
+                @if (isAnomalyPopoverOpen) {
+                  <div
+                    class="absolute left-1/2 -ml-36 mt-2 w-72 origin-top rounded-2xl border border-white/10 bg-background/95 p-4 shadow-xl backdrop-blur-2xl animate-in fade-in zoom-in duration-200">
+                    <p class="text-sm font-semibold tracking-tight mb-1">Signature integrity alert</p>
+                    <p class="text-xs leading-relaxed text-muted-foreground mb-3">
+                      {{ anomalyAlert.anomaliesFound }} of {{ anomalyAlert.recordsChecked }} checked signatures were flagged. Full breakdown sent to your inbox.
+                    </p>
+                    <button (click)="dismissAnomalyAlert()"
+                      class="w-full rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-foreground transition-all hover:bg-white/10">
+                      Got it
+                    </button>
+                  </div>
+                }
+              </div>
+            }
             <div class="relative">
               <button (click)="toggleProfile()"
                 class="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-1 pl-3 transition-all hover:bg-white/10 focus:outline-none backdrop-blur-sm"

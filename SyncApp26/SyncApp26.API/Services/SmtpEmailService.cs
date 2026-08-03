@@ -269,5 +269,84 @@ namespace SyncApp26.API.Services
 
             await SendEmailAsync(toEmail, subject, html.ToString());
         }
+
+        public async Task SendSignatureAnomalyAlertEmailAsync(string toEmail, string adminName, int recordsChecked, int anomaliesFound, IReadOnlyList<SweepAnomaly> anomalies)
+        {
+            var subject = $"SyncApp26 Security Alert — {anomaliesFound} signature {(anomaliesFound == 1 ? "anomaly needs" : "anomalies need")} review";
+
+            var encodedAdminName = WebUtility.HtmlEncode(adminName);
+
+            var html = new StringBuilder();
+            html.Append("<!doctype html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Signature Verification Alert</title></head>");
+            html.Append("<body style='margin:0;padding:0;background:#f3f4f6;font-family:Segoe UI,Arial,sans-serif;color:#111827;'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='background:#f3f4f6;padding:24px 12px;'><tr><td align='center'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;'>");
+            html.Append("<tr><td style='padding:20px 28px;background:linear-gradient(135deg,#09637E 0%,#088395 100%);'>");
+            html.Append("<h1 style='margin:0;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-.01em;'>SyncApp26</h1>");
+            html.Append("</td></tr><tr><td style='padding:28px 28px 26px;'>");
+
+            // Icon + headline lockup carries the "this is a security alert" signal on its own,
+            // so the header above can stay calm brand color instead of a wall of red.
+            html.Append("<table role='presentation' cellspacing='0' cellpadding='0' style='margin:0 0 20px;'><tr>");
+            html.Append("<td style='padding-right:14px;' valign='middle'>");
+            html.Append("<div style='width:44px;height:44px;border-radius:9999px;background:#fee2e2;text-align:center;line-height:44px;'><span style='font-size:20px;font-weight:800;color:#dc2626;'>!</span></div>");
+            html.Append("</td><td valign='middle'>");
+            html.Append("<p style='margin:0;font-size:17px;font-weight:700;color:#111827;line-height:1.3;'>Signature integrity issue detected</p>");
+            html.Append("<p style='margin:2px 0 0;font-size:12px;color:#6b7280;'>Automated verification sweep</p>");
+            html.Append("</td></tr></table>");
+
+            html.Append($"<p style='margin:0 0 12px;font-size:16px;line-height:1.5;'>Hello <strong>{encodedAdminName}</strong>,</p>");
+            html.Append("<p style='margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;'>Our scheduled signature-integrity sweep just finished its pass across the system. Most records checked out clean, but a few no longer match their original cryptographic record:</p>");
+
+            // Two stat cards side by side read faster than a sentence full of numbers.
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='margin:0 0 20px;'><tr>");
+            html.Append("<td width='50%' style='padding-right:6px;'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;'><tr><td align='center' style='padding:14px 8px;'>");
+            html.Append($"<div style='font-size:28px;font-weight:700;color:#111827;line-height:1.2;'>{recordsChecked}</div>");
+            html.Append("<div style='font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;'>Checked</div>");
+            html.Append("</td></tr></table></td>");
+            html.Append("<td width='50%' style='padding-left:6px;'>");
+            html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='background:#fef2f2;border:1px solid #fecaca;border-radius:10px;'><tr><td align='center' style='padding:14px 8px;'>");
+            html.Append($"<div style='font-size:28px;font-weight:700;color:#be123c;line-height:1.2;'>{anomaliesFound}</div>");
+            html.Append("<div style='font-size:11px;font-weight:600;color:#be123c;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;'>Flagged</div>");
+            html.Append("</td></tr></table></td>");
+            html.Append("</tr></table>");
+
+            if (anomalies.Count > 0)
+            {
+                html.Append("<table role='presentation' width='100%' cellspacing='0' cellpadding='0' style='margin:0 0 18px;border-collapse:collapse;font-size:13px;'>");
+                html.Append("<tr style='background:#f9fafb;'><th align='left' style='padding:8px 6px;border-bottom:1px solid #e5e7eb;'>Signature ID</th><th align='left' style='padding:8px 6px;border-bottom:1px solid #e5e7eb;'>Signer User ID</th><th align='left' style='padding:8px 6px;border-bottom:1px solid #e5e7eb;'>Status</th></tr>");
+                for (var i = 0; i < anomalies.Count; i++)
+                {
+                    var anomaly = anomalies[i];
+                    var rowBackground = i % 2 == 0 ? "#ffffff" : "#f9fafb";
+                    var (pillBackground, pillColor) = anomaly.Status switch
+                    {
+                        "Invalid" => ("#fee2e2", "#b91c1c"),
+                        "ChainBroken" => ("#ffedd5", "#c2410c"),
+                        _ => ("#e5e7eb", "#374151")
+                    };
+
+                    html.Append($"<tr style='background:{rowBackground};'>");
+                    html.Append($"<td style='padding:8px 6px;border-bottom:1px solid #f3f4f6;color:#374151;'>{WebUtility.HtmlEncode(anomaly.SignatureId.ToString())}</td>");
+                    html.Append($"<td style='padding:8px 6px;border-bottom:1px solid #f3f4f6;color:#374151;'>{WebUtility.HtmlEncode(anomaly.SignerUserId.ToString())}</td>");
+                    html.Append($"<td style='padding:8px 6px;border-bottom:1px solid #f3f4f6;'><span style='display:inline-block;padding:2px 9px;border-radius:9999px;font-size:11px;font-weight:600;background:{pillBackground};color:{pillColor};'>{WebUtility.HtmlEncode(anomaly.Status)}</span></td>");
+                    html.Append("</tr>");
+                }
+                html.Append("</table>");
+
+                if (anomaliesFound > anomalies.Count)
+                {
+                    html.Append($"<p style='margin:0 0 8px;font-size:13px;line-height:1.6;color:#6b7280;'>Showing the first {anomalies.Count} of {anomaliesFound} anomalies. Check the server logs for the full list.</p>");
+                }
+            }
+
+            html.Append("<p style='margin:0;font-size:13px;line-height:1.6;color:#6b7280;'>These signatures no longer match their original cryptographic record — treat them as unverified until someone confirms what happened.</p>");
+            html.Append("</td></tr><tr><td style='padding:14px 28px 24px;border-top:1px solid #e5e7eb;'>");
+            html.Append("<p style='margin:0;font-size:12px;color:#9ca3af;'>SyncApp26 - SSM and SU Digitalization Platform</p>");
+            html.Append("</td></tr></table></td></tr></table></body></html>");
+
+            await SendEmailAsync(toEmail, subject, html.ToString());
+        }
     }
 }

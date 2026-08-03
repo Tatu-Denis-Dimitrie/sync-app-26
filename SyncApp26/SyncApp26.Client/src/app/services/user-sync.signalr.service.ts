@@ -15,6 +15,12 @@ export interface SyncProgressUpdate {
     skipped: number;
 }
 
+export interface SignatureAnomalyAlert {
+    anomaliesFound: number;
+    recordsChecked: number;
+    occurredAt: string;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -25,6 +31,7 @@ export class UserSyncSignalrService {
     public comparisonResult$ = new Subject<UserComparison>();
     public syncProgress$ = new Subject<SyncProgressUpdate>();
     public signatureUpdated$ = new Subject<void>();
+    public signatureAnomalyAlert$ = new Subject<SignatureAnomalyAlert>();
     public connectionId$ = new BehaviorSubject<string | null>(null);
 
     constructor() { }
@@ -75,6 +82,10 @@ export class UserSyncSignalrService {
 
         this.hubConnection.on('SignatureUpdated', () => {
             this.signatureUpdated$.next();
+        });
+
+        this.hubConnection.on('SignatureAnomalyAlert', (data: SignatureAnomalyAlert) => {
+            this.signatureAnomalyAlert$.next(data);
         });
     }
 

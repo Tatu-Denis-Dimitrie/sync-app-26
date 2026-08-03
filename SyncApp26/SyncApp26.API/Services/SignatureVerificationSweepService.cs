@@ -1,3 +1,8 @@
+using Microsoft.AspNetCore.SignalR;
+using SyncApp26.API.Hubs;
+using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
+
 namespace SyncApp26.API.Services
 {
     /// <summary>
@@ -15,15 +20,18 @@ namespace SyncApp26.API.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<SignatureVerificationSweepService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IHubContext<SyncHub> _hubContext;
 
         public SignatureVerificationSweepService(
             IServiceProvider serviceProvider,
             ILogger<SignatureVerificationSweepService> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IHubContext<SyncHub> hubContext)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
             _configuration = configuration;
+            _hubContext = hubContext;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -52,11 +60,12 @@ namespace SyncApp26.API.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
+                SweepSummary? summary = null;
                 try
                 {
                     using var scope = _serviceProvider.CreateScope();
                     var sweeper = scope.ServiceProvider.GetRequiredService<SignatureVerificationSweeper>();
-                    await sweeper.RunAsync(stoppingToken);
+                    summary = await sweeper.RunAsync(stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -65,6 +74,49 @@ namespace SyncApp26.API.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Signature Verification Sweep run failed.");
+                }
+
+                // Kept in its own try/catch so a failure emailing admins (e.g. SMTP down) never gets
+                // conflated with a sweep failure above, and never breaks the scheduling loop.
+                if (summary is { AnomaliesFound: > 0 })
+                {
+                    try
+                    {
+                        using var scope = _serviceProvider.CreateScope();
+                        var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+                        var admins = (await userService.GetAllUsersAsync()).Where(u => u.Role == UserRole.Admin);
+                        foreach (var admin in admins)
+                        {
+                            await emailService.SendSignatureAnomalyAlertEmailAsync(
+                                admin.Email,
+                                $"{admin.FirstName} {admin.LastName}",
+                                summary.RecordsChecked,
+                                summary.AnomaliesFound,
+                                summary.Anomalies);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send signature anomaly alert email(s) to admins.");
+                    }
+
+                    // Separate try/catch from the email step above: a live-UI broadcast failure
+                    // (e.g. no clients connected) is independent of whether the email alert succeeded.
+                    try
+                    {
+                        await _hubContext.Clients.All.SendAsync("SignatureAnomalyAlert", new
+                        {
+                            anomaliesFound = summary.AnomaliesFound,
+                            recordsChecked = summary.RecordsChecked,
+                            occurredAt = DateTimeOffset.UtcNow
+                        }, stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to broadcast signature anomaly alert.");
+                    }
                 }
 
                 try
