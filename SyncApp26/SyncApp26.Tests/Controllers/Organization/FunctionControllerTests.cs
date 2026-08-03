@@ -3,6 +3,7 @@ using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Shared.DTOs.Request.Organization;
 using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Controllers.Organization
@@ -50,7 +51,7 @@ namespace SyncApp26.Tests.Controllers.Organization
         {
             var controller = CreateController();
 
-            var result = await controller.AddFunction("Electrician");
+            var result = await controller.AddFunction(new FunctionRequestDTO { Name = "Electrician" });
 
             Assert.IsType<OkResult>(result);
             _functionServiceMock.Verify(s => s.AddFunctionAsync("Electrician"), Times.Once);

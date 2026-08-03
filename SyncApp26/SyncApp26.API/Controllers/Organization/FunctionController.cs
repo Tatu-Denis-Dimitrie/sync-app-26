@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Shared.DTOs.Request.Organization;
 
 namespace SyncApp26.API.Controllers
 {
@@ -33,9 +34,9 @@ namespace SyncApp26.API.Controllers
 
         [HttpPost]
         [Authorize(Roles = Roles.Admin)]
-        public async Task<IActionResult> AddFunction([FromBody] string functionName)
+        public async Task<IActionResult> AddFunction([FromBody] FunctionRequestDTO request)
         {
-            await _functionService.AddFunctionAsync(functionName);
+            await _functionService.AddFunctionAsync(request.Name);
             return Ok();
         }
 

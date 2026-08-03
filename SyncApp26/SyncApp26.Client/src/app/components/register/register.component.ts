@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthenticationService, RegisterRequest } from '../../services/authentication.service';
+import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 
 @Component({
   selector: 'app-register',
@@ -32,6 +33,11 @@ export class RegisterComponent {
 
     if (!this.firstName || !this.lastName || !this.email || !this.password || !this.confirmPassword) {
       this.errorMessage = 'Please fill in all fields';
+      return;
+    }
+
+    if (!isValidName(this.firstName) || !isValidName(this.lastName)) {
+      this.errorMessage = `First/last name: ${NAME_ERROR_MESSAGE}`;
       return;
     }
 

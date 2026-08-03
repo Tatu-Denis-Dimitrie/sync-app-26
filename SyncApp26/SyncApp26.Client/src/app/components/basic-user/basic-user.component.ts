@@ -11,6 +11,7 @@ import { DataChangeRequestService } from '../../services/data-change-request.ser
 import { User, UserRole } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
+import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 
 @Component({
@@ -368,6 +369,20 @@ export class BasicUserComponent implements OnInit {
         return;
       }
     }
+
+    if (
+      (actualChanges['FirstName'] && !isValidName(actualChanges['FirstName'])) ||
+      (actualChanges['LastName'] && !isValidName(actualChanges['LastName']))
+    ) {
+      this.dataChangeError = `First/last name: ${NAME_ERROR_MESSAGE}`;
+      return;
+    }
+
+    if (actualChanges['Function'] && !isValidFunction(actualChanges['Function'])) {
+      this.dataChangeError = `Function: ${FUNCTION_ERROR_MESSAGE}`;
+      return;
+    }
+
     if (!this.dataChangeReason.trim()) {
       this.dataChangeError = 'Please provide a reason for the change.';
       return;

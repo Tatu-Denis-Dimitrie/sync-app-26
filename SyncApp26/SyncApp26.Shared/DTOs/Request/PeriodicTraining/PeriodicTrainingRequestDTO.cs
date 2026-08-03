@@ -1,4 +1,6 @@
 using System;
+using System.ComponentModel.DataAnnotations;
+using SyncApp26.Shared.Validation;
 
 namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
 {
@@ -7,10 +9,16 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
         public Guid UserId { get; set; }
         public DateTime? TrainingDate { get; set; }
         public decimal? DurationHours { get; set; }
+
+        [StringLength(NameValidationConstants.FunctionMaxLength)]
         public string? Occupation { get; set; }
+
         public string? MaterialTaught { get; set; }
         /// <summary>Linked instructor account — the person who will be asked to sign this training.</summary>
         public Guid InstructorId { get; set; }
+
+        [StringLength(NameValidationConstants.NameMaxLength)]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).")]
         public string? VerifierName { get; set; }
     }
 
@@ -18,10 +26,16 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
     {
         public DateTime? TrainingDate { get; set; }
         public decimal? DurationHours { get; set; }
+
+        [StringLength(NameValidationConstants.FunctionMaxLength)]
         public string? Occupation { get; set; }
+
         public string? MaterialTaught { get; set; }
         /// <summary>Linked instructor account — the person who will be asked to sign this training.</summary>
         public Guid InstructorId { get; set; }
+
+        [StringLength(NameValidationConstants.NameMaxLength)]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).")]
         public string? VerifierName { get; set; }
     }
 }
