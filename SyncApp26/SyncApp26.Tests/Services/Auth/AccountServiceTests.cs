@@ -12,9 +12,10 @@ namespace SyncApp26.Tests.Services.Auth
         private readonly Mock<IUserService> _userServiceMock = new();
         private readonly Mock<IAuthenticationService> _authenticationServiceMock = new();
         private readonly Mock<ITokenService> _tokenServiceMock = new();
+        private readonly Mock<IGoogleTokenValidator> _googleTokenValidatorMock = new();
 
         private AccountService CreateService() =>
-            new(_userServiceMock.Object, _authenticationServiceMock.Object, _tokenServiceMock.Object);
+            new(_userServiceMock.Object, _authenticationServiceMock.Object, _tokenServiceMock.Object, _googleTokenValidatorMock.Object);
 
         private static RegisterUserRequestDTO ValidRegisterRequest() => new()
         {
@@ -270,6 +271,118 @@ namespace SyncApp26.Tests.Services.Auth
             Assert.Equal(userId, result.UserId);
         }
 
+        // ───────────────────────── AuthenticateWithGoogleAsync ─────────────────────────
+
+        [Fact]
+        public async Task AuthenticateWithGoogleAsync_InvalidToken_ReturnsInvalidCredentials()
+        {
+            var service = CreateService();
+            _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>())).ReturnsAsync((GoogleTokenPayload?)null);
+
+            var result = await service.AuthenticateWithGoogleAsync("bad-token");
+
+            Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+            _userServiceMock.Verify(s => s.GetUserByEmailAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithGoogleAsync_GoogleEmailNotVerified_ReturnsGoogleEmailNotVerified()
+        {
+            var service = CreateService();
+            _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new GoogleTokenPayload { Email = "a@b.com", EmailVerified = false });
+
+            var result = await service.AuthenticateWithGoogleAsync("token");
+
+            Assert.Equal(LoginStatus.GoogleEmailNotVerified, result.Status);
+            _userServiceMock.Verify(s => s.GetUserByEmailAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithGoogleAsync_UnknownEmail_ReturnsNoAccountForEmailAndCreatesNoUser()
+        {
+            var service = CreateService();
+            _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new GoogleTokenPayload { Email = "unknown@example.com", EmailVerified = true });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("unknown@example.com")).ReturnsAsync((User?)null);
+
+            var result = await service.AuthenticateWithGoogleAsync("token");
+
+            Assert.Equal(LoginStatus.NoAccountForEmail, result.Status);
+            _userServiceMock.Verify(s => s.AddUserAsync(It.IsAny<User>()), Times.Never);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<UserRole>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithGoogleAsync_ExistingUserWithPassword_ReturnsSuccessAndLeavesPasswordHashIntact()
+        {
+            var service = CreateService();
+            var userId = Guid.NewGuid();
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hashed" };
+            _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new GoogleTokenPayload { Email = "a@b.com", EmailVerified = true });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+
+            var result = await service.AuthenticateWithGoogleAsync("token");
+
+            Assert.Equal(LoginStatus.Success, result.Status);
+            Assert.Equal("jwt-token", result.Token);
+            Assert.Equal("hashed", user.PasswordHash);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithGoogleAsync_UserWithNullIsEmailVerified_ReturnsSuccess()
+        {
+            // Users provisioned via CSV sync or admin creation never have IsEmailVerified set
+            // (it stays null) — this is the population Google sign-in targets. Regression guard
+            // for accidentally reintroducing an IsEmailVerified gate on this path.
+            var service = CreateService();
+            var userId = Guid.NewGuid();
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = null, IsEmailVerified = null };
+            _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new GoogleTokenPayload { Email = "a@b.com", EmailVerified = true });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+
+            var result = await service.AuthenticateWithGoogleAsync("token");
+
+            Assert.Equal(LoginStatus.Success, result.Status);
+            Assert.Equal("jwt-token", result.Token);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithGoogleAsync_NormalizesEmailBeforeLookup()
+        {
+            var service = CreateService();
+            _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new GoogleTokenPayload { Email = "  John.Doe@Example.com  ", EmailVerified = true });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("john.doe@example.com")).ReturnsAsync((User?)null);
+
+            await service.AuthenticateWithGoogleAsync("token");
+
+            _userServiceMock.Verify(s => s.GetUserByEmailAsync("john.doe@example.com"), Times.Once);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithGoogleAsync_ReturnsIdentityFromDatabaseNotGoogle()
+        {
+            var service = CreateService();
+            var userId = Guid.NewGuid();
+            var user = new User { Id = userId, FirstName = "DbFirst", LastName = "DbLast", Email = "a@b.com", PersonalId = "1", Role = UserRole.LineManager };
+            _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new GoogleTokenPayload { Email = "a@b.com", EmailVerified = true });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.LineManager)).ReturnsAsync("jwt-token");
+
+            var result = await service.AuthenticateWithGoogleAsync("token");
+
+            Assert.Equal("DbFirst", result.FirstName);
+            Assert.Equal("DbLast", result.LastName);
+            Assert.Equal(UserRole.LineManager, result.Role);
+        }
+
         // ───────────────────────── RequestPasswordResetAsync ─────────────────────────
 
         [Fact]
@@ -383,6 +496,40 @@ namespace SyncApp26.Tests.Services.Auth
             var result = await service.ResetPasswordAsync("a@b.com", "correct-token", "Str0ng!Pass");
 
             Assert.False(result.Success);
+        }
+
+        [Fact]
+        public async Task ResetPasswordAsync_UserWithNullPasswordHash_DoesNotCallVerifyPassword()
+        {
+            // Google-only users (provisioned via CSV sync / admin creation, never having set a
+            // password) can reach this endpoint via the "Forgot Password?" link on the login
+            // card. PasswordHash is null for them, and the old code called
+            // VerifyPasswordAsync(newPassword, user.PasswordHash!) unguarded — which, against
+            // the real BCrypt-backed AuthenticationService (not this mock), throws instead of
+            // failing gracefully. Asserting Times.Never on VerifyPasswordAsync proves the guard
+            // short-circuits before that call is ever made, regardless of what the mock itself
+            // would do with a null argument.
+            var service = CreateService();
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                FirstName = "A",
+                LastName = "B",
+                Email = "a@b.com",
+                PersonalId = "1",
+                Role = UserRole.BasicUser,
+                PasswordHash = null,
+                PasswordResetToken = "correct-token",
+                PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(10)
+            };
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
+            _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("new-hash");
+
+            var result = await service.ResetPasswordAsync("a@b.com", "correct-token", "Str0ng!Pass");
+
+            Assert.True(result.Success);
+            Assert.Equal("new-hash", user.PasswordHash);
+            _authenticationServiceMock.Verify(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]

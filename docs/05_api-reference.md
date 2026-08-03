@@ -57,6 +57,19 @@ Response:
 - 200: { message, token, user }
 	- user: { id, email, firstName, lastName, role }
 
+### POST /authentication/google-login
+Signs in with a Google ID token. Link-only: succeeds only if the token's email already belongs to
+an existing user (created via CSV sync or by an admin). Never creates a new user.
+
+Request body (GoogleLoginRequestDTO):
+- idToken (string, required) — the ID token returned by Google Identity Services
+
+Response:
+- 200: { message, token, user } — identical shape to /authentication/login
+	- user: { id, email, firstName, lastName, role }
+- 400: { message } — idToken missing
+- 401: { message } — invalid/expired token, Google email not verified, or no account exists for that email
+
 ### POST /authentication/forgot-password
 Request body (ForgotPasswordRequestDTO):
 - email (string, required)

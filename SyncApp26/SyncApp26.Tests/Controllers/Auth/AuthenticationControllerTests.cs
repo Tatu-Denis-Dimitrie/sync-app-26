@@ -239,6 +239,113 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.Equal(500, statusResult.StatusCode);
         }
 
+        // ───────────────────────── GoogleLogin ─────────────────────────
+
+        [Fact]
+        public async Task GoogleLogin_MissingIdToken_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+
+            var result = await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "" });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+            _accountServiceMock.Verify(s => s.AuthenticateWithGoogleAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GoogleLogin_InvalidToken_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync(It.IsAny<string>()))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.InvalidCredentials });
+
+            var result = await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "bad-token" });
+
+            var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
+            Assert.Contains("Invalid or expired", unauthorized.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task GoogleLogin_GoogleEmailNotVerified_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync(It.IsAny<string>()))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.GoogleEmailNotVerified });
+
+            var result = await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "token" });
+
+            var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
+            Assert.Contains("not verified", unauthorized.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task GoogleLogin_NoAccountForEmail_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync(It.IsAny<string>()))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.NoAccountForEmail });
+
+            var result = await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "token" });
+
+            var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
+            Assert.Contains("No SyncApp26 account", unauthorized.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task GoogleLogin_DistinctFailureMessages()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync("invalid"))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.InvalidCredentials });
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync("unverified"))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.GoogleEmailNotVerified });
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync("unknown"))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.NoAccountForEmail });
+
+            var invalid = Assert.IsType<UnauthorizedObjectResult>(await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "invalid" }));
+            var unverified = Assert.IsType<UnauthorizedObjectResult>(await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "unverified" }));
+            var unknown = Assert.IsType<UnauthorizedObjectResult>(await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "unknown" }));
+
+            Assert.NotEqual(invalid.Value!.ToString(), unverified.Value!.ToString());
+            Assert.NotEqual(unverified.Value!.ToString(), unknown.Value!.ToString());
+            Assert.NotEqual(invalid.Value!.ToString(), unknown.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task GoogleLogin_Success_ReturnsTokenAndUserInfo()
+        {
+            var controller = CreateController();
+            var userId = Guid.NewGuid();
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync(It.IsAny<string>()))
+                .ReturnsAsync(new LoginResult
+                {
+                    Status = LoginStatus.Success,
+                    Token = "jwt-token",
+                    UserId = userId,
+                    Email = "a@b.com",
+                    FirstName = "A",
+                    LastName = "B",
+                    Role = UserRole.BasicUser
+                });
+
+            var result = await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "good-token" });
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GoogleLogin_UnexpectedException_Returns500()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithGoogleAsync(It.IsAny<string>()))
+                .ThrowsAsync(new Exception("boom"));
+
+            var result = await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "token" });
+
+            var statusResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(500, statusResult.StatusCode);
+        }
+
         // ───────────────────────── ForgotPassword ─────────────────────────
 
         [Fact]

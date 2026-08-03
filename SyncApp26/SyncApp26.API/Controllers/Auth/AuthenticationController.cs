@@ -114,6 +114,44 @@ namespace SyncApp26.API.Controllers
             }
         }
 
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDTO request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.IdToken))
+                {
+                    return BadRequest(new { message = "Google ID token is required." });
+                }
+
+                var result = await _accountService.AuthenticateWithGoogleAsync(request.IdToken);
+
+                return result.Status switch
+                {
+                    LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Google sign-in. Please try again." }),
+                    LoginStatus.GoogleEmailNotVerified => Unauthorized(new { message = "Your Google account email is not verified. Verify it with Google and try again." }),
+                    LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Google email. Contact an administrator." }),
+                    _ => Ok(new
+                    {
+                        message = "Login successful.",
+                        token = result.Token,
+                        user = new
+                        {
+                            id = result.UserId,
+                            email = result.Email,
+                            firstName = result.FirstName,
+                            lastName = result.LastName,
+                            role = result.Role
+                        }
+                    })
+                };
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+            }
+        }
+
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {

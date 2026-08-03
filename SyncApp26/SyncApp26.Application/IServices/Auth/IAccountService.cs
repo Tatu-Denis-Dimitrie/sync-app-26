@@ -29,7 +29,9 @@ namespace SyncApp26.Application.IServices
     {
         InvalidCredentials,
         EmailNotVerified,
-        Success
+        Success,
+        GoogleEmailNotVerified,
+        NoAccountForEmail
     }
 
     public class LoginResult
@@ -63,6 +65,7 @@ namespace SyncApp26.Application.IServices
         Task<AccountActionResult<RegisteredAccountDTO>> RegisterAsync(RegisterUserRequestDTO request);
         Task<EmailVerificationResult> VerifyEmailAsync(string email, string token);
         Task<LoginResult> AuthenticateAsync(string email, string password);
+        Task<LoginResult> AuthenticateWithGoogleAsync(string idToken);
         Task<AccountActionResult<PasswordResetRequestedDTO>> RequestPasswordResetAsync(string email);
         Task<AccountActionResult<bool>> ResetPasswordAsync(string email, string token, string newPassword);
     }

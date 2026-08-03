@@ -14,12 +14,14 @@ namespace SyncApp26.Application.Services
         private readonly IUserService _userService;
         private readonly IAuthenticationService _authenticationService;
         private readonly ITokenService _tokenService;
+        private readonly IGoogleTokenValidator _googleTokenValidator;
 
-        public AccountService(IUserService userService, IAuthenticationService authenticationService, ITokenService tokenService)
+        public AccountService(IUserService userService, IAuthenticationService authenticationService, ITokenService tokenService, IGoogleTokenValidator googleTokenValidator)
         {
             _userService = userService;
             _authenticationService = authenticationService;
             _tokenService = tokenService;
+            _googleTokenValidator = googleTokenValidator;
         }
 
         private static string? ValidatePasswordFormat(string password)
@@ -168,6 +170,47 @@ namespace SyncApp26.Application.Services
             };
         }
 
+        public async Task<LoginResult> AuthenticateWithGoogleAsync(string idToken)
+        {
+            var payload = await _googleTokenValidator.ValidateAsync(idToken);
+            if (payload == null || string.IsNullOrWhiteSpace(payload.Email))
+            {
+                return new LoginResult { Status = LoginStatus.InvalidCredentials };
+            }
+
+            if (!payload.EmailVerified)
+            {
+                return new LoginResult { Status = LoginStatus.GoogleEmailNotVerified };
+            }
+
+            var normalizedEmail = payload.Email.ToLowerInvariant().Trim();
+            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
+
+            // Google sign-in is link-only: users are provisioned by HR (CSV sync / admin
+            // creation), never by this flow, so no account is ever created here. Those
+            // provisioning paths never set IsEmailVerified (it stays null), so gating on it
+            // here — like the password login does — would lock out the very users this
+            // feature targets. Google's own EmailVerified claim, checked above, is the
+            // substitute and is strictly stronger than our own click-a-link verification.
+            if (user == null)
+            {
+                return new LoginResult { Status = LoginStatus.NoAccountForEmail };
+            }
+
+            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
+
+            return new LoginResult
+            {
+                Status = LoginStatus.Success,
+                Token = token,
+                UserId = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Role = user.Role
+            };
+        }
+
         public async Task<AccountActionResult<PasswordResetRequestedDTO>> RequestPasswordResetAsync(string email)
         {
             var normalizedEmail = email.ToLowerInvariant().Trim();
@@ -209,7 +252,7 @@ namespace SyncApp26.Application.Services
                 return AccountActionResult<bool>.Fail("Invalid or expired token.");
             }
 
-            var verifyPassword = await _authenticationService.VerifyPasswordAsync(newPassword, user.PasswordHash!);
+            var verifyPassword = user.PasswordHash != null && await _authenticationService.VerifyPasswordAsync(newPassword, user.PasswordHash);
             if (verifyPassword)
             {
                 return AccountActionResult<bool>.Fail("New password cannot be the same as the old password.");
