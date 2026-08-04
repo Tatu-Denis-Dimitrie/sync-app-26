@@ -389,9 +389,6 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BloodGroup")
-                        .HasColumnType("TEXT");
-
                     b.Property<int?>("BloodType")
                         .HasColumnType("INTEGER");
 

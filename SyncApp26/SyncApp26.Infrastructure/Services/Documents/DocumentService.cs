@@ -694,7 +694,7 @@ namespace SyncApp26.Infrastructure.Services
                         if (ctx.IsSsm)
                         {
                             Row("Domiciliul:", F(user.Address));
-                            Row("Grupa sanguină:", F(user.BloodGroup));
+                            Row("Grupa sanguină:", F(user.BloodType?.ToDisplayString()));
                             Row("Legitimația / Marca:", F(user.BadgeNumber));
                         }
                         else

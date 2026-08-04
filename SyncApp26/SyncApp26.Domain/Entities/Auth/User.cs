@@ -27,7 +27,6 @@ namespace SyncApp26.Domain.Entities
         public DateTime? DateOfBirth { get; set; }
         public string? PlaceOfBirth { get; set; }
         public string? Address { get; set; }
-        public string? BloodGroup { get; set; }
         public BloodType? BloodType { get; set; }
         public string? BadgeNumber { get; set; }
         public string? Education { get; set; }
