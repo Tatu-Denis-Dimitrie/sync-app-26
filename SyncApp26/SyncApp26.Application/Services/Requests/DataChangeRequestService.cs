@@ -12,6 +12,10 @@ namespace SyncApp26.Application.Services
 {
     public class DataChangeRequestService : IDataChangeRequestService
     {
+        // Fields that must never be applied through this generic reflection-based flow,
+        // even if a client crafts a request bypassing the UI's available-fields list.
+        private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Email", "Role" };
+
         private readonly IDataChangeRequestRepository _repository;
         private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
 
@@ -19,6 +23,13 @@ namespace SyncApp26.Application.Services
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
+        }
+
+        private static Type? GetEnumType(Type propertyType)
+        {
+            if (propertyType.IsEnum) return propertyType;
+            var underlying = Nullable.GetUnderlyingType(propertyType);
+            return underlying != null && underlying.IsEnum ? underlying : null;
         }
 
         private DataChangeRequestDTO MapToDTO(DataChangeRequest req)
@@ -134,7 +145,7 @@ namespace SyncApp26.Application.Services
                     {
                         foreach (var kv in changes)
                         {
-                            if (kv.Key == "Email") continue; // Explicitly block Email changes
+                            if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Email/Role changes
                             var prop = userType.GetProperty(kv.Key);
                             if (prop != null && prop.CanWrite)
                             {
@@ -150,6 +161,11 @@ namespace SyncApp26.Application.Services
                                     prop.SetValue(req.User, it);
                                 else if (prop.PropertyType == typeof(int?) && int.TryParse(stringValue, out var nit))
                                     prop.SetValue(req.User, nit);
+                                else if (GetEnumType(prop.PropertyType) is { } enumType
+                                         && !string.IsNullOrWhiteSpace(stringValue)
+                                         && Enum.TryParse(enumType, stringValue, ignoreCase: true, out var enumValue)
+                                         && Enum.IsDefined(enumType, enumValue))
+                                    prop.SetValue(req.User, enumValue);
                             }
                         }
                         req.User.UpdatedAt = DateTime.UtcNow;
