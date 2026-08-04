@@ -336,6 +336,7 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.SignerRole).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.SignerFullNameSnapshot).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.SignerPositionSnapshot).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.SignerBadgeNumberSnapshot).HasMaxLength(100);
                 entity.Property(e => e.SignatureData).IsRequired();
 
                 entity.HasOne(e => e.UserDocument)

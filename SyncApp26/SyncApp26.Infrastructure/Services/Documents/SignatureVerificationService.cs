@@ -368,6 +368,7 @@ namespace SyncApp26.Infrastructure.Services
                 record.SignerUserId,
                 record.SignerFullNameSnapshot,
                 record.SignerPositionSnapshot,
+                record.SignerBadgeNumberSnapshot,
                 materialTaught,
                 durationHours,
                 trainingDate,

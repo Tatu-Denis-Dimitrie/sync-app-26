@@ -1397,6 +1397,7 @@ namespace SyncApp26.Infrastructure.Services
 
             var fullNameSnapshot = $"{signerUser.FirstName} {signerUser.LastName}";
             var positionSnapshot = signerUser.Function?.Name ?? string.Empty;
+            var badgeNumberSnapshot = signerUser.BadgeNumber;
             var signedAtOffset = new DateTimeOffset(signedAt, TimeSpan.Zero);
 
             // Links to the same signer's most recent signature across all their documents, not
@@ -1415,6 +1416,7 @@ namespace SyncApp26.Infrastructure.Services
                 signerUserId,
                 fullNameSnapshot,
                 positionSnapshot,
+                badgeNumberSnapshot,
                 training?.MaterialTaught,
                 training?.DurationHours,
                 training?.TrainingDate,
@@ -1433,6 +1435,7 @@ namespace SyncApp26.Infrastructure.Services
                 SignerUserId = signerUserId,
                 SignerFullNameSnapshot = fullNameSnapshot,
                 SignerPositionSnapshot = positionSnapshot,
+                SignerBadgeNumberSnapshot = badgeNumberSnapshot,
                 SignatureMethod = signatureMethod,
                 SignatureData = signatureData,
                 MaterialTaughtSnapshot = training?.MaterialTaught,

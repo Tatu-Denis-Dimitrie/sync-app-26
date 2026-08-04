@@ -45,6 +45,13 @@ namespace SyncApp26.Domain.Entities
         [MaxLength(200)]
         public string SignerPositionSnapshot { get; set; } = string.Empty;
 
+        /// <summary>
+        /// The signer's badge number as of signing time. Null for records signed under schema V1,
+        /// which had no such field, and for signers who simply have none set.
+        /// </summary>
+        [MaxLength(100)]
+        public string? SignerBadgeNumberSnapshot { get; set; }
+
         /// <summary>"Draw" or "Type"</summary>
         [MaxLength(50)]
         public string SignatureMethod { get; set; } = string.Empty;

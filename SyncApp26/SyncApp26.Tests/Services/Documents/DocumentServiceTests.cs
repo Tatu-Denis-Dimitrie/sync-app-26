@@ -34,9 +34,10 @@ namespace SyncApp26.Tests.Services.Documents
         // Recomputes the HMAC independently of DocumentService, so a passing assertion proves
         // the service captured the *correct* values, not just *some* non-null value.
         private static string ExpectedHmac(Guid signerUserId, string fullName, string position,
-            string? material, decimal? duration, DateTime? trainingDate, DateTimeOffset signedAt)
+            string? material, decimal? duration, DateTime? trainingDate, DateTimeOffset signedAt,
+            string? badgeNumber = null)
         {
-            var input = new SignatureCanonicalInput(signerUserId, fullName, position, material, duration, trainingDate, signedAt, null, SignatureCanonicalSerializer.CurrentVersion);
+            var input = new SignatureCanonicalInput(signerUserId, fullName, position, badgeNumber, material, duration, trainingDate, signedAt, null, SignatureCanonicalSerializer.CurrentVersion);
             var canonical = SignatureCanonicalSerializer.Serialize(input);
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(TestKey));
             return Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
@@ -50,7 +51,8 @@ namespace SyncApp26.Tests.Services.Documents
             return function;
         }
 
-        private User SeedUser(string firstName, string lastName, Function function, UserRole role = UserRole.BasicUser)
+        private User SeedUser(string firstName, string lastName, Function function, UserRole role = UserRole.BasicUser,
+            string? badgeNumber = null)
         {
             var user = new User
             {
@@ -61,6 +63,7 @@ namespace SyncApp26.Tests.Services.Documents
                 PersonalId = Guid.NewGuid().ToString(),
                 FunctionId = function.Id,
                 Role = role,
+                BadgeNumber = badgeNumber,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
@@ -132,6 +135,31 @@ namespace SyncApp26.Tests.Services.Documents
             var expected = ExpectedHmac(owner.Id, "Adela Popescu", "Operator", "Norme SSM generale", 2m,
                 new DateTime(2026, 1, 15), record.SignedAt);
             Assert.Equal(expected, record.SignatureHmac);
+        }
+
+        [Fact]
+        public async Task UpdateDocumentSignatureAsync_SignerHasBadgeNumber_FreezesItAndBindsItIntoTheHmac()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function, badgeNumber: "BADGE-4471");
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(
+                doc.Id, owner.Id, "User", "Draw", "signature-png-data", "1.2.3.4");
+
+            var record = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id);
+            Assert.Equal("BADGE-4471", record.SignerBadgeNumberSnapshot);
+
+            var expected = ExpectedHmac(owner.Id, "Adela Popescu", "Operator", "Norme SSM generale", 2m,
+                new DateTime(2026, 1, 15), record.SignedAt, badgeNumber: "BADGE-4471");
+            Assert.Equal(expected, record.SignatureHmac);
+
+            // The badge is genuinely part of the hashed input, not just stored alongside it.
+            var withoutBadge = ExpectedHmac(owner.Id, "Adela Popescu", "Operator", "Norme SSM generale", 2m,
+                new DateTime(2026, 1, 15), record.SignedAt);
+            Assert.NotEqual(withoutBadge, record.SignatureHmac);
         }
 
         [Fact]
@@ -613,6 +641,7 @@ namespace SyncApp26.Tests.Services.Documents
                 signer.Id,
                 fullName,
                 position,
+                signer.BadgeNumber,
                 training.MaterialTaught,
                 training.DurationHours,
                 training.TrainingDate,
@@ -634,6 +663,7 @@ namespace SyncApp26.Tests.Services.Documents
                 SignerUserId = signer.Id,
                 SignerFullNameSnapshot = fullName,
                 SignerPositionSnapshot = position,
+                SignerBadgeNumberSnapshot = signer.BadgeNumber,
                 SignatureMethod = "Draw",
                 SignatureData = "sig-manual",
                 MaterialTaughtSnapshot = training.MaterialTaught,
