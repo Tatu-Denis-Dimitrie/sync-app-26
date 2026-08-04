@@ -336,9 +336,8 @@ namespace SyncApp26.Tests.Services.Auth
         [Fact]
         public async Task AuthenticateWithGoogleAsync_UserWithNullIsEmailVerified_ReturnsSuccess()
         {
-            // Users provisioned via CSV sync or admin creation never have IsEmailVerified set
-            // (it stays null) — this is the population Google sign-in targets. Regression guard
-            // for accidentally reintroducing an IsEmailVerified gate on this path.
+            // CSV-synced and admin-created users leave IsEmailVerified null. Guards against
+            // reintroducing that gate here.
             var service = CreateService();
             var userId = Guid.NewGuid();
             var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = null, IsEmailVerified = null };
@@ -435,10 +434,7 @@ namespace SyncApp26.Tests.Services.Auth
         [Fact]
         public async Task AuthenticateWithMicrosoftAsync_UserWithNullIsEmailVerified_ReturnsSuccess()
         {
-            // Same population as the Google flow: CSV-synced/admin-created users never have
-            // IsEmailVerified set. Microsoft has no verified-email gate to check in the first
-            // place, but this still guards against someone adding a local IsEmailVerified check
-            // by mistake.
+            // Same guard as the Google flow: CSV-synced users leave IsEmailVerified null.
             var service = CreateService();
             var userId = Guid.NewGuid();
             var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = null, IsEmailVerified = null };
@@ -602,14 +598,8 @@ namespace SyncApp26.Tests.Services.Auth
         [Fact]
         public async Task ResetPasswordAsync_UserWithNullPasswordHash_DoesNotCallVerifyPassword()
         {
-            // Google-only users (provisioned via CSV sync / admin creation, never having set a
-            // password) can reach this endpoint via the "Forgot Password?" link on the login
-            // card. PasswordHash is null for them, and the old code called
-            // VerifyPasswordAsync(newPassword, user.PasswordHash!) unguarded — which, against
-            // the real BCrypt-backed AuthenticationService (not this mock), throws instead of
-            // failing gracefully. Asserting Times.Never on VerifyPasswordAsync proves the guard
-            // short-circuits before that call is ever made, regardless of what the mock itself
-            // would do with a null argument.
+            // Password-less users can still reach reset-password. Verifying against a null
+            // hash throws in real BCrypt, so the guard must short-circuit before that call.
             var service = CreateService();
             var user = new User
             {

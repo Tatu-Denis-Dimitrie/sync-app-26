@@ -85,6 +85,43 @@
   color: #9ca3af;
 }
 
+.password-field {
+  position: relative;
+}
+
+/* Room for the toggle so long passwords don't run under it. */
+.password-field .form-input {
+  padding-right: 2.75rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: #088395;
+}
+
+.password-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 .error-message {
   padding: 0.75rem;
   background-color: #fee2e2;
@@ -166,8 +203,7 @@
   margin-top: 1rem;
 }
 
-/* Dimensions mirror the Google button rendered by GIS (340x40, 4px radius, 14px text)
-   so the two provider buttons line up exactly. */
+/* Mirrors the GIS-rendered Google button so both line up. */
 .microsoft-button {
   display: flex;
   align-items: center;

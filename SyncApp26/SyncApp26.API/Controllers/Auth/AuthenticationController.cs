@@ -144,8 +144,7 @@ namespace SyncApp26.API.Controllers
                             role = result.Role
                         }
                     }),
-                    // Matching Success explicitly keeps a future LoginStatus from falling through
-                    // as a 200 carrying a null token.
+                    // Explicit Success so a new status can't fall through as a 200 with no token.
                     _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
             }
@@ -184,8 +183,7 @@ namespace SyncApp26.API.Controllers
                             role = result.Role
                         }
                     }),
-                    // Matching Success explicitly keeps a future LoginStatus from falling through
-                    // as a 200 carrying a null token.
+                    // Explicit Success so a new status can't fall through as a 200 with no token.
                     _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
             }

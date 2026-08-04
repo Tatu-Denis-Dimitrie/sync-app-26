@@ -188,12 +188,9 @@ namespace SyncApp26.Application.Services
             var normalizedEmail = payload.Email.ToLowerInvariant().Trim();
             var user = await _userService.GetUserByEmailAsync(normalizedEmail);
 
-            // Google sign-in is link-only: users are provisioned by HR (CSV sync / admin
-            // creation), never by this flow, so no account is ever created here. Those
-            // provisioning paths never set IsEmailVerified (it stays null), so gating on it
-            // here — like the password login does — would lock out the very users this
-            // feature targets. Google's own EmailVerified claim, checked above, is the
-            // substitute and is strictly stronger than our own click-a-link verification.
+            // Link-only: never creates an account. Deliberately no IsEmailVerified check -
+            // CSV-synced and admin-created users leave it null, and Google's own
+            // EmailVerified claim above covers it.
             if (user == null)
             {
                 return new LoginResult { Status = LoginStatus.NoAccountForEmail };
@@ -221,11 +218,8 @@ namespace SyncApp26.Application.Services
                 return new LoginResult { Status = LoginStatus.InvalidCredentials };
             }
 
-            // Microsoft ID tokens have no email-verified claim equivalent to Google's - the
-            // "email" claim's own presence is the only signal available, and Microsoft's docs
-            // note it "isn't guaranteed to be correct". This is link-only, same as Google: an
-            // unmatched email is always rejected, never used to create or update an account, so
-            // a stale/incorrect claim can only ever fail closed here, not sign in as someone else.
+            // Link-only, same as Google. Microsoft has no email-verified claim, but an
+            // unmatched email is always rejected, so a wrong claim can only fail closed.
             var normalizedEmail = payload.Email.ToLowerInvariant().Trim();
             var user = await _userService.GetUserByEmailAsync(normalizedEmail);
 

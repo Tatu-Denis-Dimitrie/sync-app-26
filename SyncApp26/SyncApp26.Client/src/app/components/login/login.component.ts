@@ -40,6 +40,7 @@ export class LoginComponent implements AfterViewInit {
   password: string = '';
   errorMessage: string = '';
   isLoading: boolean = false;
+  showPassword: boolean = false;
   isMicrosoftEnabled: boolean = !!environment.microsoftClientId;
 
   private msalInstance: PublicClientApplication | null = null;
@@ -74,12 +75,11 @@ export class LoginComponent implements AfterViewInit {
         size: 'large',
         text: 'signin_with',
         shape: 'rectangular',
-        // Matches .microsoft-button's max-width so both provider buttons render identically.
+        // Matches .microsoft-button so both provider buttons are the same size.
         width: '340'
       });
     } catch {
-      // Google sign-in is an optional path alongside password login; a script load
-      // failure (offline, ad-blocker) should not block the rest of the login page.
+      // Optional path - a script load failure must not break the login page.
     }
   }
 
@@ -99,8 +99,7 @@ export class LoginComponent implements AfterViewInit {
       await instance.initialize();
       this.msalInstance = instance;
     } catch {
-      // Swallowed so it can't reject the Promise.all in ngAfterViewInit and take the rest of
-      // the login page down with it. msalInstance stays null and onMicrosoftLogin reports it.
+      // Swallowed so it can't break the rest of the page; onMicrosoftLogin reports it.
     }
   }
 
@@ -143,9 +142,7 @@ export class LoginComponent implements AfterViewInit {
       });
     } catch (error: unknown) {
       this.isLoading = false;
-      // Closing the popup is a deliberate user action, not a failure to report. Match on
-      // the error code rather than the message text, so a genuine failure whose message
-      // happens to contain "cancel" still surfaces instead of being silently swallowed.
+      // Closing the popup isn't a failure. Match on the code, not the message text.
       const isUserCancelled =
         error instanceof BrowserAuthError && error.errorCode === BrowserAuthErrorCodes.userCancelled;
       if (!isUserCancelled) {
@@ -179,6 +176,10 @@ export class LoginComponent implements AfterViewInit {
         this.errorMessage = error.error?.message || 'Login failed. Please try again.';
       }
     });
+  }
+
+  togglePassword(): void {
+    this.showPassword = !this.showPassword;
   }
 
   onKeyPress(event: KeyboardEvent): void {

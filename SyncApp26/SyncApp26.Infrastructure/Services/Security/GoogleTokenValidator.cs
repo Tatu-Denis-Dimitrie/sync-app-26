@@ -17,12 +17,8 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<GoogleTokenPayload?> ValidateAsync(string idToken)
         {
-            /*
-             * Read and validate the config here rather than in the constructor: AccountService
-             * depends on this validator, so a constructor throw would fail every
-             * AuthenticationController endpoint - including plain password login and password
-             * reset - on any deployment that doesn't use Google sign-in.
-             */
+            // Checked here, not in the constructor: throwing there would break every
+            // auth endpoint when Google sign-in simply isn't configured.
             var clientId = _configuration["Authentication:Google:ClientId"];
             if (string.IsNullOrWhiteSpace(clientId))
                 throw new InvalidOperationException(
@@ -30,8 +26,7 @@ namespace SyncApp26.Infrastructure.Services
 
             try
             {
-                // Audience MUST be set: GoogleJsonWebSignature skips audience validation entirely
-                // when it is left null, which would accept an ID token issued for any Google app.
+                // Audience must be set - left null, any Google app's token would pass.
                 var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, new GoogleJsonWebSignature.ValidationSettings
                 {
                     Audience = new[] { clientId }

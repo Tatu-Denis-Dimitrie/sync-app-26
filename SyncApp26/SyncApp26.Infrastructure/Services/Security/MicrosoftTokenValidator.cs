@@ -26,12 +26,8 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<MicrosoftTokenPayload?> ValidateAsync(string idToken)
         {
-            /*
-             * Read and validate the config here rather than in the constructor: AccountService
-             * depends on this validator, so a constructor throw would fail every
-             * AuthenticationController endpoint - including plain password login and password
-             * reset - on any deployment that doesn't use Microsoft sign-in.
-             */
+            // Checked here, not in the constructor: throwing there would break every
+            // auth endpoint when Microsoft sign-in simply isn't configured.
             var clientId = _configuration["Authentication:Microsoft:ClientId"];
             if (string.IsNullOrWhiteSpace(clientId))
                 throw new InvalidOperationException(
@@ -47,10 +43,7 @@ namespace SyncApp26.Infrastructure.Services
                     IssuerSigningKeys = config.SigningKeys,
                     ValidateAudience = true,
                     ValidAudience = clientId,
-                    // "common" accepts sign-ins from any Entra ID tenant and personal Microsoft
-                    // accounts, so there is no single fixed issuer to pin - each tenant issues
-                    // with its own issuer URI. Signature + audience validation is the security
-                    // boundary here, matching Microsoft's documented multi-tenant pattern.
+                    // No fixed issuer to pin on "common" - every tenant issues its own.
                     ValidateIssuer = false,
                     ValidateLifetime = true
                 };
@@ -58,9 +51,7 @@ namespace SyncApp26.Infrastructure.Services
                 var handler = new JwtSecurityTokenHandler();
                 handler.ValidateToken(idToken, validationParameters, out var validatedToken);
 
-                // Read the raw "email" claim directly off the token instead of through the
-                // validated ClaimsPrincipal, which remaps claim types (e.g. "email" ->
-                // ClaimTypes.Email) via JwtSecurityTokenHandler's default inbound claim map.
+                // Read the raw claim - the ClaimsPrincipal remaps "email" to ClaimTypes.Email.
                 var jwt = (JwtSecurityToken)validatedToken;
                 var email = jwt.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
@@ -76,8 +67,7 @@ namespace SyncApp26.Infrastructure.Services
             }
             catch (ArgumentException)
             {
-                // Malformed input that isn't even shaped like a JWT (e.g. wrong segment count) -
-                // JwtSecurityTokenHandler rejects this before it reaches SecurityToken validation.
+                // Input isn't shaped like a JWT at all.
                 return null;
             }
         }
