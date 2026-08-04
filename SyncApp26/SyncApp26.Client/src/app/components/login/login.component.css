@@ -166,6 +166,44 @@
   margin-top: 1rem;
 }
 
+/* Dimensions mirror the Google button rendered by GIS (340x40, 4px radius, 14px text)
+   so the two provider buttons line up exactly. */
+.microsoft-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 340px;
+  height: 40px;
+  margin: 0.75rem auto 0;
+  padding: 0 1rem;
+  background: #ffffff;
+  border: 1px solid #8c8c8c;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #5e5e5e;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.microsoft-button:hover {
+  background: #f3f3f3;
+}
+
+.microsoft-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.microsoft-logo {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .login-footer {
   margin-top: 2rem;
   text-align: center;

@@ -346,6 +346,95 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.Equal(500, statusResult.StatusCode);
         }
 
+        // ───────────────────────── MicrosoftLogin ─────────────────────────
+
+        [Fact]
+        public async Task MicrosoftLogin_MissingIdToken_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+
+            var result = await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "" });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+            _accountServiceMock.Verify(s => s.AuthenticateWithMicrosoftAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task MicrosoftLogin_InvalidToken_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithMicrosoftAsync(It.IsAny<string>()))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.InvalidCredentials });
+
+            var result = await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "bad-token" });
+
+            var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
+            Assert.Contains("Invalid or expired", unauthorized.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task MicrosoftLogin_NoAccountForEmail_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithMicrosoftAsync(It.IsAny<string>()))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.NoAccountForEmail });
+
+            var result = await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "token" });
+
+            var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
+            Assert.Contains("No SyncApp26 account", unauthorized.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task MicrosoftLogin_DistinctFailureMessages()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithMicrosoftAsync("invalid"))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.InvalidCredentials });
+            _accountServiceMock.Setup(s => s.AuthenticateWithMicrosoftAsync("unknown"))
+                .ReturnsAsync(new LoginResult { Status = LoginStatus.NoAccountForEmail });
+
+            var invalid = Assert.IsType<UnauthorizedObjectResult>(await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "invalid" }));
+            var unknown = Assert.IsType<UnauthorizedObjectResult>(await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "unknown" }));
+
+            Assert.NotEqual(invalid.Value!.ToString(), unknown.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task MicrosoftLogin_Success_ReturnsTokenAndUserInfo()
+        {
+            var controller = CreateController();
+            var userId = Guid.NewGuid();
+            _accountServiceMock.Setup(s => s.AuthenticateWithMicrosoftAsync(It.IsAny<string>()))
+                .ReturnsAsync(new LoginResult
+                {
+                    Status = LoginStatus.Success,
+                    Token = "jwt-token",
+                    UserId = userId,
+                    Email = "a@b.com",
+                    FirstName = "A",
+                    LastName = "B",
+                    Role = UserRole.BasicUser
+                });
+
+            var result = await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "good-token" });
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task MicrosoftLogin_UnexpectedException_Returns500()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.AuthenticateWithMicrosoftAsync(It.IsAny<string>()))
+                .ThrowsAsync(new Exception("boom"));
+
+            var result = await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "token" });
+
+            var statusResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(500, statusResult.StatusCode);
+        }
+
         // ───────────────────────── ForgotPassword ─────────────────────────
 
         [Fact]

@@ -66,6 +66,7 @@ namespace SyncApp26.Application.IServices
         Task<EmailVerificationResult> VerifyEmailAsync(string email, string token);
         Task<LoginResult> AuthenticateAsync(string email, string password);
         Task<LoginResult> AuthenticateWithGoogleAsync(string idToken);
+        Task<LoginResult> AuthenticateWithMicrosoftAsync(string idToken);
         Task<AccountActionResult<PasswordResetRequestedDTO>> RequestPasswordResetAsync(string email);
         Task<AccountActionResult<bool>> ResetPasswordAsync(string email, string token, string newPassword);
     }

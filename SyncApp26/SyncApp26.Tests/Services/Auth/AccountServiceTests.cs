@@ -13,9 +13,10 @@ namespace SyncApp26.Tests.Services.Auth
         private readonly Mock<IAuthenticationService> _authenticationServiceMock = new();
         private readonly Mock<ITokenService> _tokenServiceMock = new();
         private readonly Mock<IGoogleTokenValidator> _googleTokenValidatorMock = new();
+        private readonly Mock<IMicrosoftTokenValidator> _microsoftTokenValidatorMock = new();
 
         private AccountService CreateService() =>
-            new(_userServiceMock.Object, _authenticationServiceMock.Object, _tokenServiceMock.Object, _googleTokenValidatorMock.Object);
+            new(_userServiceMock.Object, _authenticationServiceMock.Object, _tokenServiceMock.Object, _googleTokenValidatorMock.Object, _microsoftTokenValidatorMock.Object);
 
         private static RegisterUserRequestDTO ValidRegisterRequest() => new()
         {
@@ -377,6 +378,106 @@ namespace SyncApp26.Tests.Services.Auth
             _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.LineManager)).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateWithGoogleAsync("token");
+
+            Assert.Equal("DbFirst", result.FirstName);
+            Assert.Equal("DbLast", result.LastName);
+            Assert.Equal(UserRole.LineManager, result.Role);
+        }
+
+        // ───────────────────────── AuthenticateWithMicrosoftAsync ─────────────────────────
+
+        [Fact]
+        public async Task AuthenticateWithMicrosoftAsync_InvalidToken_ReturnsInvalidCredentials()
+        {
+            var service = CreateService();
+            _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>())).ReturnsAsync((MicrosoftTokenPayload?)null);
+
+            var result = await service.AuthenticateWithMicrosoftAsync("bad-token");
+
+            Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+            _userServiceMock.Verify(s => s.GetUserByEmailAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithMicrosoftAsync_UnknownEmail_ReturnsNoAccountForEmailAndCreatesNoUser()
+        {
+            var service = CreateService();
+            _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new MicrosoftTokenPayload { Email = "unknown@example.com" });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("unknown@example.com")).ReturnsAsync((User?)null);
+
+            var result = await service.AuthenticateWithMicrosoftAsync("token");
+
+            Assert.Equal(LoginStatus.NoAccountForEmail, result.Status);
+            _userServiceMock.Verify(s => s.AddUserAsync(It.IsAny<User>()), Times.Never);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<UserRole>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithMicrosoftAsync_ExistingUserWithPassword_ReturnsSuccessAndLeavesPasswordHashIntact()
+        {
+            var service = CreateService();
+            var userId = Guid.NewGuid();
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hashed" };
+            _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new MicrosoftTokenPayload { Email = "a@b.com" });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+
+            var result = await service.AuthenticateWithMicrosoftAsync("token");
+
+            Assert.Equal(LoginStatus.Success, result.Status);
+            Assert.Equal("jwt-token", result.Token);
+            Assert.Equal("hashed", user.PasswordHash);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithMicrosoftAsync_UserWithNullIsEmailVerified_ReturnsSuccess()
+        {
+            // Same population as the Google flow: CSV-synced/admin-created users never have
+            // IsEmailVerified set. Microsoft has no verified-email gate to check in the first
+            // place, but this still guards against someone adding a local IsEmailVerified check
+            // by mistake.
+            var service = CreateService();
+            var userId = Guid.NewGuid();
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = null, IsEmailVerified = null };
+            _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new MicrosoftTokenPayload { Email = "a@b.com" });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+
+            var result = await service.AuthenticateWithMicrosoftAsync("token");
+
+            Assert.Equal(LoginStatus.Success, result.Status);
+            Assert.Equal("jwt-token", result.Token);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithMicrosoftAsync_NormalizesEmailBeforeLookup()
+        {
+            var service = CreateService();
+            _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new MicrosoftTokenPayload { Email = "  John.Doe@Example.com  " });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("john.doe@example.com")).ReturnsAsync((User?)null);
+
+            await service.AuthenticateWithMicrosoftAsync("token");
+
+            _userServiceMock.Verify(s => s.GetUserByEmailAsync("john.doe@example.com"), Times.Once);
+        }
+
+        [Fact]
+        public async Task AuthenticateWithMicrosoftAsync_ReturnsIdentityFromDatabaseNotMicrosoft()
+        {
+            var service = CreateService();
+            var userId = Guid.NewGuid();
+            var user = new User { Id = userId, FirstName = "DbFirst", LastName = "DbLast", Email = "a@b.com", PersonalId = "1", Role = UserRole.LineManager };
+            _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
+                .ReturnsAsync(new MicrosoftTokenPayload { Email = "a@b.com" });
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.LineManager)).ReturnsAsync("jwt-token");
+
+            var result = await service.AuthenticateWithMicrosoftAsync("token");
 
             Assert.Equal("DbFirst", result.FirstName);
             Assert.Equal("DbLast", result.LastName);

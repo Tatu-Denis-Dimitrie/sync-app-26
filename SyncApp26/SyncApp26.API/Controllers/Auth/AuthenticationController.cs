@@ -152,6 +152,43 @@ namespace SyncApp26.API.Controllers
             }
         }
 
+        [HttpPost("microsoft-login")]
+        public async Task<IActionResult> MicrosoftLogin([FromBody] MicrosoftLoginRequestDTO request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.IdToken))
+                {
+                    return BadRequest(new { message = "Microsoft ID token is required." });
+                }
+
+                var result = await _accountService.AuthenticateWithMicrosoftAsync(request.IdToken);
+
+                return result.Status switch
+                {
+                    LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Microsoft sign-in. Please try again." }),
+                    LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Microsoft email. Contact an administrator." }),
+                    _ => Ok(new
+                    {
+                        message = "Login successful.",
+                        token = result.Token,
+                        user = new
+                        {
+                            id = result.UserId,
+                            email = result.Email,
+                            firstName = result.FirstName,
+                            lastName = result.LastName,
+                            role = result.Role
+                        }
+                    })
+                };
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+            }
+        }
+
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {

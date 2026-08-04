@@ -21,10 +21,6 @@ export interface LoginRequest {
     password: string;
 }
 
-export interface GoogleLoginRequest {
-  idToken: string;
-}
-
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -94,6 +90,11 @@ export class AuthenticationService {
 
   googleLogin(idToken: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/google-login`, { idToken })
+      .pipe(tap(response => this.storeSession(response)));
+  }
+
+  microsoftLogin(idToken: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/microsoft-login`, { idToken })
       .pipe(tap(response => this.storeSession(response)));
   }
 

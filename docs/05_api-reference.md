@@ -70,6 +70,22 @@ Response:
 - 400: { message } — idToken missing
 - 401: { message } — invalid/expired token, Google email not verified, or no account exists for that email
 
+### POST /authentication/microsoft-login
+Signs in with a Microsoft ID token. Link-only: succeeds only if the token's email already belongs to
+an existing user (created via CSV sync or by an admin). Never creates a new user. Unlike Google, the
+Microsoft identity platform has no email-verified claim; the `email` claim's presence is the only
+signal available, so an incorrect/stale claim can only fail closed (no matching user), never sign in
+as someone else.
+
+Request body (MicrosoftLoginRequestDTO):
+- idToken (string, required) — the ID token returned by the Microsoft identity platform (MSAL)
+
+Response:
+- 200: { message, token, user } — identical shape to /authentication/login
+	- user: { id, email, firstName, lastName, role }
+- 400: { message } — idToken missing
+- 401: { message } — invalid/expired token, or no account exists for that email
+
 ### POST /authentication/forgot-password
 Request body (ForgotPasswordRequestDTO):
 - email (string, required)
