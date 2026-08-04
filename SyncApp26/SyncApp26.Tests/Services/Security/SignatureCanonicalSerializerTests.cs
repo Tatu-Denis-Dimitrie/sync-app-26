@@ -8,6 +8,7 @@ namespace SyncApp26.Tests.Services.Security
             Guid? signerUserId = null,
             string fullName = "Adela Popescu",
             string position = "Operator",
+            string? badgeNumber = "BADGE-4471",
             string? material = "Norme SSM generale",
             decimal? duration = 2m,
             DateTime? trainingDate = null,
@@ -17,6 +18,7 @@ namespace SyncApp26.Tests.Services.Security
                 signerUserId ?? Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 fullName,
                 position,
+                badgeNumber,
                 material,
                 duration,
                 trainingDate ?? new DateTime(2026, 1, 15),
@@ -110,11 +112,11 @@ namespace SyncApp26.Tests.Services.Security
         }
 
         [Fact]
-        public void CurrentVersion_Is1()
+        public void CurrentVersion_Is2()
         {
             // Locks in which version new signatures are made under today — if this changes, it
             // should be a deliberate version bump (see the class doc comment), not an accident.
-            Assert.Equal(1, SignatureCanonicalSerializer.CurrentVersion);
+            Assert.Equal(2, SignatureCanonicalSerializer.CurrentVersion);
         }
 
         [Fact]
@@ -150,9 +152,8 @@ namespace SyncApp26.Tests.Services.Security
         [Fact]
         public void Serialize_V1AndV2_ProduceDifferentOutputForSameLogicalFields()
         {
-            // V2 exists specifically to prove the version-dispatch mechanism (see
-            // SignatureVerificationServiceTests' mixed-version tests) — this confirms it actually
-            // picks a genuinely different formula, not the same one twice under a different label.
+            // Confirms version dispatch picks a genuinely different formula, not the same one
+            // twice under a different label.
             var v1 = MakeInput(version: 1);
             var v2 = MakeInput(version: 2);
 
@@ -162,15 +163,55 @@ namespace SyncApp26.Tests.Services.Security
         }
 
         [Fact]
-        public void Serialize_V2_FormatsSignedAtAsUnixSeconds()
+        public void SerializeV1_IgnoresBadgeNumber_SoExistingSignaturesStillVerify()
         {
-            var signedAt = new DateTimeOffset(2026, 1, 15, 10, 30, 0, TimeSpan.Zero);
-            var input = MakeInput(signedAt: signedAt, version: 2);
+            // The badge number arrived with V2. If V1 ever started hashing it, every signature
+            // made before the bump would stop verifying.
+            var withBadge = MakeInput(badgeNumber: "BADGE-1", version: 1);
+            var withoutBadge = MakeInput(badgeNumber: null, version: 1);
 
-            var output = SignatureCanonicalSerializer.Serialize(input);
+            Assert.Equal(
+                SignatureCanonicalSerializer.Serialize(withBadge),
+                SignatureCanonicalSerializer.Serialize(withoutBadge));
+        }
 
-            var expectedUnixSeconds = signedAt.ToUnixTimeSeconds().ToString();
-            Assert.Contains($"{expectedUnixSeconds.Length}:{expectedUnixSeconds}", output);
+        [Fact]
+        public void SerializeV2_ChangedBadgeNumber_ProducesDifferentString()
+        {
+            var first = MakeInput(badgeNumber: "BADGE-1", version: 2);
+            var second = MakeInput(badgeNumber: "BADGE-2", version: 2);
+
+            Assert.NotEqual(
+                SignatureCanonicalSerializer.Serialize(first),
+                SignatureCanonicalSerializer.Serialize(second));
+        }
+
+        [Fact]
+        public void SerializeV2_MustNeverChange_MatchesIndependentlyRebuiltFormat()
+        {
+            // Same contract as the V1 test above: V2 is frozen now that it is CurrentVersion and
+            // real signatures are being made under it. Expected string rebuilt independently.
+            var input = MakeInput(fullName: "Ștefan Ionescu", version: 2);
+
+            string Field(string? value)
+            {
+                var v = value ?? string.Empty;
+                return $"{System.Text.Encoding.UTF8.GetByteCount(v)}:{v}";
+            }
+
+            var expected =
+                Field("2") +
+                Field(input.SignerUserId.ToString("D")) +
+                Field(input.SignerFullNameSnapshot) +
+                Field(input.SignerPositionSnapshot) +
+                Field(input.SignerBadgeNumberSnapshot) +
+                Field(input.MaterialTaughtSnapshot) +
+                Field(input.DurationHoursSnapshot!.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.TrainingDateSnapshot!.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.SignedAt.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.PreviousSignatureHash);
+
+            Assert.Equal(expected, SignatureCanonicalSerializer.Serialize(input));
         }
     }
 }

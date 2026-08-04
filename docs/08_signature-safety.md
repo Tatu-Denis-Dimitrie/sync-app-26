@@ -95,7 +95,7 @@ This provides a tamper-evident hash for the stored PDF snapshot and enables down
 Beyond the flat per-document/per-training signature fields described above, every signing event also writes an immutable SignatureRecord row — the authoritative audit trail for document and training signatures, distinct from the personal-signature audit trail (UserSignatureHistory).
 
 Frozen at signing time and never re-derived from live data on verification:
-- SignerFullNameSnapshot, SignerPositionSnapshot: the signer's identity as of that moment, so a later name change never retroactively invalidates a past signature.
+- SignerFullNameSnapshot, SignerPositionSnapshot, SignerBadgeNumberSnapshot: the signer's identity as of that moment, so a later name or badge change never retroactively invalidates a past signature. The badge number arrived with schema V2 and is null on V1 records.
 - MaterialTaughtSnapshot, DurationHoursSnapshot, TrainingDateSnapshot: the training content, when the record is linked to a PeriodicTraining row.
 
 ### HMAC chaining
@@ -109,6 +109,10 @@ This forms a per-signer hash chain. Verification reconstructs the canonical stri
 Each SignatureRecord also carries a Version: which SignatureCanonicalSerializer schema (field set and format) computed its SignatureHmac. It travels as a field on SignatureCanonicalInput itself (not a side parameter), so there is exactly one place that says which schema a given hash was computed under. It is set once at signing time to `SignatureCanonicalSerializer.CurrentVersion` and never changes afterward. This exists so that if the canonical schema ever changes — a field is added, removed, or reformatted — verification can still reconstruct the exact format a given signature was made under, instead of hashing today's field set against a signature made under an older one. Each schema version's serialization logic is frozen in code forever once real signatures exist under it; a schema change adds a new version (a new private SerializeVN method plus a bumped `CurrentVersion`) rather than editing an existing one. Version is **not** a resign counter: many signatures legitimately share the same Version (they were all made under the same schema). How many times a training slot has been re-signed is instead derived from ordering its SignatureRecords by SignedAt.
 
 The version number itself is bound into the hashed bytes as the first field (domain separation), starting with V1 — this prevents a signature made under one schema from ever being misread as belonging to another. Because this was built into V1 from the start (not added retroactively), there was never a version predating it to worry about breaking.
+
+Schema versions to date:
+- **V1** — signer identity (id, full name, position), training content (material, duration, date), SignedAt as ISO-8601, previous hash. Frozen; records signed before the V2 bump still verify against it unchanged.
+- **V2** (current) — V1 plus the signer's badge number, inserted after the position field. New signatures are made under this schema; V1 records keep verifying under V1, which never reads the badge number.
 
 ### Verification service
 SignatureVerificationService recomputes each record's status on demand (never cached), returning one of: Valid, Invalid (recomputed hash no longer matches, e.g. training content changed since signing), ChainBroken (PreviousSignatureHash does not match the signer's actual prior record), Legacy (IsLegacyUnverified), or NotFound. Exposed via `GET /api/signatures/{id}/verification-status`, `POST /api/signatures/verification-status/batch`, and `GET /api/signatures/training/{periodicTrainingId}/history` (full signing history for a training, grouped by role), access-controlled the same way as document signatures (self, any admin, or the relevant line manager).

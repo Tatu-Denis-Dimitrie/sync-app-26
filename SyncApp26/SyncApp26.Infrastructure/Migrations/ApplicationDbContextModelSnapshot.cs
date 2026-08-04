@@ -319,6 +319,10 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("SignedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SignerBadgeNumberSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SignerFullNameSnapshot")
                         .IsRequired()
                         .HasMaxLength(200)

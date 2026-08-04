@@ -155,7 +155,7 @@ namespace SyncApp26.Tests.Services.Documents
                 var previousHash = lastHmacBySigner.GetValueOrDefault(signer.Id);
 
                 var input = new SignatureCanonicalInput(
-                    signer.Id, fullName, "Operator",
+                    signer.Id, fullName, "Operator", signer.BadgeNumber,
                     "Norme SSM", 2m, new DateTime(2026, 1, 15),
                     signedAt, previousHash, version);
                 var hmac = _hmacService.ComputeHmacAsync(SignatureCanonicalSerializer.Serialize(input))

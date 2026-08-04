@@ -238,6 +238,7 @@ namespace SyncApp26.Tests.Services.Documents
                 secondRecord.SignerUserId,
                 secondRecord.SignerFullNameSnapshot,
                 secondRecord.SignerPositionSnapshot,
+                secondRecord.SignerBadgeNumberSnapshot,
                 secondRecord.MaterialTaughtSnapshot,
                 secondRecord.DurationHoursSnapshot,
                 secondRecord.TrainingDateSnapshot,
@@ -526,12 +527,13 @@ namespace SyncApp26.Tests.Services.Documents
                 signer.Id,
                 fullName,
                 position,
+                signer.BadgeNumber,
                 training?.MaterialTaught,
                 training?.DurationHours,
                 training?.TrainingDate,
                 signedAt,
                 PreviousSignatureHash: null,
-                version);
+                Version: version);
             var hmac = await _hmacService.ComputeHmacAsync(SignatureCanonicalSerializer.Serialize(input));
 
             var record = new SignatureRecord
@@ -543,6 +545,7 @@ namespace SyncApp26.Tests.Services.Documents
                 SignerUserId = signer.Id,
                 SignerFullNameSnapshot = fullName,
                 SignerPositionSnapshot = position,
+                SignerBadgeNumberSnapshot = signer.BadgeNumber,
                 SignatureMethod = "Draw",
                 SignatureData = "sig-manual",
                 MaterialTaughtSnapshot = training?.MaterialTaught,
@@ -563,9 +566,9 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task GetVerificationStatusAsync_MixedSchemaVersionsOnSameDocument_BothVerifyAsValid()
         {
             // Proves the per-record Version dispatch works on a real mix, not just in isolation:
-            // one signature made under schema V1 through the normal signing flow, another
-            // hand-built under V2 (simulating a schema bump that happened in between), both on the
-            // SAME document — each must verify using its own stored Version, never a shared one.
+            // one signature made under today's schema through the normal signing flow, another
+            // hand-built under the older V1 (as production rows signed before the bump still are),
+            // both on the SAME document — each must verify using its own stored Version.
             var docService = CreateDocumentService();
             var employeeFunction = SeedFunction("Operator");
             var managerFunction = SeedFunction("Sef Echipa");
@@ -574,18 +577,18 @@ namespace SyncApp26.Tests.Services.Documents
             var doc = SeedDocument(owner, "SU", "PendingManager");
             var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            var v1Record = SignDocument(docService, doc, owner);
-            Assert.Equal(1, v1Record.Version);
+            var currentRecord = SignDocument(docService, doc, owner);
+            Assert.Equal(SignatureCanonicalSerializer.CurrentVersion, currentRecord.Version);
 
-            var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
+            var legacyV1Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 1);
 
-            var v1Status = await CreateVerificationService().GetVerificationStatusAsync(v1Record.Id);
-            var v2Status = await CreateVerificationService().GetVerificationStatusAsync(v2Record.Id);
+            var currentStatus = await CreateVerificationService().GetVerificationStatusAsync(currentRecord.Id);
+            var legacyStatus = await CreateVerificationService().GetVerificationStatusAsync(legacyV1Record.Id);
 
-            Assert.Equal("Valid", v1Status!.Status);
-            Assert.True(v1Status.IsHashValid);
-            Assert.Equal("Valid", v2Status!.Status);
-            Assert.True(v2Status.IsHashValid);
+            Assert.Equal("Valid", currentStatus!.Status);
+            Assert.True(currentStatus.IsHashValid);
+            Assert.Equal("Valid", legacyStatus!.Status);
+            Assert.True(legacyStatus.IsHashValid);
         }
 
         [Fact]
@@ -599,14 +602,14 @@ namespace SyncApp26.Tests.Services.Documents
             var doc = SeedDocument(owner, "SU", "PendingManager");
             var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            var v1Record = SignDocument(docService, doc, owner);
-            var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
+            var currentRecord = SignDocument(docService, doc, owner);
+            var legacyV1Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 1);
 
             var results = await CreateVerificationService()
-                .GetVerificationStatusBatchAsync(new[] { v1Record.Id, v2Record.Id });
+                .GetVerificationStatusBatchAsync(new[] { currentRecord.Id, legacyV1Record.Id });
 
-            Assert.Equal("Valid", results.Single(r => r.SignatureId == v1Record.Id).Status);
-            Assert.Equal("Valid", results.Single(r => r.SignatureId == v2Record.Id).Status);
+            Assert.Equal("Valid", results.Single(r => r.SignatureId == currentRecord.Id).Status);
+            Assert.Equal("Valid", results.Single(r => r.SignatureId == legacyV1Record.Id).Status);
         }
 
         [Fact]
@@ -620,16 +623,16 @@ namespace SyncApp26.Tests.Services.Documents
             var doc = SeedDocument(owner, "SU", "PendingManager");
             var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            var v1Record = SignDocument(docService, doc, owner);
-            var v2Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 2);
+            var currentRecord = SignDocument(docService, doc, owner);
+            var legacyV1Record = await SeedManuallySignedRecordAsync(doc, training, "Manager", manager, "Sef Echipa", version: 1);
 
             var result = await CreateVerificationService().GetSignatureHistoryForTrainingAsync(training.Id);
 
-            var userEntry = result!.VersionsByRole["User"].Single(v => v.SignatureId == v1Record.Id);
-            var managerEntry = result.VersionsByRole["Manager"].Single(v => v.SignatureId == v2Record.Id);
-            Assert.Equal(1, userEntry.Version);
+            var userEntry = result!.VersionsByRole["User"].Single(v => v.SignatureId == currentRecord.Id);
+            var managerEntry = result.VersionsByRole["Manager"].Single(v => v.SignatureId == legacyV1Record.Id);
+            Assert.Equal(SignatureCanonicalSerializer.CurrentVersion, userEntry.Version);
             Assert.Equal("Valid", userEntry.Status);
-            Assert.Equal(2, managerEntry.Version);
+            Assert.Equal(1, managerEntry.Version);
             Assert.Equal("Valid", managerEntry.Status);
         }
 
