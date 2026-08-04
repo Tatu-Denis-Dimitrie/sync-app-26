@@ -88,15 +88,20 @@ export class LoginComponent implements AfterViewInit {
       return;
     }
 
-    const instance = new PublicClientApplication({
-      auth: {
-        clientId: environment.microsoftClientId,
-        authority: 'https://login.microsoftonline.com/common',
-        redirectUri: window.location.origin + MSAL_REDIRECT_PATH
-      }
-    });
-    await instance.initialize();
-    this.msalInstance = instance;
+    try {
+      const instance = new PublicClientApplication({
+        auth: {
+          clientId: environment.microsoftClientId,
+          authority: 'https://login.microsoftonline.com/common',
+          redirectUri: window.location.origin + MSAL_REDIRECT_PATH
+        }
+      });
+      await instance.initialize();
+      this.msalInstance = instance;
+    } catch {
+      // Swallowed so it can't reject the Promise.all in ngAfterViewInit and take the rest of
+      // the login page down with it. msalInstance stays null and onMicrosoftLogin reports it.
+    }
   }
 
   onGoogleCredential(response: google.accounts.id.CredentialResponse): void {
@@ -117,6 +122,7 @@ export class LoginComponent implements AfterViewInit {
 
   async onMicrosoftLogin(): Promise<void> {
     if (!this.msalInstance) {
+      this.errorMessage = 'Microsoft sign-in is unavailable right now. Please sign in with your email and password.';
       return;
     }
 

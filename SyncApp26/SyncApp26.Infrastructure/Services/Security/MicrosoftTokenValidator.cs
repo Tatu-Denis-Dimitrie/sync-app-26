@@ -14,23 +14,29 @@ namespace SyncApp26.Infrastructure.Services
     {
         private const string MetadataAddress = "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration";
 
-        private readonly string _clientId;
+        private readonly IConfiguration _configuration;
         private readonly ConfigurationManager<OpenIdConnectConfiguration> _configManager;
 
         public MicrosoftTokenValidator(IConfiguration configuration)
         {
-            var clientId = configuration["Authentication:Microsoft:ClientId"];
-            if (string.IsNullOrWhiteSpace(clientId))
-                throw new InvalidOperationException(
-                    "Microsoft sign-in is not configured. Set 'Authentication:Microsoft:ClientId' in appsettings.");
-
-            _clientId = clientId;
+            _configuration = configuration;
             _configManager = new ConfigurationManager<OpenIdConnectConfiguration>(
                 MetadataAddress, new OpenIdConnectConfigurationRetriever());
         }
 
         public async Task<MicrosoftTokenPayload?> ValidateAsync(string idToken)
         {
+            /*
+             * Read and validate the config here rather than in the constructor: AccountService
+             * depends on this validator, so a constructor throw would fail every
+             * AuthenticationController endpoint - including plain password login and password
+             * reset - on any deployment that doesn't use Microsoft sign-in.
+             */
+            var clientId = _configuration["Authentication:Microsoft:ClientId"];
+            if (string.IsNullOrWhiteSpace(clientId))
+                throw new InvalidOperationException(
+                    "Microsoft sign-in is not configured. Set 'Authentication:Microsoft:ClientId' in appsettings.");
+
             try
             {
                 var config = await _configManager.GetConfigurationAsync();
@@ -40,7 +46,7 @@ namespace SyncApp26.Infrastructure.Services
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKeys = config.SigningKeys,
                     ValidateAudience = true,
-                    ValidAudience = _clientId,
+                    ValidAudience = clientId,
                     // "common" accepts sign-ins from any Entra ID tenant and personal Microsoft
                     // accounts, so there is no single fixed issuer to pin - each tenant issues
                     // with its own issuer URI. Signature + audience validation is the security

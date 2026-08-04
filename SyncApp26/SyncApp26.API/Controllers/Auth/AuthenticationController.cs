@@ -131,7 +131,7 @@ namespace SyncApp26.API.Controllers
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Google sign-in. Please try again." }),
                     LoginStatus.GoogleEmailNotVerified => Unauthorized(new { message = "Your Google account email is not verified. Verify it with Google and try again." }),
                     LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Google email. Contact an administrator." }),
-                    _ => Ok(new
+                    LoginStatus.Success => Ok(new
                     {
                         message = "Login successful.",
                         token = result.Token,
@@ -143,7 +143,10 @@ namespace SyncApp26.API.Controllers
                             lastName = result.LastName,
                             role = result.Role
                         }
-                    })
+                    }),
+                    // Matching Success explicitly keeps a future LoginStatus from falling through
+                    // as a 200 carrying a null token.
+                    _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
             }
             catch (Exception ex)
@@ -168,7 +171,7 @@ namespace SyncApp26.API.Controllers
                 {
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Microsoft sign-in. Please try again." }),
                     LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Microsoft email. Contact an administrator." }),
-                    _ => Ok(new
+                    LoginStatus.Success => Ok(new
                     {
                         message = "Login successful.",
                         token = result.Token,
@@ -180,7 +183,10 @@ namespace SyncApp26.API.Controllers
                             lastName = result.LastName,
                             role = result.Role
                         }
-                    })
+                    }),
+                    // Matching Success explicitly keeps a future LoginStatus from falling through
+                    // as a 200 carrying a null token.
+                    _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
             }
             catch (Exception ex)
