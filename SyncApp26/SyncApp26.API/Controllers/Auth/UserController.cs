@@ -42,6 +42,9 @@ namespace SyncApp26.API.Controllers
             AssignedToId = user.AssignedToId,
             AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
             Function = user.Function?.Name ?? "Unknown",
+            Address = user.Address,
+            BadgeNumber = user.BadgeNumber,
+            BloodType = user.BloodType,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
@@ -253,7 +256,7 @@ namespace SyncApp26.API.Controllers
                 DateOfBirth = user.DateOfBirth,
                 PlaceOfBirth = user.PlaceOfBirth,
                 Address = user.Address,
-                BloodGroup = user.BloodGroup,
+                BloodType = user.BloodType,
                 BadgeNumber = user.BadgeNumber,
                 Education = user.Education,
                 Qualifications = user.Qualifications,

@@ -190,6 +190,8 @@ namespace SyncApp26.Tests.Services.Requests
         [InlineData("FirstName", "New")]
         [InlineData("DepartmentId", "11111111-1111-1111-1111-111111111111")]
         [InlineData("CommuteDurationMinutes", "45")]
+        [InlineData("Address", "123 Main St")]
+        [InlineData("BadgeNumber", "BADGE-001")]
         public async Task ResolveRequestAsync_Approved_AppliesSupportedPropertyType(string fieldName, string newValue)
         {
             var user = SeedUser();
@@ -211,9 +213,40 @@ namespace SyncApp26.Tests.Services.Requests
                 "FirstName" => updatedUser.FirstName,
                 "DepartmentId" => updatedUser.DepartmentId?.ToString(),
                 "CommuteDurationMinutes" => updatedUser.CommuteDurationMinutes?.ToString(),
+                "Address" => updatedUser.Address,
+                "BadgeNumber" => updatedUser.BadgeNumber,
                 _ => null
             };
             Assert.Equal(newValue, actual);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_Approved_AppliesEnumProperty()
+        {
+            var user = SeedUser();
+            var request = SeedRequest(user.Id, "{\"BloodType\":\"OPositive\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(BloodType.OPositive, _dbFixture.Context.Users.Single(u => u.Id == user.Id).BloodType);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_UndefinedEnumValueForEnumProperty_SkipsSilently()
+        {
+            var user = SeedUser();
+            var request = SeedRequest(user.Id, "{\"BloodType\":\"NotARealBloodType\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            var result = await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            Assert.Equal("Approved", result.Status);
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).BloodType);
         }
 
         [Fact]
@@ -252,7 +285,7 @@ namespace SyncApp26.Tests.Services.Requests
         }
 
         [Fact]
-        public async Task ResolveRequestAsync_EnumTypedProperty_IsIgnoredSilently()
+        public async Task ResolveRequestAsync_RoleInChanges_NeverAppliedEvenWhenApproved()
         {
             var user = SeedUser();
             var request = SeedRequest(user.Id, "{\"Role\":\"Admin\"}");

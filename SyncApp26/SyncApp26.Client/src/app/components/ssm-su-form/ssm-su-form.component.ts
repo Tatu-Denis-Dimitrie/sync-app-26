@@ -9,6 +9,7 @@ import { AuthenticationService, AuthRole } from '../../services/authentication.s
 import { SignatureVerificationService, SignatureVersionSummary } from '../../services/signature-verification.service';
 import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
 import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { BloodType, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 
 interface InitialTrainingEntry {
   documentType: string;
@@ -40,7 +41,7 @@ interface UserSSMSUForm {
   dateOfBirth?: string;
   placeOfBirth?: string;
   address?: string;
-  bloodGroup?: string;
+  bloodType?: BloodType;
   badgeNumber?: string;
   education?: string;
   qualifications?: string;
@@ -73,13 +74,15 @@ export class SsmSuFormComponent implements OnInit {
   selectedTab: 'ssm' | 'su' = 'ssm';
   editMode = false;
   generatingDoc = false;
+  bloodTypeLabels = BLOOD_TYPE_LABELS;
+  bloodTypeOptions = BLOOD_TYPE_OPTIONS;
 
   // Editable form data
   formData = {
     dateOfBirth: '',
     placeOfBirth: '',
     address: '',
-    bloodGroup: '',
+    bloodType: '' as BloodType | '',
     badgeNumber: '',
     education: '',
     qualifications: '',
@@ -250,7 +253,7 @@ export class SsmSuFormComponent implements OnInit {
         dateOfBirth: this.userForm.dateOfBirth || '',
         placeOfBirth: this.userForm.placeOfBirth || '',
         address: this.userForm.address || '',
-        bloodGroup: this.userForm.bloodGroup || '',
+        bloodType: this.userForm.bloodType || '',
         badgeNumber: this.userForm.badgeNumber || '',
         education: this.userForm.education || '',
         qualifications: this.userForm.qualifications || '',
@@ -314,7 +317,7 @@ export class SsmSuFormComponent implements OnInit {
       dateOfBirth: this.formData.dateOfBirth || null,
       placeOfBirth: this.formData.placeOfBirth,
       address: this.formData.address,
-      bloodGroup: this.formData.bloodGroup,
+      bloodType: this.formData.bloodType || null,
       badgeNumber: this.formData.badgeNumber,
       education: this.formData.education,
       qualifications: this.formData.qualifications,

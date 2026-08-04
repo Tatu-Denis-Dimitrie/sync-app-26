@@ -15,6 +15,9 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public string? Function { get; set; }
         public Guid? AssignedToId { get; set; }
         public string? AssignedToName { get; set; }
+        public string? Address { get; set; }
+        public string? BadgeNumber { get; set; }
+        public BloodType? BloodType { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public bool HasSignedSsm { get; set; }

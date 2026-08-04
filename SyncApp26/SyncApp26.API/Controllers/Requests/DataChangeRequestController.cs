@@ -62,16 +62,17 @@ namespace SyncApp26.API.Controllers
             try 
             {
                 var changes = JsonSerializer.Deserialize<Dictionary<string, string>>(dto.RequestedChangesJson);
-                if (changes != null && changes.ContainsKey("Email")) 
+                if (changes != null)
                 {
-                    // Explicitly block email changes from being requested
-                    changes.Remove("Email");
-                    dto.RequestedChangesJson = JsonSerializer.Serialize(changes);
-                    
-                    // If Email was the only change, we might want to return early or just let the service handle it (it will likely fail validation if empty)
-                    if (changes.Count == 0)
+                    // Block email/role changes from being requested via this flow
+                    var removedBlockedField = changes.Remove("Email") | changes.Remove("Role");
+                    if (removedBlockedField)
                     {
-                        return BadRequest(new { message = "Email changes are no longer allowed. Please provide other fields to change." });
+                        dto.RequestedChangesJson = JsonSerializer.Serialize(changes);
+                        if (changes.Count == 0)
+                        {
+                            return BadRequest(new { message = "Email and Role changes are not allowed via this flow. Please provide other fields to change." });
+                        }
                     }
                 }
             } 

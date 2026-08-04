@@ -287,7 +287,7 @@ namespace SyncApp26.Application.Services
             user.DateOfBirth = dto.DateOfBirth;
             user.PlaceOfBirth = dto.PlaceOfBirth;
             user.Address = dto.Address;
-            user.BloodGroup = dto.BloodGroup;
+            user.BloodType = dto.BloodType;
             user.BadgeNumber = dto.BadgeNumber;
             user.Education = dto.Education;
             user.Qualifications = dto.Qualifications;

@@ -11,8 +11,8 @@ using SyncApp26.Infrastructure.Context;
 namespace SyncApp26.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260729105605_AddUserDocumentInstructorSignatureFields")]
-    partial class AddUserDocumentInstructorSignatureFields
+    [Migration("20260804074303_AddBloodTypeAndFieldConstraints")]
+    partial class AddBloodTypeAndFieldConstraints
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -373,6 +373,7 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Address")
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("AdmittedByFunction")
@@ -388,10 +389,14 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("BadgeNumber")
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("BloodGroup")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("BloodType")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("CommuteDurationMinutes")
                         .HasColumnType("INTEGER");
@@ -490,6 +495,8 @@ namespace SyncApp26.Infrastructure.Migrations
 
                     b.ToTable("Users", t =>
                         {
+                            t.HasCheckConstraint("CK_Users_BloodType", "\"BloodType\" IS NULL OR \"BloodType\" IN (0, 1, 2, 3, 4, 5, 6, 7)");
+
                             t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN (0, 1, 2)");
                         });
                 });

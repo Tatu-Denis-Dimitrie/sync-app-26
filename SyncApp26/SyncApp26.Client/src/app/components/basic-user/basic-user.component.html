@@ -26,9 +26,20 @@
               <p class="text-foreground font-medium mt-1">{{ user.email }}</p>
             </div>
             <div>
-              <label class="text-sm font-medium text-muted-foreground">Personal ID</label>
-              <p class="text-foreground font-medium mt-1">{{ user.personalId }}</p>
+              <label class="text-sm font-medium text-muted-foreground">Badge Number</label>
+              <p class="text-foreground font-medium mt-1">{{ user.badgeNumber || '-' }}</p>
             </div>
+            <div>
+              <label class="text-sm font-medium text-muted-foreground">Address</label>
+              <p class="text-foreground font-medium mt-1">{{ user.address || '-' }}</p>
+            </div>
+            <div>
+              <label class="text-sm font-medium text-muted-foreground">Blood Type</label>
+              <p class="text-foreground font-medium mt-1">{{ user.bloodType ? bloodTypeLabels[user.bloodType] : '-' }}</p>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Work Information</h3>
             <div>
               <label class="text-sm font-medium text-muted-foreground">Role</label>
               <div class="mt-1">
@@ -38,9 +49,6 @@
                 </span>
               </div>
             </div>
-          </div>
-          <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-foreground border-b border-border pb-2">Work Information</h3>
             <div>
               <label class="text-sm font-medium text-muted-foreground">Department</label>
               <p class="text-foreground font-medium mt-1">{{ user.departmentName }}</p>
@@ -477,7 +485,7 @@
 <!-- Data Change Modal -->
 @if (showDataChangeModal) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-card w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-border">
       <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
         <h3 class="text-lg font-semibold text-foreground">Request Data Change</h3>
@@ -512,13 +520,19 @@
                     <select [(ngModel)]="requestedChanges[field.key]"
                       class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500">
                       <option value="">(No change)</option>
-                      @for (opt of availableDepartments; track opt) {
-                        <option [value]="opt">{{ opt }}</option>
+                      @if (field.key === 'Department') {
+                        @for (opt of availableDepartments; track opt) {
+                          <option [value]="opt">{{ opt }}</option>
+                        }
+                      } @else {
+                        @for (opt of field.options ?? []; track opt.value) {
+                          <option [value]="opt.value">{{ opt.label }}</option>
+                        }
                       }
                     </select>
                   } @else {
                     <input [type]="field.type" [(ngModel)]="requestedChanges[field.key]"
-                      [attr.maxlength]="field.key === 'FirstName' || field.key === 'LastName' || field.key === 'Function' ? 100 : null"
+                      [attr.maxlength]="field.key === 'FirstName' || field.key === 'LastName' || field.key === 'Function' || field.key === 'Address' ? 100 : (field.key === 'BadgeNumber' ? 32 : null)"
                       placeholder="Current value is okay (leave empty)"
                       class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500" />
                   }
