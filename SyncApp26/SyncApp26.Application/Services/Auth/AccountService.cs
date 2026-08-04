@@ -14,12 +14,16 @@ namespace SyncApp26.Application.Services
         private readonly IUserService _userService;
         private readonly IAuthenticationService _authenticationService;
         private readonly ITokenService _tokenService;
+        private readonly IGoogleTokenValidator _googleTokenValidator;
+        private readonly IMicrosoftTokenValidator _microsoftTokenValidator;
 
-        public AccountService(IUserService userService, IAuthenticationService authenticationService, ITokenService tokenService)
+        public AccountService(IUserService userService, IAuthenticationService authenticationService, ITokenService tokenService, IGoogleTokenValidator googleTokenValidator, IMicrosoftTokenValidator microsoftTokenValidator)
         {
             _userService = userService;
             _authenticationService = authenticationService;
             _tokenService = tokenService;
+            _googleTokenValidator = googleTokenValidator;
+            _microsoftTokenValidator = microsoftTokenValidator;
         }
 
         private static string? ValidatePasswordFormat(string password)
@@ -168,6 +172,76 @@ namespace SyncApp26.Application.Services
             };
         }
 
+        public async Task<LoginResult> AuthenticateWithGoogleAsync(string idToken)
+        {
+            var payload = await _googleTokenValidator.ValidateAsync(idToken);
+            if (payload == null || string.IsNullOrWhiteSpace(payload.Email))
+            {
+                return new LoginResult { Status = LoginStatus.InvalidCredentials };
+            }
+
+            if (!payload.EmailVerified)
+            {
+                return new LoginResult { Status = LoginStatus.GoogleEmailNotVerified };
+            }
+
+            var normalizedEmail = payload.Email.ToLowerInvariant().Trim();
+            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
+
+            // Link-only: never creates an account. Deliberately no IsEmailVerified check -
+            // CSV-synced and admin-created users leave it null, and Google's own
+            // EmailVerified claim above covers it.
+            if (user == null)
+            {
+                return new LoginResult { Status = LoginStatus.NoAccountForEmail };
+            }
+
+            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
+
+            return new LoginResult
+            {
+                Status = LoginStatus.Success,
+                Token = token,
+                UserId = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Role = user.Role
+            };
+        }
+
+        public async Task<LoginResult> AuthenticateWithMicrosoftAsync(string idToken)
+        {
+            var payload = await _microsoftTokenValidator.ValidateAsync(idToken);
+            if (payload == null || string.IsNullOrWhiteSpace(payload.Email))
+            {
+                return new LoginResult { Status = LoginStatus.InvalidCredentials };
+            }
+
+            // Link-only, same as Google. Microsoft has no email-verified claim, but an
+            // unmatched email is always rejected, so a wrong claim can only fail closed.
+            var normalizedEmail = payload.Email.ToLowerInvariant().Trim();
+            var user = await _userService.GetUserByEmailAsync(normalizedEmail);
+
+            if (user == null)
+            {
+                return new LoginResult { Status = LoginStatus.NoAccountForEmail };
+            }
+
+            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
+
+            return new LoginResult
+            {
+                Status = LoginStatus.Success,
+                Token = token,
+                UserId = user.Id,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Role = user.Role
+            };
+        }
+
         public async Task<AccountActionResult<PasswordResetRequestedDTO>> RequestPasswordResetAsync(string email)
         {
             var normalizedEmail = email.ToLowerInvariant().Trim();
@@ -209,7 +283,7 @@ namespace SyncApp26.Application.Services
                 return AccountActionResult<bool>.Fail("Invalid or expired token.");
             }
 
-            var verifyPassword = await _authenticationService.VerifyPasswordAsync(newPassword, user.PasswordHash!);
+            var verifyPassword = user.PasswordHash != null && await _authenticationService.VerifyPasswordAsync(newPassword, user.PasswordHash);
             if (verifyPassword)
             {
                 return AccountActionResult<bool>.Fail("New password cannot be the same as the old password.");

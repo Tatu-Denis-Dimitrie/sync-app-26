@@ -19,6 +19,7 @@
     "@angular/platform-browser": "^21.2.12",
     "@angular/platform-browser-dynamic": "^21.2.12",
     "@angular/router": "^21.2.12",
+    "@azure/msal-browser": "^5.17.3",
     "@microsoft/signalr": "^10.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

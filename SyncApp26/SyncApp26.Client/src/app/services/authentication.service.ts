@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Router } from '@angular/router';
 
 export interface RegisterRequest {
   firstName: string;
@@ -74,10 +73,7 @@ export interface MessageResponse {
 export class AuthenticationService {
   private apiUrl = environment.apiUrl + '/authentication';
 
-  constructor(
-    private http: HttpClient,
-    private router: Router
-  ) {}
+  constructor(private http: HttpClient) {}
 
   register(request: RegisterRequest): Observable<RegisterResponse> {
     return this.http.post<RegisterResponse>(`${this.apiUrl}/register`, request);
@@ -85,16 +81,26 @@ export class AuthenticationService {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request)
-      .pipe(
-        tap(response => {
-          if (response.token) {
-            localStorage.setItem('authToken', response.token);
-          }
-          if (response.user) {
-            localStorage.setItem('currentUser', JSON.stringify(response.user));
-          }
-        })
-      );
+      .pipe(tap(response => this.storeSession(response)));
+  }
+
+  googleLogin(idToken: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/google-login`, { idToken })
+      .pipe(tap(response => this.storeSession(response)));
+  }
+
+  microsoftLogin(idToken: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/microsoft-login`, { idToken })
+      .pipe(tap(response => this.storeSession(response)));
+  }
+
+  private storeSession(response: LoginResponse): void {
+    if (response.token) {
+      localStorage.setItem('authToken', response.token);
+    }
+    if (response.user) {
+      localStorage.setItem('currentUser', JSON.stringify(response.user));
+    }
   }
 
   forgotPassword(request: ForgotPasswordRequest): Observable<MessageResponse> {
@@ -108,7 +114,9 @@ export class AuthenticationService {
   logout(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
-    this.router.navigate(['/login']);
+    // Full reload, not router navigation: root services cache the session's data and
+    // nothing resets them, so the next account would see the previous one's.
+    window.location.href = '/login';
   }
 
   getCurrentUser(): User | null {

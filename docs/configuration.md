@@ -23,6 +23,10 @@ Key settings:
   - Controls log verbosity (Information and Warning by default).
 - SignatureVerificationSweep:Enabled (bool, default false), SignatureVerificationSweep:IntervalHours (int, default 24), SignatureVerificationSweep:IntervalMinutes (int, optional)
   - Opt-in background safety-net that periodically re-verifies every SignatureRecord and logs any that no longer verify (Invalid / ChainBroken). Disabled by default; the sweep recomputes an HMAC per signature, so enable it only after validating the cost at your data volume. Read-only — it never mutates data. IntervalMinutes overrides IntervalHours when set — useful for quickly observing a sweep run during testing; leave it unset in normal use.
+- Authentication:Google:ClientId
+  - OAuth client ID used to validate Google Sign-In ID tokens server-side. Required only if Google sign-in is used; must match the googleClientId configured in the Angular client (see below).
+- Authentication:Microsoft:ClientId
+  - Application (client) ID used to validate Microsoft Sign-In ID tokens server-side. Required only if Microsoft sign-in is used; must match the microsoftClientId configured in the Angular client (see below).
 
 Operational guidance:
 - Do not commit real SMTP credentials or production JWT secrets.
@@ -38,6 +42,10 @@ Environment files under SyncApp26/SyncApp26.Client/src/environments/:
 Key settings:
 - apiUrl: API base URL (for example http://localhost:5022/api)
 - endpoints: relative paths used by services
+- googleClientId: OAuth client ID for Google Sign-In. Must match Authentication:Google:ClientId in the API config.
+- microsoftClientId: Application (client) ID for Microsoft Sign-In. Must match Authentication:Microsoft:ClientId in the API config.
+
+Note: angular.json has no fileReplacements configured, so environment.ts is used for every build configuration, including production. environment.prod.ts and environment.staging.ts are currently not wired up.
 
 ## CORS
 Allowed origins are configured in SyncApp26/SyncApp26.API/Program.cs. Ensure the SPA base URL is included for local and deployed environments.
