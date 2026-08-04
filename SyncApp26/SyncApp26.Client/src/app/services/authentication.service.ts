@@ -21,6 +21,10 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface GoogleLoginRequest {
+  idToken: string;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -85,16 +89,21 @@ export class AuthenticationService {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request)
-      .pipe(
-        tap(response => {
-          if (response.token) {
-            localStorage.setItem('authToken', response.token);
-          }
-          if (response.user) {
-            localStorage.setItem('currentUser', JSON.stringify(response.user));
-          }
-        })
-      );
+      .pipe(tap(response => this.storeSession(response)));
+  }
+
+  googleLogin(idToken: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/google-login`, { idToken })
+      .pipe(tap(response => this.storeSession(response)));
+  }
+
+  private storeSession(response: LoginResponse): void {
+    if (response.token) {
+      localStorage.setItem('authToken', response.token);
+    }
+    if (response.user) {
+      localStorage.setItem('currentUser', JSON.stringify(response.user));
+    }
   }
 
   forgotPassword(request: ForgotPasswordRequest): Observable<MessageResponse> {
