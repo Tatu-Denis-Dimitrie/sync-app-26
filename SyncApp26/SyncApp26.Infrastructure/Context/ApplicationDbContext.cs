@@ -60,7 +60,11 @@ namespace SyncApp26.Infrastructure.Context
 
                 // Defense-in-depth: reject any Role value outside the UserRole enum range
                 // (e.g. from a direct/manual DB write), instead of silently materializing it.
-                entity.ToTable(t => t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN (0, 1, 2)"));
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN (0, 1, 2)");
+                    t.HasCheckConstraint("CK_Users_BloodType", "\"BloodType\" IS NULL OR \"BloodType\" IN (0, 1, 2, 3, 4, 5, 6, 7)");
+                });
 
                 entity.Property(e => e.FirstName)
                     .IsRequired()
@@ -90,6 +94,12 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.PersonalId)
                     .IsRequired()
                     .HasMaxLength(50);
+
+                entity.Property(e => e.Address)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.BadgeNumber)
+                    .HasMaxLength(32);
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
