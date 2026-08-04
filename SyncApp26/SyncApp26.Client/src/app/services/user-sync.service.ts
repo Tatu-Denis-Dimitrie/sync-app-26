@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
-import { User, UserRole, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, UserChangeHistory, ImportHistoryItem } from '../models/csv-sync.model';
+import { User, UserRole, BloodType, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, UserChangeHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { AuthRole } from './authentication.service';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
@@ -21,6 +21,9 @@ interface BackendUser {
   assignedToPersonalId?: string;
   assignedToName?: string;
   function?: string;
+  address?: string;
+  badgeNumber?: string;
+  bloodType?: BloodType;
   createdAt: string;
   updatedAt?: string;
   hasSignedSsm?: boolean;
@@ -142,6 +145,9 @@ export class UserSyncService {
       assignedToPersonalId: backendUser.assignedToPersonalId,
       assignedToName: backendUser.assignedToName,
       function: this.normalizeFunction(backendUser.function),
+      address: backendUser.address,
+      badgeNumber: backendUser.badgeNumber,
+      bloodType: backendUser.bloodType,
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
       role: this.mapBackendRole(backendUser),

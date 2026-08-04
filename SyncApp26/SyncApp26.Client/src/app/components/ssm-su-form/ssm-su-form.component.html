@@ -167,6 +167,7 @@
                   <input
                     type="text"
                     [(ngModel)]="formData.address"
+                    maxlength="100"
                     class="edit-input"
                     placeholder="Adresa"
                     />
@@ -175,15 +176,15 @@
               <p>
                 <strong>Grupa sanguină:</strong>
                 @if (!editMode) {
-                  <span>{{ formData.bloodGroup || "N/A" }}</span>
+                  <span>{{ formData.bloodType ? bloodTypeLabels[formData.bloodType] : "N/A" }}</span>
                 }
                 @if (editMode) {
-                  <input
-                    type="text"
-                    [(ngModel)]="formData.bloodGroup"
-                    class="edit-input-small"
-                    placeholder="Grupa"
-                    />
+                  <select [(ngModel)]="formData.bloodType" class="edit-input-small">
+                    <option value="">-- Select --</option>
+                    @for (opt of bloodTypeOptions; track opt.value) {
+                      <option [value]="opt.value">{{ opt.label }}</option>
+                    }
+                  </select>
                 }
               </p>
               <p>
@@ -195,6 +196,7 @@
                   <input
                     type="text"
                     [(ngModel)]="formData.badgeNumber"
+                    maxlength="32"
                     class="edit-input-small"
                     placeholder="Marca"
                     />
@@ -754,6 +756,7 @@
                                   <input
                                     type="text"
                                     [(ngModel)]="formData.badgeNumber"
+                                    maxlength="32"
                                     class="edit-input-small"
                                     placeholder="Marca"
                                     />
@@ -768,6 +771,7 @@
                                   <input
                                     type="text"
                                     [(ngModel)]="formData.address"
+                                    maxlength="100"
                                     class="edit-input"
                                     placeholder="Adresa"
                                     />

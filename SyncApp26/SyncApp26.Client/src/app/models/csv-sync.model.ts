@@ -3,6 +3,31 @@ export enum UserRole {
   LineManager = 'line-manager'
 }
 
+export enum BloodType {
+  APositive = 'APositive',
+  ANegative = 'ANegative',
+  BPositive = 'BPositive',
+  BNegative = 'BNegative',
+  ABPositive = 'ABPositive',
+  ABNegative = 'ABNegative',
+  OPositive = 'OPositive',
+  ONegative = 'ONegative'
+}
+
+export const BLOOD_TYPE_LABELS: Record<BloodType, string> = {
+  [BloodType.APositive]: 'A+',
+  [BloodType.ANegative]: 'A-',
+  [BloodType.BPositive]: 'B+',
+  [BloodType.BNegative]: 'B-',
+  [BloodType.ABPositive]: 'AB+',
+  [BloodType.ABNegative]: 'AB-',
+  [BloodType.OPositive]: 'O+',
+  [BloodType.ONegative]: 'O-'
+};
+
+export const BLOOD_TYPE_OPTIONS: { value: BloodType; label: string }[] =
+  Object.values(BloodType).map(value => ({ value, label: BLOOD_TYPE_LABELS[value] }));
+
 export enum SyncStatus {
   Pending = 'pending',
   InProgress = 'in-progress',
@@ -23,6 +48,9 @@ export interface User {
   assignedToPersonalId?: string;
   assignedToName?: string;
   function?: string;
+  address?: string;
+  badgeNumber?: string;
+  bloodType?: BloodType;
   createdAt: Date;
   updatedAt?: Date;
   hasSignedSsm?: boolean;

@@ -5,6 +5,7 @@ import { DataChangeRequestService } from '../../services/data-change-request.ser
 import { DataChangeRequest } from '../../models/data-change-request.model';
 import { Router } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
+import { BloodType, BLOOD_TYPE_LABELS } from '../../models/csv-sync.model';
 
 @Component({
   selector: 'app-data-change-requests',
@@ -49,6 +50,17 @@ export class DataChangeRequestsComponent implements OnInit {
     } catch {
       return {};
     }
+  }
+
+  getFieldLabel(key: PropertyKey): string {
+    return String(key).replace(/([A-Z])/g, ' $1').trim();
+  }
+
+  getDisplayValue(key: PropertyKey, value: unknown): unknown {
+    if (key === 'BloodType' && typeof value === 'string' && value in BLOOD_TYPE_LABELS) {
+      return BLOOD_TYPE_LABELS[value as BloodType];
+    }
+    return value;
   }
 
   resolveRequest(id: string, status: 'Approved' | 'Rejected'): void {

@@ -8,7 +8,7 @@ import { UserSignatureService, UserSignature, UserSignatureHistory } from '../..
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
-import { User, UserRole } from '../../models/csv-sync.model';
+import { User, UserRole, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
@@ -61,6 +61,7 @@ export class BasicUserComponent implements OnInit {
   }
 
   UserRole = UserRole;
+  bloodTypeLabels = BLOOD_TYPE_LABELS;
 
   // ── Data Change Request ────────────────────────────────────────────────
   showDataChangeModal = false;
@@ -71,11 +72,14 @@ export class BasicUserComponent implements OnInit {
   
   availableDepartments: string[] = [];
   
-  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select' }[] = [
+  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
     { key: 'LastName', label: 'Last Name', type: 'text' },
     { key: 'FirstName', label: 'First Name', type: 'text' },
     { key: 'Department', label: 'Department (Name)', type: 'select' },
-    { key: 'Function', label: 'Function (Name)', type: 'text' }
+    { key: 'Function', label: 'Function (Name)', type: 'text' },
+    { key: 'Address', label: 'Address', type: 'text' },
+    { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
+    { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS }
   ];
   selectedFieldKey = '';
   newFieldValue = '';
