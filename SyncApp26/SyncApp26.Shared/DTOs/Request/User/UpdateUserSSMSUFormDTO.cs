@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.Validation;
 
 namespace SyncApp26.Shared.DTOs.Request.User
@@ -7,8 +8,13 @@ namespace SyncApp26.Shared.DTOs.Request.User
     {
         public DateTime? DateOfBirth { get; set; }
         public string? PlaceOfBirth { get; set; }
+
+        [StringLength(100)]
         public string? Address { get; set; }
-        public string? BloodGroup { get; set; }
+
+        public BloodType? BloodType { get; set; }
+
+        [StringLength(32)]
         public string? BadgeNumber { get; set; }
         public string? Education { get; set; }
         public string? Qualifications { get; set; }
