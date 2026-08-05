@@ -45,6 +45,14 @@ namespace SyncApp26.API.Controllers
             return Ok(requests);
         }
 
+        [HttpGet("pending-count")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> GetPendingCount()
+        {
+            var count = await _service.GetPendingCountAsync();
+            return Ok(new { count });
+        }
+
         [HttpGet("my-requests")]
         public async Task<IActionResult> GetMyRequests()
         {

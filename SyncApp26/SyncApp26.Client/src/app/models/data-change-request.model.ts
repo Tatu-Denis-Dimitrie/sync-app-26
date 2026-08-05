@@ -4,11 +4,13 @@ export interface DataChangeRequest {
   userEmail?: string;
   userFullName?: string;
   requestedChangesJson: string;
+  originalValuesJson?: string;
   reason: string;
   status: string; // 'Pending', 'Approved', 'Rejected'
   createdAt: string;
   resolvedAt?: string;
   resolvedByAdminId?: string;
+  autoResolvedByImportHistoryId?: string;
 }
 
 export interface CreateDataChangeRequestDto {

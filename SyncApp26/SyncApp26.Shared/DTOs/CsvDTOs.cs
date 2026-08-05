@@ -42,6 +42,10 @@ public class FieldConflictDTO
     public object? CsvValue { get; set; }
     public string? SelectedValue { get; set; } // "db" or "csv"
     public bool Selected { get; set; }
+
+    public bool HasPendingRequest { get; set; }
+
+    public string? PendingRequestValue { get; set; }
 }
 
 public class SyncRequestDTO

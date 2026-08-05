@@ -52,6 +52,19 @@ export class DataChangeRequestsComponent implements OnInit {
     }
   }
 
+  getOriginalValues(req: DataChangeRequest): any {
+    if (!req.originalValuesJson) return {};
+    try {
+      return JSON.parse(req.originalValuesJson);
+    } catch {
+      return {};
+    }
+  }
+
+  getOriginalValue(req: DataChangeRequest, key: PropertyKey): unknown {
+    return this.getOriginalValues(req)[key as string];
+  }
+
   getFieldLabel(key: PropertyKey): string {
     return String(key).replace(/([A-Z])/g, ' $1').trim();
   }
@@ -79,6 +92,7 @@ export class DataChangeRequestsComponent implements OnInit {
         if (index !== -1) {
           this.requests[index] = res;
         }
+        this.service.loadPendingCount();
       },
       error: (err) => {
         this.error = err.error?.message || `Failed to ${status.toLowerCase()} request.`;

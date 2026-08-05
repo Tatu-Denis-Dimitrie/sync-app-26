@@ -23,7 +23,13 @@ namespace SyncApp26.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("AutoResolvedByImportHistoryId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalValuesJson")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Reason")
@@ -50,6 +56,8 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AutoResolvedByImportHistoryId");
 
                     b.HasIndex("ResolvedByAdminId");
 
@@ -845,6 +853,11 @@ namespace SyncApp26.Infrastructure.Migrations
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.DataChangeRequest", b =>
                 {
+                    b.HasOne("SyncApp26.Domain.Entities.ImportHistory", "AutoResolvedByImportHistory")
+                        .WithMany()
+                        .HasForeignKey("AutoResolvedByImportHistoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SyncApp26.Domain.Entities.User", "ResolvedByAdmin")
                         .WithMany()
                         .HasForeignKey("ResolvedByAdminId")
@@ -855,6 +868,8 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AutoResolvedByImportHistory");
 
                     b.Navigation("ResolvedByAdmin");
 

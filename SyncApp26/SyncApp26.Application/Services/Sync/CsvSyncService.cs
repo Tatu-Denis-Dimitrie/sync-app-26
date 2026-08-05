@@ -8,6 +8,7 @@ using SyncApp26.Shared.DTOs.CSV.Department;
 using SyncApp26.Shared.DTOs.Response.Department;
 using SyncApp26.Shared.DTOs.CSV.History;
 using System.IO;
+using System.Text.Json;
 
 namespace SyncApp26.Application.Services;
 
@@ -19,8 +20,19 @@ public class CsvSyncService : ICsvSyncService
     private readonly IFunctionRepository _functionRepository;
     private readonly IImportHistoryRepository _importHistoryRepository;
     private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
+    private readonly IDataChangeRequestRepository _dataChangeRequestRepository;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository)
+    // Fields a pending DataChangeRequest can name (as User property names) that this service knows
+    // how to compare against a CSV value textually. DataChangeRequest stores raw property values
+    // (e.g. a DepartmentId Guid), while the CSV compares department/function/manager by display
+    // name, so those aren't included here - there's no reliable text equivalence to auto-match on.
+    private static readonly Dictionary<string, string> CsvFieldToUserProperty = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "firstname", nameof(User.FirstName) },
+        { "lastname", nameof(User.LastName) }
+    };
+
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
@@ -28,6 +40,7 @@ public class CsvSyncService : ICsvSyncService
         _notificationService = notificationService;
         _importHistoryRepository = importHistoryRepository;
         _userChangeHistoryRepository = userChangeHistoryRepositoryRepository;
+        _dataChangeRequestRepository = dataChangeRequestRepository;
     }
 
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
@@ -45,6 +58,11 @@ public class CsvSyncService : ICsvSyncService
             .Where(u => !string.IsNullOrWhiteSpace(u.PersonalId))
             .ToDictionary(u => u.PersonalId.Trim(), u => u, StringComparer.OrdinalIgnoreCase);
 
+        // Group pending DataChangeRequests by user so conflicts on the same field can be flagged
+        var pendingRequestsByUserId = (await _dataChangeRequestRepository.GetAllPendingAsync())
+            .GroupBy(r => r.UserId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         // Process CSV users
         foreach (var csvUser in csvUsers)
         {
@@ -57,7 +75,8 @@ public class CsvSyncService : ICsvSyncService
 
             if (dbUserMap.TryGetValue(personalId, out var dbUser))
             {
-                var comparison = await BuildExistingUserComparisonAsync(dbUser, csvUser, dbUsers);
+                pendingRequestsByUserId.TryGetValue(dbUser.Id, out var pendingRequestsForUser);
+                var comparison = await BuildExistingUserComparisonAsync(dbUser, csvUser, dbUsers, pendingRequestsForUser ?? new List<DataChangeRequest>());
                 comparisons.Add(comparison);
 
                 // Stream result to frontend
@@ -89,12 +108,12 @@ public class CsvSyncService : ICsvSyncService
         return !string.IsNullOrWhiteSpace(csvUser.PersonalId);
     }
 
-    private async Task<UserComparisonDTO> BuildExistingUserComparisonAsync(User dbUser, CsvUserDTO csvUser, List<User> dbUsers)
+    private async Task<UserComparisonDTO> BuildExistingUserComparisonAsync(User dbUser, CsvUserDTO csvUser, List<User> dbUsers, List<DataChangeRequest> pendingRequestsForUser)
     {
         // User exists - compare fields
         var csvManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvUser.AssignedToPersonalId);
         var csvUserData = MapToCsvUserDataDTO(csvUser, csvManager);
-        var conflicts = DetectFieldConflicts(dbUser, csvUser, csvManager);
+        var conflicts = DetectFieldConflicts(dbUser, csvUser, csvManager, pendingRequestsForUser);
 
         return new UserComparisonDTO
         {
@@ -136,12 +155,16 @@ public class CsvSyncService : ICsvSyncService
         };
     }
 
-    private static List<FieldConflictDTO> DetectFieldConflicts(User dbUser, CsvUserDTO csvUser, User? csvManager)
+    private static List<FieldConflictDTO> DetectFieldConflicts(User dbUser, CsvUserDTO csvUser, User? csvManager, List<DataChangeRequest> pendingRequestsForUser)
     {
         var conflicts = new List<FieldConflictDTO>();
+        var pendingValuesByCsvField = GetPendingRequestValuesByCsvField(pendingRequestsForUser);
 
-        AddFieldConflictIfDifferent(conflicts, "firstName", dbUser.FirstName, csvUser.FirstName, dbUser.FirstName != csvUser.FirstName);
-        AddFieldConflictIfDifferent(conflicts, "lastName", dbUser.LastName, csvUser.LastName, dbUser.LastName != csvUser.LastName);
+        // firstName/lastName also surface a pending request that's gone stale relative to the DB -
+        // even on a row where the CSV itself doesn't disagree with the DB - so admins don't lose
+        // track of a request like "Popescu" sitting pending after "Fernandez" was already applied.
+        AddNameFieldConflict(conflicts, "firstName", "firstname", dbUser.FirstName, csvUser.FirstName, pendingValuesByCsvField);
+        AddNameFieldConflict(conflicts, "lastName", "lastname", dbUser.LastName, csvUser.LastName, pendingValuesByCsvField);
 
         var dbDepartmentName = dbUser.Department?.Name;
         AddFieldConflictIfDifferent(conflicts, "departmentName", dbDepartmentName ?? string.Empty, csvUser.DepartmentName, dbDepartmentName != csvUser.DepartmentName);
@@ -176,6 +199,77 @@ public class CsvSyncService : ICsvSyncService
             CsvValue = csvValue,
             Selected = false
         });
+    }
+
+    // Like AddFieldConflictIfDifferent, but also surfaces a pending DataChangeRequest whose target
+    // value no longer matches the DB - even when the DB and CSV agree with each other - so a stale
+    // request (e.g. one superseded by an earlier import) never silently drops out of view.
+    private static void AddNameFieldConflict(List<FieldConflictDTO> conflicts, string field, string csvFieldKey, string dbValue, string csvValue, Dictionary<string, List<string>> pendingValuesByCsvField)
+    {
+        var valuesDiffer = dbValue != csvValue;
+
+        pendingValuesByCsvField.TryGetValue(csvFieldKey, out var pendingTargets);
+        var staleTargets = (pendingTargets ?? new List<string>())
+            .Where(v => !string.Equals(v, dbValue, StringComparison.Ordinal))
+            .Distinct()
+            .ToList();
+
+        if (!valuesDiffer && staleTargets.Count == 0)
+        {
+            return;
+        }
+
+        conflicts.Add(new FieldConflictDTO
+        {
+            Field = field,
+            DbValue = dbValue,
+            CsvValue = csvValue,
+            Selected = false,
+            HasPendingRequest = staleTargets.Count > 0,
+            PendingRequestValue = staleTargets.Count > 0 ? string.Join(", ", staleTargets) : null
+        });
+    }
+
+    // Maps CSV field keys (e.g. "lastname") to every distinct value a pending DataChangeRequest for
+    // this user is asking that field to become.
+    private static Dictionary<string, List<string>> GetPendingRequestValuesByCsvField(List<DataChangeRequest> pendingRequestsForUser)
+    {
+        var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var request in pendingRequestsForUser)
+        {
+            foreach (var (propertyName, value) in TryGetRequestedFieldValues(request.RequestedChangesJson))
+            {
+                var csvField = CsvFieldToUserProperty
+                    .FirstOrDefault(kv => string.Equals(kv.Value, propertyName, StringComparison.OrdinalIgnoreCase))
+                    .Key;
+                if (csvField == null)
+                {
+                    continue;
+                }
+
+                if (!result.TryGetValue(csvField, out var values))
+                {
+                    values = new List<string>();
+                    result[csvField] = values;
+                }
+                values.Add(value);
+            }
+        }
+        return result;
+    }
+
+    private static List<(string PropertyName, string Value)> TryGetRequestedFieldValues(string requestedChangesJson)
+    {
+        try
+        {
+            var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
+            return changes?.Select(kv => (kv.Key, kv.Value?.ToString() ?? string.Empty)).ToList()
+                   ?? new List<(string, string)>();
+        }
+        catch
+        {
+            return new List<(string, string)>();
+        }
     }
 
     private List<UserComparisonDTO> FindDeletedUserComparisons(List<User> dbUsers, IEnumerable<CsvUserDTO> csvUsers)
@@ -217,6 +311,12 @@ public class CsvSyncService : ICsvSyncService
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
         var functionCache = new Dictionary<string, Function?>(StringComparer.OrdinalIgnoreCase);
 
+        // Pending DataChangeRequests grouped by user, so a request satisfied by this import can be
+        // auto-closed with correct audit attribution instead of silently going stale.
+        var pendingRequestsByUserId = (await _dataChangeRequestRepository.GetAllPendingAsync())
+            .GroupBy(r => r.UserId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         // Batch collections for bulk operations
         var usersToAdd = new List<User>();
         var usersToUpdate = new List<User>();
@@ -230,6 +330,15 @@ public class CsvSyncService : ICsvSyncService
             FileName = syncRequest.FileName ?? "CSV Import"
         };
         bool importHistoryCreated = false;
+
+        async Task EnsureImportHistoryCreatedAsync()
+        {
+            if (!importHistoryCreated)
+            {
+                await _importHistoryRepository.AddAsync(importHistory);
+                importHistoryCreated = true;
+            }
+        }
 
         int totalItems = syncRequest.Items.Count;
         int processedItems = 0;
@@ -276,12 +385,7 @@ public class CsvSyncService : ICsvSyncService
 
                         if (item.Conflicts.Any())
                         {
-                            if (!importHistoryCreated)
-                            {
-                                await _importHistoryRepository.AddAsync(importHistory);
-                                importHistoryCreated = true;
-                            }
-
+                            await EnsureImportHistoryCreatedAsync();
                             await RecordRejectedConflictsAsync(item.Conflicts, existingUser, importHistory);
                         }
 
@@ -300,6 +404,13 @@ public class CsvSyncService : ICsvSyncService
                                 continue;
                             }
                             hasChanges = changed;
+                        }
+
+                        // Whether or not this row itself changed anything, the user may now match a
+                        // pending DataChangeRequest (this import, or an earlier one) - close it out.
+                        if (pendingRequestsByUserId.TryGetValue(existingUser.Id, out var pendingRequestsForUser))
+                        {
+                            await AutoResolveSatisfiedRequestsAsync(existingUser, pendingRequestsForUser, importHistory, EnsureImportHistoryCreatedAsync);
                         }
 
                         if (hasChanges)
@@ -461,6 +572,13 @@ public class CsvSyncService : ICsvSyncService
                 continue;
             }
 
+            // Purely informational conflicts (e.g. a stale pending DataChangeRequest flagged on a
+            // field where the DB and CSV already agree) have nothing to reject - don't log a no-op.
+            if (Equals(conflict.DbValue?.ToString(), conflict.CsvValue?.ToString()))
+            {
+                continue;
+            }
+
             var normalizedField = conflict.Field.Trim().ToLower();
             var historyField = normalizedField == "assignedtoname" ? "linemanager" : normalizedField;
 
@@ -476,6 +594,108 @@ public class CsvSyncService : ICsvSyncService
             };
 
             await _userChangeHistoryRepository.AddAsync(rejectedConflict);
+        }
+    }
+
+    // Closes out any pending DataChangeRequest for this user whose every requested field now
+    // already equals the user's live value (i.e. this import - possibly combined with an earlier
+    // one - achieved exactly what the request was asking for). Requests naming any field this
+    // service can't textually compare against a CSV value, or whose fields don't ALL match yet,
+    // are left pending for an admin to resolve normally.
+    private async Task AutoResolveSatisfiedRequestsAsync(User existingUser, List<DataChangeRequest> pendingRequestsForUser, ImportHistory importHistory, Func<Task> ensureImportHistoryCreatedAsync)
+    {
+        foreach (var request in pendingRequestsForUser.Where(r => r.Status == "Pending"))
+        {
+            Dictionary<string, object>? changes;
+            try
+            {
+                changes = JsonSerializer.Deserialize<Dictionary<string, object>>(request.RequestedChangesJson);
+            }
+            catch
+            {
+                continue;
+            }
+            if (changes == null || changes.Count == 0)
+            {
+                continue;
+            }
+
+            var resolvedFields = new List<(string PropertyName, string NewValue)>();
+            var fullySatisfied = true;
+            foreach (var kv in changes)
+            {
+                if (!CsvFieldToUserProperty.ContainsValue(kv.Key))
+                {
+                    fullySatisfied = false;
+                    break;
+                }
+
+                var prop = typeof(User).GetProperty(kv.Key);
+                var newValue = kv.Value?.ToString() ?? string.Empty;
+                var currentValue = prop?.GetValue(existingUser)?.ToString() ?? string.Empty;
+                if (prop == null || !string.Equals(currentValue, newValue, StringComparison.Ordinal))
+                {
+                    fullySatisfied = false;
+                    break;
+                }
+
+                resolvedFields.Add((kv.Key, newValue));
+            }
+
+            if (!fullySatisfied)
+            {
+                continue;
+            }
+
+            await ensureImportHistoryCreatedAsync();
+
+            var originalValues = TryDeserializeOriginalValues(request.OriginalValuesJson);
+            foreach (var (propertyName, newValue) in resolvedFields)
+            {
+                var oldValue = (originalValues != null && originalValues.TryGetValue(propertyName, out var snapshot))
+                    ? snapshot ?? string.Empty
+                    : newValue; // No creation-time snapshot available (legacy request) - nothing meaningful to show as "before".
+
+                if (string.Equals(oldValue, newValue, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                await _userChangeHistoryRepository.AddAsync(new UserChangeHistory
+                {
+                    Id = Guid.NewGuid(),
+                    ImportHistoryId = importHistory.Id,
+                    UserId = existingUser.Id,
+                    FieldName = propertyName.ToLowerInvariant(),
+                    OldValue = oldValue,
+                    NewValue = newValue,
+                    Status = "approved-by-import",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            request.Status = "Approved";
+            request.ResolvedAt = DateTime.UtcNow;
+            request.ResolvedByAdminId = null;
+            request.AutoResolvedByImportHistoryId = importHistory.Id;
+            await _dataChangeRequestRepository.UpdateAsync(request);
+        }
+    }
+
+    private static Dictionary<string, string?>? TryDeserializeOriginalValues(string? originalValuesJson)
+    {
+        if (string.IsNullOrWhiteSpace(originalValuesJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, string?>>(originalValuesJson);
+        }
+        catch
+        {
+            return null;
         }
     }
 

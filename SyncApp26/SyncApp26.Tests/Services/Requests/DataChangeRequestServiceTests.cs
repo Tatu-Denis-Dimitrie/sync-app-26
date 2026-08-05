@@ -101,6 +101,23 @@ namespace SyncApp26.Tests.Services.Requests
             Assert.Equal(older.Id, result[1].Id);
         }
 
+        // ───────────────────────── GetPendingCountAsync ─────────────────────────
+
+        [Fact]
+        public async Task GetPendingCountAsync_CountsOnlyPendingRequests()
+        {
+            var user = SeedUser();
+            SeedRequest(user.Id, "{}", status: "Pending");
+            SeedRequest(user.Id, "{}", status: "Pending");
+            SeedRequest(user.Id, "{}", status: "Approved");
+            SeedRequest(user.Id, "{}", status: "Rejected");
+            var service = CreateService();
+
+            var count = await service.GetPendingCountAsync();
+
+            Assert.Equal(2, count);
+        }
+
         // ───────────────────────── CreateRequestAsync ─────────────────────────
 
         [Fact]
@@ -120,6 +137,20 @@ namespace SyncApp26.Tests.Services.Requests
             var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Id);
             Assert.Equal("Pending", persisted.Status);
             Assert.Equal("Name changed legally", persisted.Reason);
+        }
+
+        [Fact]
+        public async Task CreateRequestAsync_Success_SnapshotsCurrentValueAsOriginalValuesJson()
+        {
+            var user = SeedUser(firstName: "Old");
+            var service = CreateService();
+            var dto = new CreateDataChangeRequestDTO { RequestedChangesJson = "{\"FirstName\":\"New\"}", Reason = "Name changed legally" };
+
+            var result = await service.CreateRequestAsync(user.Id, dto);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Id);
+            Assert.Equal("{\"FirstName\":\"Old\"}", persisted.OriginalValuesJson);
         }
 
         [Fact]
@@ -333,6 +364,30 @@ namespace SyncApp26.Tests.Services.Requests
             var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id && h.FieldName == "FirstName");
             Assert.Equal("Old", history.OldValue);
             Assert.Equal("New", history.NewValue);
+            Assert.Equal("approved", history.Status);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_LiveValueAlreadyMatchesRequestBecauseOfExternalChange_StillCreatesHistoryFromSnapshot()
+        {
+            // Simulates the CSV-import race: something else (e.g. a CSV import) already changed the
+            // user's LastName to the exact value this request asks for, before an admin resolves it.
+            // Diffing against the live value alone would find no difference and silently skip the
+            // history entry - the snapshot from request-creation time must be used instead.
+            var user = SeedUser(firstName: "Old");
+            user.LastName = "Fernandez"; // live value already matches what's requested
+            _dbFixture.Context.SaveChanges();
+            var request = SeedRequest(user.Id, "{\"LastName\":\"Fernandez\"}");
+            request.OriginalValuesJson = "{\"LastName\":\"Garcia\"}"; // value at the time the request was created
+            _dbFixture.Context.SaveChanges();
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id && h.FieldName == "LastName");
+            Assert.Equal("Garcia", history.OldValue);
+            Assert.Equal("Fernandez", history.NewValue);
             Assert.Equal("approved", history.Status);
         }
 

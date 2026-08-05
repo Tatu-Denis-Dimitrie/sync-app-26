@@ -237,6 +237,13 @@
                               >- removed</span
                               >
                           }
+                          @if (fieldHasPendingRequest(comparison, 'firstName')) {
+                            <span
+                              class="text-xs text-amber-600"
+                              title="A pending data change request wants this field to become a different value"
+                              >⚠ pending request: {{ getPendingRequestValue(comparison, 'firstName') }}</span
+                              >
+                          }
                         </div>
                         <p
                           class="font-mono text-sm"
@@ -325,6 +332,13 @@
                                       class="text-xs text-red-600"
                                       >- removed</span
                                       >
+                                    }
+                                    @if (fieldHasPendingRequest(comparison, 'lastName')) {
+                                      <span
+                                        class="text-xs text-amber-600"
+                                        title="A pending data change request wants this field to become a different value"
+                                        >⚠ pending request: {{ getPendingRequestValue(comparison, 'lastName') }}</span
+                                        >
                                     }
                                   </div>
                                   <p
