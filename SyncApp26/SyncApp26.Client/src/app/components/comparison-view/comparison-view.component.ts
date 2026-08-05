@@ -204,7 +204,15 @@ export class ComparisonViewComponent implements OnChanges {
   }
 
   hasFieldConflict(comparison: UserComparison, field: string): boolean {
-    return comparison.conflicts.some(c => c.field === field);
+    return comparison.conflicts.some(c => c.field === field && c.dbValue !== c.csvValue);
+  }
+
+  fieldHasPendingRequest(comparison: UserComparison, field: string): boolean {
+    return comparison.conflicts.some(c => c.field === field && c.hasPendingRequest);
+  }
+
+  getPendingRequestValue(comparison: UserComparison, field: string): string | undefined {
+    return comparison.conflicts.find(c => c.field === field && c.hasPendingRequest)?.pendingRequestValue;
   }
 
   getFilteredComparisons(): UserComparison[] {

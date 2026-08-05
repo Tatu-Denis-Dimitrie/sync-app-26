@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SyncApp26.Infrastructure.Context;
 
@@ -10,9 +11,11 @@ using SyncApp26.Infrastructure.Context;
 namespace SyncApp26.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805074128_AddOriginalValuesJsonToDataChangeRequest")]
+    partial class AddOriginalValuesJsonToDataChangeRequest
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -21,9 +24,6 @@ namespace SyncApp26.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("AutoResolvedByImportHistoryId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -56,8 +56,6 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AutoResolvedByImportHistoryId");
 
                     b.HasIndex("ResolvedByAdminId");
 
@@ -853,11 +851,6 @@ namespace SyncApp26.Infrastructure.Migrations
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.DataChangeRequest", b =>
                 {
-                    b.HasOne("SyncApp26.Domain.Entities.ImportHistory", "AutoResolvedByImportHistory")
-                        .WithMany()
-                        .HasForeignKey("AutoResolvedByImportHistoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("SyncApp26.Domain.Entities.User", "ResolvedByAdmin")
                         .WithMany()
                         .HasForeignKey("ResolvedByAdminId")
@@ -868,8 +861,6 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("AutoResolvedByImportHistory");
 
                     b.Navigation("ResolvedByAdmin");
 

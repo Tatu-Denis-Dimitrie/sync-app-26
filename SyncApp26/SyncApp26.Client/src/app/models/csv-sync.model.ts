@@ -85,6 +85,8 @@ export interface FieldConflict {
   csvValue: any;
   selectedValue?: 'db' | 'csv';
   selected: boolean; // Whether this field should be synced
+  hasPendingRequest?: boolean; // True if a pending DataChangeRequest is also targeting this field
+  pendingRequestValue?: string; // The value(s) the pending request(s) are asking for, when hasPendingRequest is true
 }
 
 export interface CsvImport {

@@ -23,7 +23,8 @@ namespace SyncApp26.Tests.Services.Sync
             new FunctionRepository(_dbFixture.Context),
             _notificationMock.Object,
             new ImportHistoryRepository(_dbFixture.Context),
-            new UserChangeHistoryRepository(_dbFixture.Context));
+            new UserChangeHistoryRepository(_dbFixture.Context),
+            new DataChangeRequestRepository(_dbFixture.Context));
 
         private Department SeedDepartment(string name = "Engineering", bool isActive = true)
         {
@@ -81,6 +82,23 @@ namespace SyncApp26.Tests.Services.Sync
             new() { Id = existingUserId.ToString(), Status = "modified", CsvData = csvData, Conflicts = conflicts ?? new() };
 
         private static UserSyncItemDTO MakeDeletedItem(Guid existingUserId) => new() { Id = existingUserId.ToString(), Status = "deleted" };
+
+        private DataChangeRequest SeedPendingRequest(Guid userId, string requestedChangesJson, string? originalValuesJson = null)
+        {
+            var request = new DataChangeRequest
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                RequestedChangesJson = requestedChangesJson,
+                OriginalValuesJson = originalValuesJson,
+                Reason = "Test",
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
+            };
+            _dbFixture.Context.DataChangeRequests.Add(request);
+            _dbFixture.Context.SaveChanges();
+            return request;
+        }
 
         // ───────────────────────── CompareWithDatabase ─────────────────────────
 
@@ -160,6 +178,166 @@ namespace SyncApp26.Tests.Services.Sync
 
             var comparison = result.Single(c => c.Status == "new");
             Assert.Null(comparison.CsvUser!.AssignedToName);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_FieldHasPendingRequest_ConflictFlagsHasPendingRequest()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Old");
+            SeedPendingRequest(user.Id, "{\"FirstName\":\"RequestedNew\"}", "{\"FirstName\":\"Old\"}");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", firstName: "CsvNew", departmentName: "Engineering") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("firstName", conflict.Field);
+            Assert.True(conflict.HasPendingRequest);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_FieldHasNoPendingRequest_ConflictDoesNotFlagHasPendingRequest()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Old");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", firstName: "CsvNew", departmentName: "Engineering") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.False(conflict.HasPendingRequest);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_StalePendingRequestButDbAndCsvAlreadyAgree_StillSurfacedAsConflict()
+        {
+            // The CSV already matches the DB (a prior import applied "Fernandez"), but there's still a
+            // pending request for "Popescu" left over. Re-importing the same CSV must not make that
+            // request invisible - it should keep showing up until an admin resolves it.
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Daniel", lastName: "Fernandez");
+            SeedPendingRequest(user.Id, "{\"LastName\":\"Popescu\"}", "{\"LastName\":\"Garcia\"}");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", firstName: "Daniel", lastName: "Fernandez", departmentName: "Engineering") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var comparison = Assert.Single(result);
+            Assert.Equal("modified", comparison.Status);
+            var conflict = Assert.Single(comparison.Conflicts);
+            Assert.Equal("lastName", conflict.Field);
+            Assert.Equal("Fernandez", conflict.DbValue);
+            Assert.Equal("Fernandez", conflict.CsvValue);
+            Assert.True(conflict.HasPendingRequest);
+            Assert.Equal("Popescu", conflict.PendingRequestValue);
+        }
+
+        [Fact]
+        public async Task SyncUsers_StalePendingRequestInformationalConflict_DoesNotWriteNoOpRejectedHistory()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Daniel", lastName: "Fernandez");
+            SeedPendingRequest(user.Id, "{\"LastName\":\"Popescu\"}", "{\"LastName\":\"Garcia\"}");
+            var service = CreateService();
+            // Simulates the frontend re-sending the informational conflict CompareWithDatabase produced.
+            var conflict = new FieldConflictDTO { Field = "lastName", DbValue = "Fernandez", CsvValue = "Fernandez", Selected = false, HasPendingRequest = true, PendingRequestValue = "Popescu" };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Daniel", lastName: "Fernandez", departmentName: "Engineering"), new List<FieldConflictDTO> { conflict });
+            var syncRequest = new SyncRequestDTO { Items = { item } };
+
+            await service.SyncUsers(syncRequest);
+
+            Assert.Empty(_dbFixture.Context.UserChangeHistories.Where(h => h.UserId == user.Id));
+        }
+
+        // ───────────────────────── SyncUsers: pending DataChangeRequest interaction ─────────────────────────
+
+        [Fact]
+        public async Task SyncUsers_ImportAppliesSameValueAsPendingRequest_AutoApprovesRequestWithHistoryFromSnapshot()
+        {
+            // Reproduces the race condition: a user has a pending "change LastName" request, and before
+            // an admin resolves it, a CSV import applies that exact same LastName. The request must not
+            // silently collapse into a no-op - it should auto-close with a real audit trail.
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Daniel", lastName: "Garcia");
+            var request = SeedPendingRequest(user.Id, "{\"LastName\":\"Fernandez\"}", "{\"LastName\":\"Garcia\"}");
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Daniel", lastName: "Fernandez", departmentName: "Engineering"));
+            var syncRequest = new SyncRequestDTO { Items = { item }, FileName = "daniel-import.csv" };
+
+            await service.SyncUsers(syncRequest);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Approved", persistedRequest.Status);
+            Assert.Null(persistedRequest.ResolvedByAdminId);
+            Assert.NotNull(persistedRequest.ResolvedAt);
+
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id && h.FieldName == "lastname" && h.Status == "approved-by-import");
+            Assert.Equal("Garcia", history.OldValue);
+            Assert.Equal("Fernandez", history.NewValue);
+            Assert.NotNull(history.ImportHistoryId);
+            Assert.Equal(history.ImportHistoryId, persistedRequest.AutoResolvedByImportHistoryId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_TwoPendingRequestsOnSameField_OnlyTheOneMatchingImportedValueAutoResolves()
+        {
+            // Daniel has two pending LastName requests: an older one for "Popescu" and a newer one for
+            // "Fernandez". A CSV import applies "Fernandez". Only the Fernandez request should close -
+            // Popescu must stay pending and not be misrepresented as already satisfied.
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Daniel", lastName: "Garcia");
+            var popescuRequest = SeedPendingRequest(user.Id, "{\"LastName\":\"Popescu\"}", "{\"LastName\":\"Garcia\"}");
+            var fernandezRequest = SeedPendingRequest(user.Id, "{\"LastName\":\"Fernandez\"}", "{\"LastName\":\"Garcia\"}");
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Daniel", lastName: "Fernandez", departmentName: "Engineering"));
+            var syncRequest = new SyncRequestDTO { Items = { item } };
+
+            await service.SyncUsers(syncRequest);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("Approved", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == fernandezRequest.Id).Status);
+            var stillPending = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == popescuRequest.Id);
+            Assert.Equal("Pending", stillPending.Status);
+            Assert.Null(stillPending.AutoResolvedByImportHistoryId);
+            Assert.Null(stillPending.ResolvedAt);
+        }
+
+        [Fact]
+        public async Task SyncUsers_ImportAppliesDifferentValueThanPendingRequest_RequestStaysPending()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Daniel", lastName: "Garcia");
+            var request = SeedPendingRequest(user.Id, "{\"LastName\":\"Fernandez\"}", "{\"LastName\":\"Garcia\"}");
+            var service = CreateService();
+            // CSV imports a third value - neither the DB's original nor the request's target.
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Daniel", lastName: "Smith", departmentName: "Engineering"));
+            var syncRequest = new SyncRequestDTO { Items = { item } };
+
+            await service.SyncUsers(syncRequest);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+            Assert.Equal("Smith", _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").LastName);
+        }
+
+        [Fact]
+        public async Task SyncUsers_PendingRequestOnUnrelatedField_UntouchedByImport()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Daniel", lastName: "Garcia");
+            // Department changes aren't in the CSV<->request textual-comparison map, so this should never auto-close.
+            var request = SeedPendingRequest(user.Id, "{\"DepartmentId\":\"11111111-1111-1111-1111-111111111111\"}", "{\"DepartmentId\":\"\"}");
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Daniel", lastName: "Garcia", departmentName: "Engineering"));
+            var syncRequest = new SyncRequestDTO { Items = { item } };
+
+            await service.SyncUsers(syncRequest);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
         }
 
         // ───────────────────────── SyncUsers: new user ─────────────────────────

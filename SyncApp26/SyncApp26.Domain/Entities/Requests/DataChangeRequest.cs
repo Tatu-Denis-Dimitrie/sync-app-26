@@ -12,7 +12,9 @@ namespace SyncApp26.Domain.Entities
         public virtual User User { get; set; }
 
         public string RequestedChangesJson { get; set; }
-        
+
+        public string? OriginalValuesJson { get; set; }
+
         [MaxLength(1000)]
         public string Reason { get; set; }
         
@@ -25,5 +27,8 @@ namespace SyncApp26.Domain.Entities
         
         public Guid? ResolvedByAdminId { get; set; }
         public virtual User ResolvedByAdmin { get; set; }
+
+        public Guid? AutoResolvedByImportHistoryId { get; set; }
+        public virtual ImportHistory? AutoResolvedByImportHistory { get; set; }
     }
 }

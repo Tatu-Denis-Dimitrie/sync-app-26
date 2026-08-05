@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, BehaviorSubject, interval } from 'rxjs';
+import { switchMap, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { DataChangeRequest, CreateDataChangeRequestDto, ResolveDataChangeRequestDto } from '../models/data-change-request.model';
 
@@ -9,11 +10,36 @@ import { DataChangeRequest, CreateDataChangeRequestDto, ResolveDataChangeRequest
 })
 export class DataChangeRequestService {
   private apiUrl = `${environment.apiUrl}/DataChangeRequest`;
+  private pendingCount$ = new BehaviorSubject<number>(0);
 
   constructor(private http: HttpClient) {}
 
   getAllRequests(): Observable<DataChangeRequest[]> {
     return this.http.get<DataChangeRequest[]>(this.apiUrl);
+  }
+
+  getPendingCount(): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>(`${this.apiUrl}/pending-count`);
+  }
+
+  getPendingCount$(): Observable<number> {
+    return this.pendingCount$.asObservable();
+  }
+
+  loadPendingCount(): void {
+    this.getPendingCount().subscribe({
+      next: data => this.pendingCount$.next(data.count),
+      error: () => {}
+    });
+  }
+
+  startPollingPendingCount(intervalMs: number = 30000): void {
+    interval(intervalMs)
+      .pipe(
+        switchMap(() => this.getPendingCount()),
+        catchError(() => new Observable<{ count: number }>())
+      )
+      .subscribe(data => this.pendingCount$.next(data.count));
   }
 
   getMyRequests(): Observable<DataChangeRequest[]> {

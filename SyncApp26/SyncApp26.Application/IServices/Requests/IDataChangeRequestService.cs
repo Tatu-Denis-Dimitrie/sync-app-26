@@ -8,6 +8,7 @@ namespace SyncApp26.Application.IServices
     public interface IDataChangeRequestService
     {
         Task<IEnumerable<DataChangeRequestDTO>> GetAllRequestsAsync();
+        Task<int> GetPendingCountAsync();
         Task<IEnumerable<DataChangeRequestDTO>> GetRequestsByUserAsync(Guid userId);
         Task<DataChangeRequestDTO> GetRequestByIdAsync(Guid id);
         Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending");

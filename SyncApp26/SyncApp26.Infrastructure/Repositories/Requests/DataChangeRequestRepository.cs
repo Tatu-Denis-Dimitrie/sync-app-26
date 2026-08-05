@@ -49,6 +49,13 @@ namespace SyncApp26.Infrastructure.Repositories
             return request;
         }
 
+        public async Task<IEnumerable<DataChangeRequest>> GetAllPendingAsync()
+        {
+            return await _context.DataChangeRequests
+                .Where(x => x.Status == "Pending")
+                .ToListAsync();
+        }
+
         public async Task UpdateAsync(DataChangeRequest request)
         {
             _context.DataChangeRequests.Update(request);

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthenticationService, User, AuthRole, authRoleLabel } from '../../services/authentication.service';
 import { DocumentSignatureService } from '../../services/document-signature.service';
+import { DataChangeRequestService } from '../../services/data-change-request.service';
 import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/user-sync.signalr.service';
 import { filter, Subscription } from 'rxjs';
 
@@ -24,15 +25,18 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isAnomalyPopoverOpen = false;
   isScrolled = false;
   pendingSignatureCount = 0;
+  pendingRequestCount = 0;
   anomalyAlert: SignatureAnomalyAlert | null = null;
   private routerSubscription!: Subscription;
   private signatureCountSubscription!: Subscription;
   private anomalyAlertSubscription!: Subscription;
+  private requestCountSubscription!: Subscription;
 
   constructor(
     private authService: AuthenticationService,
     private router: Router,
     private documentSignatureService: DocumentSignatureService,
+    private dataChangeRequestService: DataChangeRequestService,
     private signalrService: UserSyncSignalrService
   ) { }
 
@@ -49,6 +53,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.checkAuthStatus();
       if (this.isAdmin) {
         this.loadPendingSignatureCount();
+        this.dataChangeRequestService.loadPendingCount();
       }
     });
 
@@ -56,7 +61,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (this.isAdmin) {
       // Start SignalR connection for real-time updates
       this.signalrService.startConnection();
-      
+
       this.signatureCountSubscription = this.documentSignatureService.getPendingDocumentsCount$().subscribe(
         count => this.pendingSignatureCount = count
       );
@@ -66,6 +71,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.anomalyAlertSubscription = this.signalrService.signatureAnomalyAlert$.subscribe(
         alert => this.anomalyAlert = alert
       );
+
+      // Data change request count (a CSV import auto-resolving a request) 
+      this.requestCountSubscription = this.dataChangeRequestService.getPendingCount$().subscribe(
+        count => this.pendingRequestCount = count
+      );
+      this.dataChangeRequestService.loadPendingCount();
+      this.dataChangeRequestService.startPollingPendingCount(30000);
     }
   }
 
@@ -78,6 +90,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
     if (this.anomalyAlertSubscription) {
       this.anomalyAlertSubscription.unsubscribe();
+    }
+    if (this.requestCountSubscription) {
+      this.requestCountSubscription.unsubscribe();
     }
   }
 

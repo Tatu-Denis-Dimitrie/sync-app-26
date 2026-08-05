@@ -290,6 +290,11 @@ namespace SyncApp26.Infrastructure.Context
                     .HasForeignKey(e => e.ResolvedByAdminId)
                     .OnDelete(DeleteBehavior.SetNull);
 
+                entity.HasOne(e => e.AutoResolvedByImportHistory)
+                    .WithMany()
+                    .HasForeignKey(e => e.AutoResolvedByImportHistoryId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => e.Status);
             });

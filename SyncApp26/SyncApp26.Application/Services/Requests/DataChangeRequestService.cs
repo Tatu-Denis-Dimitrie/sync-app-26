@@ -41,11 +41,13 @@ namespace SyncApp26.Application.Services
                 UserEmail = req.User?.Email,
                 UserFullName = req.User != null ? $"{req.User.FirstName} {req.User.LastName}" : null,
                 RequestedChangesJson = req.RequestedChangesJson,
+                OriginalValuesJson = req.OriginalValuesJson,
                 Reason = req.Reason,
                 Status = req.Status,
                 CreatedAt = req.CreatedAt,
                 ResolvedAt = req.ResolvedAt,
-                ResolvedByAdminId = req.ResolvedByAdminId
+                ResolvedByAdminId = req.ResolvedByAdminId,
+                AutoResolvedByImportHistoryId = req.AutoResolvedByImportHistoryId
             };
         }
 
@@ -53,6 +55,12 @@ namespace SyncApp26.Application.Services
         {
             var requests = await _repository.GetAllWithUserAsync();
             return requests.Select(MapToDTO);
+        }
+
+        public async Task<int> GetPendingCountAsync()
+        {
+            var pending = await _repository.GetAllPendingAsync();
+            return pending.Count();
         }
 
         public async Task<IEnumerable<DataChangeRequestDTO>> GetRequestsByUserAsync(Guid userId)
@@ -69,17 +77,53 @@ namespace SyncApp26.Application.Services
 
         public async Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending")
         {
+            var user = await _repository.GetUserByIdAsync(userId);
+
             var req = new DataChangeRequest
             {
                 UserId = userId,
                 RequestedChangesJson = dto.RequestedChangesJson,
+                OriginalValuesJson = BuildOriginalValuesJson(user, dto.RequestedChangesJson),
                 Reason = dto.Reason,
                 Status = initialStatus
             };
 
             await _repository.AddAsync(req);
-            req.User = await _repository.GetUserByIdAsync(userId);
+            req.User = user;
             return MapToDTO(req);
+        }
+
+        // Snapshots the User's current value for every field named in the requested changes, so
+        // that resolving the request later can always diff against "what it was when requested"
+        // instead of "whatever the live value happens to be right now".
+        private static string? BuildOriginalValuesJson(User? user, string requestedChangesJson)
+        {
+            if (user == null) return null;
+
+            try
+            {
+                var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
+                if (changes == null) return null;
+
+                var userType = typeof(User);
+                var originalValues = new Dictionary<string, string?>();
+                foreach (var key in changes.Keys)
+                {
+                    var prop = userType.GetProperty(key);
+                    if (prop != null)
+                    {
+                        originalValues[key] = prop.GetValue(user)?.ToString();
+                    }
+                }
+
+                return JsonSerializer.Serialize(originalValues);
+            }
+            catch
+            {
+                // Malformed RequestedChangesJson is handled (and reported) at resolve time; don't
+                // fail request creation over it.
+                return null;
+            }
         }
 
         public async Task<DataChangeRequestDTO> ChangeStatusAsync(Guid id, string status)
@@ -107,6 +151,19 @@ namespace SyncApp26.Application.Services
             var now = DateTime.UtcNow;
             var statusLower = dto.Status.ToLower(); // "approved" or "rejected"
 
+            Dictionary<string, string?>? originalValues = null;
+            if (!string.IsNullOrWhiteSpace(req.OriginalValuesJson))
+            {
+                try
+                {
+                    originalValues = JsonSerializer.Deserialize<Dictionary<string, string?>>(req.OriginalValuesJson);
+                }
+                catch
+                {
+                    originalValues = null;
+                }
+            }
+
             try
             {
                 var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(req.RequestedChangesJson);
@@ -120,7 +177,14 @@ namespace SyncApp26.Application.Services
                         var prop = userType.GetProperty(kv.Key);
                         if (prop != null)
                         {
-                            var oldValue = prop.GetValue(req.User)?.ToString() ?? string.Empty;
+                            // Prefer the value snapshotted when the request was created. Falling back to
+                            // the live value only applies to legacy requests created before this snapshot
+                            // existed - otherwise, diffing against the live value would silently produce no
+                            // history entry whenever another write path (e.g. a CSV import) already applied
+                            // this same change to the user before the request was resolved.
+                            var oldValue = (originalValues != null && originalValues.TryGetValue(kv.Key, out var snapshotValue))
+                                ? snapshotValue ?? string.Empty
+                                : prop.GetValue(req.User)?.ToString() ?? string.Empty;
                             var newValue = kv.Value?.ToString() ?? string.Empty;
 
                             if (!string.Equals(oldValue, newValue, StringComparison.Ordinal))

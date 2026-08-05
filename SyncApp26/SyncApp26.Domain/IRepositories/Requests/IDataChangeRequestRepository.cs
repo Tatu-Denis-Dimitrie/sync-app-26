@@ -12,6 +12,7 @@ namespace SyncApp26.Domain.IRepositories
         Task<DataChangeRequest> GetByIdWithUserAsync(Guid id);
         Task<DataChangeRequest> AddAsync(DataChangeRequest request);
         Task UpdateAsync(DataChangeRequest request);
+        Task<IEnumerable<DataChangeRequest>> GetAllPendingAsync();
         Task<User> GetUserByIdAsync(Guid userId);
         Task UpdateUserAsync(User user);
     }
