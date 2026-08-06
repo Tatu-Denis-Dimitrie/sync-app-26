@@ -154,6 +154,8 @@ namespace SyncApp26.Infrastructure.Services
                     VerifierSignature = oldRow.VerifierSignature,
                     VerifierSignatureMethod = oldRow.VerifierSignatureMethod,
                     CreatedAt = oldRow.CreatedAt,
+                    ExcludedFromPrintAt = oldRow.ExcludedFromPrintAt,
+                    ExcludedFromPrintById = oldRow.ExcludedFromPrintById,
                 };
                 _context.PeriodicTrainings.Add(copy);
             }
@@ -959,22 +961,28 @@ namespace SyncApp26.Infrastructure.Services
             // Order by CreatedAt: copies inherit CreatedAt from the original row,
             // so insertion order is preserved regardless of TrainingDate.
             // The current row (Step 2/3) always has the latest CreatedAt → naturally last.
-            var periodicTrainings = (user.PeriodicTrainings?
+            var allRows = (user.PeriodicTrainings?
                 .Where(pt => pt.UserDocumentId == document.Id)
                 .OrderBy(pt => pt.CreatedAt)
                 .ToList()) ?? new List<PeriodicTraining>();
             string occupation = user.Function?.Name ?? "";
             string employeeFullName = $"{user.FirstName} {user.LastName}";
 
+            // Resolved before the print-exclusion filter: excluding the current row must not
+            // promote an older row to "current" and repaint its highlight.
+            var currentRowId = allRows.LastOrDefault()?.Id;
+            var periodicTrainings = allRows.Where(pt => pt.ExcludedFromPrintAt == null).ToList();
+
             for (int i = 0; i < periodicTrainings.Count; i++)
             {
-                // The last row is the current (new) one; earlier rows are historical copies
-                bool isCurrentDocRow = (i == periodicTrainings.Count - 1);
+                bool isCurrentDocRow = periodicTrainings[i].Id == currentRowId;
                 RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, employeeFullName, occupation, isSsm, viewerIsAdmin, ctx.PeriodicSignatures);
             }
 
-            // Fallback: if no periodic trainings exist, render an empty row (highlighted for non-admin)
-            if (periodicTrainings.Count == 0)
+            // Fallback: if no periodic trainings exist at all, render an empty row (highlighted for
+            // non-admin). If rows exist but all are excluded from print, the table stays header-only —
+            // an excluded row must not resurrect as an empty "sign here" placeholder.
+            if (allRows.Count == 0)
                 RenderEmptyPeriodicTrainingRow(table, document, occupation, isSsm, viewerIsAdmin);
         }
 

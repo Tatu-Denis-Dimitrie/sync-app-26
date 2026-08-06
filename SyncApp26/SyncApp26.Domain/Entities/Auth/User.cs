@@ -23,6 +23,14 @@ namespace SyncApp26.Domain.Entities
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
 
+        /// <summary>
+        /// True only for accounts whose roster membership is owned by the CSV import pipeline.
+        /// Absence from an imported CSV is evidence of departure ONLY for these; accounts created
+        /// any other way (seeded, self-registered) are simply outside the CSV's scope and must never
+        /// be proposed for deletion just because an HR export doesn't mention them.
+        /// </summary>
+        public bool IsCsvManaged { get; set; }
+
         // SSM/SU Form fields
         public DateTime? DateOfBirth { get; set; }
         public string? PlaceOfBirth { get; set; }

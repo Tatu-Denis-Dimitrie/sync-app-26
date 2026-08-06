@@ -1,7 +1,6 @@
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
-using Microsoft.EntityFrameworkCore;
 using BCrypt.Net;
 
 namespace SyncApp26.Infrastructure.Data
@@ -10,12 +9,6 @@ namespace SyncApp26.Infrastructure.Data
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
-            // Check if data already exists
-            if (await context.Departments.AnyAsync() || await context.Users.AnyAsync())
-            {
-                return; // Database has been seeded
-            }
-
             // Create 5 departments
             var departments = new List<Department>
             {

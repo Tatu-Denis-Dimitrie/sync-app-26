@@ -280,57 +280,64 @@ textarea.edit-input {
   vertical-align: middle;
 }
 
-/* Column widths: keep date/duration/occupation/material narrow so the
-   signature columns get more room for images/typed names. */
+/* Column widths: a signature is a ~72px thumbnail or a short typed name, so its column only
+   needs room for that. Everything beyond that was dead space stealing width from the text
+   columns (especially "Materialul predat") and from the actions column. */
 .col-date {
-  width: 9%;
+  width: 10%;
 }
 
 .col-duration {
-  width: 6%;
+  width: 7%;
 }
 
 .col-occupation {
-  width: 10%;
+  width: 13%;
 }
 
 .col-material {
-  width: 4%;
+  width: 24%;
 }
 
 .col-sig-user,
-.col-sig-instructor {
-  width: 22%;
-}
-
+.col-sig-instructor,
 .col-sig-verifier {
-  width: 21%;
+  width: 12%;
 }
 
 .col-history {
-  width: 6%;
+  width: 10%;
 }
 
-/* SU table has only two signature columns (no verifier), so give them
-   even more of the freed-up width. */
+/* SU table has only two signature columns (no verifier), so the text columns get the rest. */
 .col-specialty {
-  width: 11%;
+  width: 14%;
 }
 
 .col-material-wide {
-  width: 10%;
+  width: 31%;
 }
 
 .col-sig-user-wide,
 .col-sig-instructor-wide {
-  width: 29%;
+  width: 14%;
 }
 
-/* Signature thumbnail styling */
+/* Signature cells: centred and tight, so the signature never pads itself out at the expense of
+   the neighbouring text columns. */
+.sig-cell {
+  text-align: center;
+  padding: 3px 4px;
+}
+
+/* Signature thumbnail styling. Sized by height with width:auto so the aspect ratio holds, and
+   capped at the cell width so a wide signature can never overflow or squeeze the row. */
 .sig-thumb {
-  display: inline-block;
-  width: 72px;
-  height: 28px;
+  display: block;
+  margin: 0 auto;
+  height: 26px;
+  width: auto;
+  max-width: 100%;
   object-fit: contain;
   border: none;
   background: transparent;
@@ -360,6 +367,8 @@ textarea.edit-input {
   padding: 0;
   background: transparent; /* no background */
   border-radius: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 .history-toggle {
@@ -415,6 +424,50 @@ textarea.edit-input {
   color: #088395;
   font-weight: bold;
   text-transform: uppercase;
+}
+
+.actions-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+}
+
+/* Buttons fill the (narrow) actions column and wrap rather than overflow it. */
+.actions-cell .history-toggle {
+  width: 100%;
+  padding: 3px 4px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.excluded-tag {
+  font-size: 9px;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.exclude-print-btn {
+  background: #b91c1c;
+}
+
+.exclude-print-btn:hover {
+  background: #7f1d1d;
+}
+
+/* On-screen indicator for a row excluded from print — the row still shows here (admins need to
+   toggle it back), but visibly muted so it reads as "not part of the printed document". */
+tr.print-excluded td:not(.no-print) {
+  opacity: 0.55;
+  text-decoration: line-through;
 }
 
 /* Print styles */

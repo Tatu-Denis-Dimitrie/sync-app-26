@@ -14,5 +14,6 @@ namespace SyncApp26.Application.IServices
         Task<PeriodicTrainingResponseDTO> UpdateAsync(Guid id, UpdatePeriodicTrainingDTO dto);
         Task<bool> DeleteAsync(Guid id);
         Task<BulkCreateResultDTO> BulkCreateAsync(BulkCreatePeriodicTrainingDTO dto, Guid? restrictToAssignedToId = null);
+        Task<PeriodicTrainingResponseDTO> SetPrintExclusionAsync(Guid id, bool excluded, Guid actingAdminId);
     }
 }

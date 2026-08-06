@@ -113,5 +113,14 @@ namespace SyncApp26.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
+
+        /// <summary>
+        /// When set, this row (content and signatures) is omitted from every printed output — the
+        /// QuestPDF document and the browser print of the SSM/SU form. Lets an admin retire a row whose
+        /// signature no longer verifies without deleting it or its SignatureRecord audit trail.
+        /// </summary>
+        public DateTime? ExcludedFromPrintAt { get; set; }
+
+        public Guid? ExcludedFromPrintById { get; set; }
     }
 }

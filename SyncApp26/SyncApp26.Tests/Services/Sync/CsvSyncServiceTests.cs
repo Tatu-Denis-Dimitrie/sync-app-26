@@ -42,8 +42,11 @@ namespace SyncApp26.Tests.Services.Sync
             return function;
         }
 
+        // isCsvManaged defaults to true because most tests here describe accounts that came from a
+        // CSV import; pass false to model a seeded or self-registered account instead.
         private User SeedUser(string personalId, Guid departmentId, string firstName = "John", string lastName = "Doe",
-            string? email = null, Guid? functionId = null, Guid? assignedToId = null, DateTime? updatedAt = null, UserRole role = UserRole.BasicUser)
+            string? email = null, Guid? functionId = null, Guid? assignedToId = null, DateTime? updatedAt = null, UserRole role = UserRole.BasicUser,
+            bool isCsvManaged = true)
         {
             var user = new User
             {
@@ -57,6 +60,7 @@ namespace SyncApp26.Tests.Services.Sync
                 AssignedToId = assignedToId,
                 Role = role,
                 UpdatedAt = updatedAt,
+                IsCsvManaged = isCsvManaged,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
@@ -162,6 +166,38 @@ namespace SyncApp26.Tests.Services.Sync
             var comparison = Assert.Single(result);
             Assert.Equal("deleted", comparison.Status);
             Assert.False(comparison.Selected);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_NonCsvManagedUserMissingFromCsv_NotReportedAsDeleted()
+        {
+            // Seeded and self-registered accounts never appear in an HR export, so their absence
+            // says nothing about them - they must not be offered up for deletion on every import.
+            var department = SeedDepartment();
+            SeedUser("SEEDED1", department.Id, isCsvManaged: false);
+            var service = CreateService();
+
+            var result = await service.CompareWithDatabase(Array.Empty<CsvUserDTO>(), totalRows: 0);
+
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_RepeatedImportOfSameCsv_LeavesNonCsvManagedAccountsAlone()
+        {
+            // Regression: re-importing an unchanged CSV used to surface every seeded account as a
+            // deletion candidate, so a "select all" click wiped accounts the CSV never owned.
+            var department = SeedDepartment("Engineering");
+            SeedUser("SEEDED1", department.Id, email: "admin@syncapp.com", isCsvManaged: false);
+            SeedUser("P1", department.Id, firstName: "John", lastName: "Doe", email: "john@example.com");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", firstName: "John", lastName: "Doe", email: "john@example.com", departmentName: "Engineering") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            Assert.DoesNotContain(result, c => c.Status == "deleted");
+            var comparison = Assert.Single(result);
+            Assert.Equal("unchanged", comparison.Status);
         }
 
         [Fact]
@@ -491,6 +527,58 @@ namespace SyncApp26.Tests.Services.Sync
             Assert.Equal(1, result.RecordsSkipped);
             _dbFixture.Context.ChangeTracker.Clear();
             Assert.Equal("old@example.com", _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").Email);
+        }
+
+        // ───────────────────────── SyncUsers: CSV-managed adoption ─────────────────────────
+
+        [Fact]
+        public async Task SyncUsers_ModifiedNonCsvManagedUser_BecomesCsvManaged()
+        {
+            // Being named in the CSV is what puts an account under CSV management, so a pre-existing
+            // account matched by an import is adopted and its later departure can be detected.
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "John", isCsvManaged: false);
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Jane", departmentName: "Engineering"));
+            var request = new SyncRequestDTO { Items = { item } };
+
+            await service.SyncUsers(request);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.True(_dbFixture.Context.Users.Single(u => u.PersonalId == "P1").IsCsvManaged);
+        }
+
+        [Fact]
+        public async Task SyncUsers_ModifiedNonCsvManagedUserWithNoFieldChanges_StillBecomesCsvManaged()
+        {
+            // Adoption must persist even when no field actually changed - otherwise the flag would be
+            // set in memory and thrown away, leaving the account permanently undetectable as departed.
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Same", lastName: "Same", isCsvManaged: false);
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Same", lastName: "Same", departmentName: "Engineering"));
+            var request = new SyncRequestDTO { Items = { item } };
+
+            var result = await service.SyncUsers(request);
+
+            Assert.Equal(1, result.RecordsSkipped);
+            _dbFixture.Context.ChangeTracker.Clear();
+            var stored = _dbFixture.Context.Users.Single(u => u.PersonalId == "P1");
+            Assert.True(stored.IsCsvManaged);
+            Assert.Null(stored.UpdatedAt); // bookkeeping only - not a change to their data
+        }
+
+        [Fact]
+        public async Task SyncUsers_NewUserFromCsv_IsCsvManaged()
+        {
+            SeedDepartment("Engineering");
+            var service = CreateService();
+            var request = new SyncRequestDTO { Items = { MakeNewItem(MakeCsvUser("P-NEW", departmentName: "Engineering")) } };
+
+            await service.SyncUsers(request);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.True(_dbFixture.Context.Users.Single(u => u.PersonalId == "P-NEW").IsCsvManaged);
         }
 
         // ───────────────────────── SyncUsers: deleted (90-day grace period) ─────────────────────────

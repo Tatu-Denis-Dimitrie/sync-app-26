@@ -137,7 +137,12 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
         await context.Database.MigrateAsync();
-        await DatabaseSeeder.SeedAsync(context);
+
+        // Only seed a genuinely empty database - avoids re-inserting default data on every run.
+        if (!await context.Departments.AnyAsync() && !await context.Users.AnyAsync())
+        {
+            await DatabaseSeeder.SeedAsync(context);
+        }
     }
     catch (Exception ex)
     {

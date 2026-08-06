@@ -96,6 +96,32 @@ namespace SyncApp26.API.Controllers
         }
 
         /// <summary>
+        /// Marks (or unmarks) a periodic training row — and its historical copies across
+        /// regenerated documents — as excluded from every printed output.
+        /// </summary>
+        [HttpPatch("{id:guid}/print-exclusion")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<IActionResult> SetPrintExclusion(Guid id, [FromBody] UpdatePrintExclusionDTO dto)
+        {
+            if (User.GetUserId() is not { } adminId)
+                return Unauthorized();
+
+            try
+            {
+                var result = await _periodicTrainingService.SetPrintExclusionAsync(id, dto.Excluded, adminId);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Create periodic training records for multiple users at once
         /// </summary>
         [HttpPost("bulk")]

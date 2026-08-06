@@ -281,7 +281,10 @@ public class CsvSyncService : ICsvSyncService
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var deletedComparisons = new List<UserComparisonDTO>();
-        foreach (var dbUser in dbUsers)
+        // Only CSV-managed accounts are in scope: for a seeded or self-registered account, absence
+        // from an HR export means nothing, so flagging it as "deleted" every single import is noise
+        // that also invites a mis-click into wiping accounts the CSV never owned.
+        foreach (var dbUser in dbUsers.Where(u => u.IsCsvManaged))
         {
             if (string.IsNullOrWhiteSpace(dbUser.PersonalId) || !csvPersonalIds.Contains(dbUser.PersonalId.Trim()))
             {
@@ -413,6 +416,16 @@ public class CsvSyncService : ICsvSyncService
                             await AutoResolveSatisfiedRequestsAsync(existingUser, pendingRequestsForUser, importHistory, EnsureImportHistoryCreatedAsync);
                         }
 
+                        // Appearing in the CSV is itself the proof that the CSV owns this person, so
+                        // adopt accounts that predate this flag or were first created another way -
+                        // otherwise their eventual departure would never be detected. UpdatedAt is
+                        // deliberately left alone: this is bookkeeping, not a change to their data.
+                        bool adopted = !existingUser.IsCsvManaged;
+                        if (adopted)
+                        {
+                            existingUser.IsCsvManaged = true;
+                        }
+
                         if (hasChanges)
                         {
                             existingUser.UpdatedAt = DateTime.UtcNow;
@@ -421,6 +434,10 @@ public class CsvSyncService : ICsvSyncService
                         }
                         else
                         {
+                            if (adopted)
+                            {
+                                usersToUpdate.Add(existingUser);
+                            }
                             result.RecordsSkipped++;
                         }
                     }
@@ -539,6 +556,7 @@ public class CsvSyncService : ICsvSyncService
             PersonalId = csvData.PersonalId,
             FunctionId = csvFunction?.Id,
             Function = csvFunction,
+            IsCsvManaged = true,
             CreatedAt = DateTime.UtcNow
         };
     }

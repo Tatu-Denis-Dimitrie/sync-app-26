@@ -105,6 +105,31 @@ namespace SyncApp26.Infrastructure.Services
             return MapToDTO(training);
         }
 
+        // Excluding (or restoring) a row must cover its whole family: CopyHistoricalPeriodicTrainingRowsAsync
+        // duplicates signed rows into every regenerated document, linked by SourceRowId. Acting on just
+        // one member would let the row reappear in already-generated documents that hold a sibling copy.
+        public async Task<PeriodicTrainingResponseDTO> SetPrintExclusionAsync(Guid id, bool excluded, Guid actingAdminId)
+        {
+            var training = await _context.PeriodicTrainings.FindAsync(id);
+            if (training == null)
+                throw new ArgumentException("Periodic training not found");
+
+            var rootId = training.SourceRowId ?? training.Id;
+            var family = await _context.PeriodicTrainings
+                .Where(pt => pt.Id == rootId || pt.SourceRowId == rootId)
+                .ToListAsync();
+
+            foreach (var row in family)
+            {
+                row.ExcludedFromPrintAt = excluded ? DateTime.UtcNow : null;
+                row.ExcludedFromPrintById = excluded ? actingAdminId : null;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return MapToDTO(training);
+        }
+
         public async Task<bool> DeleteAsync(Guid id)
         {
             var training = await _context.PeriodicTrainings.FindAsync(id);
@@ -331,7 +356,8 @@ namespace SyncApp26.Infrastructure.Services
                 VerifierSignatureMethod = training.VerifierSignatureMethod,
                 VerifierName = training.VerifierName,
                 CreatedAt = training.CreatedAt,
-                UpdatedAt = training.UpdatedAt
+                UpdatedAt = training.UpdatedAt,
+                ExcludedFromPrintAt = training.ExcludedFromPrintAt
             };
         }
     }
