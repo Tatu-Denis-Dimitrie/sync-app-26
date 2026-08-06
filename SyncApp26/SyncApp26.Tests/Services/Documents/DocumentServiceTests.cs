@@ -579,6 +579,30 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
+        public async Task GenerateDocumentAsync_SourceRowExcludedFromPrint_CopiedHistoricalRowInheritsExclusion()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var admin = SeedUser("Admin", "User", function);
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc1 = SeedDocument(owner, "SU", "PendingUser");
+            var training1 = SeedTraining(owner, doc1, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(doc1.Id, owner.Id, "User", "Draw", "sig-v1", "1.2.3.4");
+
+            training1.ExcludedFromPrintAt = DateTime.UtcNow;
+            training1.ExcludedFromPrintById = admin.Id;
+            await _dbFixture.Context.SaveChangesAsync();
+
+            var doc2 = await service.GenerateDocumentAsync(owner.Id, "SU", "admin@example.com");
+
+            var copiedRow = _dbFixture.Context.PeriodicTrainings
+                .Single(pt => pt.UserDocumentId == doc2.Id && pt.SourceRowId == training1.Id);
+            Assert.NotNull(copiedRow.ExcludedFromPrintAt);
+            Assert.Equal(admin.Id, copiedRow.ExcludedFromPrintById);
+        }
+
+        [Fact]
         public async Task UpdateDocumentSignatureAsync_NewPeriodicTrainingAddedUnderNewerSchemaVersion_BothSignaturesValidate()
         {
             // Realistic combination: the employee already signed one training session on this
