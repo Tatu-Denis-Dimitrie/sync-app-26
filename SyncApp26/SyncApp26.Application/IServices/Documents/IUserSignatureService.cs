@@ -10,7 +10,7 @@ namespace SyncApp26.Application.IServices
         /// <summary>
         /// Saves (creates or replaces) the stored signature for a user.
         /// Computes the integrity hash and server-issued cryptographic proof, then writes both
-        /// a current-state record and an immutable audit-log entry.
+        /// a current-state record and an immutable audit-log entry. 
         /// </summary>
         Task SaveUserSignatureAsync(
             Guid userId,
