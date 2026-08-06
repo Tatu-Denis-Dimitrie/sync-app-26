@@ -26,7 +26,7 @@ export class ComparisonViewComponent implements OnChanges {
   sortDirection: 'asc' | 'desc' = 'desc';
 
   get allUsersSelected(): boolean {
-    const filtered = this.getFilteredComparisons();
+    const filtered = this.getBulkSelectableComparisons();
     return filtered.length > 0 && filtered.every(c => c.selected);
   }
 
@@ -44,8 +44,16 @@ export class ComparisonViewComponent implements OnChanges {
     }
   }
 
+  // "deleted" comparisons represent existing accounts absent from the CSV (e.g. every seeded
+  // account, which is never mentioned in any import) and are destructive to sync - unlike
+  // new/modified they must always be reviewed and checked individually, never swept in by a bulk
+  // "select all" click.
+  private getBulkSelectableComparisons(): UserComparison[] {
+    return this.getFilteredComparisons().filter(c => c.status !== 'deleted');
+  }
+
   selectAll(): void {
-    const filteredIds = new Set(this.getFilteredComparisons().map(c => c.id));
+    const filteredIds = new Set(this.getBulkSelectableComparisons().map(c => c.id));
     this.comparisons.forEach(c => {
       if (filteredIds.has(c.id)) {
         c.selected = true;
@@ -66,7 +74,7 @@ export class ComparisonViewComponent implements OnChanges {
   }
 
   deselectAll(): void {
-    const filteredIds = new Set(this.getFilteredComparisons().map(c => c.id));
+    const filteredIds = new Set(this.getBulkSelectableComparisons().map(c => c.id));
     this.comparisons.forEach(c => {
       if (filteredIds.has(c.id)) {
         c.selected = false;

@@ -275,6 +275,55 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
+        public async Task SetPrintExclusionAsync_OtherTrainingRowsAndTheirCopies_StayIncluded()
+        {
+            // Excluding one session must not take any other session down with it: the remaining rows
+            // (and their historical copies in regenerated documents) still print with their own
+            // content and signatures.
+            var service = CreateService();
+            var instructor = SeedUser("Elena", "Marin");
+            var trainee = SeedUser("Adela", "Popescu");
+            var admin = SeedUser("Admin", "User");
+
+            var rowOne = await service.CreateAsync(new CreatePeriodicTrainingDTO
+            {
+                UserId = trainee.Id,
+                InstructorId = instructor.Id,
+                MaterialTaught = "Sesiunea 1"
+            });
+            var rowTwo = await service.CreateAsync(new CreatePeriodicTrainingDTO
+            {
+                UserId = trainee.Id,
+                InstructorId = instructor.Id,
+                MaterialTaught = "Sesiunea 2"
+            });
+
+            var rowTwoCopy = new PeriodicTraining
+            {
+                Id = Guid.NewGuid(),
+                UserId = trainee.Id,
+                SourceRowId = rowTwo.Id,
+                MaterialTaught = "Sesiunea 2",
+                UserSignatureData = "sig-2",
+                InstructorId = instructor.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            _dbFixture.Context.PeriodicTrainings.Add(rowTwoCopy);
+            await _dbFixture.Context.SaveChangesAsync();
+
+            await service.SetPrintExclusionAsync(rowOne.Id, excluded: true, actingAdminId: admin.Id);
+
+            Assert.NotNull(_dbFixture.Context.PeriodicTrainings.Single(pt => pt.Id == rowOne.Id).ExcludedFromPrintAt);
+
+            var storedRowTwo = _dbFixture.Context.PeriodicTrainings.Single(pt => pt.Id == rowTwo.Id);
+            var storedRowTwoCopy = _dbFixture.Context.PeriodicTrainings.Single(pt => pt.Id == rowTwoCopy.Id);
+            Assert.Null(storedRowTwo.ExcludedFromPrintAt);
+            Assert.Null(storedRowTwoCopy.ExcludedFromPrintAt);
+            Assert.Equal("Sesiunea 2", storedRowTwoCopy.MaterialTaught);
+            Assert.Equal("sig-2", storedRowTwoCopy.UserSignatureData);
+        }
+
+        [Fact]
         public async Task SetPrintExclusionAsync_UnknownId_ThrowsArgumentException()
         {
             var service = CreateService();

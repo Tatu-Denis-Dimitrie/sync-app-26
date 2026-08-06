@@ -450,6 +450,9 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<Guid?>("FunctionId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsCsvManaged")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool?>("IsEmailVerified")
                         .HasColumnType("INTEGER");
 
