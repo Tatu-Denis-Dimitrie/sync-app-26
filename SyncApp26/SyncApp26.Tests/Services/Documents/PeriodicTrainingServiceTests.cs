@@ -187,5 +187,101 @@ namespace SyncApp26.Tests.Services.Documents
                 Assert.Equal("Elena Marin", pt.InstructorName);
             });
         }
+
+        // ───────────────────────── SetPrintExclusionAsync ─────────────────────────
+
+        [Fact]
+        public async Task SetPrintExclusionAsync_Excluded_SetsTimestampAndAdminId()
+        {
+            var service = CreateService();
+            var instructor = SeedUser("Elena", "Marin");
+            var trainee = SeedUser("Adela", "Popescu");
+            var admin = SeedUser("Admin", "User");
+
+            var created = await service.CreateAsync(new CreatePeriodicTrainingDTO
+            {
+                UserId = trainee.Id,
+                InstructorId = instructor.Id
+            });
+
+            var result = await service.SetPrintExclusionAsync(created.Id, excluded: true, actingAdminId: admin.Id);
+
+            Assert.NotNull(result.ExcludedFromPrintAt);
+
+            var stored = _dbFixture.Context.PeriodicTrainings.Single(pt => pt.Id == created.Id);
+            Assert.NotNull(stored.ExcludedFromPrintAt);
+            Assert.Equal(admin.Id, stored.ExcludedFromPrintById);
+        }
+
+        [Fact]
+        public async Task SetPrintExclusionAsync_NotExcluded_ClearsTimestamp()
+        {
+            var service = CreateService();
+            var instructor = SeedUser("Elena", "Marin");
+            var trainee = SeedUser("Adela", "Popescu");
+            var admin = SeedUser("Admin", "User");
+
+            var created = await service.CreateAsync(new CreatePeriodicTrainingDTO
+            {
+                UserId = trainee.Id,
+                InstructorId = instructor.Id
+            });
+
+            await service.SetPrintExclusionAsync(created.Id, excluded: true, actingAdminId: admin.Id);
+            var result = await service.SetPrintExclusionAsync(created.Id, excluded: false, actingAdminId: admin.Id);
+
+            Assert.Null(result.ExcludedFromPrintAt);
+
+            var stored = _dbFixture.Context.PeriodicTrainings.Single(pt => pt.Id == created.Id);
+            Assert.Null(stored.ExcludedFromPrintAt);
+            Assert.Null(stored.ExcludedFromPrintById);
+        }
+
+        [Fact]
+        public async Task SetPrintExclusionAsync_RowWithCopies_ExcludesWholeFamily()
+        {
+            var service = CreateService();
+            var instructor = SeedUser("Elena", "Marin");
+            var trainee = SeedUser("Adela", "Popescu");
+            var admin = SeedUser("Admin", "User");
+
+            var root = await service.CreateAsync(new CreatePeriodicTrainingDTO
+            {
+                UserId = trainee.Id,
+                InstructorId = instructor.Id
+            });
+
+            var copy = new PeriodicTraining
+            {
+                Id = Guid.NewGuid(),
+                UserId = trainee.Id,
+                SourceRowId = root.Id,
+                InstructorId = instructor.Id,
+                InstructorName = "Elena Marin",
+                CreatedAt = DateTime.UtcNow
+            };
+            _dbFixture.Context.PeriodicTrainings.Add(copy);
+            await _dbFixture.Context.SaveChangesAsync();
+
+            // Act on the copy — the root and any sibling copies must be excluded too.
+            await service.SetPrintExclusionAsync(copy.Id, excluded: true, actingAdminId: admin.Id);
+
+            var rootStored = _dbFixture.Context.PeriodicTrainings.Single(pt => pt.Id == root.Id);
+            var copyStored = _dbFixture.Context.PeriodicTrainings.Single(pt => pt.Id == copy.Id);
+            Assert.NotNull(rootStored.ExcludedFromPrintAt);
+            Assert.NotNull(copyStored.ExcludedFromPrintAt);
+            Assert.Equal(admin.Id, rootStored.ExcludedFromPrintById);
+            Assert.Equal(admin.Id, copyStored.ExcludedFromPrintById);
+        }
+
+        [Fact]
+        public async Task SetPrintExclusionAsync_UnknownId_ThrowsArgumentException()
+        {
+            var service = CreateService();
+            var admin = SeedUser("Admin", "User");
+
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                service.SetPrintExclusionAsync(Guid.NewGuid(), excluded: true, actingAdminId: admin.Id));
+        }
     }
 }

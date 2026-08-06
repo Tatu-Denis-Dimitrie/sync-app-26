@@ -154,6 +154,8 @@ namespace SyncApp26.Infrastructure.Services
                     VerifierSignature = oldRow.VerifierSignature,
                     VerifierSignatureMethod = oldRow.VerifierSignatureMethod,
                     CreatedAt = oldRow.CreatedAt,
+                    ExcludedFromPrintAt = oldRow.ExcludedFromPrintAt,
+                    ExcludedFromPrintById = oldRow.ExcludedFromPrintById,
                 };
                 _context.PeriodicTrainings.Add(copy);
             }

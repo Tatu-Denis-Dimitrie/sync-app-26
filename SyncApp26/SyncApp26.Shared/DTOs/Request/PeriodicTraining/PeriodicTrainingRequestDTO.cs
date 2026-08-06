@@ -38,4 +38,9 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
         [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).")]
         public string? VerifierName { get; set; }
     }
+
+    public class UpdatePrintExclusionDTO
+    {
+        public bool Excluded { get; set; }
+    }
 }

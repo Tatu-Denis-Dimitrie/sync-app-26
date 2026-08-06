@@ -215,6 +215,12 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<decimal?>("DurationHours")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("ExcludedFromPrintAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ExcludedFromPrintById")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("InstructorId")
                         .HasColumnType("TEXT");
 
