@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { AuthenticationService, AuthRole } from '../../services/authentication.service';
-import { SignatureVerificationService, SignatureVersionSummary } from '../../services/signature-verification.service';
+import { SignatureVerificationService, SignatureVersionSummary, PeriodicTrainingSignatureHistory } from '../../services/signature-verification.service';
 import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
 import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 import { BloodType, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
@@ -124,6 +124,8 @@ export class SsmSuFormComponent implements OnInit {
   private historyByTrainingId = new Map<string, SignatureVersionSummary[]>();
   private historyLoadingId: string | null = null;
   private historyErrorByTrainingId = new Map<string, string>();
+  // Silent background fetch so hasInvalidSignature() has data before the user ever opens History.
+  private historyPrefetchIds = new Set<string>();
 
   constructor(
     private route: ActivatedRoute,
@@ -150,7 +152,10 @@ export class SsmSuFormComponent implements OnInit {
           this.populateFormData();
           // load periodic trainings for this user (to show signatures per-row)
           this.http.get<any[]>(`${environment.apiUrl}/PeriodicTraining/user/${this.userId}`)
-            .subscribe({ next: trainings => { this.trainings = trainings || []; }, error: () => { this.trainings = []; } });
+            .subscribe({
+              next: trainings => { this.trainings = trainings || []; this.prefetchHistoryForDisplayedRows(); },
+              error: () => { this.trainings = []; }
+            });
           this.loading = false;
         },
         error: (err) => {
@@ -219,10 +224,7 @@ export class SsmSuFormComponent implements OnInit {
     this.historyLoadingId = t.id;
     this.signatureVerificationService.getSignatureHistory(t.id).subscribe({
       next: (history) => {
-        const entries = Object.values(history.versionsByRole)
-          .flat()
-          .sort((a, b) => new Date(a.signedAt).getTime() - new Date(b.signedAt).getTime());
-        this.historyByTrainingId.set(t.id, entries);
+        this.cacheHistoryResponse(t.id, history);
         this.historyLoadingId = null;
       },
       error: () => {
@@ -230,6 +232,55 @@ export class SsmSuFormComponent implements OnInit {
         this.historyLoadingId = null;
       }
     });
+  }
+
+  private cacheHistoryResponse(trainingId: string, history: PeriodicTrainingSignatureHistory): void {
+    const entries = Object.values(history.versionsByRole)
+      .flat()
+      .sort((a, b) => new Date(a.signedAt).getTime() - new Date(b.signedAt).getTime());
+    this.historyByTrainingId.set(trainingId, entries);
+  }
+
+  // Fires right after trainings load so hasInvalidSignature() has an answer before the user ever
+  // expands History. Best-effort: a failed prefetch just means the Exclude-from-print button won't
+  // show for that row until History is opened manually — no user-facing error for a background fetch.
+  private prefetchHistoryForDisplayedRows(): void {
+    const rows = [...this.displayedSsmTrainings, ...this.displayedSuTrainings];
+    for (const t of rows) {
+      if (this.historyByTrainingId.has(t.id) || this.historyPrefetchIds.has(t.id)) continue;
+
+      this.historyPrefetchIds.add(t.id);
+      this.signatureVerificationService.getSignatureHistory(t.id).subscribe({
+        next: (history) => this.cacheHistoryResponse(t.id, history),
+        error: () => { /* best-effort prefetch — see comment above */ }
+      });
+    }
+  }
+
+  hasInvalidSignature(t: any): boolean {
+    return this.getHistoryEntries(t).some(e => e.status === 'Invalid' || e.status === 'ChainBroken');
+  }
+
+  isExcludedFromPrint(t: any): boolean {
+    return !!t.excludedFromPrintAt;
+  }
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  togglePrintExclusion(t: any): void {
+    const excluding = !this.isExcludedFromPrint(t);
+    const confirmMessage = excluding
+      ? 'Exclude this training row from every printed document? It will stay in the system but disappear from PDFs and printouts.'
+      : 'Include this training row in printed documents again?';
+    if (!confirm(confirmMessage)) return;
+
+    this.http.patch<any>(`${environment.apiUrl}/PeriodicTraining/${t.id}/print-exclusion`, { excluded: excluding })
+      .subscribe({
+        next: (updated) => { t.excludedFromPrintAt = updated.excludedFromPrintAt; },
+        error: (err) => { alert(err.error?.message || 'Failed to update print exclusion.'); }
+      });
   }
 
   populateFormData() {

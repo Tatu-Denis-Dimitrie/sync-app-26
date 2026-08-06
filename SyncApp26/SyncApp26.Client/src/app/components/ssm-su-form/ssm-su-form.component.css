@@ -417,6 +417,40 @@ textarea.edit-input {
   text-transform: uppercase;
 }
 
+.actions-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.excluded-tag {
+  font-size: 9px;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.exclude-print-btn {
+  background: #b91c1c;
+}
+
+.exclude-print-btn:hover {
+  background: #7f1d1d;
+}
+
+/* On-screen indicator for a row excluded from print — the row still shows here (admins need to
+   toggle it back), but visibly muted so it reads as "not part of the printed document". */
+tr.print-excluded td:not(.no-print) {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
 /* Print styles */
 @media print {
   .tabs,

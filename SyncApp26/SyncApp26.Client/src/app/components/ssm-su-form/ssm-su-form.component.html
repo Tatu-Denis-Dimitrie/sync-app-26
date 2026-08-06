@@ -602,7 +602,7 @@
                       </thead>
                       <tbody>
                         @for (t of displayedSsmTrainings; track t) {
-                          <tr>
+                          <tr [class.print-excluded]="isExcludedFromPrint(t)" [class.no-print]="isExcludedFromPrint(t)">
                             <td>
                               {{
                               t.trainingDate
@@ -669,10 +669,24 @@
                                         }
                                       </td>
                                     }
-                                    <td class="no-print">
+                                    <td class="no-print actions-cell">
+                                      @if (isExcludedFromPrint(t)) {
+                                        <span class="excluded-tag">Excluded from print</span>
+                                      }
                                       <button type="button" class="history-toggle" (click)="toggleHistory(t)">
                                         {{ isHistoryExpanded(t) ? 'Hide' : 'History' }}
                                       </button>
+                                      @if (isAdmin) {
+                                        @if (isExcludedFromPrint(t)) {
+                                          <button type="button" class="history-toggle" (click)="togglePrintExclusion(t)">
+                                            Include in print
+                                          </button>
+                                        } @else if (hasInvalidSignature(t)) {
+                                          <button type="button" class="history-toggle exclude-print-btn" (click)="togglePrintExclusion(t)">
+                                            Exclude from print
+                                          </button>
+                                        }
+                                      }
                                     </td>
                                   </tr>
                                   @if (isHistoryExpanded(t)) {
@@ -1129,7 +1143,7 @@
                                   </thead>
                                   <tbody>
                                     @for (t of displayedSuTrainings; track t) {
-                                      <tr>
+                                      <tr [class.print-excluded]="isExcludedFromPrint(t)" [class.no-print]="isExcludedFromPrint(t)">
                                         <td>
                                           {{
                                           t.trainingDate
@@ -1176,10 +1190,24 @@
                                                   —
                                                 }
                                               </td>
-                                              <td class="no-print">
+                                              <td class="no-print actions-cell">
+                                                @if (isExcludedFromPrint(t)) {
+                                                  <span class="excluded-tag">Excluded from print</span>
+                                                }
                                                 <button type="button" class="history-toggle" (click)="toggleHistory(t)">
                                                   {{ isHistoryExpanded(t) ? 'Hide' : 'History' }}
                                                 </button>
+                                                @if (isAdmin) {
+                                                  @if (isExcludedFromPrint(t)) {
+                                                    <button type="button" class="history-toggle" (click)="togglePrintExclusion(t)">
+                                                      Include in print
+                                                    </button>
+                                                  } @else if (hasInvalidSignature(t)) {
+                                                    <button type="button" class="history-toggle exclude-print-btn" (click)="togglePrintExclusion(t)">
+                                                      Exclude from print
+                                                    </button>
+                                                  }
+                                                }
                                               </td>
                                             </tr>
                                             @if (isHistoryExpanded(t)) {
