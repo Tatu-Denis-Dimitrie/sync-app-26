@@ -23,7 +23,6 @@ namespace SyncApp26.Tests.Services.Sync
                 LastName = "Doe",
                 Email = $"{Guid.NewGuid():N}@example.com",
                 PersonalId = Guid.NewGuid().ToString(),
-                Role = UserRole.BasicUser,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);

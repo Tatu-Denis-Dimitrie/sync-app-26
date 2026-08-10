@@ -511,9 +511,6 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<string>("Qualifications")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -541,8 +538,6 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("Users", t =>
                         {
                             t.HasCheckConstraint("CK_Users_BloodType", "\"BloodType\" IS NULL OR \"BloodType\" IN (0, 1, 2, 3, 4, 5, 6, 7)");
-
-                            t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN (0, 1, 2)");
                         });
                 });
 

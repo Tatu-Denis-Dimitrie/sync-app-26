@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.Validation;
 
 namespace SyncApp26.Shared.DTOs.Request.User
@@ -21,6 +20,5 @@ namespace SyncApp26.Shared.DTOs.Request.User
         public string? Function { get; set; }
 
         public Guid? AssignedToId { get; set; }
-        public UserRole? Role { get; set; }
     }
 }

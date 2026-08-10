@@ -22,7 +22,6 @@ namespace SyncApp26.Tests.Services.Documents
                 LastName = lastName,
                 Email = $"{firstName}.{lastName}.{Guid.NewGuid():N}@example.com".ToLowerInvariant(),
                 PersonalId = Guid.NewGuid().ToString(),
-                Role = Domain.Enums.UserRole.BasicUser,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);

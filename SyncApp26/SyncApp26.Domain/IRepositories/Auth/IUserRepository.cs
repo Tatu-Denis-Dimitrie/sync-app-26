@@ -19,5 +19,9 @@ namespace SyncApp26.Domain.IRepositories
         Task<User?> GetUserByPersonalIdAsync(string personalId);
 
         Task<(List<User> Items, int TotalCount)> SearchUsersAsync(string? search, int page, int pageSize);
+
+        Task<Role?> GetRoleByNameAsync(string roleName);
+        Task<IEnumerable<User>> GetUsersInRoleAsync(string roleName);
+        Task<bool> IsInRoleAsync(Guid userId, string roleName);
     }
 }

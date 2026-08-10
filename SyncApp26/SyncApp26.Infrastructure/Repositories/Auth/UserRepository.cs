@@ -22,6 +22,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.InitialTrainings)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
@@ -33,11 +34,15 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.InitialTrainings)
-                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
+                .Where(u => u.DeletedAt == null)
+                .WithoutRole(Roles.Admin)
                 .ToListAsync();
         }
 
-        // Optimized method for CSV comparison - no tracking, minimal includes
+        // Optimized method for CSV comparison - no tracking, minimal includes. Role assignments are
+        // deliberately NOT loaded here: nothing on the comparison path reads a user's role, and this
+        // query runs over the entire roster (up to ~250k users per deployment) on every CSV upload.
         public async Task<List<User>> GetAllUsersForComparisonAsync()
         {
             return await _context.Users
@@ -45,7 +50,8 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin)
+                .Where(u => u.DeletedAt == null)
+                .WithoutRole(Roles.Admin)
                 .ToListAsync();
         }
 
@@ -69,7 +75,9 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null && u.Role != UserRole.Admin)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
+                .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null)
+                .WithoutRole(Roles.Admin)
                 .ToListAsync();
         }
 
@@ -79,7 +87,9 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null && u.Role != UserRole.Admin)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
+                .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null)
+                .WithoutRole(Roles.Admin)
                 .ToListAsync();
         }
 
@@ -108,7 +118,10 @@ namespace SyncApp26.Infrastructure.Repositories
 
         public async Task<bool> IsUserLineManagerAsync(Guid userId)
         {
-            return await _context.Users.AnyAsync(u => u.AssignedToId == userId && u.DeletedAt == null && u.Role != UserRole.Admin);
+            return await _context.Users
+                .Where(u => u.AssignedToId == userId && u.DeletedAt == null)
+                .WithoutRole(Roles.Admin)
+                .AnyAsync();
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -117,6 +130,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.DeletedAt == null)
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
@@ -127,7 +141,9 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Include(u => u.Department)
                 .Include(u => u.Function)
                 .Include(u => u.AssignedTo)
-                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
+                .Where(u => u.DeletedAt == null)
+                .WithoutRole(Roles.Admin)
                 .FirstOrDefaultAsync(u => u.PersonalId == personalId);
         }
 
@@ -135,7 +151,8 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             var query = _context.Users
                 .Include(u => u.Department)
-                .Where(u => u.DeletedAt == null && u.Role != UserRole.Admin);
+                .Where(u => u.DeletedAt == null)
+                .WithoutRole(Roles.Admin);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -155,6 +172,33 @@ namespace SyncApp26.Infrastructure.Repositories
                 .ToListAsync();
 
             return (items, totalCount);
+        }
+
+        public async Task<Role?> GetRoleByNameAsync(string roleName)
+        {
+            return await _context.Roles.FirstOrDefaultAsync(r => r.Name == roleName);
+        }
+
+        public async Task<IEnumerable<User>> GetUsersInRoleAsync(string roleName)
+        {
+            // Deliberately no "exclude Admin" filter here, unlike GetAllUsersAsync — a caller asking
+            // "who holds role X" wants every holder, including admins (e.g. the Admin role itself).
+            return await _context.Users
+                .Include(u => u.Department)
+                .Include(u => u.Function)
+                .Include(u => u.AssignedTo)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
+                .Where(u => u.DeletedAt == null)
+                .WithRole(roleName)
+                .ToListAsync();
+        }
+
+        public async Task<bool> IsInRoleAsync(Guid userId, string roleName)
+        {
+            return await _context.Users
+                .Where(u => u.Id == userId)
+                .WithRole(roleName)
+                .AnyAsync();
         }
     }
 }

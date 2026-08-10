@@ -13,8 +13,5 @@ namespace SyncApp26.API.Extensions
 
         public static string? GetEmail(this ClaimsPrincipal user)
             => user.FindFirst(ClaimTypes.Email)?.Value;
-
-        public static string? GetRole(this ClaimsPrincipal user)
-            => user.FindFirst(ClaimTypes.Role)?.Value;
     }
 }

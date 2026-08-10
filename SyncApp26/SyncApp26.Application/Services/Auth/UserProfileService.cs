@@ -77,7 +77,6 @@ namespace SyncApp26.Application.Services
             {
                 Id = Guid.NewGuid(),
                 PersonalId = Guid.NewGuid().ToString(),
-                Role = UserRole.BasicUser,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Email = request.Email,
@@ -87,15 +86,25 @@ namespace SyncApp26.Application.Services
                 CreatedAt = DateTime.UtcNow
             };
 
+            var basicUserRole = await _userService.GetRoleByNameAsync(Roles.BasicUser);
+            if (basicUserRole != null)
+            {
+                user.RoleAssignments.Add(new UserRoleAssignment { UserId = user.Id, RoleId = basicUserRole.Id });
+            }
+
             await _userService.AddUserAsync(user);
 
             if (request.AssignedToId.HasValue)
             {
                 var managerToPromote = await _userService.GetUserByIdAsync(request.AssignedToId.Value);
-                if (managerToPromote != null && managerToPromote.Role != UserRole.LineManager)
+                if (managerToPromote != null && !managerToPromote.RoleAssignments.Any(a => a.Role.Name == Roles.LineManager))
                 {
-                    managerToPromote.Role = UserRole.LineManager;
-                    await _userService.UpdateUserAsync(managerToPromote);
+                    var lineManagerRole = await _userService.GetRoleByNameAsync(Roles.LineManager);
+                    if (lineManagerRole != null)
+                    {
+                        managerToPromote.RoleAssignments.Add(new UserRoleAssignment { UserId = managerToPromote.Id, RoleId = lineManagerRole.Id });
+                        await _userService.UpdateUserAsync(managerToPromote);
+                    }
                 }
             }
 
@@ -173,11 +182,6 @@ namespace SyncApp26.Application.Services
             existingUser.AssignedToId = request.AssignedToId;
             existingUser.FunctionId = resolvedFunctionId;
             existingUser.UpdatedAt = DateTime.UtcNow;
-
-            if (request.Role.HasValue)
-            {
-                existingUser.Role = request.Role.Value;
-            }
 
             await _userService.UpdateUserAsync(existingUser);
 

@@ -84,7 +84,7 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john.doe@example.com", PersonalId = "1", Role = UserRole.BasicUser });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john.doe@example.com", PersonalId = "1" });
 
             var result = await service.RegisterAsync(ValidRegisterRequest());
 
@@ -127,7 +127,7 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john@example.com", PersonalId = "1", IsEmailVerified = true, Role = UserRole.BasicUser });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "john@example.com", PersonalId = "1", IsEmailVerified = true });
 
             var result = await service.VerifyEmailAsync("john@example.com", "token");
 
@@ -146,7 +146,6 @@ namespace SyncApp26.Tests.Services.Auth
                     LastName = "B",
                     Email = "john@example.com",
                     PersonalId = "1",
-                    Role = UserRole.BasicUser,
                     IsEmailVerified = false,
                     EmailVerificationToken = "correct-token",
                     EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(1)
@@ -169,7 +168,6 @@ namespace SyncApp26.Tests.Services.Auth
                     LastName = "B",
                     Email = "john@example.com",
                     PersonalId = "1",
-                    Role = UserRole.BasicUser,
                     IsEmailVerified = false,
                     EmailVerificationToken = "correct-token",
                     EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(-1)
@@ -191,7 +189,6 @@ namespace SyncApp26.Tests.Services.Auth
                 LastName = "B",
                 Email = "john@example.com",
                 PersonalId = "1",
-                Role = UserRole.BasicUser,
                 IsEmailVerified = false,
                 EmailVerificationToken = "correct-token",
                 EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(1)
@@ -224,7 +221,7 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hash", IsEmailVerified = true });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hash", IsEmailVerified = true });
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
 
             var result = await service.AuthenticateAsync("a@b.com", "WrongPass1!");
@@ -237,7 +234,7 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
-                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hash", IsEmailVerified = false });
+                .ReturnsAsync(new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hash", IsEmailVerified = false });
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
             var result = await service.AuthenticateAsync("a@b.com", "Str0ng!Pass");
@@ -259,11 +256,10 @@ namespace SyncApp26.Tests.Services.Auth
                     Email = "a@b.com",
                     PersonalId = "1",
                     PasswordHash = "hash",
-                    IsEmailVerified = true,
-                    Role = UserRole.Admin
+                    IsEmailVerified = true
                 });
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.Admin)).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", It.IsAny<IEnumerable<string>>())).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateAsync("a@b.com", "Str0ng!Pass");
 
@@ -311,7 +307,7 @@ namespace SyncApp26.Tests.Services.Auth
 
             Assert.Equal(LoginStatus.NoAccountForEmail, result.Status);
             _userServiceMock.Verify(s => s.AddUserAsync(It.IsAny<User>()), Times.Never);
-            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<UserRole>()), Times.Never);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
         }
 
         [Fact]
@@ -319,11 +315,11 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             var userId = Guid.NewGuid();
-            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hashed" };
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hashed" };
             _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
                 .ReturnsAsync(new GoogleTokenPayload { Email = "a@b.com", EmailVerified = true });
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", It.IsAny<IEnumerable<string>>())).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateWithGoogleAsync("token");
 
@@ -340,11 +336,11 @@ namespace SyncApp26.Tests.Services.Auth
             // reintroducing that gate here.
             var service = CreateService();
             var userId = Guid.NewGuid();
-            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = null, IsEmailVerified = null };
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = null, IsEmailVerified = null };
             _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
                 .ReturnsAsync(new GoogleTokenPayload { Email = "a@b.com", EmailVerified = true });
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", It.IsAny<IEnumerable<string>>())).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateWithGoogleAsync("token");
 
@@ -370,17 +366,18 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             var userId = Guid.NewGuid();
-            var user = new User { Id = userId, FirstName = "DbFirst", LastName = "DbLast", Email = "a@b.com", PersonalId = "1", Role = UserRole.LineManager };
+            var user = new User { Id = userId, FirstName = "DbFirst", LastName = "DbLast", Email = "a@b.com", PersonalId = "1" };
+            user.RoleAssignments.Add(new UserRoleAssignment { UserId = userId, Role = new Role { Name = Roles.LineManager } });
             _googleTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
                 .ReturnsAsync(new GoogleTokenPayload { Email = "a@b.com", EmailVerified = true });
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.LineManager)).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", It.IsAny<IEnumerable<string>>())).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateWithGoogleAsync("token");
 
             Assert.Equal("DbFirst", result.FirstName);
             Assert.Equal("DbLast", result.LastName);
-            Assert.Equal(UserRole.LineManager, result.Role);
+            Assert.Contains(Roles.LineManager, result.Roles);
         }
 
         // ───────────────────────── AuthenticateWithMicrosoftAsync ─────────────────────────
@@ -409,7 +406,7 @@ namespace SyncApp26.Tests.Services.Auth
 
             Assert.Equal(LoginStatus.NoAccountForEmail, result.Status);
             _userServiceMock.Verify(s => s.AddUserAsync(It.IsAny<User>()), Times.Never);
-            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<UserRole>()), Times.Never);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
         }
 
         [Fact]
@@ -417,11 +414,11 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             var userId = Guid.NewGuid();
-            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hashed" };
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hashed" };
             _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
                 .ReturnsAsync(new MicrosoftTokenPayload { Email = "a@b.com" });
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", It.IsAny<IEnumerable<string>>())).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateWithMicrosoftAsync("token");
 
@@ -437,11 +434,11 @@ namespace SyncApp26.Tests.Services.Auth
             // Same guard as the Google flow: CSV-synced users leave IsEmailVerified null.
             var service = CreateService();
             var userId = Guid.NewGuid();
-            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = null, IsEmailVerified = null };
+            var user = new User { Id = userId, FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = null, IsEmailVerified = null };
             _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
                 .ReturnsAsync(new MicrosoftTokenPayload { Email = "a@b.com" });
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.BasicUser)).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", It.IsAny<IEnumerable<string>>())).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateWithMicrosoftAsync("token");
 
@@ -467,17 +464,18 @@ namespace SyncApp26.Tests.Services.Auth
         {
             var service = CreateService();
             var userId = Guid.NewGuid();
-            var user = new User { Id = userId, FirstName = "DbFirst", LastName = "DbLast", Email = "a@b.com", PersonalId = "1", Role = UserRole.LineManager };
+            var user = new User { Id = userId, FirstName = "DbFirst", LastName = "DbLast", Email = "a@b.com", PersonalId = "1" };
+            user.RoleAssignments.Add(new UserRoleAssignment { UserId = userId, Role = new Role { Name = Roles.LineManager } });
             _microsoftTokenValidatorMock.Setup(v => v.ValidateAsync(It.IsAny<string>()))
                 .ReturnsAsync(new MicrosoftTokenPayload { Email = "a@b.com" });
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("a@b.com")).ReturnsAsync(user);
-            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", UserRole.LineManager)).ReturnsAsync("jwt-token");
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "a@b.com", It.IsAny<IEnumerable<string>>())).ReturnsAsync("jwt-token");
 
             var result = await service.AuthenticateWithMicrosoftAsync("token");
 
             Assert.Equal("DbFirst", result.FirstName);
             Assert.Equal("DbLast", result.LastName);
-            Assert.Equal(UserRole.LineManager, result.Role);
+            Assert.Contains(Roles.LineManager, result.Roles);
         }
 
         // ───────────────────────── RequestPasswordResetAsync ─────────────────────────
@@ -497,7 +495,7 @@ namespace SyncApp26.Tests.Services.Auth
         public async Task RequestPasswordResetAsync_Success_SetsTokenAndExpiry()
         {
             var service = CreateService();
-            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser };
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1" };
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
 
             var result = await service.RequestPasswordResetAsync("a@b.com");
@@ -537,7 +535,7 @@ namespace SyncApp26.Tests.Services.Auth
         public async Task ResetPasswordAsync_SameAsOldPassword_Fails()
         {
             var service = CreateService();
-            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, PasswordHash = "hash" };
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", PasswordHash = "hash" };
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
             _authenticationServiceMock.Setup(s => s.VerifyPasswordAsync(It.IsAny<string>(), "hash")).ReturnsAsync(true);
 
@@ -558,7 +556,6 @@ namespace SyncApp26.Tests.Services.Auth
                 LastName = "B",
                 Email = "a@b.com",
                 PersonalId = "1",
-                Role = UserRole.BasicUser,
                 PasswordHash = "hash",
                 PasswordResetToken = "correct-token",
                 PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(10)
@@ -582,7 +579,6 @@ namespace SyncApp26.Tests.Services.Auth
                 LastName = "B",
                 Email = "a@b.com",
                 PersonalId = "1",
-                Role = UserRole.BasicUser,
                 PasswordHash = "hash",
                 PasswordResetToken = "correct-token",
                 PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(-1)
@@ -608,7 +604,6 @@ namespace SyncApp26.Tests.Services.Auth
                 LastName = "B",
                 Email = "a@b.com",
                 PersonalId = "1",
-                Role = UserRole.BasicUser,
                 PasswordHash = null,
                 PasswordResetToken = "correct-token",
                 PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(10)
@@ -634,7 +629,6 @@ namespace SyncApp26.Tests.Services.Auth
                 LastName = "B",
                 Email = "a@b.com",
                 PersonalId = "1",
-                Role = UserRole.BasicUser,
                 PasswordHash = "hash",
                 PasswordResetToken = "correct-token",
                 PasswordResetTokenExpiresAt = DateTime.UtcNow.AddMinutes(10)

@@ -14,7 +14,7 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public string PersonalId { get; set; } = string.Empty;
         public string? DepartmentName { get; set; }
         public string? FunctionName { get; set; }
-        public UserRole Role { get; set; }
+        public List<string> Roles { get; set; } = new();
         public string? ManagerFirstName { get; set; }
         public string? ManagerLastName { get; set; }
         public string? ManagerFunctionName { get; set; }

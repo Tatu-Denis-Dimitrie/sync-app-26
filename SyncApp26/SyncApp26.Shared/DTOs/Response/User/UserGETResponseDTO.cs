@@ -6,7 +6,7 @@ namespace SyncApp26.Shared.DTOs.Response.User
     {
         public Guid Id { get; set; }
         public required string PersonalId { get; set; }
-        public UserRole Role { get; set; }
+        public List<string> Roles { get; set; } = new();
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
         public required string Email { get; set; }

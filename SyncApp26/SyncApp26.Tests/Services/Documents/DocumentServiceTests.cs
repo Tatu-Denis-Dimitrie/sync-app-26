@@ -51,7 +51,7 @@ namespace SyncApp26.Tests.Services.Documents
             return function;
         }
 
-        private User SeedUser(string firstName, string lastName, Function function, UserRole role = UserRole.BasicUser,
+        private User SeedUser(string firstName, string lastName, Function function, string roleName = Roles.BasicUser,
             string? badgeNumber = null)
         {
             var user = new User
@@ -62,12 +62,12 @@ namespace SyncApp26.Tests.Services.Documents
                 Email = $"{firstName}.{lastName}.{Guid.NewGuid():N}@example.com".ToLowerInvariant(),
                 PersonalId = Guid.NewGuid().ToString(),
                 FunctionId = function.Id,
-                Role = role,
                 BadgeNumber = badgeNumber,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
             _dbFixture.Context.SaveChanges();
+            _dbFixture.GrantRole(user, roleName);
             return user;
         }
 
@@ -288,7 +288,7 @@ namespace SyncApp26.Tests.Services.Documents
         {
             var service = CreateService();
             var adminFunction = SeedFunction("Inspector SSM");
-            var admin = SeedUser("Mihai", "Ionescu", adminFunction, role: UserRole.Admin);
+            var admin = SeedUser("Mihai", "Ionescu", adminFunction, roleName: Roles.Admin);
             var employeeFunction = SeedFunction("Operator");
             var owner = SeedUser("Adela", "Popescu", employeeFunction);
             var doc = SeedDocument(owner, "SSM", "PendingAdmin");

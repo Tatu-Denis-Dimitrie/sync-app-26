@@ -81,7 +81,7 @@ namespace SyncApp26.Application.Services
 
             var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
             var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
-            bool signerIsAdmin = signerUser?.Role == UserRole.Admin;
+            bool signerIsAdmin = signerUser != null && await _userService.IsInRoleAsync(signerUser.Id, Roles.Admin);
 
             bool isManagerSigning = false;
             bool isInstructorSigning = false;
@@ -139,7 +139,7 @@ namespace SyncApp26.Application.Services
 
             var periodicTrainingId = request.PeriodicTrainingId ?? tokenEntity.PeriodicTrainingId;
 
-            bool signerIsAdmin = signerUserFromToken.Role == UserRole.Admin;
+            bool signerIsAdmin = await _userService.IsInRoleAsync(signerUserFromToken.Id, Roles.Admin);
             bool isUser = document.UserId == signerUserFromToken.Id;
             bool isManager = document.User?.AssignedToId == signerUserFromToken.Id;
             bool isInstructor = ResolveInstructorId(document, periodicTrainingId) == signerUserFromToken.Id;

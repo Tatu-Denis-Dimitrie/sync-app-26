@@ -33,7 +33,7 @@ namespace SyncApp26.API.Controllers
         {
             Id = user.Id,
             PersonalId = user.PersonalId,
-            Role = user.Role,
+            Roles = user.RoleAssignments.Select(a => a.Role.Name).ToList(),
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
@@ -249,7 +249,7 @@ namespace SyncApp26.API.Controllers
                 PersonalId = user.PersonalId,
                 DepartmentName = user.Department?.Name,
                 FunctionName = user.Function?.Name,
-                Role = user.Role,
+                Roles = user.RoleAssignments.Select(a => a.Role.Name).ToList(),
                 ManagerFirstName = user.AssignedTo?.FirstName,
                 ManagerLastName = user.AssignedTo?.LastName,
                 ManagerFunctionName = user.AssignedTo?.Function?.Name,

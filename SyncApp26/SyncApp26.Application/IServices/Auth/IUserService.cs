@@ -14,5 +14,9 @@ namespace SyncApp26.Application.IServices
         Task<User?> GetUserByPersonalIdAsync(string personalId);
         Task<User?> GetUserByEmailAsync(string email);
         Task<(List<User> Items, int TotalCount)> SearchUsersAsync(string? search, int page, int pageSize);
+
+        Task<Role?> GetRoleByNameAsync(string roleName);
+        Task<IEnumerable<User>> GetUsersInRoleAsync(string roleName);
+        Task<bool> IsInRoleAsync(Guid userId, string roleName);
     }
 }

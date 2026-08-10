@@ -122,7 +122,6 @@ namespace SyncApp26.Tests.Services.Documents
                     Email = $"signer{i}.{Guid.NewGuid():N}@example.com",
                     PersonalId = Guid.NewGuid().ToString(),
                     FunctionId = function.Id,
-                    Role = UserRole.BasicUser,
                     CreatedAt = DateTime.UtcNow
                 };
                 signers.Add(user);

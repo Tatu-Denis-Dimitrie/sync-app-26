@@ -314,6 +314,9 @@ public class CsvSyncService : ICsvSyncService
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
         var functionCache = new Dictionary<string, Function?>(StringComparer.OrdinalIgnoreCase);
 
+        // Fetched once, not per new row - an import can create thousands of users in one pass.
+        var basicUserRoleId = (await _userRepository.GetRoleByNameAsync(Roles.BasicUser))?.Id;
+
         // Pending DataChangeRequests grouped by user, so a request satisfied by this import can be
         // auto-closed with correct audit attribution instead of silently going stale.
         var pendingRequestsByUserId = (await _dataChangeRequestRepository.GetAllPendingAsync())
@@ -362,7 +365,7 @@ public class CsvSyncService : ICsvSyncService
             {
                 if (item.Status == "new" && item.CsvData != null)
                 {
-                    var newUser = await TryBuildNewUserAsync(item.CsvData, departments, dbUsers, functionCache, result);
+                    var newUser = await TryBuildNewUserAsync(item.CsvData, departments, dbUsers, functionCache, basicUserRoleId, result);
                     if (newUser == null)
                     {
                         continue;
@@ -494,18 +497,29 @@ public class CsvSyncService : ICsvSyncService
                     .ToHashSet();
 
                 var usersToPromote = allUsers
-                    .Where(u => managerIds.Contains(u.Id) && u.Role != UserRole.LineManager)
+                    .Where(u => managerIds.Contains(u.Id) && !u.RoleAssignments.Any(a => a.Role.Name == Roles.LineManager))
                     .ToList();
                 var usersToDemote = allUsers
-                    .Where(u => !managerIds.Contains(u.Id) && u.Role == UserRole.LineManager)
+                    .Where(u => !managerIds.Contains(u.Id) && u.RoleAssignments.Any(a => a.Role.Name == Roles.LineManager))
                     .ToList();
 
-                foreach (var u in usersToPromote) u.Role = UserRole.LineManager;
-                foreach (var u in usersToDemote)  u.Role = UserRole.BasicUser;
+                if (usersToPromote.Count > 0 || usersToDemote.Count > 0)
+                {
+                    var lineManagerRole = await _userRepository.GetRoleByNameAsync(Roles.LineManager);
+                    if (lineManagerRole != null)
+                    {
+                        // Grant/revoke ONLY the LineManager role: every other role the person holds
+                        // (officer duties, admin) is none of the import's business and must survive
+                        // an import untouched.
+                        foreach (var u in usersToPromote)
+                            u.RoleAssignments.Add(new UserRoleAssignment { UserId = u.Id, RoleId = lineManagerRole.Id });
+                        foreach (var u in usersToDemote)
+                            u.RoleAssignments.Remove(u.RoleAssignments.First(a => a.Role.Name == Roles.LineManager));
 
-                var roleUpdates = usersToPromote.Concat(usersToDemote).ToList();
-                if (roleUpdates.Any())
-                    await _userRepository.UpdateUsersAsync(roleUpdates);
+                        var roleUpdates = usersToPromote.Concat(usersToDemote).ToList();
+                        await _userRepository.UpdateUsersAsync(roleUpdates);
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -530,7 +544,7 @@ public class CsvSyncService : ICsvSyncService
         return result;
     }
 
-    private async Task<User?> TryBuildNewUserAsync(CsvUserDTO csvData, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, SyncResultDTO result)
+    private async Task<User?> TryBuildNewUserAsync(CsvUserDTO csvData, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, Guid? basicUserRoleId, SyncResultDTO result)
     {
         var department = departments.FirstOrDefault(d => d.Name.Equals(csvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
         if (department == null)
@@ -544,10 +558,9 @@ public class CsvSyncService : ICsvSyncService
         var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvData.AssignedToPersonalId);
         var csvFunction = await ResolveExistingFunctionAsync(csvData.Function, functionCache);
 
-        return new User
+        var newUser = new User
         {
             Id = Guid.NewGuid(),
-            Role = UserRole.BasicUser, // Everyone starts as Basic User
             FirstName = csvData.FirstName.Trim(),
             LastName = csvData.LastName.Trim(),
             Email = csvData.Email.Trim(),
@@ -559,6 +572,14 @@ public class CsvSyncService : ICsvSyncService
             IsCsvManaged = true,
             CreatedAt = DateTime.UtcNow
         };
+
+        // Everyone starts as Basic User.
+        if (basicUserRoleId.HasValue)
+        {
+            newUser.RoleAssignments.Add(new UserRoleAssignment { UserId = newUser.Id, RoleId = basicUserRoleId.Value });
+        }
+
+        return newUser;
     }
 
     private static void ProcessDeletedItem(UserSyncItemDTO item, Dictionary<string, User> dbUserMap, List<User> usersToDelete, SyncResultDTO result)

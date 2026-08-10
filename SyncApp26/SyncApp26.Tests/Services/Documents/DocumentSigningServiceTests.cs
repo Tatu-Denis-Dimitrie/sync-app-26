@@ -19,7 +19,7 @@ namespace SyncApp26.Tests.Services.Documents
         private DocumentSigningService CreateService() =>
             new(_documentServiceMock.Object, _documentSignatureServiceMock.Object, _userServiceMock.Object);
 
-        private static User MakeUser(Guid? id = null, Guid? assignedToId = null, string? email = null, UserRole role = UserRole.BasicUser) => new()
+        private static User MakeUser(Guid? id = null, Guid? assignedToId = null, string? email = null) => new()
         {
             Id = id ?? Guid.NewGuid(),
             FirstName = "Jane",
@@ -27,7 +27,6 @@ namespace SyncApp26.Tests.Services.Documents
             Email = email ?? $"jane.roe.{Guid.NewGuid():N}@example.com",
             PersonalId = Guid.NewGuid().ToString(),
             AssignedToId = assignedToId,
-            Role = role,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -248,7 +247,7 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task RequestSigningTokenAsync_AdminWrongStatus_Fails()
         {
             var service = CreateService();
-            var admin = MakeUser(role: UserRole.Admin);
+            var admin = MakeUser();
             var document = MakeDocument(documentType: "SSM", status: "Completed");
 
             var result = await service.RequestSigningTokenAsync(document, admin, callerIsAdmin: true);
@@ -261,7 +260,7 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task RequestSigningTokenAsync_AdminNonSsmDocument_Fails()
         {
             var service = CreateService();
-            var admin = MakeUser(role: UserRole.Admin);
+            var admin = MakeUser();
             var document = MakeDocument(documentType: "SU", status: "PendingAdmin");
             document.UserSignedAt = DateTime.UtcNow;
             document.ManagerSignedAt = DateTime.UtcNow;
@@ -277,7 +276,7 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task RequestSigningTokenAsync_ValidAdminSignature_ReturnsToken()
         {
             var service = CreateService();
-            var admin = MakeUser(role: UserRole.Admin);
+            var admin = MakeUser();
             var document = MakeDocument(documentType: "SSM", status: "PendingAdmin"); // unrelated owner
             document.UserSignedAt = DateTime.UtcNow;
             document.ManagerSignedAt = DateTime.UtcNow;
@@ -375,13 +374,14 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task GetSigningContextAsync_AdminSigningSsmDocument_ReturnsIsAdminSigningTrue()
         {
             var service = CreateService();
-            var admin = MakeUser(email: "admin@example.com", role: UserRole.Admin);
+            var admin = MakeUser(email: "admin@example.com");
             var document = MakeDocument(documentType: "SSM", status: "PendingAdmin");
             var token = new DocumentSignatureToken { DocumentId = document.Id, Email = admin.Email };
 
             _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(admin.Email)).ReturnsAsync(admin);
+            _userServiceMock.Setup(s => s.IsInRoleAsync(admin.Id, Roles.Admin)).ReturnsAsync(true);
 
             var result = await service.GetSigningContextAsync("tok");
 
@@ -468,13 +468,14 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task ConsumeSigningTokenAsync_AdminWrongDocumentType_Fails()
         {
             var service = CreateService();
-            var admin = MakeUser(role: UserRole.Admin);
+            var admin = MakeUser();
             var document = MakeDocument(documentType: "SU", status: "PendingAdmin");
             var token = new DocumentSignatureToken { DocumentId = document.Id, Email = admin.Email };
 
             _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(admin.Email)).ReturnsAsync(admin);
+            _userServiceMock.Setup(s => s.IsInRoleAsync(admin.Id, Roles.Admin)).ReturnsAsync(true);
 
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
 
@@ -627,13 +628,14 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task ConsumeSigningTokenAsync_AdminSignature_Success()
         {
             var service = CreateService();
-            var admin = MakeUser(role: UserRole.Admin);
+            var admin = MakeUser();
             var document = MakeDocument(documentType: "SSM", status: "PendingAdmin");
             var token = new DocumentSignatureToken { DocumentId = document.Id, Email = admin.Email };
 
             _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(admin.Email)).ReturnsAsync(admin);
+            _userServiceMock.Setup(s => s.IsInRoleAsync(admin.Id, Roles.Admin)).ReturnsAsync(true);
             _documentSignatureServiceMock.Setup(s => s.ConsumeTokenAsync("tok")).ReturnsAsync(true);
 
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });

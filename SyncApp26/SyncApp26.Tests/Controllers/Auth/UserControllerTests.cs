@@ -38,10 +38,10 @@ namespace SyncApp26.Tests.Controllers.Auth
             _documentServiceMock.Setup(s => s.GetUserIdsWithUnsignedDocumentTypeAsync(It.IsAny<string>())).ReturnsAsync(new HashSet<Guid>());
         }
 
-        private static User MakeUser(Guid? id = null, Guid? departmentId = null, Guid? assignedToId = null, UserRole role = UserRole.BasicUser)
+        private static User MakeUser(Guid? id = null, Guid? departmentId = null, Guid? assignedToId = null, string roleName = Roles.BasicUser)
         {
             var userId = id ?? Guid.NewGuid();
-            return new User
+            var user = new User
             {
                 Id = userId,
                 FirstName = "John",
@@ -50,9 +50,10 @@ namespace SyncApp26.Tests.Controllers.Auth
                 PersonalId = Guid.NewGuid().ToString(),
                 DepartmentId = departmentId,
                 AssignedToId = assignedToId,
-                Role = role,
                 CreatedAt = DateTime.UtcNow
             };
+            user.RoleAssignments.Add(new UserRoleAssignment { UserId = userId, Role = new Role { Name = roleName } });
+            return user;
         }
 
         // ───────────────────────── GetUserById ─────────────────────────

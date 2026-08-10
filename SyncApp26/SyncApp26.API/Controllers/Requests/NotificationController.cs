@@ -46,8 +46,6 @@ namespace SyncApp26.API.Controllers
             }
 
             // Check permissions: Only Admin or the user's AssingedTo (Line Manager) can notify
-            var currentUserRole = User.GetRole();
-
             if (User.GetUserId() is not { } currentUserId)
             {
                 return Unauthorized();
@@ -59,7 +57,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found." });
             }
 
-            if (currentUserRole != Roles.Admin && targetUser.AssignedToId != currentUserId)
+            if (!User.IsInRole(Roles.Admin) && targetUser.AssignedToId != currentUserId)
             {
                 return Forbid("You do not have permission to notify this user.");
             }
@@ -178,10 +176,7 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
             }
 
-            var allUsers = await _userService.GetAllUsersAsync();
-            var managers = allUsers
-                .Where(u => u.Role == UserRole.LineManager)
-                .ToList();
+            var managers = (await _userService.GetUsersInRoleAsync(Roles.LineManager)).ToList();
 
             if (!managers.Any())
                 return BadRequest(new { Message = "No active line managers found." });

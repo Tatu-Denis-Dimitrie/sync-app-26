@@ -8,7 +8,6 @@ namespace SyncApp26.Domain.Entities
         public Guid? DepartmentId { get; set; }
         public Guid? FunctionId { get; set; }
         public Guid? AssignedToId { get; set; }
-        public required UserRole Role { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
@@ -54,11 +53,7 @@ namespace SyncApp26.Domain.Entities
         public ICollection<PeriodicTraining> PeriodicTrainings { get; set; } = new List<PeriodicTraining>();
         public ICollection<UserInitialTraining> InitialTrainings { get; set; } = new List<UserInitialTraining>();
 
-        /// <summary>
-        /// The roles this user currently holds. Coexists with <see cref="Role"/> during the
-        /// migration to role-table-based authorization; Role is dropped once every call site reads
-        /// from this collection instead.
-        /// </summary>
+        /// <summary>The roles this user currently holds.</summary>
         public ICollection<UserRoleAssignment> RoleAssignments { get; set; } = new List<UserRoleAssignment>();
     }
 }

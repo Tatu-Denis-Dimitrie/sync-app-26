@@ -48,7 +48,6 @@ namespace SyncApp26.Tests.Controllers.Documents
             Email = $"jane.roe.{Guid.NewGuid():N}@example.com",
             PersonalId = Guid.NewGuid().ToString(),
             AssignedToId = assignedToId,
-            Role = UserRole.BasicUser,
             CreatedAt = DateTime.UtcNow
         };
 
