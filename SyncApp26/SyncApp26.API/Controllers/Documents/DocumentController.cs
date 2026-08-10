@@ -358,8 +358,7 @@ namespace SyncApp26.API.Controllers
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null) return NotFound();
 
-            var isAdmin = User.IsInRole(Roles.Admin);
-            var result = await _documentSigningService.RequestSigningTokenAsync(document, user, isAdmin);
+            var result = await _documentSigningService.RequestSigningTokenAsync(document, user);
 
             if (result.Forbidden) return Forbid();
             if (!result.Success) return BadRequest(new { message = result.ErrorMessage });
@@ -383,11 +382,15 @@ namespace SyncApp26.API.Controllers
 
             bool isDocOwner = document.UserId == userId;
             bool isManager = document.User?.AssignedToId == userId;
-            bool isInstructor = document.User?.PeriodicTrainings?
+            bool isSsm = document.DocumentType?.ToUpperInvariant() == "SSM";
+            // Historical match (whoever actually signed as Instructor) OR the current officer for this
+            // document's type, so an officer can preview a document before signing it too.
+            bool signedAsInstructor = document.User?.PeriodicTrainings?
                 .Where(pt => pt.UserDocumentId == document.Id)
                 .OrderByDescending(pt => pt.TrainingDate)
                 .ThenByDescending(pt => pt.CreatedAt)
                 .FirstOrDefault()?.InstructorId == userId;
+            bool isInstructor = signedAsInstructor || await _userService.IsInRoleAsync(userId, isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
             bool isAdmin = User.IsInRole(Roles.Admin);
 
             if (!isDocOwner && !isManager && !isInstructor && !isAdmin)

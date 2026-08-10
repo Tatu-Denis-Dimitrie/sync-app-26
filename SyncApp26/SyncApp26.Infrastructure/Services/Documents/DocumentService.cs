@@ -1309,7 +1309,9 @@ namespace SyncApp26.Infrastructure.Services
 
             // Persist signature to the specific PeriodicTraining row (by ID from token, or latest as fallback)
             var targetTraining = FindTargetPeriodicTraining(doc, periodicTrainingId);
-            ApplySignatureToPeriodicTraining(targetTraining, doc, signerRole, signatureMethod, signatureData);
+            var signerUser = await _context.Users.FindAsync(signerUserId);
+            var signerFullName = signerUser != null ? $"{signerUser.FirstName} {signerUser.LastName}" : string.Empty;
+            ApplySignatureToPeriodicTraining(targetTraining, doc, signerRole, signatureMethod, signatureData, signerUserId, signerFullName);
 
             // Capture signature into UserInitialTraining once (first-time only, never overwritten)
             await ApplySignatureToInitialTrainingAsync(doc, signerRole, signatureMethod, signatureData);
@@ -1342,15 +1344,16 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(d => d.Id == documentId);
 
-        // Workflow: User -> Manager -> Instructor -> Admin (SSM only) / Completed (SU, after Instructor).
-        // Manager (the employee's line manager, via AssignedTo) and Instructor (the training row's
-        // linked InstructorId) are independent steps/signers — Manager approves the employee's
-        // admission to work, Instructor attests to having conducted the training itself.
+        // Workflow: User -> Manager -> Instructor -> Completed. Manager (the employee's line manager,
+        // via AssignedTo) and Instructor (now the SSM/SU officer for the document's type) are
+        // independent steps/signers — Manager approves the employee's admission to work, Instructor
+        // attests to having conducted/verified the training itself.
+        //
+        // "Admin" is no longer a reachable signer role — admin has no signing rights at all now. The
+        // case below stays only so documents completed under the old flow keep rendering correctly.
         private static void ApplyDocumentLevelSignature(UserDocument doc, string signerRole,
             string signatureMethod, string signatureData, string ipAddress, DateTime timestamp, string cryptoSignature)
         {
-            bool isSsm = doc.DocumentType?.ToUpperInvariant() == "SSM";
-
             switch (signerRole)
             {
                 case "User":
@@ -1377,7 +1380,7 @@ namespace SyncApp26.Infrastructure.Services
                     doc.InstructorSignatureIpAddress = ipAddress;
                     doc.InstructorSignedAt = timestamp;
                     doc.InstructorCryptographicSignature = cryptoSignature;
-                    doc.Status = isSsm ? "PendingAdmin" : "Completed";
+                    doc.Status = "Completed";
                     break;
 
                 case "Admin":
@@ -1509,7 +1512,7 @@ namespace SyncApp26.Infrastructure.Services
         // Manager's signature is intentionally NOT written here — it lives only at the
         // UserDocument level (rendered under "Admis la lucru"), not tied to a specific training row.
         private static void ApplySignatureToPeriodicTraining(PeriodicTraining? training, UserDocument doc,
-            string signerRole, string signatureMethod, string signatureData)
+            string signerRole, string signatureMethod, string signatureData, Guid signerUserId, string signerFullName)
         {
             if (training == null) return;
 
@@ -1528,6 +1531,10 @@ namespace SyncApp26.Infrastructure.Services
                     {
                         training.InstructorSignature = signatureData;
                         training.InstructorSignatureMethod = signatureMethod;
+                        // There's no upfront picker anymore — whoever actually signs as the officer
+                        // is who this row's Instructor was.
+                        training.InstructorId = signerUserId;
+                        training.InstructorName = signerFullName;
                     }
                     break;
 
@@ -1618,9 +1625,12 @@ namespace SyncApp26.Infrastructure.Services
             var docs = await LoadPendingDocumentsForBulkSignAsync(isAdmin, signerUserId);
             if (docs.Count == 0) return 0;
 
+            var signerUser = await _context.Users.FindAsync(signerUserId);
+            var signerFullName = signerUser != null ? $"{signerUser.FirstName} {signerUser.LastName}" : string.Empty;
+
             var timestamp = DateTime.UtcNow;
             foreach (var doc in docs)
-                await SignSingleDocumentInBulkAsync(doc, isAdmin, signerUserId, signatureMethod, signatureData, ipAddress, timestamp);
+                await SignSingleDocumentInBulkAsync(doc, isAdmin, signerUserId, signerFullName, signatureMethod, signatureData, ipAddress, timestamp);
 
             await _context.SaveChangesAsync();
 
@@ -1668,7 +1678,7 @@ namespace SyncApp26.Infrastructure.Services
             return scopedDocs.OrderBy(d => d.GeneratedAt).ToList();
         }
 
-        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
+        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, Guid signerUserId, string signerFullName, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
         {
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
             var signerRole = isAdmin ? "Admin" : doc.Status == "PendingManager" ? "Manager" : "Instructor";
@@ -1676,7 +1686,7 @@ namespace SyncApp26.Infrastructure.Services
             ApplyDocumentLevelSignature(doc, signerRole, signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
 
             var trainingForDoc = await GetLatestPeriodicTrainingForDocumentAsync(doc.Id);
-            ApplySignatureToPeriodicTraining(trainingForDoc, doc, signerRole, signatureMethod, signatureData);
+            ApplySignatureToPeriodicTraining(trainingForDoc, doc, signerRole, signatureMethod, signatureData, signerUserId, signerFullName);
 
             // Capture into UserInitialTraining (first-time only, never overwritten).
             // Create record automatically if missing and this is the first document.

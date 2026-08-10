@@ -352,7 +352,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var caller = MakeUser(id: callerId);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(callerId)).ReturnsAsync(caller);
-            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, caller, false))
+            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, caller))
                 .ReturnsAsync(new SigningTokenResult { Forbidden = true });
 
             var result = await controller.GetSignTokenForDocument(document.Id);
@@ -368,7 +368,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var document = MakeDocument(user: owner);
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
-            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, owner, false))
+            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, owner))
                 .ReturnsAsync(new SigningTokenResult { ErrorMessage = "User already signed this document." });
 
             var result = await controller.GetSignTokenForDocument(document.Id);
@@ -385,7 +385,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var document = MakeDocument(user: owner, status: "PendingUser");
             _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(owner.Id)).ReturnsAsync(owner);
-            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, owner, false))
+            _documentSigningServiceMock.Setup(s => s.RequestSigningTokenAsync(document, owner))
                 .ReturnsAsync(new SigningTokenResult { Success = true, Token = "token-123" });
 
             var result = await controller.GetSignTokenForDocument(document.Id);

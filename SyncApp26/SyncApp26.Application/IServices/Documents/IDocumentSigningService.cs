@@ -46,7 +46,7 @@ namespace SyncApp26.Application.IServices
 
     public interface IDocumentSigningService
     {
-        Task<SigningTokenResult> RequestSigningTokenAsync(UserDocument document, User caller, bool callerIsAdmin);
+        Task<SigningTokenResult> RequestSigningTokenAsync(UserDocument document, User caller);
         Task<SigningContextResult> GetSigningContextAsync(string token);
         Task<ConsumeSigningTokenResult> ConsumeSigningTokenAsync(ConsumeSigningTokenRequest request);
     }
