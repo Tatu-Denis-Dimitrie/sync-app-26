@@ -53,5 +53,12 @@ namespace SyncApp26.Domain.Entities
         public Function? Function { get; set; }
         public ICollection<PeriodicTraining> PeriodicTrainings { get; set; } = new List<PeriodicTraining>();
         public ICollection<UserInitialTraining> InitialTrainings { get; set; } = new List<UserInitialTraining>();
+
+        /// <summary>
+        /// The roles this user currently holds. Coexists with <see cref="Role"/> during the
+        /// migration to role-table-based authorization; Role is dropped once every call site reads
+        /// from this collection instead.
+        /// </summary>
+        public ICollection<UserRoleAssignment> RoleAssignments { get; set; } = new List<UserRoleAssignment>();
     }
 }

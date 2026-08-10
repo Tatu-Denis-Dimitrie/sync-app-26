@@ -47,6 +47,8 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<UserSignatureHistory> UserSignatureHistories { get; set; }
         public DbSet<DataChangeRequest> DataChangeRequests { get; set; }
         public DbSet<SignatureRecord> SignatureRecords { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -375,6 +377,49 @@ namespace SyncApp26.Infrastructure.Context
 
                 entity.HasIndex(e => new { e.UserDocumentId, e.SignerRole })
                     .HasDatabaseName("IX_SignatureRecords_UserDocumentId_SignerRole");
+            });
+
+            // Configure Role entity
+            modelBuilder.Entity<Role>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(200);
+
+                entity.HasIndex(e => e.Name)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Roles_Name");
+            });
+
+            // Configure UserRoleAssignment entity (User <-> Role many-to-many, with grant audit fields)
+            modelBuilder.Entity<UserRoleAssignment>(entity =>
+            {
+                entity.HasKey(e => new { e.UserId, e.RoleId });
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.RoleAssignments)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Role)
+                    .WithMany(r => r.UserAssignments)
+                    .HasForeignKey(e => e.RoleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.AssignedByUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.AssignedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Reverse-direction lookups ("who holds this role") walk from Role, not from User —
+                // the composite PK above already covers the User -> roles direction.
+                entity.HasIndex(e => new { e.RoleId, e.UserId })
+                    .HasDatabaseName("IX_UserRoles_RoleId_UserId");
             });
         }
 
