@@ -509,8 +509,9 @@ namespace SyncApp26.Tests.Services.Documents
 
             Assert.True(result.Success);
             Assert.Equal(1, result.TotalSigned);
-            Assert.Equal(manager.Email, result.ManagerEmail);
-            Assert.Equal("manager-tok", result.ManagerNotificationToken);
+            var notification = Assert.Single(result.NextSignerNotifications);
+            Assert.Equal(manager.Email, notification.Email);
+            Assert.Equal("manager-tok", notification.Token);
             _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, owner.Id, "User", "Draw", "data", "1.2.3.4", null), Times.Once);
         }
 
@@ -531,8 +532,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
 
             Assert.True(result.Success);
-            Assert.Null(result.ManagerEmail);
-            Assert.Null(result.ManagerNotificationToken);
+            Assert.Empty(result.NextSignerNotifications);
         }
 
         [Fact]
@@ -559,8 +559,9 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", IpAddress = "1.2.3.4" });
 
             Assert.True(result.Success);
-            Assert.Equal(officer.Email, result.ManagerEmail);
-            Assert.Equal("officer-tok", result.ManagerNotificationToken);
+            var notification = Assert.Single(result.NextSignerNotifications);
+            Assert.Equal(officer.Email, notification.Email);
+            Assert.Equal("officer-tok", notification.Token);
             _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, manager.Id, "Manager", "Draw", "data", "1.2.3.4", null), Times.Once);
         }
 
@@ -585,8 +586,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
 
             Assert.True(result.Success);
-            Assert.Null(result.ManagerEmail);
-            Assert.Null(result.ManagerNotificationToken);
+            Assert.Empty(result.NextSignerNotifications);
         }
 
         [Fact]
@@ -609,7 +609,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
 
             Assert.True(result.Success);
-            Assert.Null(result.ManagerEmail);
+            Assert.Empty(result.NextSignerNotifications);
             _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, officer.Id, "Instructor", "Draw", "data", It.IsAny<string>(), null), Times.Once);
         }
 
@@ -651,13 +651,13 @@ namespace SyncApp26.Tests.Services.Documents
             SetOfficer(manager, document.DocumentType!, false);
             _userServiceMock.Setup(s => s.GetUsersInRoleAsync(Roles.SsmOfficer)).ReturnsAsync(new List<User>());
             _documentSignatureServiceMock.Setup(s => s.ConsumeTokenAsync("tok")).ReturnsAsync(true);
-            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(false, manager.Id, "Draw", "data", It.IsAny<string>())).ReturnsAsync(3);
+            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(manager.Id, "Draw", "data", It.IsAny<string>())).ReturnsAsync(3);
 
             var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", BulkSign = true });
 
             Assert.True(result.Success);
             Assert.Equal(4, result.TotalSigned); // 3 bulk-signed + 1 signed individually
-            _documentServiceMock.Verify(s => s.BulkSignDocumentsAsync(false, manager.Id, "Draw", "data", It.IsAny<string>()), Times.Once);
+            _documentServiceMock.Verify(s => s.BulkSignDocumentsAsync(manager.Id, "Draw", "data", It.IsAny<string>()), Times.Once);
         }
     }
 }

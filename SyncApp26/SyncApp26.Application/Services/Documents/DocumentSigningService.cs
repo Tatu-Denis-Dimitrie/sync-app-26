@@ -163,50 +163,42 @@ namespace SyncApp26.Application.Services
                 periodicTrainingId
             );
 
-            // Notify the next person in the chain
-            string? nextEmail = null;
-            string? nextNotificationDocumentName = null;
-            string? nextNotificationToken = null;
+            // Notify everyone who needs to sign next in the chain — a single manager, or every
+            // officer currently holding the role for this document's type (there can be more than one).
+            var nextSignerNotifications = new List<SigningNotification>();
 
             if (signerRole == "User" && document.User?.AssignedTo != null)
             {
                 var manager = document.User.AssignedTo;
-                nextNotificationDocumentName = $"{document.DocumentType} Document (Manager Approval)";
-                nextNotificationToken = await _documentSignatureService.GenerateSignatureTokenAsync(
-                    manager.Email, document.Id, nextNotificationDocumentName, periodicTrainingId);
-                nextEmail = manager.Email;
+                var docName = $"{document.DocumentType} Document (Manager Approval)";
+                var managerToken = await _documentSignatureService.GenerateSignatureTokenAsync(
+                    manager.Email, document.Id, docName, periodicTrainingId);
+                nextSignerNotifications.Add(new SigningNotification { Email = manager.Email, Token = managerToken, DocumentName = docName });
             }
             else if (signerRole == "Manager")
             {
-                // Notifies a single officer for now; sending a link to every officer holding this
-                // role is Pasul 2.2's job (bulk-sign and multi-recipient notification land together).
-                var officer = (await _userService.GetUsersInRoleAsync(isSsm ? Roles.SsmOfficer : Roles.SuOfficer)).FirstOrDefault();
-                if (officer != null)
+                var officers = await _userService.GetUsersInRoleAsync(isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
+                var docName = $"{document.DocumentType} Document (Instructor Signature)";
+                foreach (var officer in officers)
                 {
-                    nextNotificationDocumentName = $"{document.DocumentType} Document (Instructor Signature)";
-                    nextNotificationToken = await _documentSignatureService.GenerateSignatureTokenAsync(
-                        officer.Email, document.Id, nextNotificationDocumentName, periodicTrainingId);
-                    nextEmail = officer.Email;
+                    var officerToken = await _documentSignatureService.GenerateSignatureTokenAsync(
+                        officer.Email, document.Id, docName, periodicTrainingId);
+                    nextSignerNotifications.Add(new SigningNotification { Email = officer.Email, Token = officerToken, DocumentName = docName });
                 }
             }
 
             int bulkCount = 0;
             if (request.BulkSign && (signerRole == "Manager" || signerRole == "Instructor"))
             {
-                // isAdmin is always false now that admin has no signing role; Pasul 2.2 removes this
-                // parameter from BulkSignDocumentsAsync entirely.
                 bulkCount = await _documentService.BulkSignDocumentsAsync(
-                    false, signerUserFromToken.Id,
-                    request.SignatureMethod, request.SignatureData, request.IpAddress);
+                    signerUserFromToken.Id, request.SignatureMethod, request.SignatureData, request.IpAddress);
             }
 
             return new ConsumeSigningTokenResult
             {
                 Success = true,
                 TotalSigned = bulkCount + 1,
-                ManagerEmail = nextEmail,
-                ManagerNotificationDocumentName = nextNotificationDocumentName,
-                ManagerNotificationToken = nextNotificationToken
+                NextSignerNotifications = nextSignerNotifications
             };
         }
     }

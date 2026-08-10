@@ -33,32 +33,34 @@ namespace SyncApp26.Infrastructure.Services
             _hmacSignatureService = hmacSignatureService;
         }
 
-        // Returnează numărul de documente SSM ce trebuie semnate de admin (verificator)
-        public async Task<int> GetPendingSsmDocumentsForAdminAsync()
+        // Returnează numărul de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU.
+        public async Task<int> GetPendingDocumentsForOfficerAsync(string documentType)
         {
+            var type = documentType.ToUpperInvariant();
             return await _context.UserDocuments
                 .Include(d => d.User)
                 .CountAsync(d =>
-                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
-                    d.Status == "PendingAdmin");
+                    d.Status == "PendingInstructor");
         }
 
-        // Returnează lista de documente SSM ce trebuie semnate de admin (pentru bulk progres)
+        // Returnează lista de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU (pentru bulk progres)
         // Returns ALL pending documents ordered oldest-first so signatures are applied in creation order.
-        public async Task<List<UserDocument>> GetPendingSsmDocumentsForAdminListAsync()
+        public async Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType)
         {
+            var type = documentType.ToUpperInvariant();
             var allPending = await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.InitialTrainings)
                 .Where(d =>
-                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
-                    d.Status == "PendingAdmin")
+                    d.Status == "PendingInstructor")
                 .ToListAsync();
 
             return allPending.OrderBy(d => d.GeneratedAt).ToList();
@@ -234,46 +236,29 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
-        public async Task SignSingleDocumentAsAdminAsync(UserDocument doc, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
+        public async Task SignSingleDocumentAsOfficerAsync(UserDocument doc, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
             var timestamp = DateTime.UtcNow;
-            var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
-            var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
+            var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
 
-            // Admin signs last — mark as Completed
-            doc.AdminSignatureMethod = signatureMethod;
-            doc.AdminSignatureData = signatureData;
-            doc.AdminSignatureIpAddress = ipAddress;
-            doc.AdminSignedAt = timestamp;
-            doc.AdminCryptographicSignature = cryptoSignature;
-            doc.Status = "Completed";
-
+            ApplyDocumentLevelSignature(doc, "Instructor", signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
 
             var latestTraining = doc.User?.PeriodicTrainings
                 ?.Where(pt => pt.UserDocumentId == doc.Id)
                 .OrderByDescending(pt => pt.TrainingDate)
                 .ThenByDescending(pt => pt.CreatedAt)
                 .FirstOrDefault();
-            if (latestTraining != null)
-            {
-                latestTraining.VerifierSignature = signatureData;
-                latestTraining.VerifierSignatureMethod = signatureMethod;
-            }
+            var signerUser = await _context.Users.FindAsync(signerUserId);
+            var signerFullName = signerUser != null ? $"{signerUser.FirstName} {signerUser.LastName}" : string.Empty;
+            ApplySignatureToPeriodicTraining(latestTraining, doc, "Instructor", signatureMethod, signatureData, signerUserId, signerFullName);
 
-            // Store verifier signature in UserInitialTraining (first-time only, never overwritten)
-            var initialTraining = doc.User?.InitialTrainings
-                ?.FirstOrDefault(t => string.Equals(t.DocumentType, doc.DocumentType, StringComparison.OrdinalIgnoreCase));
-            if (initialTraining != null && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
-            {
-                initialTraining.VerifierSignatureData = signatureData;
-                initialTraining.VerifierSignatureMethod = signatureMethod;
-            }
+            await ApplySignatureToInitialTrainingAsync(doc, "Instructor", signatureMethod, signatureData);
 
-            await CreateSignatureRecordAsync(doc, latestTraining, "Admin", signerUserId, signatureMethod, signatureData, ipAddress, timestamp);
+            await CreateSignatureRecordAsync(doc, latestTraining, "Instructor", signerUserId, signatureMethod, signatureData, ipAddress, timestamp);
 
             await _context.SaveChangesAsync();
 
-            // Propagate verifier signature to copies of this row in newer documents
+            // Propagate the signature to copies of this row in newer documents
             if (latestTraining != null)
                 await PropagateSignatureToNewerDocumentsAsync(latestTraining);
 
@@ -1199,14 +1184,18 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
         }
 
-        // "Pending my signature as instructor" is a live-state question — who's currently the
-        // linked instructor on the document's active training row — resolved the same way signing
-        // itself is (FindTargetPeriodicTraining + InstructorId). Filtered client-side after a
-        // cheap status-only query, same pattern as GetManagerPendingSignaturesAsync's bulk-sign
-        // sibling (LoadPendingDocumentsForBulkSignAsync).
+        // "Pending my signature as instructor" is now a role question — is the caller the SsmOfficer/
+        // SuOfficer for this document's type — not a per-row InstructorId match: that field stays null
+        // until someone actually signs (see ApplySignatureToPeriodicTraining), so it can never
+        // pre-identify who's still waiting to sign.
         public async Task<IEnumerable<UserDocument>> GetInstructorPendingSignaturesAsync(Guid instructorId)
         {
-            var candidates = await _context.UserDocuments
+            bool isSsmOfficer = await _context.Users.Where(u => u.Id == instructorId).WithRole(Roles.SsmOfficer).AnyAsync();
+            bool isSuOfficer = await _context.Users.Where(u => u.Id == instructorId).WithRole(Roles.SuOfficer).AnyAsync();
+
+            if (!isSsmOfficer && !isSuOfficer) return new List<UserDocument>();
+
+            return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
@@ -1219,11 +1208,11 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.PeriodicTrainings)
                 .Where(d => d.Status == "PendingInstructor"
                     && d.ManagerSignedAt != null
-                    && d.InstructorSignedAt == null)
+                    && d.InstructorSignedAt == null
+                    && d.DocumentType != null
+                    && ((isSsmOfficer && d.DocumentType.ToUpper() == "SSM") || (isSuOfficer && d.DocumentType.ToUpper() == "SU")))
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
-
-            return candidates.Where(d => ResolveInstructorId(d, null) == instructorId);
         }
 
         // "Documents I've signed as instructor" is a historical-fact question, so it's answered
@@ -1502,13 +1491,6 @@ namespace SyncApp26.Infrastructure.Services
                 .FirstOrDefault();
         }
 
-        // Resolves the training row's linked instructor account. No fallback to AssignedTo — now
-        // that Manager is its own independent step, an employee's line manager is never implicitly
-        // treated as the instructor; a row with no InstructorId simply has no eligible instructor
-        // signer until an admin links one (PeriodicTrainingController's update endpoint).
-        private static Guid? ResolveInstructorId(UserDocument doc, Guid? periodicTrainingId) =>
-            FindTargetPeriodicTraining(doc, periodicTrainingId)?.InstructorId;
-
         // Manager's signature is intentionally NOT written here — it lives only at the
         // UserDocument level (rendered under "Admis la lucru"), not tied to a specific training row.
         private static void ApplySignatureToPeriodicTraining(PeriodicTraining? training, UserDocument doc,
@@ -1620,9 +1602,9 @@ namespace SyncApp26.Infrastructure.Services
             catch { /* non-fatal: keep old PDF if regeneration fails */ }
         }
 
-        public async Task<int> BulkSignDocumentsAsync(bool isAdmin, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
+        public async Task<int> BulkSignDocumentsAsync(Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
-            var docs = await LoadPendingDocumentsForBulkSignAsync(isAdmin, signerUserId);
+            var docs = await LoadPendingDocumentsForBulkSignAsync(signerUserId);
             if (docs.Count == 0) return 0;
 
             var signerUser = await _context.Users.FindAsync(signerUserId);
@@ -1630,7 +1612,7 @@ namespace SyncApp26.Infrastructure.Services
 
             var timestamp = DateTime.UtcNow;
             foreach (var doc in docs)
-                await SignSingleDocumentInBulkAsync(doc, isAdmin, signerUserId, signerFullName, signatureMethod, signatureData, ipAddress, timestamp);
+                await SignSingleDocumentInBulkAsync(doc, signerUserId, signerFullName, signatureMethod, signatureData, ipAddress, timestamp);
 
             await _context.SaveChangesAsync();
 
@@ -1638,14 +1620,17 @@ namespace SyncApp26.Infrastructure.Services
             // then regenerate the PDF for each signed document.
             await PropagateAndRegenerateBulkSignedDocumentsAsync(docs);
 
-            return isAdmin ? docs.Select(d => d.UserId).Distinct().Count() : docs.Count;
+            return docs.Count;
         }
 
-        // Bulk-sign covers two independent non-admin roles at once — a caller might be someone's
-        // line Manager (PendingManager docs) and someone else's linked Instructor
-        // (PendingInstructor docs) simultaneously; each document's role is resolved individually.
-        private async Task<List<UserDocument>> LoadPendingDocumentsForBulkSignAsync(bool isAdmin, Guid signerUserId)
+        // Bulk-sign covers up to three independent roles at once — a caller might be someone's line
+        // Manager (their own reports' PendingManager docs) and, separately, hold the SsmOfficer and/or
+        // SuOfficer role (every employee's PendingInstructor docs of that type, not just linked ones).
+        private async Task<List<UserDocument>> LoadPendingDocumentsForBulkSignAsync(Guid signerUserId)
         {
+            bool isSsmOfficer = await _context.Users.Where(u => u.Id == signerUserId).WithRole(Roles.SsmOfficer).AnyAsync();
+            bool isSuOfficer = await _context.Users.Where(u => u.Id == signerUserId).WithRole(Roles.SuOfficer).AnyAsync();
+
             var allDocs = await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
@@ -1658,30 +1643,21 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
-                .Where(d =>
-                    (isAdmin
-                        ? d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.User != null && !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) && d.Status == "PendingAdmin"
-                        : d.User != null && (
-                            (d.Status == "PendingManager" && d.UserSignedAt != null && d.ManagerSignedAt == null)
-                            || (d.Status == "PendingInstructor" && d.ManagerSignedAt != null && d.InstructorSignedAt == null)))
-                )
+                .Where(d => d.User != null && (
+                    (d.Status == "PendingManager" && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User.AssignedToId == signerUserId)
+                    || (isSsmOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.Status == "PendingInstructor" && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
+                    || (isSuOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == "SU" && d.Status == "PendingInstructor" && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
+                ))
                 .ToListAsync();
 
-            var scopedDocs = isAdmin
-                ? allDocs
-                : allDocs.Where(d => d.Status == "PendingManager"
-                    ? d.User?.AssignedToId == signerUserId
-                    : ResolveInstructorId(d, null) == signerUserId)
-                    .ToList();
-
             // Process all pending documents ordered oldest-first so signatures are applied in creation order
-            return scopedDocs.OrderBy(d => d.GeneratedAt).ToList();
+            return allDocs.OrderBy(d => d.GeneratedAt).ToList();
         }
 
-        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, bool isAdmin, Guid signerUserId, string signerFullName, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
+        private async Task SignSingleDocumentInBulkAsync(UserDocument doc, Guid signerUserId, string signerFullName, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
         {
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
-            var signerRole = isAdmin ? "Admin" : doc.Status == "PendingManager" ? "Manager" : "Instructor";
+            var signerRole = doc.Status == "PendingManager" ? "Manager" : "Instructor";
 
             ApplyDocumentLevelSignature(doc, signerRole, signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
 
@@ -1767,86 +1743,6 @@ namespace SyncApp26.Infrastructure.Services
             }
 
             return (generated, skipped);
-        }
-
-        public async Task<int> BulkSignAndSendGeneratedDocumentsAsync(string documentType, string signatureMethod, string signatureData, string ipAddress)
-        {
-            var allDocs = await _context.UserDocuments
-                .Include(d => d.User)
-                    .ThenInclude(u => u.Department)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.Function)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.AssignedTo)
-                        .ThenInclude(m => m!.Function)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
-                .Where(d => d.DocumentType == documentType && d.Status == "PendingUser" && d.ManagerSignedAt == null)
-                .ToListAsync();
-
-            // Only sign the LATEST document per user — old documents must not be touched
-            var docs = allDocs
-                .GroupBy(d => d.UserId)
-                .Select(g => g.OrderByDescending(d => d.GeneratedAt).First())
-                .ToList();
-
-            if (docs.Count == 0) return 0;
-
-            var timestamp = DateTime.UtcNow;
-
-            foreach (var doc in docs)
-            {
-                var dataToSign = $"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}";
-                var cryptoSignature = await _cryptographyService.SignDataAsync(dataToSign);
-
-                bool isSsmAdminVerifier = doc.DocumentType?.ToUpperInvariant() == "SSM";
-                if (isSsmAdminVerifier)
-                {
-                    doc.Status = doc.UserSignedAt != null ? "PendingManager" : "PendingUser";
-                }
-                else
-                {
-                    doc.ManagerSignatureMethod = signatureMethod;
-                    doc.ManagerSignatureData = signatureData;
-                    doc.ManagerSignatureIpAddress = ipAddress;
-                    doc.ManagerSignedAt = timestamp;
-                    doc.ManagerCryptographicSignature = cryptoSignature;
-                    doc.Status = "PendingUser";
-                }
-
-                // NOTE: this shortcut only pre-fills the Manager step — Instructor is now its own
-                // independent step (tied to the training row's InstructorId) and must go through
-                // the normal signing flow, so it's intentionally not pre-filled here.
-                if (isSsmAdminVerifier)
-                {
-                    var trainingForDoc = doc.User?.PeriodicTrainings
-                        ?.Where(pt => pt.UserDocumentId == doc.Id)
-                        .OrderByDescending(pt => pt.TrainingDate)
-                        .ThenByDescending(pt => pt.CreatedAt)
-                        .FirstOrDefault();
-                    if (trainingForDoc != null)
-                    {
-                        trainingForDoc.VerifierSignature = signatureData;
-                        trainingForDoc.VerifierSignatureMethod = signatureMethod;
-                    }
-                }
-            }
-
-            await _context.SaveChangesAsync();
-
-            foreach (var doc in docs)
-            {
-                var freshUser = await LoadUserWithDocumentDataAsync(doc.UserId);
-
-                if (freshUser != null)
-                {
-                    try { await GeneratePdfSnapshotAsync(freshUser, doc); }
-                    catch { /* non-fatal */ }
-                }
-            }
-            await _context.SaveChangesAsync();
-
-            return docs.Count;
         }
 
         // Returns SSM documents pending admin signature (PendingAdmin status, signed by both employee and LM)
