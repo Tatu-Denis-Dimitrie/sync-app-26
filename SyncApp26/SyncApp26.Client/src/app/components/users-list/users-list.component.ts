@@ -6,8 +6,9 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
-import { AuthenticationService } from '../../services/authentication.service';
+import { AuthenticationService, roleLabel } from '../../services/authentication.service';
 import { NotificationService } from '../../services/notification.service';
+import { RoleService, Role } from '../../services/role.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
@@ -122,7 +123,8 @@ export class UsersListComponent implements OnInit {
     private authService: AuthenticationService,
     private router: Router,
     private route: ActivatedRoute,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private roleService: RoleService
   ) { }
 
   logout(): void {
@@ -562,6 +564,90 @@ export class UsersListComponent implements OnInit {
         console.error('Error deleting user:', err);
         this.showToast(err.error?.message || 'Error deleting user', 'error');
       }
+    });
+  }
+
+  // Role management modal state and logic
+  roleLabel = roleLabel;
+  isRolesModalOpen = false;
+  rolesModalUser: User | null = null;
+  allRoles: Role[] = [];
+  selectedRoleNames: string[] = [];
+  isSavingRoles = false;
+  newRoleName = '';
+  newRoleDescription = '';
+
+  openRolesModal(user: User, event: Event): void {
+    event.stopPropagation();
+    this.rolesModalUser = user;
+    this.selectedRoleNames = [...(user.roles || [])];
+    this.isRolesModalOpen = true;
+    this.refreshRoles();
+  }
+
+  private refreshRoles(): void {
+    this.roleService.getAllRoles().subscribe({
+      next: (roles) => this.allRoles = roles,
+      error: (err) => this.showToast(err.error?.message || 'Error loading roles', 'error')
+    });
+  }
+
+  closeRolesModal(): void {
+    this.isRolesModalOpen = false;
+    this.rolesModalUser = null;
+    this.newRoleName = '';
+    this.newRoleDescription = '';
+  }
+
+  isRoleSelected(roleName: string): boolean {
+    return this.selectedRoleNames.includes(roleName);
+  }
+
+  toggleRoleSelection(roleName: string): void {
+    this.selectedRoleNames = this.isRoleSelected(roleName)
+      ? this.selectedRoleNames.filter(name => name !== roleName)
+      : [...this.selectedRoleNames, roleName];
+  }
+
+  saveRoles(): void {
+    if (!this.rolesModalUser) return;
+
+    this.isSavingRoles = true;
+    this.userSyncService.setUserRoles(this.rolesModalUser.id, this.selectedRoleNames).subscribe({
+      next: () => {
+        this.isSavingRoles = false;
+        this.showToast('Roles updated successfully.');
+        this.closeRolesModal();
+      },
+      error: (err) => {
+        this.isSavingRoles = false;
+        this.showToast(err.error?.message || 'Error updating roles', 'error');
+      }
+    });
+  }
+
+  createRole(): void {
+    if (!this.newRoleName.trim()) return;
+
+    this.roleService.createRole({ name: this.newRoleName.trim(), description: this.newRoleDescription.trim() || undefined }).subscribe({
+      next: (role) => {
+        this.newRoleName = '';
+        this.newRoleDescription = '';
+        this.showToast(`Role '${role.name}' created.`);
+        this.refreshRoles();
+      },
+      error: (err) => this.showToast(err.error?.message || 'Error creating role', 'error')
+    });
+  }
+
+  deleteRole(role: Role): void {
+    this.roleService.deleteRole(role.id).subscribe({
+      next: () => {
+        this.selectedRoleNames = this.selectedRoleNames.filter(name => name !== role.name);
+        this.showToast(`Role '${role.name}' deleted.`);
+        this.refreshRoles();
+      },
+      error: (err) => this.showToast(err.error?.message || 'Error deleting role', 'error')
     });
   }
 }

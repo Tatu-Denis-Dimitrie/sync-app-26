@@ -200,5 +200,32 @@ namespace SyncApp26.Infrastructure.Repositories
                 .WithRole(roleName)
                 .AnyAsync();
         }
+
+        public async Task<List<Role>> GetAllRolesAsync()
+        {
+            return await _context.Roles.OrderBy(r => r.Name).ToListAsync();
+        }
+
+        public async Task<Role?> GetRoleByIdAsync(Guid id)
+        {
+            return await _context.Roles.FirstOrDefaultAsync(r => r.Id == id);
+        }
+
+        public async Task AddRoleAsync(Role role)
+        {
+            await _context.Roles.AddAsync(role);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteRoleAsync(Role role)
+        {
+            _context.Roles.Remove(role);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> RoleHasAssignmentsAsync(Guid roleId)
+        {
+            return await _context.UserRoleAssignments.AnyAsync(a => a.RoleId == roleId);
+        }
     }
 }

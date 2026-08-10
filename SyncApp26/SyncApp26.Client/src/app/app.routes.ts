@@ -13,6 +13,7 @@ import { LoadingScreenComponent } from './components/loading-screen/loading-scre
 import { DocumentSignatureComponent } from './pages/document-signature/document-signature.component';
 import { TestSignatureComponent } from './pages/test-signature/test-signature.component';
 import { AdminGuard } from './guards/admin.guard';
+import { OfficerGuard } from './guards/officer.guard';
 import { AuthGuard } from './guards/auth.guard';
 import { LineManagerGuard } from './guards/line-manager.guard';
 import { SsmSuFormComponent } from './components/ssm-su-form/ssm-su-form.component';
@@ -49,7 +50,7 @@ export const routes: Routes = [
   { path: 'employees/:id/ssm-su', component: SsmSuFormComponent, canActivate: [LineManagerGuard] },
   { path: 'import-history', component: ImportHistoryComponent, canActivate: [AdminGuard] },
   { path: 'test-signature', component: TestSignatureComponent, canActivate: [AdminGuard] },
-  { path: 'admin-signature', component: AdminSignatureComponent, canActivate: [AdminGuard] },
+  { path: 'admin-signature', component: AdminSignatureComponent, canActivate: [OfficerGuard] },
   { path: 'documents', component: DocumentsViewComponent, canActivate: [LineManagerGuard] },
   { path: 'data-requests', component: DataChangeRequestsComponent, canActivate: [AdminGuard] },
   

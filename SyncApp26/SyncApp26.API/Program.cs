@@ -89,6 +89,7 @@ builder.Services.AddScoped<IDataChangeRequestService, DataChangeRequestService>(
 builder.Services.AddScoped<IUserInitialTrainingService, UserInitialTrainingService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();

@@ -563,5 +563,99 @@ namespace SyncApp26.Tests.Services.Auth
             var row = _dbFixture.Context.UserInitialTrainings.Single(t => t.UserId == user.Id && t.DocumentType == "SSM");
             Assert.Equal("Original Instructor", row.IntroductoryTrainingInstructor);
         }
+
+        // ───────────────────────── SetUserRolesAsync ─────────────────────────
+
+        [Fact]
+        public async Task SetUserRolesAsync_UserNotFound_ReturnsFailure()
+        {
+            var service = CreateService();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(It.IsAny<Guid>())).ReturnsAsync((User?)null);
+
+            var result = await service.SetUserRolesAsync(Guid.NewGuid(), new List<string> { Roles.Admin }, Guid.NewGuid());
+
+            Assert.False(result.Success);
+        }
+
+        [Fact]
+        public async Task SetUserRolesAsync_UnknownRoleName_ReturnsFailureWithoutUpdating()
+        {
+            var service = CreateService();
+            var user = MakeUser(roleName: Roles.BasicUser);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userServiceMock.Setup(s => s.GetRoleByNameAsync("NoSuchRole")).ReturnsAsync((Role?)null);
+
+            var result = await service.SetUserRolesAsync(user.Id, new List<string> { "NoSuchRole" }, Guid.NewGuid());
+
+            Assert.False(result.Success);
+            Assert.Contains("NoSuchRole", result.Message);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SetUserRolesAsync_RemovingLastAdmin_ReturnsFailureWithoutUpdating()
+        {
+            var service = CreateService();
+            var user = MakeUser(roleName: Roles.Admin);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userServiceMock.Setup(s => s.GetUsersInRoleAsync(Roles.Admin)).ReturnsAsync(new List<User> { user });
+
+            var result = await service.SetUserRolesAsync(user.Id, new List<string>(), Guid.NewGuid());
+
+            Assert.False(result.Success);
+            Assert.Contains("last remaining administrator", result.Message);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task SetUserRolesAsync_RemovingAdminWithAnotherAdminPresent_Succeeds()
+        {
+            var service = CreateService();
+            var user = MakeUser(roleName: Roles.Admin);
+            var otherAdmin = MakeUser(roleName: Roles.Admin);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userServiceMock.Setup(s => s.GetUsersInRoleAsync(Roles.Admin)).ReturnsAsync(new List<User> { user, otherAdmin });
+
+            var result = await service.SetUserRolesAsync(user.Id, new List<string>(), Guid.NewGuid());
+
+            Assert.True(result.Success);
+            Assert.Empty(user.RoleAssignments);
+        }
+
+        [Fact]
+        public async Task SetUserRolesAsync_GrantsNewRolesAndRevokesRemoved()
+        {
+            // The point of the many-to-many model: swapping BasicUser for SsmOfficer replaces
+            // exactly the requested set, with audit fields recorded for the new grant.
+            var service = CreateService();
+            var user = MakeUser(roleName: Roles.BasicUser);
+            var adminId = Guid.NewGuid();
+            var ssmRole = new Role { Id = Guid.NewGuid(), Name = Roles.SsmOfficer };
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userServiceMock.Setup(s => s.GetRoleByNameAsync(Roles.SsmOfficer)).ReturnsAsync(ssmRole);
+
+            var result = await service.SetUserRolesAsync(user.Id, new List<string> { Roles.SsmOfficer }, adminId);
+
+            Assert.True(result.Success);
+            var granted = Assert.Single(user.RoleAssignments);
+            Assert.Equal(ssmRole.Id, granted.RoleId);
+            Assert.Equal(adminId, granted.AssignedByUserId);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(user), Times.Once);
+        }
+
+        [Fact]
+        public async Task SetUserRolesAsync_SameRoleRequestedTwice_GrantedOnce()
+        {
+            var service = CreateService();
+            var user = MakeUser(roleName: Roles.BasicUser);
+            var basicRole = user.RoleAssignments.Single().Role;
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _userServiceMock.Setup(s => s.GetRoleByNameAsync(Roles.BasicUser)).ReturnsAsync(basicRole);
+
+            var result = await service.SetUserRolesAsync(user.Id, new List<string> { Roles.BasicUser, "basicuser" }, Guid.NewGuid());
+
+            Assert.True(result.Success);
+            Assert.Single(user.RoleAssignments);
+        }
     }
 }

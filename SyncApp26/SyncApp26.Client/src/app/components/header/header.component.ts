@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
-import { AuthenticationService, User, AuthRole, authRoleLabel } from '../../services/authentication.service';
+import { AuthenticationService, User, rolesLabel } from '../../services/authentication.service';
 import { DocumentSignatureService } from '../../services/document-signature.service';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
 import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/user-sync.signalr.service';
@@ -15,11 +15,11 @@ import { filter, Subscription } from 'rxjs';
   styleUrl: './header.component.css'
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-  AuthRole = AuthRole;
-  authRoleLabel = authRoleLabel;
+  rolesLabel = rolesLabel;
   currentUser: User | null = null;
   isLoggedIn = false;
   isAdmin = false;
+  isLineManager = false;
   isMenuOpen = false;
   isProfileOpen = false;
   isAnomalyPopoverOpen = false;
@@ -113,6 +113,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isLoggedIn = this.authService.isLoggedIn();
     this.currentUser = this.authService.getCurrentUser();
     this.isAdmin = this.authService.isAdmin();
+    this.isLineManager = this.authService.isLineManager();
   }
 
   loadPendingSignatureCount(): void {
@@ -142,6 +143,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isLoggedIn = false;
     this.currentUser = null;
     this.isAdmin = false;
+    this.isLineManager = false;
     this.isMenuOpen = false;
     this.isProfileOpen = false;
     this.isAnomalyPopoverOpen = false;

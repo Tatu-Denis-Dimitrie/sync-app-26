@@ -59,6 +59,7 @@ export interface User {
   hasUnsignedSu?: boolean;
   // Computed properties
   role?: UserRole;  // Calculated based on whether user has direct reports
+  roles?: string[]; // Raw auth role names (Admin, LineManager, SsmOfficer, SuOfficer, custom roles...)
 }
 
 export interface Department {

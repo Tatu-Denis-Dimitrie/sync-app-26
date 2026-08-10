@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { AuthenticationService, AuthRole } from '../../services/authentication.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { UserSignatureService, UserSignature } from '../../services/user-signature.service';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 
@@ -60,7 +60,7 @@ export class DocumentSignatureComponent implements OnInit {
     this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
 
     // Bulk: preia numărul total de documente de semnat pentru admin
-    if (this.isBulkMode && this.isLoggedIn && this.authService.getCurrentUser()?.role === AuthRole.Admin) {
+    if (this.isBulkMode && this.isLoggedIn && this.authService.isAdmin()) {
       this.http.get<any>(`${environment.apiUrl}/documentsignature/pending-ssm-admin-count`).subscribe({
         next: (res) => {
           this.bulkTotal = res?.count || 0;
@@ -119,8 +119,7 @@ export class DocumentSignatureComponent implements OnInit {
         if (data) {
           this.documentData = data;
           // Adaugă flag pentru semnare ca admin (verificator SSM)
-          const user = this.authService.getCurrentUser();
-          this.documentData.isAdminSigning = !!(user && user.role === AuthRole.Admin && this.documentData.documentType === 'SSM');
+          this.documentData.isAdminSigning = this.authService.isAdmin() && this.documentData.documentType === 'SSM';
           setTimeout(() => { if (this.signatureMethod === 'draw') this.initCanvas(); }, 100);
         }
       });
@@ -188,7 +187,7 @@ export class DocumentSignatureComponent implements OnInit {
     this.errorMessage = '';
 
     // Bulk sign cu progres real (admin)
-    if (this.isBulkMode && this.bulkTotal > 0 && this.authService.getCurrentUser()?.role === AuthRole.Admin) {
+    if (this.isBulkMode && this.bulkTotal > 0 && this.authService.isAdmin()) {
       this.bulkSigned = 0;
       this.successMessage = '';
       const payload = {
@@ -279,8 +278,8 @@ export class DocumentSignatureComponent implements OnInit {
   goToDashboard(): void {
     const user = this.authService.getCurrentUser();
     if (!user) { this.router.navigate(['/login']); return; }
-    if (user.role === AuthRole.Admin) this.router.navigate(['/documents']);
-    else if (user.role === AuthRole.LineManager) this.router.navigate(['/line-manager']);
+    if (this.authService.isAdmin()) this.router.navigate(['/documents']);
+    else if (this.authService.isLineManager()) this.router.navigate(['/line-manager']);
     else this.router.navigate(['/basic-user']);
   }
 

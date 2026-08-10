@@ -446,5 +446,69 @@ namespace SyncApp26.Application.Services
 
             return result;
         }
+
+        // Replaces a user's entire role set with the requested one. Every name must resolve to an
+        // existing Role - silently ignoring a typo would leave the admin believing a role was
+        // granted when it wasn't. Refuses any change that would leave the system with no Admin at
+        // all, since nobody could ever grant the role back afterward.
+        public async Task<UserResponseDTO> SetUserRolesAsync(Guid userId, List<string> roleNames, Guid actingAdminId)
+        {
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return new UserResponseDTO { Success = false, Message = "User not found" };
+            }
+
+            var requestedNames = roleNames
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var resolvedRoles = new List<Role>();
+            foreach (var name in requestedNames)
+            {
+                var role = await _userService.GetRoleByNameAsync(name);
+                if (role == null)
+                {
+                    return new UserResponseDTO { Success = false, Message = $"Role '{name}' does not exist." };
+                }
+                resolvedRoles.Add(role);
+            }
+
+            var currentRoleNames = user.RoleAssignments.Select(a => a.Role.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var newRoleNames = resolvedRoles.Select(r => r.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (currentRoleNames.Contains(Roles.Admin) && !newRoleNames.Contains(Roles.Admin))
+            {
+                var remainingAdmins = (await _userService.GetUsersInRoleAsync(Roles.Admin)).Count();
+                if (remainingAdmins <= 1)
+                {
+                    return new UserResponseDTO { Success = false, Message = "Cannot remove the Admin role from the last remaining administrator." };
+                }
+            }
+
+            var assignmentsToRemove = user.RoleAssignments.Where(a => !newRoleNames.Contains(a.Role.Name)).ToList();
+            foreach (var assignment in assignmentsToRemove)
+            {
+                user.RoleAssignments.Remove(assignment);
+            }
+
+            var rolesToAdd = resolvedRoles.Where(r => !currentRoleNames.Contains(r.Name));
+            foreach (var role in rolesToAdd)
+            {
+                user.RoleAssignments.Add(new UserRoleAssignment
+                {
+                    UserId = user.Id,
+                    RoleId = role.Id,
+                    AssignedAt = DateTime.UtcNow,
+                    AssignedByUserId = actingAdminId
+                });
+            }
+
+            await _userService.UpdateUserAsync(user);
+
+            return new UserResponseDTO { Success = true, Message = "Roles updated successfully" };
+        }
     }
 }

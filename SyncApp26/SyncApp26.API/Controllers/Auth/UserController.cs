@@ -176,6 +176,19 @@ namespace SyncApp26.API.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
+        [HttpPut("{id}/roles")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<ActionResult<UserResponseDTO>> SetUserRoles(Guid id, [FromBody] SetUserRolesRequestDTO request)
+        {
+            if (User.GetUserId() is not { } adminId)
+            {
+                return Unauthorized();
+            }
+
+            var result = await _userProfileService.SetUserRolesAsync(id, request.RoleNames, adminId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
         [HttpPut("{id}")]
         public async Task<ActionResult<UserResponseDTO>> UpdateUser(Guid id, [FromBody] UserRequestDTO userRequestDTO)
         {
