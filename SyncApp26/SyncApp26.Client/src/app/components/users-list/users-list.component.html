@@ -693,25 +693,12 @@
                                                     user.departmentName
                                                   }}</span>
                                                 </div>
-                                                <div class="flex items-center justify-between text-sm">
-                                                  <span class="text-muted-foreground">Role:</span>
-                                                  <span
-              [class]="
-                'px-2 py-1 rounded border text-xs font-medium ' +
-                getRoleBadgeColor(user.role!)
-              "
-                                                    >
-                                                    {{
-                                                    user.role === UserRole.LineManager ? "Line Manager" : "Employee"
-                                                    }}
-                                                  </span>
-                                                </div>
                                                 @if (user.roles && user.roles.length > 0) {
                                                   <div class="flex items-center justify-between text-sm gap-2">
                                                     <span class="text-muted-foreground shrink-0">Roles:</span>
                                                     <span class="flex flex-wrap justify-end gap-1">
                                                       @for (roleName of user.roles; track roleName) {
-                                                        <span class="px-2 py-0.5 rounded border text-xs font-medium bg-secondary text-secondary-foreground border-border">
+                                                        <span [class]="'px-2 py-0.5 rounded border text-xs font-medium ' + roleNameBadgeColor(roleName)">
                                                           {{ roleLabel(roleName) }}
                                                         </span>
                                                       }

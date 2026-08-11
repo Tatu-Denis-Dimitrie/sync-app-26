@@ -11,8 +11,8 @@ import { NotificationService } from '../../services/notification.service';
 import { RoleService, Role } from '../../services/role.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
-import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { roleNameBadgeColor } from '../../shared/utils/role.util';
 
 interface SignatureStats {
   total: number;
@@ -393,10 +393,6 @@ export class UsersListComponent implements OnInit {
     this.confirmingNotify = null;
   }
 
-  getRoleBadgeColor(role: UserRole): string {
-    return getRoleBadgeColorUtil(role);
-  }
-
   navigateToDashboard(): void {
     this.router.navigate(['/dashboard']);
   }
@@ -569,6 +565,7 @@ export class UsersListComponent implements OnInit {
 
   // Role management modal state and logic
   roleLabel = roleLabel;
+  roleNameBadgeColor = roleNameBadgeColor;
   isRolesModalOpen = false;
   rolesModalUser: User | null = null;
   allRoles: Role[] = [];
