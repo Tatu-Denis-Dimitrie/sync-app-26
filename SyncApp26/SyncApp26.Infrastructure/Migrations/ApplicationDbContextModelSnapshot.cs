@@ -287,6 +287,36 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("PeriodicTrainings");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Roles_Name");
+
+                    b.ToTable("Roles");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -481,9 +511,6 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<string>("Qualifications")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -511,8 +538,6 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("Users", t =>
                         {
                             t.HasCheckConstraint("CK_Users_BloodType", "\"BloodType\" IS NULL OR \"BloodType\" IN (0, 1, 2, 3, 4, 5, 6, 7)");
-
-                            t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN (0, 1, 2)");
                         });
                 });
 
@@ -754,6 +779,30 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasDatabaseName("IX_UserInitialTrainings_UserId_DocumentType");
 
                     b.ToTable("UserInitialTrainings");
+                });
+
+            modelBuilder.Entity("SyncApp26.Domain.Entities.UserRoleAssignment", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AssignedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("RoleId", "UserId")
+                        .HasDatabaseName("IX_UserRoles_RoleId_UserId");
+
+                    b.ToTable("UserRoleAssignments");
                 });
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.UserSignature", b =>
@@ -1017,6 +1066,32 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.UserRoleAssignment", b =>
+                {
+                    b.HasOne("SyncApp26.Domain.Entities.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SyncApp26.Domain.Entities.Role", "Role")
+                        .WithMany("UserAssignments")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SyncApp26.Domain.Entities.User", "User")
+                        .WithMany("RoleAssignments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.UserSignature", b =>
                 {
                     b.HasOne("SyncApp26.Domain.Entities.User", "User")
@@ -1053,6 +1128,11 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.Role", b =>
+                {
+                    b.Navigation("UserAssignments");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.User", b =>
                 {
                     b.Navigation("AssignedUsers");
@@ -1060,6 +1140,8 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("InitialTrainings");
 
                     b.Navigation("PeriodicTrainings");
+
+                    b.Navigation("RoleAssignments");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 
 import { Router } from '@angular/router';
-import { AuthenticationService, User, authRoleLabel } from '../../services/authentication.service';
+import { AuthenticationService, User, rolesLabel } from '../../services/authentication.service';
 
 @Component({
   selector: 'app-access-restricted',
@@ -11,7 +11,7 @@ import { AuthenticationService, User, authRoleLabel } from '../../services/authe
   styleUrls: ['./access-restricted.component.css']
 })
 export class AccessRestrictedComponent implements OnInit {
-  authRoleLabel = authRoleLabel;
+  rolesLabel = rolesLabel;
   currentUser: User | null = null;
 
   constructor(

@@ -59,7 +59,6 @@ namespace SyncApp26.Tests.Services.Documents
                 Email = $"{firstName}.{lastName}.{Guid.NewGuid():N}@example.com".ToLowerInvariant(),
                 PersonalId = Guid.NewGuid().ToString(),
                 FunctionId = function.Id,
-                Role = UserRole.BasicUser,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);

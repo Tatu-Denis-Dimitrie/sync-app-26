@@ -22,7 +22,6 @@ namespace SyncApp26.Tests.Services.Documents
                 LastName = lastName,
                 Email = $"{firstName}.{lastName}.{Guid.NewGuid():N}@example.com".ToLowerInvariant(),
                 PersonalId = Guid.NewGuid().ToString(),
-                Role = Domain.Enums.UserRole.BasicUser,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
@@ -122,59 +121,17 @@ namespace SyncApp26.Tests.Services.Documents
         // ───────────────────────── BulkCreateAsync ─────────────────────────
 
         [Fact]
-        public async Task BulkCreateAsync_InstructorNotFound_ReturnsErrorNoRecordsCreated()
+        public async Task BulkCreateAsync_NoInstructorChosenUpfront_CreatesRowsWithNullInstructor()
         {
+            // There's no instructor picker anymore — InstructorId/InstructorName are left null at
+            // creation and only get stamped once the SSM/SU officer actually signs (see
+            // DocumentService.ApplySignatureToPeriodicTraining).
             var service = CreateService();
-            var trainee = SeedUser("Adela", "Popescu");
-
-            var result = await service.BulkCreateAsync(new BulkCreatePeriodicTrainingDTO
-            {
-                InstructorId = Guid.NewGuid(),
-                DocumentType = "SU",
-                ApplyToAllUsers = false,
-                SelectedUserIds = new List<Guid> { trainee.Id }
-            });
-
-            Assert.Equal(0, result.SuccessCount);
-            Assert.Contains("Instructor not found.", result.Errors);
-            Assert.Empty(_dbFixture.Context.PeriodicTrainings);
-        }
-
-        [Fact]
-        public async Task BulkCreateAsync_InstructorIsOneOfSelectedTrainees_SkipsThatUserOnly()
-        {
-            var service = CreateService();
-            var instructor = SeedUser("Elena", "Marin");
-            var trainee = SeedUser("Adela", "Popescu");
-
-            var result = await service.BulkCreateAsync(new BulkCreatePeriodicTrainingDTO
-            {
-                InstructorId = instructor.Id,
-                DocumentType = "SU",
-                ApplyToAllUsers = false,
-                SelectedUserIds = new List<Guid> { trainee.Id, instructor.Id }
-            });
-
-            Assert.Equal(1, result.SuccessCount);
-            Assert.Equal(1, result.FailedCount);
-            Assert.Contains(result.Errors, e => e.Contains("cannot be their own instructor"));
-
-            var traineeRow = Assert.Single(_dbFixture.Context.PeriodicTrainings.Where(pt => pt.UserId == trainee.Id));
-            Assert.Equal(instructor.Id, traineeRow.InstructorId);
-            Assert.DoesNotContain(_dbFixture.Context.PeriodicTrainings, pt => pt.UserId == instructor.Id);
-        }
-
-        [Fact]
-        public async Task BulkCreateAsync_ValidInstructor_SetsInstructorIdAndNameForAllCreatedRows()
-        {
-            var service = CreateService();
-            var instructor = SeedUser("Elena", "Marin");
             var trainee1 = SeedUser("Adela", "Popescu");
             var trainee2 = SeedUser("Vlad", "Georgescu");
 
             var result = await service.BulkCreateAsync(new BulkCreatePeriodicTrainingDTO
             {
-                InstructorId = instructor.Id,
                 DocumentType = "SU",
                 ApplyToAllUsers = false,
                 SelectedUserIds = new List<Guid> { trainee1.Id, trainee2.Id }
@@ -183,8 +140,8 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Equal(2, result.SuccessCount);
             Assert.All(_dbFixture.Context.PeriodicTrainings, pt =>
             {
-                Assert.Equal(instructor.Id, pt.InstructorId);
-                Assert.Equal("Elena Marin", pt.InstructorName);
+                Assert.Null(pt.InstructorId);
+                Assert.Null(pt.InstructorName);
             });
         }
 

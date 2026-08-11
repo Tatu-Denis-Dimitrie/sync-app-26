@@ -86,7 +86,10 @@ namespace SyncApp26.API.Services
                         var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
                         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-                        var admins = (await userService.GetAllUsersAsync()).Where(u => u.Role == UserRole.Admin);
+                        // GetUsersInRoleAsync, unlike GetAllUsersAsync, doesn't exclude admins by
+                        // design — the earlier filter-after-GetAllUsersAsync() form always returned
+                        // empty here, since GetAllUsersAsync already strips admins out.
+                        var admins = await userService.GetUsersInRoleAsync(Roles.Admin);
                         foreach (var admin in admins)
                         {
                             await emailService.SendSignatureAnomalyAlertEmailAsync(

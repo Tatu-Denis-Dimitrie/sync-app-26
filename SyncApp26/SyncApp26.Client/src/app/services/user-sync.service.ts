@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
 import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
 import { User, UserRole, BloodType, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, UserChangeHistory, ImportHistoryItem } from '../models/csv-sync.model';
-import { AuthRole } from './authentication.service';
+import { Roles } from './authentication.service';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
 import { from, combineLatest } from 'rxjs';
@@ -11,7 +11,7 @@ import { from, combineLatest } from 'rxjs';
 interface BackendUser {
   id: string;
   personalId: string;
-  role?: AuthRole;
+  roles?: string[];
   firstName: string;
   lastName: string;
   email: string;
@@ -72,11 +72,11 @@ export class UserSyncService {
   }
 
   private mapBackendRole(backendUser: BackendUser): UserRole {
-    if (backendUser.role === AuthRole.LineManager) {
+    if (backendUser.roles?.includes(Roles.LineManager)) {
       return UserRole.LineManager;
     }
 
-    if (backendUser.role === AuthRole.BasicUser) {
+    if (backendUser.roles?.includes(Roles.BasicUser)) {
       return UserRole.BasicUser;
     }
 
@@ -151,6 +151,7 @@ export class UserSyncService {
       createdAt: new Date(backendUser.createdAt),
       updatedAt: backendUser.updatedAt ? new Date(backendUser.updatedAt) : undefined,
       role: this.mapBackendRole(backendUser),
+      roles: backendUser.roles ?? [],
       hasSignedSsm: backendUser.hasSignedSsm ?? false,
       hasSignedSu: backendUser.hasSignedSu ?? false,
       hasUnsignedSsm: backendUser.hasUnsignedSsm ?? false,
@@ -310,6 +311,15 @@ export class UserSyncService {
   updateUser(id: string, userData: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}`, userData).pipe(
       tap(() => this.loadUsers()) // Refresh users list after update
+    );
+  }
+
+  /**
+   * Replace a user's role assignments with the given set of role names
+   */
+  setUserRoles(id: string, roleNames: string[]): Observable<{ success: boolean; message: string }> {
+    return this.http.put<{ success: boolean; message: string }>(`${this.apiUrl}/${id}/roles`, { roleNames }).pipe(
+      tap(() => this.loadUsers()) // Refresh users list after role change
     );
   }
 

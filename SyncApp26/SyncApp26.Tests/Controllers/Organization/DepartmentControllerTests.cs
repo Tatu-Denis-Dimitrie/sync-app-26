@@ -208,7 +208,7 @@ namespace SyncApp26.Tests.Controllers.Organization
             var department = MakeDepartment();
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(department.Id)).ReturnsAsync(department);
             _userServiceMock.Setup(s => s.GetUsersByDepartmentIdAsync(department.Id))
-                .ReturnsAsync(new[] { new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, CreatedAt = DateTime.UtcNow } });
+                .ReturnsAsync(new[] { new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", CreatedAt = DateTime.UtcNow } });
 
             var result = await controller.DeleteDepartment(department.Id, null, _userServiceMock.Object);
 
@@ -226,7 +226,7 @@ namespace SyncApp26.Tests.Controllers.Organization
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(department.Id)).ReturnsAsync(department);
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(transferId)).ReturnsAsync((Department?)null);
             _userServiceMock.Setup(s => s.GetUsersByDepartmentIdAsync(department.Id))
-                .ReturnsAsync(new[] { new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, CreatedAt = DateTime.UtcNow } });
+                .ReturnsAsync(new[] { new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", CreatedAt = DateTime.UtcNow } });
 
             var result = await controller.DeleteDepartment(department.Id, transferId, _userServiceMock.Object);
 
@@ -242,7 +242,7 @@ namespace SyncApp26.Tests.Controllers.Organization
             var department = MakeDepartment();
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(department.Id)).ReturnsAsync(department);
             _userServiceMock.Setup(s => s.GetUsersByDepartmentIdAsync(department.Id))
-                .ReturnsAsync(new[] { new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, CreatedAt = DateTime.UtcNow } });
+                .ReturnsAsync(new[] { new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", CreatedAt = DateTime.UtcNow } });
 
             var result = await controller.DeleteDepartment(department.Id, department.Id, _userServiceMock.Object);
 
@@ -257,7 +257,7 @@ namespace SyncApp26.Tests.Controllers.Organization
             var controller = CreateController();
             var department = MakeDepartment();
             var transferDepartment = MakeDepartment();
-            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", Role = UserRole.BasicUser, DepartmentId = department.Id, CreatedAt = DateTime.UtcNow };
+            var user = new User { Id = Guid.NewGuid(), FirstName = "A", LastName = "B", Email = "a@b.com", PersonalId = "1", DepartmentId = department.Id, CreatedAt = DateTime.UtcNow };
 
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(department.Id)).ReturnsAsync(department);
             _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(transferDepartment.Id)).ReturnsAsync(transferDepartment);

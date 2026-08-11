@@ -589,13 +589,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  getSortIcon(field: 'createdAt' | 'updatedAt'): string {
-    if (this.sortField !== field) {
-      return '↕️'; // Not sorted
-    }
-    return this.sortDirection === 'asc' ? '↑' : '↓';
-  }
-
   getRoleBadgeColor(role: UserRole): string {
     return getRoleBadgeColorUtil(role);
   }

@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { AuthenticationService, AuthRole } from '../../services/authentication.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { SignatureVerificationService, SignatureVersionSummary, PeriodicTrainingSignatureHistory } from '../../services/signature-verification.service';
 import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
 import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
@@ -34,7 +34,6 @@ interface UserSSMSUForm {
   personalId: string;
   departmentName?: string;
   functionName?: string;
-  role?: AuthRole;
   managerFirstName?: string;
   managerLastName?: string;
   managerFunctionName?: string;

@@ -89,6 +89,7 @@ builder.Services.AddScoped<IDataChangeRequestService, DataChangeRequestService>(
 builder.Services.AddScoped<IUserInitialTrainingService, UserInitialTrainingService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
@@ -100,6 +101,15 @@ builder.Services.AddSingleton<IMicrosoftTokenValidator, MicrosoftTokenValidator>
 builder.Services.AddHostedService<DepartmentCleanupService>();
 builder.Services.AddScoped<SignatureVerificationSweeper>();
 builder.Services.AddHostedService<SignatureVerificationSweepService>();
+
+// Since .NET 6, an unhandled exception from a hosted service's ExecuteAsync stops the entire host
+// by default. A background job (e.g. an SMTP failure while emailing an anomaly alert) must never be
+// able to take down the whole API — each service already catches what it knows about internally,
+// this is the outer safety net for anything that slips through.
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+});
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]

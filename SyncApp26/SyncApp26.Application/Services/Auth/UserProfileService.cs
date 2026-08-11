@@ -77,7 +77,6 @@ namespace SyncApp26.Application.Services
             {
                 Id = Guid.NewGuid(),
                 PersonalId = Guid.NewGuid().ToString(),
-                Role = UserRole.BasicUser,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Email = request.Email,
@@ -87,15 +86,25 @@ namespace SyncApp26.Application.Services
                 CreatedAt = DateTime.UtcNow
             };
 
+            var basicUserRole = await _userService.GetRoleByNameAsync(Roles.BasicUser);
+            if (basicUserRole != null)
+            {
+                user.RoleAssignments.Add(new UserRoleAssignment { UserId = user.Id, RoleId = basicUserRole.Id });
+            }
+
             await _userService.AddUserAsync(user);
 
             if (request.AssignedToId.HasValue)
             {
                 var managerToPromote = await _userService.GetUserByIdAsync(request.AssignedToId.Value);
-                if (managerToPromote != null && managerToPromote.Role != UserRole.LineManager)
+                if (managerToPromote != null && !managerToPromote.RoleAssignments.Any(a => a.Role.Name == Roles.LineManager))
                 {
-                    managerToPromote.Role = UserRole.LineManager;
-                    await _userService.UpdateUserAsync(managerToPromote);
+                    var lineManagerRole = await _userService.GetRoleByNameAsync(Roles.LineManager);
+                    if (lineManagerRole != null)
+                    {
+                        managerToPromote.RoleAssignments.Add(new UserRoleAssignment { UserId = managerToPromote.Id, RoleId = lineManagerRole.Id });
+                        await _userService.UpdateUserAsync(managerToPromote);
+                    }
                 }
             }
 
@@ -173,11 +182,6 @@ namespace SyncApp26.Application.Services
             existingUser.AssignedToId = request.AssignedToId;
             existingUser.FunctionId = resolvedFunctionId;
             existingUser.UpdatedAt = DateTime.UtcNow;
-
-            if (request.Role.HasValue)
-            {
-                existingUser.Role = request.Role.Value;
-            }
 
             await _userService.UpdateUserAsync(existingUser);
 
@@ -441,6 +445,70 @@ namespace SyncApp26.Application.Services
             }
 
             return result;
+        }
+
+        // Replaces a user's entire role set with the requested one. Every name must resolve to an
+        // existing Role - silently ignoring a typo would leave the admin believing a role was
+        // granted when it wasn't. Refuses any change that would leave the system with no Admin at
+        // all, since nobody could ever grant the role back afterward.
+        public async Task<UserResponseDTO> SetUserRolesAsync(Guid userId, List<string> roleNames, Guid actingAdminId)
+        {
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return new UserResponseDTO { Success = false, Message = "User not found" };
+            }
+
+            var requestedNames = roleNames
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var resolvedRoles = new List<Role>();
+            foreach (var name in requestedNames)
+            {
+                var role = await _userService.GetRoleByNameAsync(name);
+                if (role == null)
+                {
+                    return new UserResponseDTO { Success = false, Message = $"Role '{name}' does not exist." };
+                }
+                resolvedRoles.Add(role);
+            }
+
+            var currentRoleNames = user.RoleAssignments.Select(a => a.Role.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var newRoleNames = resolvedRoles.Select(r => r.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (currentRoleNames.Contains(Roles.Admin) && !newRoleNames.Contains(Roles.Admin))
+            {
+                var remainingAdmins = (await _userService.GetUsersInRoleAsync(Roles.Admin)).Count();
+                if (remainingAdmins <= 1)
+                {
+                    return new UserResponseDTO { Success = false, Message = "Cannot remove the Admin role from the last remaining administrator." };
+                }
+            }
+
+            var assignmentsToRemove = user.RoleAssignments.Where(a => !newRoleNames.Contains(a.Role.Name)).ToList();
+            foreach (var assignment in assignmentsToRemove)
+            {
+                user.RoleAssignments.Remove(assignment);
+            }
+
+            var rolesToAdd = resolvedRoles.Where(r => !currentRoleNames.Contains(r.Name));
+            foreach (var role in rolesToAdd)
+            {
+                user.RoleAssignments.Add(new UserRoleAssignment
+                {
+                    UserId = user.Id,
+                    RoleId = role.Id,
+                    AssignedAt = DateTime.UtcNow,
+                    AssignedByUserId = actingAdminId
+                });
+            }
+
+            await _userService.UpdateUserAsync(user);
+
+            return new UserResponseDTO { Success = true, Message = "Roles updated successfully" };
         }
     }
 }

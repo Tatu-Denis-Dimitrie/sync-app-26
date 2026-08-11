@@ -346,7 +346,14 @@
                               <button (click)="toggleSort('createdAt')"
                                 class="hover:text-foreground transition-colors flex items-center gap-1"
                                 title="Sort by created date">
-                                Created {{ getSortIcon("createdAt") }}
+                                Created
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                  fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                  stroke-linejoin="round" class="transition-transform"
+                                  [class.opacity-40]="sortField !== 'createdAt'"
+                                  [class.rotate-180]="sortField === 'createdAt' && sortDirection === 'asc'">
+                                  <path d="m6 9 6 6 6-6" />
+                                </svg>
                               </button>
                             </th>
                             <th rowspan="2"
@@ -354,7 +361,14 @@
                               <button (click)="toggleSort('updatedAt')"
                                 class="hover:text-foreground transition-colors flex items-center gap-1"
                                 title="Sort by updated date">
-                                Updated {{ getSortIcon("updatedAt") }}
+                                Updated
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                  fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                  stroke-linejoin="round" class="transition-transform"
+                                  [class.opacity-40]="sortField !== 'updatedAt'"
+                                  [class.rotate-180]="sortField === 'updatedAt' && sortDirection === 'asc'">
+                                  <path d="m6 9 6 6 6-6" />
+                                </svg>
                               </button>
                             </th>
                           </tr>

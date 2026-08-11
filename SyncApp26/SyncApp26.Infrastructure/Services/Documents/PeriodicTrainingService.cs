@@ -244,27 +244,19 @@ namespace SyncApp26.Infrastructure.Services
                     return result;
                 }
 
-                var instructor = await _context.Users.FindAsync(dto.InstructorId);
-                if (instructor == null)
-                {
-                    result.Errors.Add("Instructor not found.");
-                    return result;
-                }
-                var instructorFullName = $"{instructor.FirstName} {instructor.LastName}";
-
                 // Determine which document types to create rows for
                 var docTypes = dto.DocumentType == "Both"
                     ? new[] { "SSM", "SU" }
                     : new[] { dto.DocumentType ?? "SSM" };
 
-                // Create training record for each user × each document type
+                // Create training record for each user × each document type. InstructorId/InstructorName
+                // are left null here — they're stamped at signing time (see
+                // DocumentService.ApplySignatureToPeriodicTraining) with whoever actually signs as the
+                // SSM/SU officer, not chosen upfront.
                 foreach (var user in users)
                 {
                     try
                     {
-                        if (user.Id == instructor.Id)
-                            throw new InvalidOperationException("An employee cannot be their own instructor.");
-
                         foreach (var docType in docTypes)
                         {
                             // Check if there's already an unsigned, unlinked row for this user+type
@@ -287,8 +279,6 @@ namespace SyncApp26.Infrastructure.Services
                                     ? dto.Occupation
                                     : user.Function?.Name;
                                 existingUnsigned.MaterialTaught = dto.MaterialTaught;
-                                existingUnsigned.InstructorId = instructor.Id;
-                                existingUnsigned.InstructorName = instructorFullName;
                                 existingUnsigned.VerifierName = dto.VerifierName;
                                 existingUnsigned.DocumentType = docType;
                                 existingUnsigned.UpdatedAt = DateTime.UtcNow;
@@ -305,8 +295,6 @@ namespace SyncApp26.Infrastructure.Services
                                         ? dto.Occupation
                                         : user.Function?.Name,
                                     MaterialTaught = dto.MaterialTaught,
-                                    InstructorId = instructor.Id,
-                                    InstructorName = instructorFullName,
                                     VerifierName = dto.VerifierName,
                                     CreatedAt = DateTime.UtcNow
                                 };

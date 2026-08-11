@@ -30,19 +30,33 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
-// Mirrors the backend SyncApp26.Domain.Enums.UserRole enum values exactly.
-export enum AuthRole {
-  Admin = 0,
-  LineManager = 1,
-  BasicUser = 2
+// Mirrors the backend SyncApp26.Domain.Enums.Roles constants exactly. A user can hold any
+// combination of these (and custom roles an admin created) at once - roles are no longer a single
+// value, so there's no enum to switch on.
+export const Roles = {
+  Admin: 'Admin',
+  LineManager: 'LineManager',
+  BasicUser: 'BasicUser',
+  SsmOfficer: 'SsmOfficer',
+  SuOfficer: 'SuOfficer'
+} as const;
+
+const KNOWN_ROLE_LABELS: Record<string, string> = {
+  [Roles.Admin]: 'Admin',
+  [Roles.LineManager]: 'Line Manager',
+  [Roles.BasicUser]: 'Basic User',
+  [Roles.SsmOfficer]: 'SSM Officer',
+  [Roles.SuOfficer]: 'SU Officer'
+};
+
+/** Falls back to the raw name for custom roles an admin created, which carry no built-in label. */
+export function roleLabel(name: string): string {
+  return KNOWN_ROLE_LABELS[name] ?? name;
 }
 
-export function authRoleLabel(role: AuthRole): string {
-  switch (role) {
-    case AuthRole.Admin: return 'Admin';
-    case AuthRole.LineManager: return 'Line Manager';
-    case AuthRole.BasicUser: return 'Basic User';
-  }
+export function rolesLabel(names: string[] | undefined | null): string {
+  if (!names || names.length === 0) return '';
+  return names.map(roleLabel).join(', ');
 }
 
 export interface User {
@@ -50,7 +64,7 @@ export interface User {
     email: string;
     firstName: string;
     lastName: string;
-    role: AuthRole;
+    roles: string[];
 }
 
 export interface LoginResponse {
@@ -128,13 +142,29 @@ export class AuthenticationService {
     return !!localStorage.getItem('authToken');
   }
 
-  isAdmin(): boolean {
+  hasRole(name: string): boolean {
     const user = this.getCurrentUser();
-    return user?.role === AuthRole.Admin;
+    return !!user?.roles?.includes(name);
+  }
+
+  isAdmin(): boolean {
+    return this.hasRole(Roles.Admin);
   }
 
   isLineManager(): boolean {
-    const user = this.getCurrentUser();
-    return user?.role === AuthRole.LineManager;
+    return this.hasRole(Roles.LineManager);
+  }
+
+  isSsmOfficer(): boolean {
+    return this.hasRole(Roles.SsmOfficer);
+  }
+
+  isSuOfficer(): boolean {
+    return this.hasRole(Roles.SuOfficer);
+  }
+
+  /** Either officer duty - used to gate the shared "stored signature" page. */
+  isOfficer(): boolean {
+    return this.isSsmOfficer() || this.isSuOfficer();
   }
 }

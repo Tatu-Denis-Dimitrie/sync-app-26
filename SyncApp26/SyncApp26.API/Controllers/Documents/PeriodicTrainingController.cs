@@ -129,14 +129,59 @@ namespace SyncApp26.API.Controllers
         {
             try
             {
-                var isAdmin = User.IsInRole(Roles.Admin);
-                Guid? restrictToAssignedToId = null;
-                if (!isAdmin && User.GetUserId() is { } currentUserId)
+                var requestedTypes = (dto.DocumentType ?? "Both").Equals("Both", StringComparison.OrdinalIgnoreCase)
+                    ? new[] { "SSM", "SU" }
+                    : new[] { dto.DocumentType!.ToUpperInvariant() };
+
+                // Each type is authorized independently: the officer for that type can create for
+                // anyone; a line manager (with no officer duty on that type) is restricted to their own
+                // direct reports; anyone else is dropped from this request rather than failing it outright.
+                bool isLineManager = User.IsInRole(Roles.LineManager);
+                var currentUserId = User.GetUserId();
+                var includedTypes = new List<(string Type, Guid? RestrictToAssignedToId)>();
+                foreach (var type in requestedTypes)
                 {
-                    restrictToAssignedToId = currentUserId;
+                    if (User.CanInitiateFor(type))
+                        includedTypes.Add((type, null));
+                    else if (isLineManager && currentUserId is { } managerId)
+                        includedTypes.Add((type, managerId));
                 }
 
-                var result = await _periodicTrainingService.BulkCreateAsync(dto, restrictToAssignedToId);
+                if (includedTypes.Count == 0)
+                    return Forbid();
+
+                BulkCreateResultDTO result;
+                if (includedTypes.Select(t => t.RestrictToAssignedToId).Distinct().Count() == 1)
+                {
+                    // Every included type shares the same restriction — one call, same as before.
+                    dto.DocumentType = includedTypes.Count == 2 ? "Both" : includedTypes[0].Type;
+                    result = await _periodicTrainingService.BulkCreateAsync(dto, includedTypes[0].RestrictToAssignedToId);
+                }
+                else
+                {
+                    // Mixed authorization (e.g. officer on one type, line manager on the other) —
+                    // one call per type, merged.
+                    result = new BulkCreateResultDTO();
+                    foreach (var (type, restrictToAssignedToId) in includedTypes)
+                    {
+                        var typeDto = new BulkCreatePeriodicTrainingDTO
+                        {
+                            TrainingDate = dto.TrainingDate,
+                            DurationHours = dto.DurationHours,
+                            Occupation = dto.Occupation,
+                            MaterialTaught = dto.MaterialTaught,
+                            VerifierName = dto.VerifierName,
+                            DocumentType = type,
+                            SelectedDepartmentId = dto.SelectedDepartmentId,
+                            ApplyToAllUsers = dto.ApplyToAllUsers,
+                            SelectedUserIds = dto.SelectedUserIds
+                        };
+                        var typeResult = await _periodicTrainingService.BulkCreateAsync(typeDto, restrictToAssignedToId);
+                        result.SuccessCount += typeResult.SuccessCount;
+                        result.FailedCount += typeResult.FailedCount;
+                        result.Errors.AddRange(typeResult.Errors);
+                    }
+                }
 
                 if (result.FailedCount > 0 && result.SuccessCount == 0)
                 {

@@ -218,7 +218,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                     Email = "a@b.com",
                     FirstName = "A",
                     LastName = "B",
-                    Role = UserRole.Admin
+                    Roles = new[] { Roles.Admin }
                 });
 
             var result = await controller.Login(new LoginUserRequestDTO { Email = "a@b.com", Password = "Str0ng!Pass" });
@@ -325,7 +325,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                     Email = "a@b.com",
                     FirstName = "A",
                     LastName = "B",
-                    Role = UserRole.BasicUser
+                    Roles = new[] { Roles.BasicUser }
                 });
 
             var result = await controller.GoogleLogin(new GoogleLoginRequestDTO { IdToken = "good-token" });
@@ -414,7 +414,7 @@ namespace SyncApp26.Tests.Controllers.Auth
                     Email = "a@b.com",
                     FirstName = "A",
                     LastName = "B",
-                    Role = UserRole.BasicUser
+                    Roles = new[] { Roles.BasicUser }
                 });
 
             var result = await controller.MicrosoftLogin(new MicrosoftLoginRequestDTO { IdToken = "good-token" });

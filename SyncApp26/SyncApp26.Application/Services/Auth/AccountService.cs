@@ -90,7 +90,6 @@ namespace SyncApp26.Application.Services
             {
                 Id = Guid.NewGuid(),
                 PersonalId = Guid.NewGuid().ToString(),
-                Role = UserRole.BasicUser,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Email = normalizedEmail,
@@ -100,6 +99,12 @@ namespace SyncApp26.Application.Services
                 EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24),
                 CreatedAt = DateTime.UtcNow
             };
+
+            var basicUserRole = await _userService.GetRoleByNameAsync(Roles.BasicUser);
+            if (basicUserRole != null)
+            {
+                user.RoleAssignments.Add(new UserRoleAssignment { UserId = user.Id, RoleId = basicUserRole.Id });
+            }
 
             await _userService.AddUserAsync(user);
 
@@ -158,7 +163,8 @@ namespace SyncApp26.Application.Services
                 return new LoginResult { Status = LoginStatus.EmailNotVerified };
             }
 
-            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
+            var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
+            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleNames);
 
             return new LoginResult
             {
@@ -168,7 +174,7 @@ namespace SyncApp26.Application.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = user.Role
+                Roles = roleNames
             };
         }
 
@@ -196,7 +202,8 @@ namespace SyncApp26.Application.Services
                 return new LoginResult { Status = LoginStatus.NoAccountForEmail };
             }
 
-            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
+            var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
+            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleNames);
 
             return new LoginResult
             {
@@ -206,7 +213,7 @@ namespace SyncApp26.Application.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = user.Role
+                Roles = roleNames
             };
         }
 
@@ -228,7 +235,8 @@ namespace SyncApp26.Application.Services
                 return new LoginResult { Status = LoginStatus.NoAccountForEmail };
             }
 
-            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, user.Role);
+            var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
+            var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleNames);
 
             return new LoginResult
             {
@@ -238,7 +246,7 @@ namespace SyncApp26.Application.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = user.Role
+                Roles = roleNames
             };
         }
 

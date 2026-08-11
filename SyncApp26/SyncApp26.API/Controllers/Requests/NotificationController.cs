@@ -19,6 +19,7 @@ namespace SyncApp26.API.Controllers
         private readonly IPeriodicTrainingService _periodicTrainingService;
         private readonly IDocumentSignatureService _documentSignatureService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<NotificationController> _logger;
 
         public NotificationController(
             IUserService userService,
@@ -26,7 +27,8 @@ namespace SyncApp26.API.Controllers
             IDocumentService documentService,
             IPeriodicTrainingService periodicTrainingService,
             IDocumentSignatureService documentSignatureService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<NotificationController> logger)
         {
             _userService = userService;
             _emailService = emailService;
@@ -34,6 +36,7 @@ namespace SyncApp26.API.Controllers
             _periodicTrainingService = periodicTrainingService;
             _documentSignatureService = documentSignatureService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("notify-user/{userId}")]
@@ -46,8 +49,6 @@ namespace SyncApp26.API.Controllers
             }
 
             // Check permissions: Only Admin or the user's AssingedTo (Line Manager) can notify
-            var currentUserRole = User.GetRole();
-
             if (User.GetUserId() is not { } currentUserId)
             {
                 return Unauthorized();
@@ -59,7 +60,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found." });
             }
 
-            if (currentUserRole != Roles.Admin && targetUser.AssignedToId != currentUserId)
+            if (!User.IsInRole(Roles.Admin) && targetUser.AssignedToId != currentUserId)
             {
                 return Forbid("You do not have permission to notify this user.");
             }
@@ -178,10 +179,7 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
             }
 
-            var allUsers = await _userService.GetAllUsersAsync();
-            var managers = allUsers
-                .Where(u => u.Role == UserRole.LineManager)
-                .ToList();
+            var managers = (await _userService.GetUsersInRoleAsync(Roles.LineManager)).ToList();
 
             if (!managers.Any())
                 return BadRequest(new { Message = "No active line managers found." });
@@ -195,13 +193,22 @@ namespace SyncApp26.API.Controllers
                 var unsignedCount = assignedUsers.Count(u => !signedIds.Contains(u.Id));
                 if (unsignedCount == 0) continue;
 
-                await _emailService.SendMissingSignatureToManagerEmailAsync(
-                    manager.Email,
-                    $"{manager.FirstName} {manager.LastName}",
-                    request.DocumentType,
-                    unsignedCount
-                );
-                notifiedCount++;
+                // One manager's email failing (e.g. SMTP daily limit) must not abort notifications
+                // to the rest — each send is independent.
+                try
+                {
+                    await _emailService.SendMissingSignatureToManagerEmailAsync(
+                        manager.Email,
+                        $"{manager.FirstName} {manager.LastName}",
+                        request.DocumentType,
+                        unsignedCount
+                    );
+                    notifiedCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send missing-signature notification to manager {ManagerId}.", manager.Id);
+                }
             }
 
             if (notifiedCount == 0)

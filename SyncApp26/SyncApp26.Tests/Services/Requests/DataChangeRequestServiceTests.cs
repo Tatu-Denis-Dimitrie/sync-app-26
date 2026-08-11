@@ -26,7 +26,6 @@ namespace SyncApp26.Tests.Services.Requests
                 LastName = "Doe",
                 Email = $"{Guid.NewGuid():N}@example.com",
                 PersonalId = Guid.NewGuid().ToString(),
-                Role = UserRole.BasicUser,
                 DepartmentId = departmentId,
                 CommuteDurationMinutes = commuteDurationMinutes,
                 CreatedAt = DateTime.UtcNow
@@ -318,6 +317,10 @@ namespace SyncApp26.Tests.Services.Requests
         [Fact]
         public async Task ResolveRequestAsync_RoleInChanges_NeverAppliedEvenWhenApproved()
         {
+            // "Role" isn't a User property at all anymore (roles live in RoleAssignments), so
+            // reflection can't find it in either the history-snapshot or apply loop - the same
+            // defense-in-depth outcome as the old BlockedFields check, now enforced structurally: a
+            // data change request can never grant itself a role, and leaves no trace of trying.
             var user = SeedUser();
             var request = SeedRequest(user.Id, "{\"Role\":\"Admin\"}");
             var service = CreateService();
@@ -326,9 +329,7 @@ namespace SyncApp26.Tests.Services.Requests
             await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
 
             _dbFixture.Context.ChangeTracker.Clear();
-            Assert.Equal(UserRole.BasicUser, _dbFixture.Context.Users.Single(u => u.Id == user.Id).Role);
-            var historyEntry = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id && h.FieldName == "Role");
-            Assert.Equal("Admin", historyEntry.NewValue);
+            Assert.False(_dbFixture.Context.UserChangeHistories.Any(h => h.UserId == user.Id && h.FieldName == "Role"));
         }
 
         [Fact]

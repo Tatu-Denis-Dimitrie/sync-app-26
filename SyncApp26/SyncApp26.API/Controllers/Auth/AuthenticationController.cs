@@ -103,7 +103,7 @@ namespace SyncApp26.API.Controllers
                             email = result.Email,
                             firstName = result.FirstName,
                             lastName = result.LastName,
-                            role = result.Role
+                            roles = result.Roles
                         }
                     })
                 };
@@ -141,7 +141,7 @@ namespace SyncApp26.API.Controllers
                             email = result.Email,
                             firstName = result.FirstName,
                             lastName = result.LastName,
-                            role = result.Role
+                            roles = result.Roles
                         }
                     }),
                     // Explicit Success so a new status can't fall through as a 200 with no token.
@@ -180,7 +180,7 @@ namespace SyncApp26.API.Controllers
                             email = result.Email,
                             firstName = result.FirstName,
                             lastName = result.LastName,
-                            role = result.Role
+                            roles = result.Roles
                         }
                     }),
                     // Explicit Success so a new status can't fall through as a 200 with no token.

@@ -55,7 +55,6 @@ namespace SyncApp26.Tests.Services.Documents
                 PersonalId = Guid.NewGuid().ToString(),
                 FunctionId = function.Id,
                 AssignedToId = assignedToId,
-                Role = UserRole.BasicUser,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);

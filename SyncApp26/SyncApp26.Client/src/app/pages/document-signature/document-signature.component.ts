@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { AuthenticationService, AuthRole } from '../../services/authentication.service';
+import { AuthenticationService } from '../../services/authentication.service';
 import { UserSignatureService, UserSignature } from '../../services/user-signature.service';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 
@@ -59,19 +59,6 @@ export class DocumentSignatureComponent implements OnInit {
     this.token = this.route.snapshot.paramMap.get('token');
     this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
 
-    // Bulk: preia numărul total de documente de semnat pentru admin
-    if (this.isBulkMode && this.isLoggedIn && this.authService.getCurrentUser()?.role === AuthRole.Admin) {
-      this.http.get<any>(`${environment.apiUrl}/documentsignature/pending-ssm-admin-count`).subscribe({
-        next: (res) => {
-          this.bulkTotal = res?.count || 0;
-          this.bulkSigned = 0;
-        },
-        error: () => {
-          this.bulkTotal = 0;
-        }
-      });
-    }
-
     if (!this.token) {
       this.errorMessage = 'Invalid link. No token provided.';
       this.isValidating = false;
@@ -118,10 +105,23 @@ export class DocumentSignatureComponent implements OnInit {
       .subscribe(data => {
         if (data) {
           this.documentData = data;
-          // Adaugă flag pentru semnare ca admin (verificator SSM)
-          const user = this.authService.getCurrentUser();
-          this.documentData.isAdminSigning = !!(user && user.role === AuthRole.Admin && this.documentData.documentType === 'SSM');
           setTimeout(() => { if (this.signatureMethod === 'draw') this.initCanvas(); }, 100);
+
+          // Bulk: preia numărul total de documente de semnat pentru responsabilul SSM/SU, acum că
+          // tipul documentului e cunoscut.
+          if (this.isBulkMode && this.isLoggedIn && this.authService.isOfficer()) {
+            this.http.get<any>(`${environment.apiUrl}/documentsignature/pending-ssm-admin-count`, {
+              params: { documentType: this.documentData.documentType }
+            }).subscribe({
+              next: (res) => {
+                this.bulkTotal = res?.count || 0;
+                this.bulkSigned = 0;
+              },
+              error: () => {
+                this.bulkTotal = 0;
+              }
+            });
+          }
         }
       });
   }
@@ -187,13 +187,14 @@ export class DocumentSignatureComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Bulk sign cu progres real (admin)
-    if (this.isBulkMode && this.bulkTotal > 0 && this.authService.getCurrentUser()?.role === AuthRole.Admin) {
+    // Bulk sign cu progres real (responsabil SSM/SU)
+    if (this.isBulkMode && this.bulkTotal > 0 && this.authService.isOfficer()) {
       this.bulkSigned = 0;
       this.successMessage = '';
       const payload = {
         signatureMethod: method,
-        signatureData: data
+        signatureData: data,
+        documentType: this.documentData?.documentType
       };
       // DEBUG: log payload trimis la bulk-sign-async
       console.log('Bulk sign payload:', payload);
@@ -279,8 +280,8 @@ export class DocumentSignatureComponent implements OnInit {
   goToDashboard(): void {
     const user = this.authService.getCurrentUser();
     if (!user) { this.router.navigate(['/login']); return; }
-    if (user.role === AuthRole.Admin) this.router.navigate(['/documents']);
-    else if (user.role === AuthRole.LineManager) this.router.navigate(['/line-manager']);
+    if (this.authService.isAdmin()) this.router.navigate(['/documents']);
+    else if (this.authService.isLineManager()) this.router.navigate(['/line-manager']);
     else this.router.navigate(['/basic-user']);
   }
 

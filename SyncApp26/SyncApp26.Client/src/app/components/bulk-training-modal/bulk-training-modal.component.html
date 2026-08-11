@@ -126,22 +126,6 @@
                 </p>
               </div>
               <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">
-                    Instructor <span class="required">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    class="form-input text-left"
-                    (click)="openInstructorPicker()"
-                    >
-                    {{ selectedInstructor ? selectedInstructorLabel : "Select an instructor..." }}
-                  </button>
-                  <p class="form-hint">
-                    The selected instructor will be sent a request to sign these training
-                    records.
-                  </p>
-                  </div>
                   @if (formData.documentType !== 'SU') {
                     <div class="form-group">
                       <label for="verifierName" class="form-label">
@@ -308,101 +292,6 @@
                                 </div>
                               </div>
                             }
-                            @if (isInstructorPickerVisible) {
-                              <div
-                                class="user-picker-overlay"
-                                (click)="closeInstructorPicker()"
-                                >
-                                <div class="user-picker-modal" (click)="$event.stopPropagation()">
-                                  <div class="user-picker-header">
-                                    <h3>Select instructor</h3>
-                                    <button
-                                      type="button"
-                                      class="close-button"
-                                      (click)="closeInstructorPicker()"
-                                      aria-label="Close instructor selector"
-                                      >
-                                      <svg
-                                        class="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        >
-                                        <path
-                                          stroke-linecap="round"
-                                          stroke-linejoin="round"
-                                          stroke-width="2"
-                                          d="M6 18L18 6M6 6l12 12"
-                                        ></path>
-                                      </svg>
-                                    </button>
-                                  </div>
-                                  <div class="user-picker-body">
-                                    <div class="picker-filters">
-                                      <input
-                                        type="text"
-                                        class="form-input"
-                                        [(ngModel)]="instructorSearchQuery"
-                                        (ngModelChange)="onInstructorSearchChanged()"
-                                        name="instructorSearchQuery"
-                                        placeholder="Search by name or email..."
-                                        />
-                                      </div>
-                                      @if (!isLoadingInstructors) {
-                                        <div class="users-list">
-                                          @for (user of instructorResults; track user.id) {
-                                            <button
-                                              type="button"
-                                              class="user-row"
-                                              (click)="selectInstructor(user)"
-                                              >
-                                              <div class="user-meta">
-                                                <span class="user-name"
-                                                  >{{ user.firstName }} {{ user.lastName }}</span
-                                                  >
-                                                  <span class="user-email"
-                                                    >{{ user.email }} | {{ user.departmentName }}</span
-                                                    >
-                                                  </div>
-                                                </button>
-                                              }
-                                              @if (instructorResults.length === 0) {
-                                                <p class="form-hint">
-                                                  No users found for this search.
-                                                </p>
-                                              }
-                                            </div>
-                                          } @else {
-                                            <p class="form-hint">Loading...</p>
-                                          }
-                                          @if (instructorTotalPages > 1) {
-                                            <div class="picker-actions">
-                                              <button
-                                                type="button"
-                                                class="btn-secondary"
-                                                [disabled]="instructorPage <= 1"
-                                                (click)="goToInstructorPage(instructorPage - 1)"
-                                                >
-                                                Previous
-                                              </button>
-                                              <span class="form-hint"
-                                                >Page {{ instructorPage }} of {{ instructorTotalPages }}
-                                                ({{ instructorTotalCount }} users)</span
-                                                >
-                                                <button
-                                                  type="button"
-                                                  class="btn-secondary"
-                                                  [disabled]="instructorPage >= instructorTotalPages"
-                                                  (click)="goToInstructorPage(instructorPage + 1)"
-                                                  >
-                                                  Next
-                                                </button>
-                                              </div>
-                                            }
-                                          </div>
-                                        </div>
-                                      </div>
-                                    }
                             @if (!submitted) {
                               <div class="modal-footer flex-col gap-2">
                                 @if (validationMessage) {

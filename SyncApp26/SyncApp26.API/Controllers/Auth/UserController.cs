@@ -33,7 +33,7 @@ namespace SyncApp26.API.Controllers
         {
             Id = user.Id,
             PersonalId = user.PersonalId,
-            Role = user.Role,
+            Roles = user.RoleAssignments.Select(a => a.Role.Name).ToList(),
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
@@ -79,8 +79,10 @@ namespace SyncApp26.API.Controllers
             var usersList = await _userService.GetAllUsersAsync();
             var users = usersList.AsEnumerable();
 
-            var isAdmin = User.IsInRole(Roles.Admin);
-            if (!isAdmin && User.GetUserId() is { } currentUserId)
+            // Admin and SSM/SU officers see every employee — an officer's duty spans all of them,
+            // not just their own reports. Everyone else (line managers, basic users) is scoped down.
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything && User.GetUserId() is { } currentUserId)
             {
                 users = users.Where(u => u.AssignedToId == currentUserId || u.Id == currentUserId);
             }
@@ -176,6 +178,19 @@ namespace SyncApp26.API.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
+        [HttpPut("{id}/roles")]
+        [Authorize(Roles = Roles.Admin)]
+        public async Task<ActionResult<UserResponseDTO>> SetUserRoles(Guid id, [FromBody] SetUserRolesRequestDTO request)
+        {
+            if (User.GetUserId() is not { } adminId)
+            {
+                return Unauthorized();
+            }
+
+            var result = await _userProfileService.SetUserRolesAsync(id, request.RoleNames, adminId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
         [HttpPut("{id}")]
         public async Task<ActionResult<UserResponseDTO>> UpdateUser(Guid id, [FromBody] UserRequestDTO userRequestDTO)
         {
@@ -224,8 +239,8 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { Message = "User not found" });
             }
 
-            bool isAdmin = User.IsInRole(Roles.Admin);
-            if (!isAdmin && User.GetUserId() is { } currentUserId)
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything && User.GetUserId() is { } currentUserId)
             {
                 if (user.AssignedToId != currentUserId && user.Id != currentUserId)
                 {
@@ -249,7 +264,7 @@ namespace SyncApp26.API.Controllers
                 PersonalId = user.PersonalId,
                 DepartmentName = user.Department?.Name,
                 FunctionName = user.Function?.Name,
-                Role = user.Role,
+                Roles = user.RoleAssignments.Select(a => a.Role.Name).ToList(),
                 ManagerFirstName = user.AssignedTo?.FirstName,
                 ManagerLastName = user.AssignedTo?.LastName,
                 ManagerFunctionName = user.AssignedTo?.Function?.Name,
@@ -302,8 +317,8 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
-            bool isAdmin = User.IsInRole(Roles.Admin);
-            if (!isAdmin && User.GetUserId() is { } currentUserId)
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything && User.GetUserId() is { } currentUserId)
             {
                 if (user.AssignedToId != currentUserId && user.Id != currentUserId)
                 {
@@ -323,14 +338,67 @@ namespace SyncApp26.API.Controllers
         [HttpPost("bulk-initial-training")]
         public async Task<ActionResult<BulkInitialTrainingResultDTO>> BulkInitialTraining([FromBody] BulkInitialTrainingDTO dto)
         {
-            var isAdmin = User.IsInRole(Roles.Admin);
-            Guid? restrictToAssignedToId = null;
-            if (!isAdmin && User.GetUserId() is { } currentUserId)
+            var requestedTypes = (dto.DocumentType ?? "Both").Equals("Both", StringComparison.OrdinalIgnoreCase)
+                ? new[] { "SSM", "SU" }
+                : new[] { dto.DocumentType!.ToUpperInvariant() };
+
+            // Each type is authorized independently: the officer for that type can apply for anyone;
+            // a line manager (with no officer duty on that type) is restricted to their own direct
+            // reports; anyone else is dropped from this request rather than failing it outright.
+            bool isLineManager = User.IsInRole(Roles.LineManager);
+            var currentUserId = User.GetUserId();
+            var includedTypes = new List<(string Type, Guid? RestrictToAssignedToId)>();
+            foreach (var type in requestedTypes)
             {
-                restrictToAssignedToId = currentUserId;
+                if (User.CanInitiateFor(type))
+                    includedTypes.Add((type, null));
+                else if (isLineManager && currentUserId is { } managerId)
+                    includedTypes.Add((type, managerId));
             }
 
-            var result = await _userProfileService.ApplyBulkInitialTrainingAsync(dto, restrictToAssignedToId);
+            if (includedTypes.Count == 0)
+                return Forbid();
+
+            BulkInitialTrainingResultDTO result;
+            if (includedTypes.Select(t => t.RestrictToAssignedToId).Distinct().Count() == 1)
+            {
+                // Every included type shares the same restriction — one call, same as before.
+                dto.DocumentType = includedTypes.Count == 2 ? "Both" : includedTypes[0].Type;
+                result = await _userProfileService.ApplyBulkInitialTrainingAsync(dto, includedTypes[0].RestrictToAssignedToId);
+            }
+            else
+            {
+                // Mixed authorization (e.g. officer on one type, line manager on the other) — one
+                // call per type, merged.
+                result = new BulkInitialTrainingResultDTO();
+                foreach (var (type, restrictToAssignedToId) in includedTypes)
+                {
+                    var typeDto = new BulkInitialTrainingDTO
+                    {
+                        DocumentType = type,
+                        IntroductoryTrainingDate = dto.IntroductoryTrainingDate,
+                        IntroductoryTrainingHours = dto.IntroductoryTrainingHours,
+                        IntroductoryTrainingInstructor = dto.IntroductoryTrainingInstructor,
+                        IntroductoryTrainingInstructorFunction = dto.IntroductoryTrainingInstructorFunction,
+                        IntroductoryTrainingContent = dto.IntroductoryTrainingContent,
+                        WorkplaceTrainingDate = dto.WorkplaceTrainingDate,
+                        WorkplaceTrainingLocation = dto.WorkplaceTrainingLocation,
+                        WorkplaceTrainingHours = dto.WorkplaceTrainingHours,
+                        WorkplaceTrainingInstructor = dto.WorkplaceTrainingInstructor,
+                        WorkplaceTrainingInstructorFunction = dto.WorkplaceTrainingInstructorFunction,
+                        WorkplaceTrainingContent = dto.WorkplaceTrainingContent,
+                        SelectedDepartmentId = dto.SelectedDepartmentId,
+                        ApplyToAllUsers = dto.ApplyToAllUsers,
+                        SelectedUserIds = dto.SelectedUserIds
+                    };
+                    var typeResult = await _userProfileService.ApplyBulkInitialTrainingAsync(typeDto, restrictToAssignedToId);
+                    result.SuccessCount += typeResult.SuccessCount;
+                    result.SkippedCount += typeResult.SkippedCount;
+                    result.FailedCount += typeResult.FailedCount;
+                    result.Errors.AddRange(typeResult.Errors);
+                }
+            }
+
             return result.NoUsersMatched ? BadRequest(result) : Ok(result);
         }
     }

@@ -113,9 +113,13 @@ export class DocumentsViewComponent implements OnInit {
     private signatureVerificationService: SignatureVerificationService
   ) {}
 
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
   ngOnInit(): void {
     this.loadDocuments();
-    if (this.authService.isAdmin() || this.authService.isLineManager()) {
+    if (this.authService.isOfficer() || this.authService.isLineManager()) {
       this.loadPendingAdminCount();
     }
   }
@@ -291,15 +295,16 @@ export class DocumentsViewComponent implements OnInit {
       });
   }
 
-  bulkSignAsAdmin(): void {
+  bulkSignAsOfficer(): void {
     this.error = null;
-    // Get a token for any pending admin document, then navigate to the signing page in bulk mode
-    const pendingAdminDoc = this.allDocuments.find(d => d.status === 'PendingAdmin');
-    if (!pendingAdminDoc) {
-      this.error = 'No documents pending admin signature.';
+    // Get a token for any document pending the officer's signature, then navigate to the signing
+    // page in bulk mode.
+    const pendingDoc = this.allDocuments.find(d => d.status === 'PendingInstructor');
+    if (!pendingDoc) {
+      this.error = 'No documents pending your signature.';
       return;
     }
-    this.http.get<{ token: string }>(`${environment.apiUrl}/document/token-for-document/${pendingAdminDoc.id}`)
+    this.http.get<{ token: string }>(`${environment.apiUrl}/document/token-for-document/${pendingDoc.id}`)
       .subscribe({
         next: (res) => {
           this.router.navigate(['/sign', res.token], { queryParams: { bulk: 'true' } });

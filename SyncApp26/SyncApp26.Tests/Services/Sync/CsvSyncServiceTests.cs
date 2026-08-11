@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
@@ -17,14 +18,22 @@ namespace SyncApp26.Tests.Services.Sync
 
         public void Dispose() => _dbFixture.Dispose();
 
-        private CsvSyncService CreateService() => new(
-            new UserRepository(_dbFixture.Context),
-            new DepartmentRepository(_dbFixture.Context),
-            new FunctionRepository(_dbFixture.Context),
-            _notificationMock.Object,
-            new ImportHistoryRepository(_dbFixture.Context),
-            new UserChangeHistoryRepository(_dbFixture.Context),
-            new DataChangeRequestRepository(_dbFixture.Context));
+        private CsvSyncService CreateService()
+        {
+            // Mirrors the real AddRoleTables seed - CsvSyncService looks these up by name.
+            _dbFixture.GetOrCreateRole(Roles.Admin);
+            _dbFixture.GetOrCreateRole(Roles.LineManager);
+            _dbFixture.GetOrCreateRole(Roles.BasicUser);
+
+            return new(
+                new UserRepository(_dbFixture.Context),
+                new DepartmentRepository(_dbFixture.Context),
+                new FunctionRepository(_dbFixture.Context),
+                _notificationMock.Object,
+                new ImportHistoryRepository(_dbFixture.Context),
+                new UserChangeHistoryRepository(_dbFixture.Context),
+                new DataChangeRequestRepository(_dbFixture.Context));
+        }
 
         private Department SeedDepartment(string name = "Engineering", bool isActive = true)
         {
@@ -45,7 +54,7 @@ namespace SyncApp26.Tests.Services.Sync
         // isCsvManaged defaults to true because most tests here describe accounts that came from a
         // CSV import; pass false to model a seeded or self-registered account instead.
         private User SeedUser(string personalId, Guid departmentId, string firstName = "John", string lastName = "Doe",
-            string? email = null, Guid? functionId = null, Guid? assignedToId = null, DateTime? updatedAt = null, UserRole role = UserRole.BasicUser,
+            string? email = null, Guid? functionId = null, Guid? assignedToId = null, DateTime? updatedAt = null, string roleName = Roles.BasicUser,
             bool isCsvManaged = true)
         {
             var user = new User
@@ -58,13 +67,13 @@ namespace SyncApp26.Tests.Services.Sync
                 DepartmentId = departmentId,
                 FunctionId = functionId,
                 AssignedToId = assignedToId,
-                Role = role,
                 UpdatedAt = updatedAt,
                 IsCsvManaged = isCsvManaged,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
             _dbFixture.Context.SaveChanges();
+            _dbFixture.GrantRole(user, roleName);
             return user;
         }
 
@@ -390,7 +399,8 @@ namespace SyncApp26.Tests.Services.Sync
             Assert.Equal(1, result.RecordsProcessed);
             Assert.Equal(0, result.RecordsFailed);
             var persisted = _dbFixture.Context.Users.Single(u => u.PersonalId == "P1");
-            Assert.Equal(UserRole.BasicUser, persisted.Role);
+            var basicUserRole = _dbFixture.GetOrCreateRole(Roles.BasicUser);
+            Assert.Contains(persisted.RoleAssignments, a => a.RoleId == basicUserRole.Id);
             Assert.Equal(department.Id, persisted.DepartmentId);
         }
 
@@ -619,27 +629,53 @@ namespace SyncApp26.Tests.Services.Sync
         public async Task SyncUsers_UserReferencedAsManager_PromotedToLineManager()
         {
             var department = SeedDepartment();
-            var manager = SeedUser("MGR1", department.Id, role: UserRole.BasicUser);
+            var manager = SeedUser("MGR1", department.Id, roleName: Roles.BasicUser);
             SeedUser("EMP1", department.Id, assignedToId: manager.Id);
             var service = CreateService();
 
             await service.SyncUsers(new SyncRequestDTO());
 
             _dbFixture.Context.ChangeTracker.Clear();
-            Assert.Equal(UserRole.LineManager, _dbFixture.Context.Users.Single(u => u.Id == manager.Id).Role);
+            var lineManagerRole = _dbFixture.GetOrCreateRole(Roles.LineManager);
+            var updated = _dbFixture.Context.Users.Include(u => u.RoleAssignments).Single(u => u.Id == manager.Id);
+            Assert.Contains(updated.RoleAssignments, a => a.RoleId == lineManagerRole.Id);
         }
 
         [Fact]
-        public async Task SyncUsers_LineManagerNoLongerReferenced_DemotedToBasicUser()
+        public async Task SyncUsers_ManagerPromoted_UnrelatedRoleSurvivesImport()
         {
+            // The many-to-many model's whole point: promoting someone to LineManager must never
+            // disturb any other role they separately hold (e.g. an SSM officer duty).
             var department = SeedDepartment();
-            var manager = SeedUser("MGR1", department.Id, role: UserRole.LineManager); // nobody reports to them
+            var manager = SeedUser("MGR1", department.Id, roleName: Roles.SsmOfficer);
+            SeedUser("EMP1", department.Id, assignedToId: manager.Id);
             var service = CreateService();
 
             await service.SyncUsers(new SyncRequestDTO());
 
             _dbFixture.Context.ChangeTracker.Clear();
-            Assert.Equal(UserRole.BasicUser, _dbFixture.Context.Users.Single(u => u.Id == manager.Id).Role);
+            var ssmOfficerRole = _dbFixture.GetOrCreateRole(Roles.SsmOfficer);
+            var lineManagerRole = _dbFixture.GetOrCreateRole(Roles.LineManager);
+            var updated = _dbFixture.Context.Users.Include(u => u.RoleAssignments).Single(u => u.Id == manager.Id);
+            Assert.Contains(updated.RoleAssignments, a => a.RoleId == ssmOfficerRole.Id);
+            Assert.Contains(updated.RoleAssignments, a => a.RoleId == lineManagerRole.Id);
+        }
+
+        [Fact]
+        public async Task SyncUsers_LineManagerNoLongerReferenced_LineManagerRoleRevoked()
+        {
+            // Revoking the role must not force BasicUser back on - the many-to-many model leaves
+            // whatever other roles the person holds untouched (here: none, by construction).
+            var department = SeedDepartment();
+            var manager = SeedUser("MGR1", department.Id, roleName: Roles.LineManager); // nobody reports to them
+            var service = CreateService();
+
+            await service.SyncUsers(new SyncRequestDTO());
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var lineManagerRole = _dbFixture.GetOrCreateRole(Roles.LineManager);
+            var updated = _dbFixture.Context.Users.Include(u => u.RoleAssignments).Single(u => u.Id == manager.Id);
+            Assert.DoesNotContain(updated.RoleAssignments, a => a.RoleId == lineManagerRole.Id);
         }
 
         // ───────────────────────── CompareDepartmentsWithDatabase / SyncDepartments ─────────────────────────

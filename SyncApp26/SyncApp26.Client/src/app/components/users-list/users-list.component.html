@@ -2,7 +2,7 @@
   <!-- Toast notification -->
   @if (toastMessage) {
     <div
-      class="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300"
+      class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-top-4 duration-300"
       >
       <div
       [ngClass]="
@@ -667,6 +667,12 @@
                                                 </div>
                                                 <div class="flex items-center gap-1">
                                                   <button
+                                                    (click)="openRolesModal(user, $event)"
+                                                    class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
+                                                    >
+                                                    Roles
+                                                  </button>
+                                                  <button
                                                     (click)="openEditModal(user, $event)"
                                                     class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >
@@ -687,19 +693,18 @@
                                                     user.departmentName
                                                   }}</span>
                                                 </div>
-                                                <div class="flex items-center justify-between text-sm">
-                                                  <span class="text-muted-foreground">Role:</span>
-                                                  <span
-              [class]="
-                'px-2 py-1 rounded border text-xs font-medium ' +
-                getRoleBadgeColor(user.role!)
-              "
-                                                    >
-                                                    {{
-                                                    user.role === UserRole.LineManager ? "Line Manager" : "Employee"
-                                                    }}
-                                                  </span>
-                                                </div>
+                                                @if (user.roles && user.roles.length > 0) {
+                                                  <div class="flex items-center justify-between text-sm gap-2">
+                                                    <span class="text-muted-foreground shrink-0">Roles:</span>
+                                                    <span class="flex flex-wrap justify-end gap-1">
+                                                      @for (roleName of user.roles; track roleName) {
+                                                        <span [class]="'px-2 py-0.5 rounded border text-xs font-medium ' + roleNameBadgeColor(roleName)">
+                                                          {{ roleLabel(roleName) }}
+                                                        </span>
+                                                      }
+                                                    </span>
+                                                  </div>
+                                                }
                                                 @if (user.assignedToName) {
                                                   <div
                                                     class="flex items-center justify-between text-sm"
@@ -1006,6 +1011,122 @@
                                                           </button>
                                                         </div>
                                                       </form>
+                                                    </div>
+                                                  </div>
+                                                }
+
+                                                <!-- Roles Modal -->
+                                                @if (isRolesModalOpen && rolesModalUser) {
+                                                  <div
+                                                    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+                                                    (click)="closeRolesModal()"
+                                                    >
+                                                    <div
+                                                      class="bg-card w-full max-w-md rounded-lg shadow-lg border border-border p-6"
+                                                      (click)="$event.stopPropagation()"
+                                                      >
+                                                      <div class="flex justify-between items-center mb-4">
+                                                        <h2 class="text-lg font-semibold text-foreground">
+                                                          Roles for {{ rolesModalUser.firstName }} {{ rolesModalUser.lastName }}
+                                                        </h2>
+                                                        <button
+                                                          (click)="closeRolesModal()"
+                                                          class="text-muted-foreground hover:text-foreground"
+                                                          >
+                                                          <svg
+                                                            class="w-5 h-5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                            >
+                                                            <path
+                                                              stroke-linecap="round"
+                                                              stroke-linejoin="round"
+                                                              stroke-width="2"
+                                                              d="M6 18L18 6M6 6l12 12"
+                                                            ></path>
+                                                          </svg>
+                                                        </button>
+                                                      </div>
+
+                                                      <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                                        @for (role of allRoles; track role.id) {
+                                                          <div class="flex items-center justify-between gap-2 py-1">
+                                                            <label class="flex items-center gap-2 text-sm text-foreground">
+                                                              <input
+                                                                type="checkbox"
+                                                                [checked]="isRoleSelected(role.name)"
+                                                                (change)="toggleRoleSelection(role.name)"
+                                                                class="w-4 h-4 rounded border-border"
+                                                                />
+                                                              {{ roleLabel(role.name) }}
+                                                              @if (role.description) {
+                                                                <span class="text-xs text-muted-foreground">— {{ role.description }}</span>
+                                                              }
+                                                            </label>
+                                                            @if (!role.isSystem) {
+                                                              <button
+                                                                type="button"
+                                                                (click)="deleteRole(role)"
+                                                                class="text-xs text-destructive hover:underline"
+                                                                >
+                                                                Delete
+                                                              </button>
+                                                            }
+                                                          </div>
+                                                        }
+                                                        @if (allRoles.length === 0) {
+                                                          <p class="text-sm text-muted-foreground">No roles found.</p>
+                                                        }
+                                                      </div>
+
+                                                      <div class="border-t border-border mt-4 pt-4 space-y-2">
+                                                        <label class="text-sm font-medium text-foreground">Create a custom role</label>
+                                                        <div class="flex gap-2">
+                                                          <input
+                                                            type="text"
+                                                            [(ngModel)]="newRoleName"
+                                                            name="newRoleName"
+                                                            placeholder="Role name"
+                                                            maxlength="50"
+                                                            class="flex-1 px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                                            />
+                                                          <button
+                                                            type="button"
+                                                            (click)="createRole()"
+                                                            [disabled]="!newRoleName.trim()"
+                                                            class="px-3 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 disabled:opacity-50"
+                                                            >
+                                                            Add
+                                                          </button>
+                                                        </div>
+                                                        <input
+                                                          type="text"
+                                                          [(ngModel)]="newRoleDescription"
+                                                          name="newRoleDescription"
+                                                          placeholder="Description (optional)"
+                                                          maxlength="200"
+                                                          class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                                          />
+                                                      </div>
+
+                                                      <div class="flex justify-end gap-3 mt-6">
+                                                        <button
+                                                          type="button"
+                                                          (click)="closeRolesModal()"
+                                                          class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
+                                                          >
+                                                          Cancel
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          (click)="saveRoles()"
+                                                          [disabled]="isSavingRoles"
+                                                          class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+                                                          >
+                                                          {{ isSavingRoles ? 'Saving...' : 'Save Roles' }}
+                                                        </button>
+                                                      </div>
                                                     </div>
                                                   </div>
                                                 }

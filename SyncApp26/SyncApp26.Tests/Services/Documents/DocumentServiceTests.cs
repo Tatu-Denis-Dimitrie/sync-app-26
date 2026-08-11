@@ -51,7 +51,7 @@ namespace SyncApp26.Tests.Services.Documents
             return function;
         }
 
-        private User SeedUser(string firstName, string lastName, Function function, UserRole role = UserRole.BasicUser,
+        private User SeedUser(string firstName, string lastName, Function function, string roleName = Roles.BasicUser,
             string? badgeNumber = null)
         {
             var user = new User
@@ -62,12 +62,12 @@ namespace SyncApp26.Tests.Services.Documents
                 Email = $"{firstName}.{lastName}.{Guid.NewGuid():N}@example.com".ToLowerInvariant(),
                 PersonalId = Guid.NewGuid().ToString(),
                 FunctionId = function.Id,
-                Role = role,
                 BadgeNumber = badgeNumber,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
             _dbFixture.Context.SaveChanges();
+            _dbFixture.GrantRole(user, roleName);
             return user;
         }
 
@@ -268,7 +268,7 @@ namespace SyncApp26.Tests.Services.Documents
             // A single bulk-sign call processes both documents in one in-memory loop before the
             // caller's own SaveChanges — this proves the chain lookup sees records created
             // earlier in the *same* loop, not just ones from a prior, already-saved request.
-            await service.BulkSignDocumentsAsync(false, manager.Id, "Type", "Radu Stanescu", "9.9.9.9");
+            await service.BulkSignDocumentsAsync(manager.Id, "Type", "Radu Stanescu", "9.9.9.9");
 
             var records = _dbFixture.Context.SignatureRecords
                 .Where(r => r.SignerUserId == manager.Id)
@@ -284,14 +284,16 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
-        public async Task SignSingleDocumentAsAdminAsync_CreatesSignatureRecordWithAdminRole()
+        public async Task SignSingleDocumentAsOfficerAsync_CreatesSignatureRecordWithInstructorRole()
         {
             var service = CreateService();
-            var adminFunction = SeedFunction("Inspector SSM");
-            var admin = SeedUser("Mihai", "Ionescu", adminFunction, role: UserRole.Admin);
+            var officerFunction = SeedFunction("Inspector SSM");
+            var officer = SeedUser("Mihai", "Ionescu", officerFunction, roleName: Roles.SsmOfficer);
             var employeeFunction = SeedFunction("Operator");
             var owner = SeedUser("Adela", "Popescu", employeeFunction);
-            var doc = SeedDocument(owner, "SSM", "PendingAdmin");
+            var doc = SeedDocument(owner, "SSM", "PendingInstructor");
+            doc.ManagerSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
             SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
             var loadedDoc = await _dbFixture.Context.UserDocuments
@@ -299,13 +301,14 @@ namespace SyncApp26.Tests.Services.Documents
                 .Include(d => d.User).ThenInclude(u => u.InitialTrainings)
                 .FirstAsync(d => d.Id == doc.Id);
 
-            await service.SignSingleDocumentAsAdminAsync(loadedDoc, admin.Id, "Type", "Mihai Ionescu", "5.6.7.8");
+            await service.SignSingleDocumentAsOfficerAsync(loadedDoc, officer.Id, "Type", "Mihai Ionescu", "5.6.7.8");
 
             var record = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id);
-            Assert.Equal("Admin", record.SignerRole);
-            Assert.Equal(admin.Id, record.SignerUserId);
+            Assert.Equal("Instructor", record.SignerRole);
+            Assert.Equal(officer.Id, record.SignerUserId);
             Assert.Equal("Mihai Ionescu", record.SignerFullNameSnapshot);
             Assert.Equal("Inspector SSM", record.SignerPositionSnapshot);
+            Assert.Equal("Completed", loadedDoc.Status);
         }
 
         [Fact]
@@ -328,7 +331,7 @@ namespace SyncApp26.Tests.Services.Documents
             doc2.UserSignedAt = DateTime.UtcNow;
             _dbFixture.Context.SaveChanges();
 
-            var count = await service.BulkSignDocumentsAsync(false, manager.Id, "Type", "Radu Stanescu", "9.9.9.9");
+            var count = await service.BulkSignDocumentsAsync(manager.Id, "Type", "Radu Stanescu", "9.9.9.9");
 
             Assert.Equal(2, count);
             var records = _dbFixture.Context.SignatureRecords.Where(r => r.SignerUserId == manager.Id).ToList();
@@ -428,43 +431,68 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
-        public async Task BulkSignDocumentsAsync_ScopesToLinkedInstructor_NotOtherInstructorsDocuments()
+        public async Task BulkSignDocumentsAsync_ScopesToOfficerRole_NotDocumentTypeMismatch()
         {
+            // The officer role — not any per-row InstructorId link — decides eligibility: an SsmOfficer
+            // signs every pending SSM document regardless of who was ever linked as instructor, and
+            // never touches SU documents even if pending.
             var service = CreateService();
             var function = SeedFunction("Operator");
-            var instructorA = SeedUser("Elena", "Marin", function);
-            var instructorB = SeedUser("Ion", "Dobre", function);
+            var ssmOfficer = SeedUser("Elena", "Marin", function, roleName: Roles.SsmOfficer);
             var owner1 = SeedUser("Adela", "Popescu", function);
             var owner2 = SeedUser("Vlad", "Georgescu", function);
             _dbFixture.Context.SaveChanges();
 
-            var doc1 = SeedDocument(owner1, "SU", "PendingInstructor");
-            doc1.UserSignedAt = DateTime.UtcNow;
-            doc1.ManagerSignedAt = DateTime.UtcNow;
-            var doc2 = SeedDocument(owner2, "SU", "PendingInstructor");
-            doc2.UserSignedAt = DateTime.UtcNow;
-            doc2.ManagerSignedAt = DateTime.UtcNow;
+            var ssmDoc = SeedDocument(owner1, "SSM", "PendingInstructor");
+            ssmDoc.UserSignedAt = DateTime.UtcNow;
+            ssmDoc.ManagerSignedAt = DateTime.UtcNow;
+            var suDoc = SeedDocument(owner2, "SU", "PendingInstructor");
+            suDoc.UserSignedAt = DateTime.UtcNow;
+            suDoc.ManagerSignedAt = DateTime.UtcNow;
             _dbFixture.Context.SaveChanges();
-            SeedTraining(owner1, doc1, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructorA.Id);
-            SeedTraining(owner2, doc2, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructorB.Id);
+            SeedTraining(owner1, ssmDoc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+            SeedTraining(owner2, suDoc, "Norme SU generale", 2m, new DateTime(2026, 1, 15));
 
-            var count = await service.BulkSignDocumentsAsync(false, instructorA.Id, "Type", "Elena Marin", "9.9.9.9");
+            var count = await service.BulkSignDocumentsAsync(ssmOfficer.Id, "Type", "Elena Marin", "9.9.9.9");
 
             Assert.Equal(1, count);
-            var record1 = _dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == doc1.Id);
-            Assert.NotNull(record1);
-            Assert.Equal("Instructor", record1!.SignerRole);
-            Assert.Null(_dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == doc2.Id));
+            var ssmRecord = _dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == ssmDoc.Id);
+            Assert.NotNull(ssmRecord);
+            Assert.Equal("Instructor", ssmRecord.SignerRole);
+            Assert.Null(_dbFixture.Context.SignatureRecords.SingleOrDefault(r => r.UserDocumentId == suDoc.Id));
+        }
+
+        [Fact]
+        public async Task BulkSignDocumentsAsync_NonOfficer_SignsNoInstructorDocuments()
+        {
+            // Being linked as InstructorId on a training row no longer grants signing eligibility —
+            // only holding the SsmOfficer/SuOfficer role does.
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var linkedButNotOfficer = SeedUser("Ion", "Dobre", function);
+            var owner = SeedUser("Adela", "Popescu", function);
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SU", "PendingInstructor");
+            doc.UserSignedAt = DateTime.UtcNow;
+            doc.ManagerSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            SeedTraining(owner, doc, "Norme SU generale", 2m, new DateTime(2026, 1, 15), instructorId: linkedButNotOfficer.Id);
+
+            var count = await service.BulkSignDocumentsAsync(linkedButNotOfficer.Id, "Type", "Ion Dobre", "9.9.9.9");
+
+            Assert.Equal(0, count);
         }
 
         [Fact]
         public async Task BulkSignDocumentsAsync_CoversBothManagerAndInstructorSteps_ForSameCaller()
         {
-            // The same person can be someone's line manager (PendingManager) and someone else's
-            // linked instructor (PendingInstructor) at once — a single bulk-sign call covers both.
+            // The same person can be someone's line manager (PendingManager, via AssignedTo) and,
+            // separately, hold the SuOfficer role (every SU employee's PendingInstructor) at once —
+            // a single bulk-sign call covers both.
             var service = CreateService();
             var function = SeedFunction("Operator");
-            var person = SeedUser("Radu", "Stanescu", function);
+            var person = SeedUser("Radu", "Stanescu", function, roleName: Roles.SuOfficer);
             var managedOwner = SeedUser("Adela", "Popescu", function);
             managedOwner.AssignedToId = person.Id;
             var instructedOwner = SeedUser("Vlad", "Georgescu", function);
@@ -476,9 +504,9 @@ namespace SyncApp26.Tests.Services.Documents
             instructorDoc.UserSignedAt = DateTime.UtcNow;
             instructorDoc.ManagerSignedAt = DateTime.UtcNow;
             _dbFixture.Context.SaveChanges();
-            SeedTraining(instructedOwner, instructorDoc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: person.Id);
+            SeedTraining(instructedOwner, instructorDoc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
 
-            var count = await service.BulkSignDocumentsAsync(false, person.Id, "Type", "Radu Stanescu", "9.9.9.9");
+            var count = await service.BulkSignDocumentsAsync(person.Id, "Type", "Radu Stanescu", "9.9.9.9");
 
             Assert.Equal(2, count);
             var managerRecord = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == managerDoc.Id);

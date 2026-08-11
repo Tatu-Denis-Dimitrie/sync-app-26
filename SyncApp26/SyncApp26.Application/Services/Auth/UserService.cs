@@ -62,5 +62,45 @@ namespace SyncApp26.Application.Services
         {
             return await _userRepository.SearchUsersAsync(search, page, pageSize);
         }
+
+        public async Task<Role?> GetRoleByNameAsync(string roleName)
+        {
+            return await _userRepository.GetRoleByNameAsync(roleName);
+        }
+
+        public async Task<IEnumerable<User>> GetUsersInRoleAsync(string roleName)
+        {
+            return await _userRepository.GetUsersInRoleAsync(roleName);
+        }
+
+        public async Task<bool> IsInRoleAsync(Guid userId, string roleName)
+        {
+            return await _userRepository.IsInRoleAsync(userId, roleName);
+        }
+
+        public async Task<List<Role>> GetAllRolesAsync()
+        {
+            return await _userRepository.GetAllRolesAsync();
+        }
+
+        public async Task<Role?> GetRoleByIdAsync(Guid id)
+        {
+            return await _userRepository.GetRoleByIdAsync(id);
+        }
+
+        public async Task AddRoleAsync(Role role)
+        {
+            await _userRepository.AddRoleAsync(role);
+        }
+
+        public async Task DeleteRoleAsync(Role role)
+        {
+            await _userRepository.DeleteRoleAsync(role);
+        }
+
+        public async Task<bool> RoleHasAssignmentsAsync(Guid roleId)
+        {
+            return await _userRepository.RoleHasAssignmentsAsync(roleId);
+        }
     }
 }

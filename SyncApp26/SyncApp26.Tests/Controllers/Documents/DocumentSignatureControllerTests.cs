@@ -58,7 +58,6 @@ namespace SyncApp26.Tests.Controllers.Documents
             Email = email ?? $"jane.roe.{Guid.NewGuid():N}@example.com",
             PersonalId = Guid.NewGuid().ToString(),
             AssignedToId = assignedToId,
-            Role = UserRole.BasicUser,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -183,9 +182,10 @@ namespace SyncApp26.Tests.Controllers.Documents
                 {
                     Success = true,
                     TotalSigned = 1,
-                    ManagerEmail = "manager@example.com",
-                    ManagerNotificationDocumentName = "SSM Document (Manager Approval)",
-                    ManagerNotificationToken = "manager-tok"
+                    NextSignerNotifications = new List<SigningNotification>
+                    {
+                        new() { Email = "manager@example.com", DocumentName = "SSM Document (Manager Approval)", Token = "manager-tok" }
+                    }
                 });
 
             var result = await controller.ConsumeToken(new ConsumeTokenDto { Token = "tok", SignatureMethod = "Draw", SignatureData = "data" });
@@ -267,19 +267,19 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task BulkSign_BasicUser_NotAnyonesInstructor_ScopedToZero()
+        public async Task BulkSign_BasicUser_NotAnyoneOfficerOrManager_ScopedToZero()
         {
-            // Instructors aren't restricted to the LineManager role, so a BasicUser is allowed to
-            // call bulk-sign — BulkSignDocumentsAsync itself scopes to documents where the caller
-            // is the resolved instructor, so a caller who isn't anyone's instructor just signs 0.
+            // Eligibility is no longer role-restricted at the controller level — the controller just
+            // forwards to BulkSignDocumentsAsync, which does the actual role/AssignedTo scoping. A
+            // caller who is neither anyone's manager nor an officer just signs 0.
             var callerId = Guid.NewGuid();
             var controller = CreateController(callerId, role: Roles.BasicUser);
-            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(false, callerId, "Draw", "data", It.IsAny<string>())).ReturnsAsync(0);
+            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(callerId, "Draw", "data", It.IsAny<string>())).ReturnsAsync(0);
 
             var result = await controller.BulkSign(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
 
             var ok = Assert.IsType<OkObjectResult>(result);
-            _documentServiceMock.Verify(s => s.BulkSignDocumentsAsync(false, callerId, "Draw", "data", It.IsAny<string>()), Times.Once);
+            _documentServiceMock.Verify(s => s.BulkSignDocumentsAsync(callerId, "Draw", "data", It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
@@ -287,7 +287,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var adminId = Guid.NewGuid();
             var controller = CreateController(adminId, role: Roles.Admin);
-            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(true, adminId, "Draw", "data", It.IsAny<string>())).ReturnsAsync(4);
+            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(adminId, "Draw", "data", It.IsAny<string>())).ReturnsAsync(4);
 
             var result = await controller.BulkSign(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
 
@@ -312,8 +312,8 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkSignAsync_NoPendingDocuments_ReturnsOkWithNullJobId()
         {
-            var controller = CreateController(role: Roles.Admin);
-            _documentServiceMock.Setup(s => s.GetPendingSsmDocumentsForAdminAsync()).ReturnsAsync(0);
+            var controller = CreateController(role: Roles.SsmOfficer);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(0);
 
             var result = await controller.BulkSignAsync(new BulkSignDto { SignatureData = "data" });
 
@@ -324,15 +324,15 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkSignAsync_PendingDocuments_StartsJobAndReturnsJobId()
         {
-            var controller = CreateController(role: Roles.Admin);
-            _documentServiceMock.Setup(s => s.GetPendingSsmDocumentsForAdminAsync()).ReturnsAsync(3);
+            var controller = CreateController(role: Roles.SsmOfficer);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(3);
 
             var scopeMock = new Mock<IServiceScope>();
             var providerMock = new Mock<IServiceProvider>();
             providerMock.Setup(p => p.GetService(typeof(IDocumentService))).Returns(_documentServiceMock.Object);
             scopeMock.Setup(s => s.ServiceProvider).Returns(providerMock.Object);
             _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
-            _documentServiceMock.Setup(s => s.GetPendingSsmDocumentsForAdminListAsync()).ReturnsAsync(new List<UserDocument>());
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerListAsync("SSM")).ReturnsAsync(new List<UserDocument>());
 
             var result = await controller.BulkSignAsync(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
 
@@ -347,7 +347,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public void GetBulkSignStatus_UnknownJob_ReturnsNotFound()
         {
-            var controller = CreateController(role: Roles.Admin);
+            var controller = CreateController(role: Roles.SsmOfficer);
 
             var result = controller.GetBulkSignStatus(Guid.NewGuid().ToString());
 
@@ -357,14 +357,14 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GetBulkSignStatus_KnownJob_ReturnsTotal()
         {
-            var controller = CreateController(role: Roles.Admin);
-            _documentServiceMock.Setup(s => s.GetPendingSsmDocumentsForAdminAsync()).ReturnsAsync(5);
+            var controller = CreateController(role: Roles.SsmOfficer);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(5);
             var scopeMock = new Mock<IServiceScope>();
             var providerMock = new Mock<IServiceProvider>();
             providerMock.Setup(p => p.GetService(typeof(IDocumentService))).Returns(_documentServiceMock.Object);
             scopeMock.Setup(s => s.ServiceProvider).Returns(providerMock.Object);
             _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
-            _documentServiceMock.Setup(s => s.GetPendingSsmDocumentsForAdminListAsync()).ReturnsAsync(new List<UserDocument>());
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerListAsync("SSM")).ReturnsAsync(new List<UserDocument>());
 
             var startResult = await controller.BulkSignAsync(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
             var startOk = Assert.IsType<OkObjectResult>(startResult);
@@ -377,61 +377,15 @@ namespace SyncApp26.Tests.Controllers.Documents
             Assert.Null(GetProp<string?>(ok.Value!, "error"));
         }
 
-        // ───────────────────────── AdminSignAndSendGeneratedDocuments ─────────────────────────
-
-        [Fact]
-        public async Task AdminSignAndSend_MissingDocumentType_ReturnsBadRequest()
-        {
-            var controller = CreateController(role: Roles.Admin);
-
-            var result = await controller.AdminSignAndSendGeneratedDocuments(new AdminSignAndSendDto { DocumentType = "", SignatureData = "data" });
-
-            Assert.IsType<BadRequestObjectResult>(result);
-        }
-
-        [Fact]
-        public async Task AdminSignAndSend_MissingSignatureData_ReturnsBadRequest()
-        {
-            var controller = CreateController(role: Roles.Admin);
-
-            var result = await controller.AdminSignAndSendGeneratedDocuments(new AdminSignAndSendDto { DocumentType = "SSM", SignatureData = "" });
-
-            Assert.IsType<BadRequestObjectResult>(result);
-        }
-
-        [Fact]
-        public async Task AdminSignAndSend_NonAdmin_ReturnsForbidden()
-        {
-            var controller = CreateController(role: Roles.BasicUser);
-
-            var result = await controller.AdminSignAndSendGeneratedDocuments(new AdminSignAndSendDto { DocumentType = "SSM", SignatureData = "data" });
-
-            Assert.IsType<ForbidResult>(result);
-        }
-
-        [Fact]
-        public async Task AdminSignAndSend_Success_ReturnsCounts()
-        {
-            var controller = CreateController(role: Roles.Admin);
-            _documentServiceMock.Setup(s => s.BulkSignAndSendGeneratedDocumentsAsync("SSM", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(2);
-            _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync("SSM")).ReturnsAsync(Array.Empty<UserDocument>());
-
-            var result = await controller.AdminSignAndSendGeneratedDocuments(new AdminSignAndSendDto { DocumentType = "SSM", SignatureMethod = "Draw", SignatureData = "data" });
-
-            var ok = Assert.IsType<OkObjectResult>(result);
-            Assert.Equal(2, GetProp<int>(ok.Value!, "documentsSigned"));
-        }
-
         // ───────────────────────── GetPendingSsmAdminCount ─────────────────────────
 
         [Fact]
         public async Task GetPendingSsmAdminCount_ReturnsCount()
         {
-            var controller = CreateController(role: Roles.Admin);
-            _documentServiceMock.Setup(s => s.GetPendingSsmDocumentsForAdminAsync()).ReturnsAsync(7);
+            var controller = CreateController(role: Roles.SsmOfficer);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(7);
 
-            var result = await controller.GetPendingSsmAdminCount();
+            var result = await controller.GetPendingSsmAdminCount("SSM");
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(7, GetProp<int>(ok.Value!, "count"));
@@ -444,7 +398,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var managerId = Guid.NewGuid();
             var controller = CreateController(managerId, role: Roles.LineManager);
-            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(false, managerId, "Draw", "data", It.IsAny<string>())).ReturnsAsync(2);
+            _documentServiceMock.Setup(s => s.BulkSignDocumentsAsync(managerId, "Draw", "data", It.IsAny<string>())).ReturnsAsync(2);
 
             var result = await controller.BulkSign(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
 

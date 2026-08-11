@@ -146,23 +146,21 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = result.ErrorMessage });
             }
 
-            // If the employee just signed, notify the manager with their own signing link
-            if (result.ManagerEmail != null)
+            // Notify whoever needs to sign next — the manager, or every officer holding the role
+            // for this document's type (there can be more than one).
+            var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+            foreach (var notification in result.NextSignerNotifications)
             {
-                var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
-                var managerSecureLink = $"{frontendUrl}/sign/{result.ManagerNotificationToken}";
-
+                var secureLink = $"{frontendUrl}/sign/{notification.Token}";
                 try
                 {
                     await _emailService.SendDocumentSignatureEmailWithLinkAsync(
-                        result.ManagerEmail,
-                        result.ManagerNotificationDocumentName!,
-                        managerSecureLink);
+                        notification.Email, notification.DocumentName, secureLink);
                 }
                 catch (Exception ex)
                 {
                     // Log but don't fail the signing operation
-                    Console.WriteLine($"Warning: Failed to send email to manager {result.ManagerEmail}: {ex.Message}");
+                    Console.WriteLine($"Warning: Failed to send email to {notification.Email}: {ex.Message}");
                 }
             }
 
@@ -180,6 +178,8 @@ namespace SyncApp26.API.Controllers
         {
             public string SignatureMethod { get; set; } = string.Empty;
             public string SignatureData { get; set; } = string.Empty;
+            /// <summary>Which officer queue to process asynchronously ("SSM" or "SU"). Only used by bulk-sign-async.</summary>
+            public string DocumentType { get; set; } = "SSM";
         }
 
         [HttpPost("bulk-sign")]
@@ -192,12 +192,10 @@ namespace SyncApp26.API.Controllers
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
-            bool isAdmin = User.IsInRole(Roles.Admin);
-
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
             var count = await _documentService.BulkSignDocumentsAsync(
-                isAdmin, userId, request.SignatureMethod, request.SignatureData, ipAddress);
+                userId, request.SignatureMethod, request.SignatureData, ipAddress);
 
             await _hubContext.Clients.All.SendAsync("SignatureUpdated");
 
@@ -205,16 +203,16 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("bulk-sign-async")]
-        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
+        [Authorize(Roles = Roles.SsmOfficer + "," + Roles.SuOfficer + "," + Roles.LineManager)]
         public async Task<IActionResult> BulkSignAsync([FromBody] BulkSignDto request)
         {
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
-            bool isAdmin = User.IsInRole(Roles.Admin);
+            var documentType = string.IsNullOrWhiteSpace(request.DocumentType) ? "SSM" : request.DocumentType;
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
-            int total = await _documentService.GetPendingSsmDocumentsForAdminAsync();
+            int total = await _documentService.GetPendingDocumentsForOfficerAsync(documentType);
             if (total == 0)
                 return Ok(new { message = "No documents to sign.", jobId = (string?)null });
 
@@ -228,14 +226,12 @@ namespace SyncApp26.API.Controllers
                 var docService = scope.ServiceProvider.GetRequiredService<IDocumentService>();
                 try
                 {
-                    var baseQuery = await docService.GetPendingSsmDocumentsForAdminListAsync();
-                    int idx = 0;
+                    var baseQuery = await docService.GetPendingDocumentsForOfficerListAsync(documentType);
                     foreach (var doc in baseQuery)
                     {
-                        await docService.SignSingleDocumentAsAdminAsync(doc, userId, request.SignatureMethod, request.SignatureData, ipAddress);
+                        await docService.SignSingleDocumentAsOfficerAsync(doc, userId, request.SignatureMethod, request.SignatureData, ipAddress);
                         progress.Signed++;
-                        idx++;
-                        await Task.Delay(250); 
+                        await Task.Delay(250);
                     }
                     progress.Completed = true;
                 }
@@ -250,7 +246,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("bulk-sign-status/{jobId}")]
-        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
+        [Authorize(Roles = Roles.SsmOfficer + "," + Roles.SuOfficer + "," + Roles.LineManager)]
         public IActionResult GetBulkSignStatus(string jobId)
         {
             if (BulkSignJobs.TryGetValue(jobId, out var progress))
@@ -260,82 +256,11 @@ namespace SyncApp26.API.Controllers
             return NotFound(new { message = "Job not found" });
         }
 
-        public class AdminSignAndSendDto
-        {
-            public string DocumentType { get; set; } = string.Empty; // "SSM", "SU", "Both"
-            public string SignatureMethod { get; set; } = string.Empty; // "Draw" or "Type"
-            public string SignatureData { get; set; } = string.Empty; // Base64 signature
-        }
-
-        /// <summary>
-        /// Admin signs all recently generated documents and sends signature links to employees.
-        /// This endpoint streamlines the workflow: generate → admin signs → send to employees.
-        /// </summary>
-        [HttpPost("admin-sign-and-send-generated-documents")]
-        [Authorize]
-        public async Task<IActionResult> AdminSignAndSendGeneratedDocuments([FromBody] AdminSignAndSendDto request)
-        {
-            if (string.IsNullOrWhiteSpace(request.DocumentType))
-                return BadRequest(new { message = "DocumentType is required (SSM, SU, or Both)." });
-
-            if (string.IsNullOrWhiteSpace(request.SignatureData))
-                return BadRequest(new { message = "SignatureData is required." });
-
-            var types = request.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
-                ? new[] { "SSM", "SU" }
-                : new[] { request.DocumentType.ToUpperInvariant() };
-
-            if (User.GetUserId() is not { } userId)
-                return Unauthorized();
-
-            if (!User.IsInRole(Roles.Admin))
-                return Forbid();
-
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
-
-            int signedCount = 0;
-            int emailsSent = 0;
-
-            foreach (var type in types)
-            {
-                signedCount += await _documentService.BulkSignAndSendGeneratedDocumentsAsync(
-                    type,
-                    request.SignatureMethod,
-                    request.SignatureData,
-                    ipAddress);
-
-                var pendingDocuments = await _documentService.GetAllPendingUserDocumentsAsync(type);
-                foreach (var doc in pendingDocuments)
-                {
-                    if (doc.User?.Email is { Length: > 0 } userEmail && doc.UserSignedAt == null)
-                    {
-                        try
-                        {
-                            var token = await _documentSignatureService.GenerateSignatureTokenAsync(
-                                userEmail, doc.Id, $"{type} Document");
-                            var link = $"{frontendUrl}/sign/{token}";
-                            await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", link);
-                            emailsSent++;
-                        }
-                        catch { /* non-fatal per user */ }
-                    }
-                }
-            }
-
-            return Ok(new
-            {
-                message = $"Successfully signed {signedCount} document(s) and sent {emailsSent} signature request(s).",
-                documentsSigned = signedCount,
-                emailsSent = emailsSent
-            });
-        }
-
         [HttpGet("pending-ssm-admin-count")]
-        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
-        public async Task<IActionResult> GetPendingSsmAdminCount()
+        [Authorize(Roles = Roles.SsmOfficer + "," + Roles.SuOfficer + "," + Roles.LineManager)]
+        public async Task<IActionResult> GetPendingSsmAdminCount([FromQuery] string documentType = "SSM")
         {
-            var count = await _documentService.GetPendingSsmDocumentsForAdminAsync();
+            var count = await _documentService.GetPendingDocumentsForOfficerAsync(documentType);
             return Ok(new { count });
         }
     }
