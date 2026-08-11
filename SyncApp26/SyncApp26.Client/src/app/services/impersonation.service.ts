@@ -30,6 +30,15 @@ export class ImpersonationService {
     return userStr ? JSON.parse(userStr) : null;
   }
 
+  /**
+   * The admin's own identity, stashed aside for the duration - null unless impersonating. Lets the
+   * UI keep showing who you really are while the live session belongs to someone else.
+   */
+  originalUser(): User | null {
+    const userStr = localStorage.getItem(ORIGINAL_USER_KEY);
+    return userStr ? JSON.parse(userStr) : null;
+  }
+
   start(userId: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/impersonate/${userId}`, {})
       .pipe(tap(response => {

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
-import { AuthenticationService, User, rolesLabel } from '../../services/authentication.service';
+import { AuthenticationService, User, rolesLabel, Roles } from '../../services/authentication.service';
 import { DocumentSignatureService } from '../../services/document-signature.service';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
 import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/user-sync.signalr.service';
@@ -30,6 +30,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
   pendingRequestCount = 0;
   anomalyAlert: SignatureAnomalyAlert | null = null;
   isImpersonating = false;
+  /** The admin's own account while impersonating; null otherwise. */
+  impersonatorUser: User | null = null;
   impersonationBlockedMessage: string | null = null;
   private routerSubscription!: Subscription;
   private signatureCountSubscription!: Subscription;
@@ -138,10 +140,42 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isLineManager = this.authService.isLineManager();
     this.isOfficer = this.authService.isOfficer();
     this.isImpersonating = this.impersonationService.isImpersonating();
+    this.impersonatorUser = this.impersonationService.originalUser();
+  }
+
+  /**
+   * Identity the profile menu speaks for: your own account, even while the live session belongs to
+   * someone you're impersonating. `currentUser` stays the impersonated user - every role check and
+   * guard keys off that - so this is presentation only.
+   */
+  get profileUser(): User | null {
+    return this.impersonatorUser ?? this.currentUser;
   }
 
   exitImpersonation(): void {
     this.impersonationService.stop();
+  }
+
+  /**
+   * Initials colour for the impersonated user, keyed to the colours the users list already uses
+   * (purple = line manager, blue = basic user). Lighter (400) shades than the app's usual 500/600
+   * on purpose - the avatar's background is the same near-black gradient as the profile avatar, so
+   * the mid-tone shades used elsewhere on light backgrounds read as muddy here. Classes are spelled
+   * out in full: Tailwind scans this file, so anything built by string interpolation would get
+   * purged from the bundle.
+   */
+  private static readonly ROLE_INITIALS: ReadonlyArray<{ role: string; text: string }> = [
+    { role: Roles.Admin, text: 'text-rose-400' },
+    { role: Roles.LineManager, text: 'text-purple-400' },
+    { role: Roles.SsmOfficer, text: 'text-green-400' },
+    { role: Roles.SuOfficer, text: 'text-amber-400' }
+  ];
+
+  /** Most privileged role wins, since a user can hold several at once. */
+  impersonationInitialsClass(): string {
+    const roles = this.currentUser?.roles ?? [];
+    const match = HeaderComponent.ROLE_INITIALS.find(accent => roles.includes(accent.role));
+    return match?.text ?? 'text-blue-400';
   }
 
   loadPendingSignatureCount(): void {
@@ -178,9 +212,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isAnomalyPopoverOpen = false;
   }
 
+  /** Initials for the profile chip - yours, not the impersonated user's. */
   getUserInitials(): string {
-    if (!this.currentUser) return 'U';
-    return (this.currentUser.firstName?.[0] || '') + (this.currentUser.lastName?.[0] || '');
+    return HeaderComponent.initialsOf(this.profileUser);
+  }
+
+  /** Initials for the impersonation lockup - the borrowed identity. */
+  impersonatedInitials(): string {
+    return HeaderComponent.initialsOf(this.currentUser);
+  }
+
+  private static initialsOf(user: User | null): string {
+    if (!user) return 'U';
+    return (user.firstName?.[0] || '') + (user.lastName?.[0] || '');
   }
 
   getLogoLink(): string {
