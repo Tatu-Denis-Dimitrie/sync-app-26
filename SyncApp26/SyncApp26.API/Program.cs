@@ -91,6 +91,7 @@ builder.Services.AddScoped<IUserInitialTrainingService, UserInitialTrainingServi
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
