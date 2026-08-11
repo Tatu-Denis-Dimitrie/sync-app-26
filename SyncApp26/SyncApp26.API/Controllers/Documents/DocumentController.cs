@@ -108,20 +108,30 @@ namespace SyncApp26.API.Controllers
             var adminEmail = User.GetEmail() ?? "admin@syncapp26.com";
             var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
 
-            var types = request.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
+            var requestedTypes = request.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
                 ? new[] { "SSM", "SU" }
                 : new[] { request.DocumentType.ToUpper() };
 
-            var isAdmin = User.IsInRole(Roles.Admin);
-            Guid? restrictToAssignedToId = null;
-            if (!isAdmin && User.GetUserId() is { } currentUserId)
+            // Each type is authorized independently: the officer for that type can generate for
+            // anyone; a line manager (with no officer duty on that type) is restricted to their own
+            // direct reports; anyone else is dropped from this request rather than failing it outright.
+            bool isLineManager = User.IsInRole(Roles.LineManager);
+            var currentUserId = User.GetUserId();
+            var typesToProcess = new List<(string Type, Guid? RestrictToAssignedToId)>();
+            foreach (var type in requestedTypes)
             {
-                restrictToAssignedToId = currentUserId;
+                if (User.CanInitiateFor(type))
+                    typesToProcess.Add((type, null));
+                else if (isLineManager && currentUserId is { } managerId)
+                    typesToProcess.Add((type, managerId));
             }
+
+            if (typesToProcess.Count == 0)
+                return Forbid();
 
             int totalGenerated = 0, totalSkipped = 0;
 
-            foreach (var type in types)
+            foreach (var (type, restrictToAssignedToId) in typesToProcess)
             {
                 var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds, restrictToAssignedToId);
                 totalGenerated += generated;
@@ -130,7 +140,7 @@ namespace SyncApp26.API.Controllers
 
             // Send signature request emails to all employees with pending documents
             int emailsSent = 0;
-            foreach (var type in types)
+            foreach (var (type, _) in typesToProcess)
             {
                 var pendingDocs = await _documentService.GetAllPendingUserDocumentsAsync(type);
                 foreach (var doc in pendingDocs)
@@ -171,14 +181,13 @@ namespace SyncApp26.API.Controllers
                 var user = await _userService.GetUserByIdAsync(request.UserId);
                 if (user == null) return NotFound(new { message = "User not found." });
 
-                bool isAdmin = User.IsInRole(Roles.Admin);
-                if (!isAdmin && User.GetUserId() is { } currentUserId)
-                {
-                    if (user.AssignedToId != currentUserId)
-                    {
-                        return Forbid();
-                    }
-                }
+                // The officer for this document's type can generate for anyone; a line manager is
+                // restricted to their own direct reports. Admin has no standing here at all.
+                bool canInitiate = User.CanInitiateFor(request.DocumentType)
+                    || (User.IsInRole(Roles.LineManager) && user.AssignedToId == User.GetUserId());
+
+                if (!canInitiate)
+                    return Forbid();
 
                 var document = await _documentService.GenerateDocumentAsync(request.UserId, request.DocumentType, adminEmail);
 
@@ -218,8 +227,10 @@ namespace SyncApp26.API.Controllers
             var allDocs = await _documentService.GetAllDocumentsAsync();
             var documents = allDocs.AsEnumerable();
 
-            var isAdmin = User.IsInRole(Roles.Admin);
-            if (!isAdmin && User.GetUserId() is { } currentUserId)
+            // Admin and SSM/SU officers see every document — an officer's duty spans all employees,
+            // not just their own reports. Everyone else (line managers, basic users) is scoped down.
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything && User.GetUserId() is { } currentUserId)
             {
                 documents = documents.Where(d => d.User?.AssignedToId == currentUserId || d.UserId == currentUserId);
             }

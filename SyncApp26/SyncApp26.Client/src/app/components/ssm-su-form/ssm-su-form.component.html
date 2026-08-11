@@ -22,7 +22,7 @@
           SU File
         </button>
         <div class="button-group">
-          @if (!editMode) {
+          @if (!editMode && !isAdmin) {
             <button
               (click)="generateDocument()"
               [disabled]="generatingDoc"

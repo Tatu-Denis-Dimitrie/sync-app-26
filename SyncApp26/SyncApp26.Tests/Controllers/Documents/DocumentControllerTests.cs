@@ -77,19 +77,33 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task BulkGenerateDocuments_Admin_GeneratesBothTypesAndSendsEmails()
+        public async Task BulkGenerateDocuments_Admin_ReturnsForbidden()
         {
+            // Admin has no standing to initiate anything anymore — app administration and SSM/SU
+            // responsibility are separate duties.
             var controller = CreateController(role: Roles.Admin);
+
+            var result = await controller.BulkGenerateDocuments(new BulkGenerateDocumentDto { DocumentType = "Both" });
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task BulkGenerateDocuments_SsmOfficerRequestingBoth_GeneratesOnlySsm()
+        {
+            // Holding the officer role for one type gives no standing on the other — SU is silently
+            // dropped from the request rather than failing the whole call.
+            var controller = CreateController(role: Roles.SsmOfficer);
             _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
-                .ReturnsAsync((2, 1));
+                .ReturnsAsync((2, 0));
             _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync(It.IsAny<string>()))
                 .ReturnsAsync(Array.Empty<UserDocument>());
 
             var result = await controller.BulkGenerateDocuments(new BulkGenerateDocumentDto { DocumentType = "Both" });
 
-            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.IsType<OkObjectResult>(result);
             _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SSM", It.IsAny<string>(), null, null), Times.Once);
-            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SU", It.IsAny<string>(), null, null), Times.Once);
+            _documentServiceMock.Verify(s => s.BulkGenerateDocumentsAsync("SU", It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()), Times.Never);
         }
 
         [Fact]
@@ -135,9 +149,22 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
+        public async Task GenerateDocument_Admin_ReturnsForbidden()
+        {
+            // Admin has no standing to initiate anything anymore, even for an unrelated employee.
+            var controller = CreateController(role: Roles.Admin);
+            var user = MakeUser();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.GenerateDocument(new GenerateDocumentDto { UserId = user.Id, DocumentType = "SSM" });
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
         public async Task GenerateDocument_Success_SendsSignatureEmail()
         {
-            var controller = CreateController(role: Roles.Admin);
+            var controller = CreateController(role: Roles.SsmOfficer);
             var user = MakeUser();
             var document = MakeDocument(user: user);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
@@ -156,7 +183,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GenerateDocument_ServiceThrows_ReturnsBadRequest()
         {
-            var controller = CreateController();
+            var controller = CreateController(role: Roles.SsmOfficer);
             var user = MakeUser();
             _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
             _documentServiceMock.Setup(s => s.GenerateDocumentAsync(user.Id, "SSM", It.IsAny<string>())).ThrowsAsync(new InvalidOperationException("already exists"));
@@ -484,7 +511,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkGenerateDocuments_SendsEmailOnlyToUnsignedUsersWithEmail()
         {
-            var controller = CreateController(role: Roles.Admin);
+            var controller = CreateController(role: Roles.SsmOfficer);
             var needsEmail = MakeDocument(user: MakeUser());
             var alreadySigned = MakeDocument(user: MakeUser());
             alreadySigned.UserSignedAt = DateTime.UtcNow;
@@ -505,7 +532,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkGenerateDocuments_EmailFailureForOneUser_DoesNotStopProcessingOthers()
         {
-            var controller = CreateController(role: Roles.Admin);
+            var controller = CreateController(role: Roles.SsmOfficer);
             var failingDoc = MakeDocument(user: MakeUser());
             var succeedingDoc = MakeDocument(user: MakeUser());
 
@@ -539,6 +566,20 @@ namespace SyncApp26.Tests.Controllers.Documents
             Assert.Equal(3, items.Count);
         }
 
+        [Fact]
+        public async Task GetAllDocuments_SsmOfficer_ReturnsAllDocumentsUnfiltered()
+        {
+            // An officer's duty spans every employee, not just their own reports — same breadth as admin.
+            var controller = CreateController(role: Roles.SsmOfficer);
+            _documentServiceMock.Setup(s => s.GetAllDocumentsAsync()).ReturnsAsync(new[] { MakeDocument(), MakeDocument(), MakeDocument() });
+
+            var result = await controller.GetAllDocuments();
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(ok.Value).Cast<object>().ToList();
+            Assert.Equal(3, items.Count);
+        }
+
         // ───────────────────────── Additional GenerateDocument edge cases ─────────────────────────
 
         [Fact]
@@ -563,7 +604,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task GenerateDocument_EmptyUserEmail_SkipsEmailSending()
         {
-            var controller = CreateController(role: Roles.Admin);
+            var controller = CreateController(role: Roles.SsmOfficer);
             var owner = MakeUser();
             owner.Email = "";
             var document = MakeDocument(user: owner);

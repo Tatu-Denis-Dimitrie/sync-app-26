@@ -14,8 +14,6 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
         public string? Occupation { get; set; }
 
         public string? MaterialTaught { get; set; }
-        /// <summary>Linked instructor account — the person who will be asked to sign this training.</summary>
-        public Guid InstructorId { get; set; }
 
         [StringLength(NameValidationConstants.NameMaxLength)]
         [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).")]

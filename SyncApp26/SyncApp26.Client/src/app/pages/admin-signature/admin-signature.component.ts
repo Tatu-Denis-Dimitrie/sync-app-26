@@ -1,7 +1,7 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { UserSignatureService } from '../../services/user-signature.service';
 import { Router } from '@angular/router';
-import { AuthenticationService } from '../../services/authentication.service';
+import { AuthenticationService, Roles, rolesLabel } from '../../services/authentication.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -27,6 +27,16 @@ export class AdminSignatureComponent {
   savedSignature: any = null;
   isSigConfirmed = false;
   currentYear = new Date().getFullYear();
+
+  // Admin keeps this page to store a signature even though it no longer signs anything, so the
+  // heading reflects whichever officer duty actually uses it — falling back to "Admin" only when
+  // the visitor holds neither officer role.
+  get pageTitle(): string {
+    const officerRoles = (this.authService.getCurrentUser()?.roles || [])
+      .filter(role => role === Roles.SsmOfficer || role === Roles.SuOfficer);
+
+    return officerRoles.length > 0 ? `${rolesLabel(officerRoles)} Signature` : 'Admin Signature';
+  }
 
   ngOnInit() {
     this.loadSignature();

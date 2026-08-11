@@ -165,7 +165,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkCreate_ServiceThrows_ReturnsBadRequest()
         {
-            var controller = CreateController();
+            var controller = CreateController(role: Roles.SsmOfficer);
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>(), It.IsAny<Guid?>())).ThrowsAsync(new Exception("boom"));
 
@@ -177,7 +177,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkCreate_AllFailed_ReturnsBadRequest()
         {
-            var controller = CreateController();
+            var controller = CreateController(role: Roles.SsmOfficer);
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             var resultDto = new BulkCreateResultDTO { SuccessCount = 0, FailedCount = 2, Errors = new List<string> { "err1", "err2" } };
             _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>(), It.IsAny<Guid?>())).ReturnsAsync(resultDto);
@@ -188,18 +188,33 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
-        public async Task BulkCreate_Admin_PassesNullRestriction()
+        public async Task BulkCreate_Admin_ReturnsForbidden()
         {
+            // Admin has no standing to initiate anything anymore — app administration and SSM/SU
+            // responsibility are separate duties.
             var controller = CreateController(role: Roles.Admin);
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
+
+            var result = await controller.BulkCreate(dto);
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task BulkCreate_SsmOfficerBothTypes_PassesNullRestrictionForSsmOnly()
+        {
+            // Holding the officer role for one type gives no standing on the other — SU is silently
+            // dropped from the request rather than failing the whole call.
+            var controller = CreateController(role: Roles.SsmOfficer);
+            var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             var resultDto = new BulkCreateResultDTO { SuccessCount = 3 };
-            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(dto, null)).ReturnsAsync(resultDto);
+            _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.Is<BulkCreatePeriodicTrainingDTO>(d => d.DocumentType == "SSM"), null)).ReturnsAsync(resultDto);
 
             var result = await controller.BulkCreate(dto);
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.Equal(resultDto, ok.Value);
-            _periodicTrainingServiceMock.Verify(s => s.BulkCreateAsync(dto, null), Times.Once);
+            _periodicTrainingServiceMock.Verify(s => s.BulkCreateAsync(It.Is<BulkCreatePeriodicTrainingDTO>(d => d.DocumentType == "SSM"), null), Times.Once);
         }
 
         [Fact]
@@ -219,7 +234,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         [Fact]
         public async Task BulkCreate_PartialSuccess_StillReturnsOk()
         {
-            var controller = CreateController();
+            var controller = CreateController(role: Roles.SsmOfficer);
             var dto = new BulkCreatePeriodicTrainingDTO { ApplyToAllUsers = true };
             var resultDto = new BulkCreateResultDTO { SuccessCount = 2, FailedCount = 1, Errors = new List<string> { "one failure" } };
             _periodicTrainingServiceMock.Setup(s => s.BulkCreateAsync(It.IsAny<BulkCreatePeriodicTrainingDTO>(), It.IsAny<Guid?>())).ReturnsAsync(resultDto);

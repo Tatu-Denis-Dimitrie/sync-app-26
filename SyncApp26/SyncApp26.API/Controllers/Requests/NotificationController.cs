@@ -19,6 +19,7 @@ namespace SyncApp26.API.Controllers
         private readonly IPeriodicTrainingService _periodicTrainingService;
         private readonly IDocumentSignatureService _documentSignatureService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<NotificationController> _logger;
 
         public NotificationController(
             IUserService userService,
@@ -26,7 +27,8 @@ namespace SyncApp26.API.Controllers
             IDocumentService documentService,
             IPeriodicTrainingService periodicTrainingService,
             IDocumentSignatureService documentSignatureService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<NotificationController> logger)
         {
             _userService = userService;
             _emailService = emailService;
@@ -34,6 +36,7 @@ namespace SyncApp26.API.Controllers
             _periodicTrainingService = periodicTrainingService;
             _documentSignatureService = documentSignatureService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("notify-user/{userId}")]
@@ -190,13 +193,22 @@ namespace SyncApp26.API.Controllers
                 var unsignedCount = assignedUsers.Count(u => !signedIds.Contains(u.Id));
                 if (unsignedCount == 0) continue;
 
-                await _emailService.SendMissingSignatureToManagerEmailAsync(
-                    manager.Email,
-                    $"{manager.FirstName} {manager.LastName}",
-                    request.DocumentType,
-                    unsignedCount
-                );
-                notifiedCount++;
+                // One manager's email failing (e.g. SMTP daily limit) must not abort notifications
+                // to the rest — each send is independent.
+                try
+                {
+                    await _emailService.SendMissingSignatureToManagerEmailAsync(
+                        manager.Email,
+                        $"{manager.FirstName} {manager.LastName}",
+                        request.DocumentType,
+                        unsignedCount
+                    );
+                    notifiedCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send missing-signature notification to manager {ManagerId}.", manager.Id);
+                }
             }
 
             if (notifiedCount == 0)

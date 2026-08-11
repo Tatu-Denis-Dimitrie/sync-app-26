@@ -46,7 +46,13 @@ namespace SyncApp26.API.Services
             };
 
             message.To.Add(toEmail);
-            await client.SendMailAsync(message);
+
+            // SmtpClient.SendMailAsync uses the legacy APM callback pipeline (see the
+            // SendMailAsyncResult frames in any exception from this call) — on failure it can throw
+            // on the I/O completion thread in a way that bypasses normal Task exception propagation
+            // and crashes the whole process instead of surfacing through this method's try/catch.
+            // The synchronous Send(), run on a pool thread, propagates exceptions the normal way.
+            await Task.Run(() => client.Send(message));
         }
 
         public async Task SendVerificationEmailAsync(string toEmail, string firstName, string verifyUrl)

@@ -149,6 +149,23 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.DoesNotContain(list, u => u.Id == unrelated.Id);
         }
 
+        [Fact]
+        public async Task GetAllUsers_AsSsmOfficer_ReturnsAllUsers()
+        {
+            // An officer's duty spans every employee, not just their own reports — same breadth as admin.
+            var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
+            StubEmptyDocumentSets();
+            var users = new[] { MakeUser(), MakeUser() };
+            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(users);
+
+            var result = await controller.GetAllUsers();
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var list = Assert.IsAssignableFrom<IEnumerable<UserGETResponseDTO>>(ok.Value);
+            Assert.Equal(2, list.Count());
+        }
+
         // ───────────────────────── GetUsersByDepartment ─────────────────────────
 
         [Fact]
@@ -381,6 +398,24 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
+        public async Task GetUserSSMSUForm_SsmOfficerNotOwnerOrManager_ReturnsOk()
+        {
+            // An officer can view any employee's SSM/SU form, not just their own reports.
+            var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
+            var user = MakeUser(); // unrelated to caller
+
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+            _periodicTrainingServiceMock.Setup(s => s.GetByUserIdAsync(user.Id)).ReturnsAsync(Array.Empty<PeriodicTrainingResponseDTO>());
+
+            var result = await controller.GetUserSSMSUForm(user.Id);
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var dto = Assert.IsType<UserSSMSUFormDTO>(ok.Value);
+            Assert.Equal(user.Id, dto.Id);
+        }
+
+        [Fact]
         public async Task GetUserSSMSUForm_WithTrainingsAndInitialTrainings_MapsLatestAndInitialTrainings()
         {
             var controller = CreateController();
@@ -450,6 +485,23 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
+        public async Task UpdateUserSSMSUForm_SsmOfficerNotOwnerOrManager_Succeeds()
+        {
+            // An officer can update any employee's SSM/SU form, not just their own reports.
+            var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
+            var user = MakeUser();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.UpdateUserSSMSUForm(user.Id, new UpdateUserSSMSUFormDTO());
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var dto = Assert.IsType<UserResponseDTO>(ok.Value);
+            Assert.True(dto.Success);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(user, It.IsAny<UpdateUserSSMSUFormDTO>()), Times.Once);
+        }
+
+        [Fact]
         public async Task UpdateUserSSMSUForm_Success_DelegatesToService()
         {
             var controller = CreateController();
@@ -479,6 +531,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         public async Task BulkInitialTraining_NoUsersMatched_ReturnsBadRequest()
         {
             var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
             var dto = new BulkInitialTrainingDTO { ApplyToAllUsers = true, DocumentType = "SSM" };
             var resultDto = new BulkInitialTrainingResultDTO { NoUsersMatched = true };
             resultDto.Errors.Add("No users found to apply initial training data.");
@@ -495,6 +548,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         public async Task BulkInitialTraining_Success_ReturnsOk()
         {
             var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
             var dto = new BulkInitialTrainingDTO { ApplyToAllUsers = true, DocumentType = "SSM" };
             var resultDto = new BulkInitialTrainingResultDTO { SuccessCount = 2 };
             _userProfileServiceMock.Setup(s => s.ApplyBulkInitialTrainingAsync(dto, null)).ReturnsAsync(resultDto);
@@ -523,9 +577,10 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
-        public async Task BulkInitialTraining_Admin_PassesNullRestriction()
+        public async Task BulkInitialTraining_SsmOfficer_PassesNullRestriction()
         {
             var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
             var dto = new BulkInitialTrainingDTO { ApplyToAllUsers = true, DocumentType = "SSM" };
             _userProfileServiceMock.Setup(s => s.ApplyBulkInitialTrainingAsync(dto, null)).ReturnsAsync(new BulkInitialTrainingResultDTO { SuccessCount = 1 });
 
@@ -533,6 +588,19 @@ namespace SyncApp26.Tests.Controllers.Auth
 
             Assert.IsType<OkObjectResult>(result.Result);
             _userProfileServiceMock.Verify(s => s.ApplyBulkInitialTrainingAsync(dto, null), Times.Once);
+        }
+
+        [Fact]
+        public async Task BulkInitialTraining_Admin_ReturnsForbidden()
+        {
+            // Admin has no standing to initiate anything anymore — app administration and SSM/SU
+            // responsibility are separate duties.
+            var controller = CreateController();
+            var dto = new BulkInitialTrainingDTO { ApplyToAllUsers = true, DocumentType = "SSM" };
+
+            var result = await controller.BulkInitialTraining(dto);
+
+            Assert.IsType<ForbidResult>(result.Result);
         }
     }
 }

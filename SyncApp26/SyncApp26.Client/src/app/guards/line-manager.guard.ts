@@ -22,8 +22,9 @@ export class LineManagerGuard implements CanActivate {
 
     const isLineManager = this.authService.isLineManager();
     const isAdmin = this.authService.isAdmin();
+    const isOfficer = this.authService.isOfficer();
 
-    if (!isLineManager && !isAdmin) {
+    if (!isLineManager && !isAdmin && !isOfficer) {
       this.router.navigate(['/access-restricted']);
       return false;
     }

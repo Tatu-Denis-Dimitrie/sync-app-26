@@ -59,19 +59,6 @@ export class DocumentSignatureComponent implements OnInit {
     this.token = this.route.snapshot.paramMap.get('token');
     this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
 
-    // Bulk: preia numărul total de documente de semnat pentru admin
-    if (this.isBulkMode && this.isLoggedIn && this.authService.isAdmin()) {
-      this.http.get<any>(`${environment.apiUrl}/documentsignature/pending-ssm-admin-count`).subscribe({
-        next: (res) => {
-          this.bulkTotal = res?.count || 0;
-          this.bulkSigned = 0;
-        },
-        error: () => {
-          this.bulkTotal = 0;
-        }
-      });
-    }
-
     if (!this.token) {
       this.errorMessage = 'Invalid link. No token provided.';
       this.isValidating = false;
@@ -118,9 +105,23 @@ export class DocumentSignatureComponent implements OnInit {
       .subscribe(data => {
         if (data) {
           this.documentData = data;
-          // Adaugă flag pentru semnare ca admin (verificator SSM)
-          this.documentData.isAdminSigning = this.authService.isAdmin() && this.documentData.documentType === 'SSM';
           setTimeout(() => { if (this.signatureMethod === 'draw') this.initCanvas(); }, 100);
+
+          // Bulk: preia numărul total de documente de semnat pentru responsabilul SSM/SU, acum că
+          // tipul documentului e cunoscut.
+          if (this.isBulkMode && this.isLoggedIn && this.authService.isOfficer()) {
+            this.http.get<any>(`${environment.apiUrl}/documentsignature/pending-ssm-admin-count`, {
+              params: { documentType: this.documentData.documentType }
+            }).subscribe({
+              next: (res) => {
+                this.bulkTotal = res?.count || 0;
+                this.bulkSigned = 0;
+              },
+              error: () => {
+                this.bulkTotal = 0;
+              }
+            });
+          }
         }
       });
   }
@@ -186,13 +187,14 @@ export class DocumentSignatureComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Bulk sign cu progres real (admin)
-    if (this.isBulkMode && this.bulkTotal > 0 && this.authService.isAdmin()) {
+    // Bulk sign cu progres real (responsabil SSM/SU)
+    if (this.isBulkMode && this.bulkTotal > 0 && this.authService.isOfficer()) {
       this.bulkSigned = 0;
       this.successMessage = '';
       const payload = {
         signatureMethod: method,
-        signatureData: data
+        signatureData: data,
+        documentType: this.documentData?.documentType
       };
       // DEBUG: log payload trimis la bulk-sign-async
       console.log('Bulk sign payload:', payload);

@@ -20,7 +20,9 @@ export class OfficerGuard implements CanActivate {
       return false;
     }
 
-    if (!this.authService.isOfficer()) {
+    // Admin keeps access so they can store a signature for later, even though they can no
+    // longer use it to sign anything.
+    if (!this.authService.isOfficer() && !this.authService.isAdmin()) {
       this.router.navigate(['/access-restricted']);
       return false;
     }

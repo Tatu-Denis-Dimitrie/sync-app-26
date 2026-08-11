@@ -352,15 +352,66 @@ namespace SyncApp26.Infrastructure.Services
         private static string FDate(DateTime? dt) => dt.HasValue ? dt.Value.ToString("dd.MM.yyyy") : "___________";
         private static string FUnderline(string? val) => val?.Trim() is { Length: > 0 } v ? v : "___________";
 
-        private static void SignatureRow(ColumnDescriptor col, bool isSsm, User user, DocumentRenderContext ctx,
+        private static void SignatureRow(ColumnDescriptor col, bool isSsm, User user, UserDocument document, DocumentRenderContext ctx,
             string? instructorName = null, string? instructorPosition = null,
             string? userSigMethod = null, string? userSigData = null,
             string? instructorSigMethod = null, string? instructorSigData = null,
             string? verifierSigMethod = null, string? verifierSigData = null)
         {
             var userRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("User");
-            var instructorRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Instructor");
-            var verifierRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Admin");
+            var officerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Instructor");
+
+            // Legacy documents completed before the SSM/SU officer took over the Instructor slot
+            // (Faza 2 of the roles plan) really had a separate Admin/Verifier signer — keep those
+            // untouched. New SSM documents show the employee's Manager (one signature per document)
+            // under "Instructor" and the officer's actual capture — still stored in the Instructor*
+            // fields, since that's the chain step the officer signs — under "Verificator".
+            bool applyOfficerSwap = isSsm && string.IsNullOrEmpty(verifierSigData);
+
+            string? renderedInstructorName, renderedInstructorPosition, renderedInstructorSigMethod, renderedInstructorSigData;
+            DateTime? renderedInstructorSignedAt;
+
+            if (applyOfficerSwap)
+            {
+                var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+                renderedInstructorName = managerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
+                renderedInstructorPosition = managerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
+                renderedInstructorSigMethod = document.ManagerSignatureMethod;
+                renderedInstructorSigData = document.ManagerSignatureData;
+                renderedInstructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
+            }
+            else
+            {
+                renderedInstructorName = officerRecord?.SignerFullNameSnapshot ?? instructorName;
+                renderedInstructorPosition = officerRecord?.SignerPositionSnapshot ?? instructorPosition;
+                renderedInstructorSigMethod = instructorSigMethod;
+                renderedInstructorSigData = instructorSigData;
+                renderedInstructorSignedAt = officerRecord?.SignedAt.UtcDateTime;
+            }
+
+            string? renderedVerifierName = null, renderedVerifierPosition = null, renderedVerifierSigMethod = null, renderedVerifierSigData = null;
+            DateTime? renderedVerifierSignedAt = null;
+
+            if (isSsm)
+            {
+                if (applyOfficerSwap)
+                {
+                    renderedVerifierName = officerRecord?.SignerFullNameSnapshot ?? instructorName;
+                    renderedVerifierPosition = officerRecord?.SignerPositionSnapshot ?? instructorPosition;
+                    renderedVerifierSigMethod = instructorSigMethod;
+                    renderedVerifierSigData = instructorSigData;
+                    renderedVerifierSignedAt = officerRecord?.SignedAt.UtcDateTime;
+                }
+                else
+                {
+                    var legacyVerifierRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Admin");
+                    renderedVerifierName = legacyVerifierRecord?.SignerFullNameSnapshot;
+                    renderedVerifierPosition = legacyVerifierRecord?.SignerPositionSnapshot;
+                    renderedVerifierSigMethod = verifierSigMethod;
+                    renderedVerifierSigData = verifierSigData;
+                    renderedVerifierSignedAt = legacyVerifierRecord?.SignedAt.UtcDateTime;
+                }
+            }
 
             col.Item().PaddingTop(6).Row(row =>
             {
@@ -375,9 +426,8 @@ namespace SyncApp26.Infrastructure.Services
                 row.RelativeItem().Column(c => RenderSignatureBlock(c,
                     "Semnătura celui care a efectuat instruirea:",
                     new SignatureBlockData(
-                        instructorRecord?.SignerFullNameSnapshot ?? instructorName,
-                        instructorRecord?.SignerPositionSnapshot ?? instructorPosition,
-                        instructorSigMethod, instructorSigData, instructorRecord?.SignedAt.UtcDateTime)));
+                        renderedInstructorName, renderedInstructorPosition,
+                        renderedInstructorSigMethod, renderedInstructorSigData, renderedInstructorSignedAt)));
 
                 if (isSsm)
                 {
@@ -385,9 +435,8 @@ namespace SyncApp26.Infrastructure.Services
                     row.RelativeItem().Column(c => RenderSignatureBlock(c,
                         "Semnătura celui care a verificat:",
                         new SignatureBlockData(
-                            verifierRecord?.SignerFullNameSnapshot,
-                            verifierRecord?.SignerPositionSnapshot,
-                            verifierSigMethod, verifierSigData, verifierRecord?.SignedAt.UtcDateTime)));
+                            renderedVerifierName, renderedVerifierPosition,
+                            renderedVerifierSigMethod, renderedVerifierSigData, renderedVerifierSignedAt)));
                 }
             });
         }
@@ -772,15 +821,15 @@ namespace SyncApp26.Infrastructure.Services
             string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
             SectionHeader(col, sectionTitle, ctx.AccentColor);
 
-            RenderIntroductoryTrainingItem(col, user, ctx, it);
+            RenderIntroductoryTrainingItem(col, user, document, ctx, it);
             col.Item().Height(8);
-            RenderWorkplaceTrainingItem(col, user, ctx, it);
+            RenderWorkplaceTrainingItem(col, user, document, ctx, it);
             col.Item().Height(10);
             RenderAdmittedToWorkItem(col, user, document, ctx);
         }
 
         // 1. Instruire introductivă generală
-        private static void RenderIntroductoryTrainingItem(ColumnDescriptor col, User user, DocumentRenderContext ctx, UserInitialTraining? it)
+        private static void RenderIntroductoryTrainingItem(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx, UserInitialTraining? it)
         {
             bool isSsm = ctx.IsSsm;
             string t1 = isSsm ? "1. Instruirea introductiv generală" : "1. Instructajul introductiv general";
@@ -805,7 +854,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
             // Signatures frozen from first signing — stored on UserInitialTraining, name/timestamp
             // resolved from the correlating SignatureRecord where available (see ctx)
-            SignatureRow(col, isSsm, user, ctx,
+            SignatureRow(col, isSsm, user, document, ctx,
                 it?.IntroductoryTrainingInstructor, it?.IntroductoryTrainingInstructorFunction,
                 it?.UserSignatureMethod, it?.UserSignatureData,
                 it?.InstructorSignatureMethod, it?.InstructorSignatureData,
@@ -813,7 +862,7 @@ namespace SyncApp26.Infrastructure.Services
         }
 
         // 2. Instruire la locul de muncă
-        private static void RenderWorkplaceTrainingItem(ColumnDescriptor col, User user, DocumentRenderContext ctx, UserInitialTraining? it)
+        private static void RenderWorkplaceTrainingItem(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx, UserInitialTraining? it)
         {
             bool isSsm = ctx.IsSsm;
             string t2 = isSsm ? "2. Instruirea la locul de muncă" : "2. Instructajul la locul de muncă";
@@ -840,7 +889,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
             // Signatures frozen from first signing — stored on UserInitialTraining, name/timestamp
             // resolved from the correlating SignatureRecord where available (see ctx)
-            SignatureRow(col, isSsm, user, ctx,
+            SignatureRow(col, isSsm, user, document, ctx,
                 it?.WorkplaceTrainingInstructor, it?.WorkplaceTrainingInstructorFunction,
                 it?.UserSignatureMethod, it?.UserSignatureData,
                 it?.InstructorSignatureMethod, it?.InstructorSignatureData,
@@ -962,7 +1011,7 @@ namespace SyncApp26.Infrastructure.Services
             for (int i = 0; i < periodicTrainings.Count; i++)
             {
                 bool isCurrentDocRow = periodicTrainings[i].Id == currentRowId;
-                RenderPeriodicTrainingRow(table, periodicTrainings[i], i, isCurrentDocRow, employeeFullName, occupation, isSsm, viewerIsAdmin, ctx.PeriodicSignatures);
+                RenderPeriodicTrainingRow(table, document, periodicTrainings[i], i, isCurrentDocRow, employeeFullName, occupation, isSsm, viewerIsAdmin, ctx);
             }
 
             // Fallback: if no periodic trainings exist at all, render an empty row (highlighted for
@@ -972,24 +1021,67 @@ namespace SyncApp26.Infrastructure.Services
                 RenderEmptyPeriodicTrainingRow(table, document, occupation, isSsm, viewerIsAdmin);
         }
 
-        private static void RenderPeriodicTrainingRow(TableDescriptor table, PeriodicTraining training, int index, bool isCurrentDocRow, string employeeFullName, string occupation, bool isSsm, bool viewerIsAdmin,
-            Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures)
+        private static void RenderPeriodicTrainingRow(TableDescriptor table, UserDocument document, PeriodicTraining training, int index, bool isCurrentDocRow, string employeeFullName, string occupation, bool isSsm, bool viewerIsAdmin,
+            DocumentRenderContext ctx)
         {
             // Use only per-row signatures stored directly on the PeriodicTraining row.
             // No fallback to document-level fields — those are transient; the
             // canonical signature store is always the training row.
             string? userSigData = training.UserSignatureData;
             string? userSigMethod = training.UserSignatureMethod;
-            string? instructorSigData = training.InstructorSignature;
-            string? instructorSigMethod = training.InstructorSignatureMethod;
-            string? verifierSigData = training.VerifierSignature;
-            string? verifierSigMethod = !string.IsNullOrEmpty(verifierSigData) ? training.VerifierSignatureMethod : null;
 
-            // For SSM, when verifier signature exists (admin), do not duplicate into instructor column.
-            if (isSsm && !string.IsNullOrEmpty(verifierSigData) && string.IsNullOrEmpty(training.InstructorSignature))
+            var officerRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "Instructor"));
+
+            // Legacy rows signed before the SSM/SU officer took over the Instructor slot (Faza 2 of
+            // the roles plan) really had a separate Admin/Verifier signer — keep those untouched.
+            // New SSM rows show the employee's Manager (one signature per document) under
+            // "Instructor" and the officer's actual capture — still stored in the Instructor*
+            // fields, since that's the chain step the officer signs — under "Verificator".
+            bool applyOfficerSwap = isSsm && string.IsNullOrEmpty(training.VerifierSignature);
+
+            string? instructorName, instructorPosition, instructorSigMethod, instructorSigData;
+            DateTime? instructorSignedAt;
+
+            if (applyOfficerSwap)
             {
-                instructorSigData = null;
-                instructorSigMethod = null;
+                var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+                instructorName = managerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
+                instructorPosition = managerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
+                instructorSigMethod = document.ManagerSignatureMethod;
+                instructorSigData = document.ManagerSignatureData;
+                instructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
+            }
+            else
+            {
+                instructorName = officerRecord?.SignerFullNameSnapshot ?? training.InstructorName;
+                instructorPosition = officerRecord?.SignerPositionSnapshot;
+                instructorSigMethod = training.InstructorSignatureMethod;
+                instructorSigData = training.InstructorSignature;
+                instructorSignedAt = officerRecord?.SignedAt.UtcDateTime;
+            }
+
+            string? verifierName = null, verifierPosition = null, verifierSigMethod = null, verifierSigData = null;
+            DateTime? verifierSignedAt = null;
+
+            if (isSsm)
+            {
+                if (applyOfficerSwap)
+                {
+                    verifierName = officerRecord?.SignerFullNameSnapshot ?? training.InstructorName;
+                    verifierPosition = officerRecord?.SignerPositionSnapshot;
+                    verifierSigMethod = training.InstructorSignatureMethod;
+                    verifierSigData = training.InstructorSignature;
+                    verifierSignedAt = officerRecord?.SignedAt.UtcDateTime;
+                }
+                else
+                {
+                    var legacyVerifierRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "Admin"));
+                    verifierName = legacyVerifierRecord?.SignerFullNameSnapshot ?? training.VerifierName;
+                    verifierPosition = legacyVerifierRecord?.SignerPositionSnapshot;
+                    verifierSigMethod = training.VerifierSignatureMethod;
+                    verifierSigData = training.VerifierSignature;
+                    verifierSignedAt = legacyVerifierRecord?.SignedAt.UtcDateTime;
+                }
             }
 
             // Highlight this row only if signatures are still missing and viewer is not admin
@@ -1008,9 +1100,7 @@ namespace SyncApp26.Infrastructure.Services
             // Name/position/timestamp come from the frozen SignatureRecord for this exact
             // (training, role) when one exists; falls back to live/row data otherwise (e.g. rows
             // predating this table, or not yet signed).
-            var userRecord = periodicSignatures.GetValueOrDefault((training.Id, "User"));
-            var instructorRecord = periodicSignatures.GetValueOrDefault((training.Id, "Instructor"));
-            var verifierRecord = periodicSignatures.GetValueOrDefault((training.Id, "Admin"));
+            var userRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "User"));
 
             table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
                 new SignatureBlockData(
@@ -1018,17 +1108,11 @@ namespace SyncApp26.Infrastructure.Services
                     userRecord?.SignerPositionSnapshot ?? occupation,
                     userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime), stacked: true));
             table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
-                new SignatureBlockData(
-                    instructorRecord?.SignerFullNameSnapshot ?? training.InstructorName,
-                    instructorRecord?.SignerPositionSnapshot,
-                    instructorSigMethod, instructorSigData, instructorRecord?.SignedAt.UtcDateTime), stacked: true));
+                new SignatureBlockData(instructorName, instructorPosition, instructorSigMethod, instructorSigData, instructorSignedAt), stacked: true));
 
             if (isSsm)
                 table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
-                    new SignatureBlockData(
-                        verifierRecord?.SignerFullNameSnapshot ?? training.VerifierName,
-                        verifierRecord?.SignerPositionSnapshot,
-                        verifierSigMethod, verifierSigData, verifierRecord?.SignedAt.UtcDateTime), stacked: true));
+                    new SignatureBlockData(verifierName, verifierPosition, verifierSigMethod, verifierSigData, verifierSignedAt), stacked: true));
         }
 
         private static void RenderEmptyPeriodicTrainingRow(TableDescriptor table, UserDocument document, string occupation, bool isSsm, bool viewerIsAdmin)
