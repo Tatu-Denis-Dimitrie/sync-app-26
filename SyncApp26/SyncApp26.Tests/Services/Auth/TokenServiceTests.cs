@@ -1,5 +1,4 @@
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using SyncApp26.Application.Services;
@@ -30,11 +29,16 @@ namespace SyncApp26.Tests.Services.Auth
             var token = await service.GenerateTokenAsync(userId, "user@test.com", new[] { "LineManager", "SsmOfficer" });
 
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-            Assert.Equal(userId.ToString(), jwt.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
-            Assert.Equal("user@test.com", jwt.Claims.Single(c => c.Type == ClaimTypes.Email).Value);
+            // JwtSecurityTokenHandler's default outbound claim map rewrites ClaimTypes.NameIdentifier /
+            // Email / Role to the short wire names "nameid" / "email" / "role" when WRITING the token —
+            // ReadJwtToken parses the raw wire format, so it sees the short names, not the long URIs.
+            // The JwtBearer handler on the receiving side applies the matching inbound map when it
+            // builds ClaimsPrincipal, which is why ClaimsPrincipalExtensions.GetUserId() etc. still work.
+            Assert.Equal(userId.ToString(), jwt.Claims.Single(c => c.Type == "nameid").Value);
+            Assert.Equal("user@test.com", jwt.Claims.Single(c => c.Type == "email").Value);
             Assert.Equal(
                 new[] { "LineManager", "SsmOfficer" },
-                jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToArray());
+                jwt.Claims.Where(c => c.Type == "role").Select(c => c.Value).ToArray());
             Assert.DoesNotContain(jwt.Claims, c => c.Type == CustomClaimTypes.ImpersonatorId);
 
             var lifetime = jwt.ValidTo - jwt.ValidFrom;
@@ -70,9 +74,9 @@ namespace SyncApp26.Tests.Services.Auth
                 targetId, "target@test.com", new[] { "BasicUser" }, impersonatorId);
 
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-            Assert.Equal(targetId.ToString(), jwt.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
-            Assert.Equal("target@test.com", jwt.Claims.Single(c => c.Type == ClaimTypes.Email).Value);
-            Assert.Equal("BasicUser", jwt.Claims.Single(c => c.Type == ClaimTypes.Role).Value);
+            Assert.Equal(targetId.ToString(), jwt.Claims.Single(c => c.Type == "nameid").Value);
+            Assert.Equal("target@test.com", jwt.Claims.Single(c => c.Type == "email").Value);
+            Assert.Equal("BasicUser", jwt.Claims.Single(c => c.Type == "role").Value);
             Assert.Equal(impersonatorId.ToString(), jwt.Claims.Single(c => c.Type == CustomClaimTypes.ImpersonatorId).Value);
 
             var lifetime = jwt.ValidTo - jwt.ValidFrom;
