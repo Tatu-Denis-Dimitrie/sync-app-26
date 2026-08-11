@@ -65,6 +65,7 @@ builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepo
 builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
 builder.Services.AddScoped<IDataChangeRequestRepository, DataChangeRequestRepository>();
 builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
+builder.Services.AddScoped<IImpersonationLogRepository, ImpersonationLogRepository>();
 
 
 // Services

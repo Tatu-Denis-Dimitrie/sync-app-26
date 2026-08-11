@@ -180,6 +180,39 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("Functions");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.ImpersonationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ImpersonatorUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TargetUserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImpersonatorUserId")
+                        .HasDatabaseName("IX_ImpersonationLogs_ImpersonatorUserId");
+
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("IX_ImpersonationLogs_StartedAt");
+
+                    b.HasIndex("TargetUserId")
+                        .HasDatabaseName("IX_ImpersonationLogs_TargetUserId");
+
+                    b.ToTable("ImpersonationLogs");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.ImportHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -951,6 +984,25 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("Department");
 
                     b.Navigation("Function");
+                });
+
+            modelBuilder.Entity("SyncApp26.Domain.Entities.ImpersonationLog", b =>
+                {
+                    b.HasOne("SyncApp26.Domain.Entities.User", "ImpersonatorUser")
+                        .WithMany()
+                        .HasForeignKey("ImpersonatorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SyncApp26.Domain.Entities.User", "TargetUser")
+                        .WithMany()
+                        .HasForeignKey("TargetUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ImpersonatorUser");
+
+                    b.Navigation("TargetUser");
                 });
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.PeriodicTraining", b =>

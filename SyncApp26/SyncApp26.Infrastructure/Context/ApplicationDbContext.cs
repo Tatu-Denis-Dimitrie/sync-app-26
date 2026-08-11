@@ -49,6 +49,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<SignatureRecord> SignatureRecords { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
+        public DbSet<ImpersonationLog> ImpersonationLogs { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -419,6 +420,37 @@ namespace SyncApp26.Infrastructure.Context
                 // the composite PK above already covers the User -> roles direction.
                 entity.HasIndex(e => new { e.RoleId, e.UserId })
                     .HasDatabaseName("IX_UserRoles_RoleId_UserId");
+            });
+
+            // Configure ImpersonationLog entity (immutable audit log)
+            modelBuilder.Entity<ImpersonationLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.IpAddress)
+                    .HasMaxLength(50);
+
+                // Restrict, not Cascade, on both FKs: neither party "owns" an audit row, and deleting
+                // either must not erase the trail. Safe because user deletion is soft (User.DeletedAt) —
+                // there is no hard-delete path that would ever trigger this.
+                entity.HasOne(e => e.ImpersonatorUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.ImpersonatorUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.TargetUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.TargetUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.ImpersonatorUserId)
+                    .HasDatabaseName("IX_ImpersonationLogs_ImpersonatorUserId");
+
+                entity.HasIndex(e => e.TargetUserId)
+                    .HasDatabaseName("IX_ImpersonationLogs_TargetUserId");
+
+                entity.HasIndex(e => e.StartedAt)
+                    .HasDatabaseName("IX_ImpersonationLogs_StartedAt");
             });
         }
 
