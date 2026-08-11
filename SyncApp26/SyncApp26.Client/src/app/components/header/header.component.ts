@@ -5,6 +5,7 @@ import { AuthenticationService, User, rolesLabel } from '../../services/authenti
 import { DocumentSignatureService } from '../../services/document-signature.service';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
 import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/user-sync.signalr.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { filter, Subscription } from 'rxjs';
 
 @Component({
@@ -28,21 +29,31 @@ export class HeaderComponent implements OnInit, OnDestroy {
   pendingSignatureCount = 0;
   pendingRequestCount = 0;
   anomalyAlert: SignatureAnomalyAlert | null = null;
+  isImpersonating = false;
+  impersonationBlockedMessage: string | null = null;
   private routerSubscription!: Subscription;
   private signatureCountSubscription!: Subscription;
   private anomalyAlertSubscription!: Subscription;
   private requestCountSubscription!: Subscription;
+  private impersonationBlockedMessageSubscription!: Subscription;
 
   constructor(
     private authService: AuthenticationService,
     private router: Router,
     private documentSignatureService: DocumentSignatureService,
     private dataChangeRequestService: DataChangeRequestService,
-    private signalrService: UserSyncSignalrService
+    private signalrService: UserSyncSignalrService,
+    private impersonationService: ImpersonationService
   ) { }
 
   ngOnInit(): void {
     this.checkAuthStatus();
+
+    // Unconditional: start()/stop() always hard-reload the page (see ImpersonationService), so there's
+    // no stale-flag risk here the way there is for the role-gated subscriptions below.
+    this.impersonationBlockedMessageSubscription = this.impersonationService.blockedMessage$.subscribe(
+      message => this.impersonationBlockedMessage = message
+    );
 
     // Close menus on navigation
     this.routerSubscription = this.router.events.pipe(
@@ -102,6 +113,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (this.requestCountSubscription) {
       this.requestCountSubscription.unsubscribe();
     }
+    if (this.impersonationBlockedMessageSubscription) {
+      this.impersonationBlockedMessageSubscription.unsubscribe();
+    }
   }
 
   toggleAnomalyPopover(): void {
@@ -123,6 +137,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isAdmin = this.authService.isAdmin();
     this.isLineManager = this.authService.isLineManager();
     this.isOfficer = this.authService.isOfficer();
+    this.isImpersonating = this.impersonationService.isImpersonating();
+  }
+
+  exitImpersonation(): void {
+    this.impersonationService.stop();
   }
 
   loadPendingSignatureCount(): void {

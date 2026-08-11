@@ -9,6 +9,7 @@ import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService, roleLabel } from '../../services/authentication.service';
 import { NotificationService } from '../../services/notification.service';
 import { RoleService, Role } from '../../services/role.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { User, UserRole, Department } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
@@ -124,7 +125,8 @@ export class UsersListComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private notificationService: NotificationService,
-    private roleService: RoleService
+    private roleService: RoleService,
+    private impersonationService: ImpersonationService
   ) { }
 
   logout(): void {
@@ -573,6 +575,14 @@ export class UsersListComponent implements OnInit {
   isSavingRoles = false;
   newRoleName = '';
   newRoleDescription = '';
+
+  viewAsUser(user: User, event: Event): void {
+    event.stopPropagation();
+    this.impersonationService.start(user.id).subscribe({
+      // Success needs no handler here: start() hard-navigates away on success.
+      error: (err) => this.showToast(err.error?.message || 'Could not start view-as session.', 'error')
+    });
+  }
 
   openRolesModal(user: User, event: Event): void {
     event.stopPropagation();

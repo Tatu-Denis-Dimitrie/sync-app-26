@@ -667,6 +667,12 @@
                                                 </div>
                                                 <div class="flex items-center gap-1">
                                                   <button
+                                                    (click)="viewAsUser(user, $event)"
+                                                    class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
+                                                    >
+                                                    View as
+                                                  </button>
+                                                  <button
                                                     (click)="openRolesModal(user, $event)"
                                                     class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >

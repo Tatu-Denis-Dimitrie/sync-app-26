@@ -64,6 +64,9 @@ export class RegisterComponent {
         if (response.token) {
           localStorage.setItem('authToken', response.token);
         }
+        // A fresh account always ends any impersonation - see ImpersonationService for the key names.
+        localStorage.removeItem('impersonationOriginalToken');
+        localStorage.removeItem('impersonationOriginalUser');
 
         // Redirect to login after 2 seconds
         setTimeout(() => {
