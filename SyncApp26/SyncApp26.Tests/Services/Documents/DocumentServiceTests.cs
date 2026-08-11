@@ -6,6 +6,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Domain.Exceptions;
 using SyncApp26.Infrastructure.Services;
 using SyncApp26.Tests.TestHelpers;
 
@@ -329,7 +330,7 @@ namespace SyncApp26.Tests.Services.Documents
                 .Include(d => d.User).ThenInclude(u => u.InitialTrainings)
                 .FirstAsync(d => d.Id == doc.Id);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            await Assert.ThrowsAsync<DocumentSigningAuthorizationException>(() =>
                 service.SignSingleDocumentAsOfficerAsync(loadedDoc, wrongTypeOfficer.Id, "Type", "Mihai Ionescu", "5.6.7.8"));
         }
 

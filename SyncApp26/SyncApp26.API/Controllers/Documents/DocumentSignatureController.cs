@@ -179,7 +179,7 @@ namespace SyncApp26.API.Controllers
             public string SignatureMethod { get; set; } = string.Empty;
             public string SignatureData { get; set; } = string.Empty;
             /// <summary>Which officer queue to process asynchronously ("SSM" or "SU"). Only used by bulk-sign-async.</summary>
-            public string DocumentType { get; set; } = "SSM";
+            public string DocumentType { get; set; } = DocumentTypes.Ssm;
         }
 
         [HttpPost("bulk-sign")]
@@ -209,9 +209,19 @@ namespace SyncApp26.API.Controllers
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
-            var documentType = (string.IsNullOrWhiteSpace(request.DocumentType) ? "SSM" : request.DocumentType).Trim().ToUpperInvariant();
-            if (documentType != "SSM" && documentType != "SU")
+            string documentType;
+            if (string.IsNullOrWhiteSpace(request.DocumentType))
+            {
+                documentType = DocumentTypes.Ssm;
+            }
+            else if (DocumentTypes.Normalize(request.DocumentType) is { } normalized)
+            {
+                documentType = normalized;
+            }
+            else
+            {
                 return BadRequest(new { message = "DocumentType must be 'SSM' or 'SU'." });
+            }
 
             // This endpoint processes the officer queue only (GetPendingDocumentsForOfficerListAsync) —
             // it never touches PendingManager documents — so the caller must be the officer for the
@@ -267,7 +277,7 @@ namespace SyncApp26.API.Controllers
 
         [HttpGet("pending-ssm-admin-count")]
         [Authorize(Roles = Roles.SsmOfficer + "," + Roles.SuOfficer + "," + Roles.LineManager)]
-        public async Task<IActionResult> GetPendingSsmAdminCount([FromQuery] string documentType = "SSM")
+        public async Task<IActionResult> GetPendingSsmAdminCount([FromQuery] string documentType = DocumentTypes.Ssm)
         {
             var count = await _documentService.GetPendingDocumentsForOfficerAsync(documentType);
             return Ok(new { count });
