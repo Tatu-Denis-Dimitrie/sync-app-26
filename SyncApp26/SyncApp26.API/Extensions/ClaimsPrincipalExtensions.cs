@@ -20,7 +20,6 @@ namespace SyncApp26.API.Extensions
         // duties. A line manager may still initiate, but only for their own direct reports — callers
         // check that separately, since it isn't a role check.
         public static bool CanInitiateFor(this ClaimsPrincipal user, string documentType) =>
-            user.IsInRole(documentType.Equals("SSM", StringComparison.OrdinalIgnoreCase)
-                ? Roles.SsmOfficer : Roles.SuOfficer);
+            user.IsInRole(DocumentTypes.IsSsm(documentType) ? Roles.SsmOfficer : Roles.SuOfficer);
     }
 }

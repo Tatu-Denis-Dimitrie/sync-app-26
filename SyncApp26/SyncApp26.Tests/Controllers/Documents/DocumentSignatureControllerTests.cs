@@ -342,6 +342,36 @@ namespace SyncApp26.Tests.Controllers.Documents
             Assert.Equal(3, GetProp<int>(ok.Value!, "total"));
         }
 
+        [Fact]
+        public async Task BulkSignAsync_SuOfficerRequestingSsm_ReturnsForbidden()
+        {
+            var controller = CreateController(role: Roles.SuOfficer);
+
+            var result = await controller.BulkSignAsync(new BulkSignDto { SignatureData = "data", DocumentType = "SSM" });
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task BulkSignAsync_LineManagerWithoutOfficerRole_ReturnsForbidden()
+        {
+            var controller = CreateController(role: Roles.LineManager);
+
+            var result = await controller.BulkSignAsync(new BulkSignDto { SignatureData = "data" });
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task BulkSignAsync_InvalidDocumentType_ReturnsBadRequest()
+        {
+            var controller = CreateController(role: Roles.SsmOfficer);
+
+            var result = await controller.BulkSignAsync(new BulkSignDto { SignatureData = "data", DocumentType = "Both" });
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
         // ───────────────────────── GetBulkSignStatus ─────────────────────────
 
         [Fact]

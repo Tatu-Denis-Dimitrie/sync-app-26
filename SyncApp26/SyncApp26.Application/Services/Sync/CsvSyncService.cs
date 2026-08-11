@@ -573,11 +573,16 @@ public class CsvSyncService : ICsvSyncService
             CreatedAt = DateTime.UtcNow
         };
 
-        // Everyone starts as Basic User.
-        if (basicUserRoleId.HasValue)
+        // Everyone starts as Basic User. A missing role id means the Roles table isn't seeded/migrated
+        // yet — creating the account anyway would silently produce a role-less user nothing can
+        // authorize, so fail the row explicitly instead of proceeding.
+        if (!basicUserRoleId.HasValue)
         {
-            newUser.RoleAssignments.Add(new UserRoleAssignment { UserId = newUser.Id, RoleId = basicUserRoleId.Value });
+            result.RecordsFailed++;
+            result.Errors.Add($"User {csvData.Email}: The BasicUser role is not configured. Cannot create the account without it.");
+            return null;
         }
+        newUser.RoleAssignments.Add(new UserRoleAssignment { UserId = newUser.Id, RoleId = basicUserRoleId.Value });
 
         return newUser;
     }

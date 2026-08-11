@@ -8,6 +8,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Domain.Exceptions;
 using SyncApp26.Infrastructure.Context;
 using SyncApp26.Infrastructure.Repositories;
 using QuestPDF.Fluent;
@@ -36,21 +37,21 @@ namespace SyncApp26.Infrastructure.Services
         // Returnează numărul de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU.
         public async Task<int> GetPendingDocumentsForOfficerAsync(string documentType)
         {
-            var type = documentType.ToUpperInvariant();
+            var type = DocumentTypes.Normalize(documentType);
             return await _context.UserDocuments
                 .Include(d => d.User)
                 .CountAsync(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
-                    d.Status == "PendingInstructor");
+                    d.Status == DocumentStatuses.PendingInstructor);
         }
 
         // Returnează lista de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU (pentru bulk progres)
         // Returns ALL pending documents ordered oldest-first so signatures are applied in creation order.
         public async Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType)
         {
-            var type = documentType.ToUpperInvariant();
+            var type = DocumentTypes.Normalize(documentType);
             var allPending = await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
@@ -60,7 +61,7 @@ namespace SyncApp26.Infrastructure.Services
                     d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
-                    d.Status == "PendingInstructor")
+                    d.Status == DocumentStatuses.PendingInstructor)
                 .ToListAsync();
 
             return allPending.OrderBy(d => d.GeneratedAt).ToList();
@@ -102,7 +103,7 @@ namespace SyncApp26.Infrastructure.Services
             {
                 UserId = userId,
                 DocumentType = documentType ?? string.Empty,
-                Status = "PendingUser",
+                Status = DocumentStatuses.PendingUser,
                 GeneratedAt = DateTime.UtcNow
             };
             _context.UserDocuments.Add(doc);
@@ -238,6 +239,25 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task SignSingleDocumentAsOfficerAsync(UserDocument doc, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
+            // The service layer must enforce this itself — bulk-sign-async's controller loop calls
+            // this per document, so a missed/loosened controller check must not translate into an
+            // unauthorized signature actually being written. Wrong state and lack of authorization are
+            // deliberately different exception types so callers can tell them apart.
+            if (doc.Status != DocumentStatuses.PendingInstructor)
+                throw new InvalidOperationException("Document is not pending an officer signature.");
+
+            var docType = DocumentTypes.Normalize(doc.DocumentType);
+            var requiredOfficerRole = docType switch
+            {
+                DocumentTypes.Ssm => Roles.SsmOfficer,
+                DocumentTypes.Su => Roles.SuOfficer,
+                _ => null
+            };
+            bool isOfficerForType = requiredOfficerRole != null &&
+                await _context.Users.Where(u => u.Id == signerUserId).WithRole(requiredOfficerRole).AnyAsync();
+            if (!isOfficerForType)
+                throw new DocumentSigningAuthorizationException("Signer does not hold the officer role for this document's type.");
+
             var timestamp = DateTime.UtcNow;
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
 
@@ -619,7 +639,7 @@ namespace SyncApp26.Infrastructure.Services
             Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures,
             Dictionary<string, SignatureRecord> initialTrainingSignatures)
         {
-            bool isSsm = document.DocumentType?.ToUpper() == "SSM";
+            bool isSsm = DocumentTypes.IsSsm(document.DocumentType);
             string formTitle = isSsm
                 ? "FIȘA DE SECURITATE ȘI SĂNĂTATE ÎN MUNCĂ"
                 : "FIȘA DE INSTRUCTAJ PRIVIND SECURITATEA LA INCENDII (SU)";
@@ -817,7 +837,7 @@ namespace SyncApp26.Infrastructure.Services
         private static void BuildInitialTrainingSection(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx)
         {
             bool isSsm = ctx.IsSsm;
-            var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? "SSM" : "SU"));
+            var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? DocumentTypes.Ssm : DocumentTypes.Su));
             string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
             SectionHeader(col, sectionTitle, ctx.AccentColor);
 
@@ -1182,7 +1202,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             return await _context.UserDocuments
                 .Include(d => d.User)
-                .Where(d => d.DocumentType == documentType && d.Status == "PendingUser")
+                .Where(d => d.DocumentType == documentType && d.Status == DocumentStatuses.PendingUser)
                 .ToListAsync();
         }
 
@@ -1235,7 +1255,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
                 .Where(d => d.User != null && d.User.AssignedToId == managerId
-                    && d.Status == "PendingManager"
+                    && d.Status == DocumentStatuses.PendingManager
                     && d.UserSignedAt != null
                     && d.ManagerSignedAt == null)
                 .OrderByDescending(d => d.GeneratedAt)
@@ -1290,11 +1310,11 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
-                .Where(d => d.Status == "PendingInstructor"
+                .Where(d => d.Status == DocumentStatuses.PendingInstructor
                     && d.ManagerSignedAt != null
                     && d.InstructorSignedAt == null
                     && d.DocumentType != null
-                    && ((isSsmOfficer && d.DocumentType.ToUpper() == "SSM") || (isSuOfficer && d.DocumentType.ToUpper() == "SU")))
+                    && ((isSsmOfficer && d.DocumentType.ToUpper() == DocumentTypes.Ssm) || (isSuOfficer && d.DocumentType.ToUpper() == DocumentTypes.Su)))
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
         }
@@ -1354,7 +1374,7 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
 
             var ids = latestPerUser
-                .Where(d => d.Status == "PendingUser")
+                .Where(d => d.Status == DocumentStatuses.PendingUser)
                 .Select(d => d.UserId)
                 .Distinct();
             return new HashSet<Guid>(ids);
@@ -1435,7 +1455,7 @@ namespace SyncApp26.Infrastructure.Services
                     doc.UserSignatureIpAddress = ipAddress;
                     doc.UserSignedAt = timestamp;
                     doc.UserCryptographicSignature = cryptoSignature;
-                    doc.Status = "PendingManager";
+                    doc.Status = DocumentStatuses.PendingManager;
                     break;
 
                 case "Manager":
@@ -1444,7 +1464,7 @@ namespace SyncApp26.Infrastructure.Services
                     doc.ManagerSignatureIpAddress = ipAddress;
                     doc.ManagerSignedAt = timestamp;
                     doc.ManagerCryptographicSignature = cryptoSignature;
-                    doc.Status = "PendingInstructor";
+                    doc.Status = DocumentStatuses.PendingInstructor;
                     break;
 
                 case "Instructor":
@@ -1453,7 +1473,7 @@ namespace SyncApp26.Infrastructure.Services
                     doc.InstructorSignatureIpAddress = ipAddress;
                     doc.InstructorSignedAt = timestamp;
                     doc.InstructorCryptographicSignature = cryptoSignature;
-                    doc.Status = "Completed";
+                    doc.Status = DocumentStatuses.Completed;
                     break;
 
                 case "Admin":
@@ -1462,7 +1482,7 @@ namespace SyncApp26.Infrastructure.Services
                     doc.AdminSignatureIpAddress = ipAddress;
                     doc.AdminSignedAt = timestamp;
                     doc.AdminCryptographicSignature = cryptoSignature;
-                    doc.Status = "Completed";
+                    doc.Status = DocumentStatuses.Completed;
                     break;
             }
         }
@@ -1605,7 +1625,7 @@ namespace SyncApp26.Infrastructure.Services
                     break;
 
                 case "Admin":
-                    if (doc.DocumentType?.ToUpperInvariant() == "SSM")
+                    if (DocumentTypes.IsSsm(doc.DocumentType))
                     {
                         training.VerifierSignature = signatureData;
                         training.VerifierSignatureMethod = signatureMethod;
@@ -1648,7 +1668,7 @@ namespace SyncApp26.Infrastructure.Services
                     break;
 
                 case "Admin":
-                    if (doc.DocumentType?.ToUpperInvariant() == "SSM" && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
+                    if (DocumentTypes.IsSsm(doc.DocumentType) && string.IsNullOrEmpty(initialTraining.VerifierSignatureData))
                     {
                         initialTraining.VerifierSignatureData = signatureData;
                         initialTraining.VerifierSignatureMethod = signatureMethod;
@@ -1728,9 +1748,9 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
                 .Where(d => d.User != null && (
-                    (d.Status == "PendingManager" && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User.AssignedToId == signerUserId)
-                    || (isSsmOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" && d.Status == "PendingInstructor" && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
-                    || (isSuOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == "SU" && d.Status == "PendingInstructor" && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
+                    (d.Status == DocumentStatuses.PendingManager && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User.AssignedToId == signerUserId)
+                    || (isSsmOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Ssm && d.Status == DocumentStatuses.PendingInstructor && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
+                    || (isSuOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Su && d.Status == DocumentStatuses.PendingInstructor && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
                 ))
                 .ToListAsync();
 
@@ -1741,7 +1761,7 @@ namespace SyncApp26.Infrastructure.Services
         private async Task SignSingleDocumentInBulkAsync(UserDocument doc, Guid signerUserId, string signerFullName, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
         {
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
-            var signerRole = doc.Status == "PendingManager" ? "Manager" : "Instructor";
+            var signerRole = doc.Status == DocumentStatuses.PendingManager ? "Manager" : "Instructor";
 
             ApplyDocumentLevelSignature(doc, signerRole, signatureMethod, signatureData, ipAddress, timestamp, cryptoSignature);
 
@@ -1783,7 +1803,7 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
         {
-            bool isSsmDocumentType = string.Equals(documentType, "SSM", StringComparison.OrdinalIgnoreCase);
+            bool isSsmDocumentType = DocumentTypes.IsSsm(documentType);
 
             var users = await _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
@@ -1841,10 +1861,10 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
                 .Where(d =>
-                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
+                    d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Ssm &&
                     d.User != null &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
-                    d.Status == "PendingAdmin")
+                    d.Status == DocumentStatuses.PendingAdmin)
                 .OrderByDescending(d => d.GeneratedAt)
                 .ToListAsync();
         }
@@ -1862,8 +1882,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
                 .Where(d =>
-                    d.DocumentType != null && d.DocumentType.ToUpper() == "SSM" &&
-                    d.Status == "Completed" &&
+                    d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Ssm &&
+                    d.Status == DocumentStatuses.Completed &&
                     d.User != null &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin))
                 .OrderByDescending(d => d.GeneratedAt)
