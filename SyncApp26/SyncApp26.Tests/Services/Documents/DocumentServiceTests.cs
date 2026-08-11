@@ -312,6 +312,49 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
+        public async Task SignSingleDocumentAsOfficerAsync_SignerLacksOfficerRoleForType_Throws()
+        {
+            var service = CreateService();
+            var officerFunction = SeedFunction("Inspector SU");
+            // Holds the SU officer role, not SSM — must not be able to sign an SSM document.
+            var wrongTypeOfficer = SeedUser("Mihai", "Ionescu", officerFunction, roleName: Roles.SuOfficer);
+            var employeeFunction = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", employeeFunction);
+            var doc = SeedDocument(owner, "SSM", "PendingInstructor");
+            doc.ManagerSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+
+            var loadedDoc = await _dbFixture.Context.UserDocuments
+                .Include(d => d.User).ThenInclude(u => u.PeriodicTrainings)
+                .Include(d => d.User).ThenInclude(u => u.InitialTrainings)
+                .FirstAsync(d => d.Id == doc.Id);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SignSingleDocumentAsOfficerAsync(loadedDoc, wrongTypeOfficer.Id, "Type", "Mihai Ionescu", "5.6.7.8"));
+        }
+
+        [Fact]
+        public async Task SignSingleDocumentAsOfficerAsync_DocumentNotPendingInstructor_Throws()
+        {
+            var service = CreateService();
+            var officerFunction = SeedFunction("Inspector SSM");
+            var officer = SeedUser("Mihai", "Ionescu", officerFunction, roleName: Roles.SsmOfficer);
+            var employeeFunction = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", employeeFunction);
+            // Still waiting on the manager — not yet this officer's turn to sign.
+            var doc = SeedDocument(owner, "SSM", "PendingManager");
+            _dbFixture.Context.SaveChanges();
+
+            var loadedDoc = await _dbFixture.Context.UserDocuments
+                .Include(d => d.User).ThenInclude(u => u.PeriodicTrainings)
+                .Include(d => d.User).ThenInclude(u => u.InitialTrainings)
+                .FirstAsync(d => d.Id == doc.Id);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SignSingleDocumentAsOfficerAsync(loadedDoc, officer.Id, "Type", "Mihai Ionescu", "5.6.7.8"));
+        }
+
+        [Fact]
         public async Task BulkSignDocumentsAsync_ManagerBulkSigns_CreatesOneSignatureRecordPerDocument()
         {
             var service = CreateService();

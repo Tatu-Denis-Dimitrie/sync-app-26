@@ -196,7 +196,7 @@ namespace SyncApp26.Infrastructure.Repositories
         public async Task<bool> IsInRoleAsync(Guid userId, string roleName)
         {
             return await _context.Users
-                .Where(u => u.Id == userId)
+                .Where(u => u.Id == userId && u.DeletedAt == null)
                 .WithRole(roleName)
                 .AnyAsync();
         }

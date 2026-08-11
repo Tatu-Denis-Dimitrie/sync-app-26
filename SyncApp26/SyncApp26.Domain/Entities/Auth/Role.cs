@@ -19,7 +19,7 @@ namespace SyncApp26.Domain.Entities
         public string? Description { get; set; }
 
         /// <summary>
-        /// Built-in roles that code checks by name (see SyncApp26.Domain.Constants.Roles). The admin
+        /// Built-in roles that code checks by name (see SyncApp26.Domain.Enums.Roles). The admin
         /// UI must refuse to delete or rename these — dropping one would silently strip authorization
         /// instead of failing loudly.
         /// </summary>

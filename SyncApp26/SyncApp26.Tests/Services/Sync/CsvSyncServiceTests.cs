@@ -405,6 +405,32 @@ namespace SyncApp26.Tests.Services.Sync
         }
 
         [Fact]
+        public async Task SyncUsers_NewUserWhenBasicUserRoleMissing_FailsRowWithoutCreatingUser()
+        {
+            // Roles table not fully seeded (e.g. migrations not applied yet) — BasicUser role is
+            // missing. Must fail the row explicitly rather than silently create a role-less account.
+            _dbFixture.GetOrCreateRole(Roles.Admin);
+            _dbFixture.GetOrCreateRole(Roles.LineManager);
+            var service = new CsvSyncService(
+                new UserRepository(_dbFixture.Context),
+                new DepartmentRepository(_dbFixture.Context),
+                new FunctionRepository(_dbFixture.Context),
+                _notificationMock.Object,
+                new ImportHistoryRepository(_dbFixture.Context),
+                new UserChangeHistoryRepository(_dbFixture.Context),
+                new DataChangeRequestRepository(_dbFixture.Context));
+
+            SeedDepartment("Engineering");
+            var request = new SyncRequestDTO { Items = { MakeNewItem(MakeCsvUser("P1", departmentName: "Engineering")) } };
+
+            var result = await service.SyncUsers(request);
+
+            Assert.Equal(1, result.RecordsFailed);
+            Assert.Equal(0, result.RecordsProcessed);
+            Assert.Empty(_dbFixture.Context.Users.Where(u => u.PersonalId == "P1"));
+        }
+
+        [Fact]
         public async Task SyncUsers_NewUserDepartmentInactive_RecordsFailureWithoutAdding()
         {
             SeedDepartment("Engineering", isActive: false);

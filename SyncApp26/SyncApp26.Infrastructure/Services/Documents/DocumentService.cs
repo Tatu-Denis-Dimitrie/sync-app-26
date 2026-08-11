@@ -238,6 +238,24 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task SignSingleDocumentAsOfficerAsync(UserDocument doc, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress)
         {
+            // The service layer must enforce this itself — bulk-sign-async's controller loop calls
+            // this per document, so a missed/loosened controller check must not translate into an
+            // unauthorized signature actually being written.
+            if (doc.Status != "PendingInstructor")
+                throw new InvalidOperationException("Document is not pending an officer signature.");
+
+            var docType = doc.DocumentType?.ToUpperInvariant();
+            var requiredOfficerRole = docType switch
+            {
+                "SSM" => Roles.SsmOfficer,
+                "SU" => Roles.SuOfficer,
+                _ => null
+            };
+            bool isOfficerForType = requiredOfficerRole != null &&
+                await _context.Users.Where(u => u.Id == signerUserId).WithRole(requiredOfficerRole).AnyAsync();
+            if (!isOfficerForType)
+                throw new InvalidOperationException("Signer does not hold the officer role for this document's type.");
+
             var timestamp = DateTime.UtcNow;
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
 

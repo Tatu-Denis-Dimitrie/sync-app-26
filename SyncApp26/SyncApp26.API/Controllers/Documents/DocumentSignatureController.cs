@@ -209,7 +209,16 @@ namespace SyncApp26.API.Controllers
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
 
-            var documentType = string.IsNullOrWhiteSpace(request.DocumentType) ? "SSM" : request.DocumentType;
+            var documentType = (string.IsNullOrWhiteSpace(request.DocumentType) ? "SSM" : request.DocumentType).Trim().ToUpperInvariant();
+            if (documentType != "SSM" && documentType != "SU")
+                return BadRequest(new { message = "DocumentType must be 'SSM' or 'SU'." });
+
+            // This endpoint processes the officer queue only (GetPendingDocumentsForOfficerListAsync) —
+            // it never touches PendingManager documents — so the caller must be the officer for the
+            // requested type specifically, not just hold some officer role for the other type.
+            if (!User.CanInitiateFor(documentType))
+                return Forbid();
+
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
             int total = await _documentService.GetPendingDocumentsForOfficerAsync(documentType);
