@@ -50,6 +50,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
         public DbSet<ImpersonationLog> ImpersonationLogs { get; set; }
+        public DbSet<SignatureAnomalyAlert> SignatureAnomalyAlerts { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -451,6 +452,25 @@ namespace SyncApp26.Infrastructure.Context
 
                 entity.HasIndex(e => e.StartedAt)
                     .HasDatabaseName("IX_ImpersonationLogs_StartedAt");
+            });
+
+            // Configure SignatureAnomalyAlert entity (one row per sweep run with anomalies)
+            modelBuilder.Entity<SignatureAnomalyAlert>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Restrict, not Cascade: the admin who dismissed the alert doesn't own the row,
+                // same reasoning as ImpersonationLog's FKs above.
+                entity.HasOne(e => e.ReadByAdmin)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReadByAdminId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.OccurredAt)
+                    .HasDatabaseName("IX_SignatureAnomalyAlerts_OccurredAt");
+
+                entity.HasIndex(e => e.IsRead)
+                    .HasDatabaseName("IX_SignatureAnomalyAlerts_IsRead");
             });
         }
 

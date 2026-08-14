@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.SignalR;
 using SyncApp26.API.Hubs;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Domain.IRepositories;
 
 namespace SyncApp26.API.Services
 {
@@ -103,6 +105,23 @@ namespace SyncApp26.API.Services
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Failed to send signature anomaly alert email(s) to admins.");
+                    }
+
+                    // Independent of both the email and the broadcast below: persists so an admin who
+                    // wasn't connected/logged in when this fired still sees the alert on next login.
+                    try
+                    {
+                        using var scope = _serviceProvider.CreateScope();
+                        var alertRepository = scope.ServiceProvider.GetRequiredService<ISignatureAnomalyAlertRepository>();
+                        await alertRepository.AddAsync(new SignatureAnomalyAlert
+                        {
+                            RecordsChecked = summary.RecordsChecked,
+                            AnomaliesFound = summary.AnomaliesFound
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to persist signature anomaly alert.");
                     }
 
                     // Separate try/catch from the email step above: a live-UI broadcast failure

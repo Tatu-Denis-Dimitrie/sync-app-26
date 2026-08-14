@@ -350,6 +350,43 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureAnomalyAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AnomaliesFound")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ReadByAdminId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RecordsChecked")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsRead")
+                        .HasDatabaseName("IX_SignatureAnomalyAlerts_IsRead");
+
+                    b.HasIndex("OccurredAt")
+                        .HasDatabaseName("IX_SignatureAnomalyAlerts_OccurredAt");
+
+                    b.HasIndex("ReadByAdminId");
+
+                    b.ToTable("SignatureAnomalyAlerts");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1027,6 +1064,16 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("Instructor");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureAnomalyAlert", b =>
+                {
+                    b.HasOne("SyncApp26.Domain.Entities.User", "ReadByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ReadByAdminId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ReadByAdmin");
                 });
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureRecord", b =>
