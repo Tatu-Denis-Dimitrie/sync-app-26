@@ -667,26 +667,26 @@
                                                 </div>
                                                 <div class="flex items-center gap-1">
                                                   <button
-                                                    (click)="viewAsUser(user, $event)"
-                                                    class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
+                                                    (click)="openViewAsModal(user, $event)"
+                                                    class="user-card-action text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >
                                                     View as
                                                   </button>
                                                   <button
                                                     (click)="openRolesModal(user, $event)"
-                                                    class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
+                                                    class="user-card-action text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >
                                                     Roles
                                                   </button>
                                                   <button
                                                     (click)="openEditModal(user, $event)"
-                                                    class="text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
+                                                    class="user-card-action text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >
                                                     Edit
                                                   </button>
                                                   <button
                                                     (click)="openDeleteModal(user, $event)"
-                                                    class="text-xs p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+                                                    class="user-card-action text-xs p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
                                                     >
                                                     Delete
                                                   </button>
@@ -1131,6 +1131,42 @@
                                                           class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
                                                           >
                                                           {{ isSavingRoles ? 'Saving...' : 'Save Roles' }}
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                }
+
+                                                <!-- View As Modal -->
+                                                @if (isViewAsModalOpen && viewAsModalUser) {
+                                                  <div
+                                                    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 text-left backdrop-blur-sm cursor-default"
+                                                    (click)="closeViewAsModal()"
+                                                    >
+                                                    <div
+                                                      class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
+                                                      (click)="$event.stopPropagation()"
+                                                      >
+                                                      <h2 class="text-lg font-semibold text-foreground mb-2">View as {{ viewAsModalUser.firstName }} {{ viewAsModalUser.lastName }}?</h2>
+                                                      <p class="text-muted-foreground text-sm mb-6">
+                                                        Your session switches to theirs immediately, with their permissions. You can return to your own session anytime from the header.
+                                                      </p>
+                                                      <div class="flex flex-wrap justify-end gap-3">
+                                                        <button
+                                                          type="button"
+                                                          (click)="closeViewAsModal()"
+                                                          [disabled]="isStartingImpersonation"
+                                                          class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent disabled:opacity-50"
+                                                          >
+                                                          Cancel
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          (click)="confirmViewAs()"
+                                                          [disabled]="isStartingImpersonation"
+                                                          class="max-w-full truncate px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+                                                          >
+                                                          {{ isStartingImpersonation ? 'Switching…' : 'View as ' + viewAsModalUser.firstName }}
                                                         </button>
                                                       </div>
                                                     </div>

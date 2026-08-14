@@ -576,11 +576,34 @@ export class UsersListComponent implements OnInit {
   newRoleName = '';
   newRoleDescription = '';
 
-  viewAsUser(user: User, event: Event): void {
+  // View As modal state: impersonation swaps the live session on a single click, so it gets the
+  // same confirm-then-commit shape as Delete rather than firing straight off the list button.
+  isViewAsModalOpen = false;
+  viewAsModalUser: User | null = null;
+  isStartingImpersonation = false;
+
+  openViewAsModal(user: User, event: Event): void {
     event.stopPropagation();
-    this.impersonationService.start(user.id).subscribe({
+    this.viewAsModalUser = user;
+    this.isViewAsModalOpen = true;
+  }
+
+  closeViewAsModal(): void {
+    if (this.isStartingImpersonation) return;
+    this.isViewAsModalOpen = false;
+    this.viewAsModalUser = null;
+  }
+
+  confirmViewAs(): void {
+    if (!this.viewAsModalUser || this.isStartingImpersonation) return;
+
+    this.isStartingImpersonation = true;
+    this.impersonationService.start(this.viewAsModalUser.id).subscribe({
       // Success needs no handler here: start() hard-navigates away on success.
-      error: (err) => this.showToast(err.error?.message || 'Could not start view-as session.', 'error')
+      error: (err) => {
+        this.isStartingImpersonation = false;
+        this.showToast(err.error?.message || 'Could not start view-as session.', 'error');
+      }
     });
   }
 
