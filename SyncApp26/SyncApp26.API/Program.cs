@@ -8,6 +8,7 @@ using SyncApp26.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using System.IO;
 using SyncApp26.API.Services;
+using SyncApp26.API.Filters;
 using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -17,7 +18,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddSignalR();
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        // Global, fail-closed: any non-GET request on an impersonation token is refused unless the
+        // action is explicitly marked [AllowDuringImpersonation]. See ImpersonationReadOnlyFilter.
+        options.Filters.Add<ImpersonationReadOnlyFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -65,6 +71,7 @@ builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepo
 builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
 builder.Services.AddScoped<IDataChangeRequestRepository, DataChangeRequestRepository>();
 builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
+builder.Services.AddScoped<IImpersonationLogRepository, ImpersonationLogRepository>();
 
 
 // Services
@@ -90,6 +97,7 @@ builder.Services.AddScoped<IUserInitialTrainingService, UserInitialTrainingServi
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();

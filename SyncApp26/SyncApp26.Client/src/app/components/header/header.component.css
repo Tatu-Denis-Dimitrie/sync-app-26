@@ -60,7 +60,10 @@ a.router-link-active {
   a.router-link-active::after {
     content: '';
     position: absolute;
-    bottom: -18px;
+    /* -18px put this well below the nav bar's own bottom edge, so it never rendered inside it
+       (verified live: link/nav gap is a stable 15px scrolled or not). -8px keeps it inside that
+       gap, attached to the label, in both header heights. */
+    bottom: -8px;
     left: 20%;
     right: 20%;
     height: 3px;
@@ -90,5 +93,14 @@ a.router-link-active {
   .max-w-7xl {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+}
+
+/* Guarantee a real hit target on touch, independent of viewport width - a touchscreen laptop
+   at desktop breakpoints still has no hover, and the exit control is too consequential to miss. */
+@media (pointer: coarse) {
+  .impersonation-exit {
+    min-height: 44px;
+    min-width: 44px;
   }
 }

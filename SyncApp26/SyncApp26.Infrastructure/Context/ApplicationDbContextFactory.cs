@@ -9,8 +9,10 @@ namespace SyncApp26.Infrastructure.Context
         {
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
             
-            // Configure SQLite with the connection string
-            optionsBuilder.UseSqlite("Data Source=SyncApp26.db");
+            // Design-time tools (dotnet ef) run with the startup project (SyncApp26.API) as the
+            // working directory, matching Program.cs's ContentRootPath-relative resolution of
+            // "DefaultConnection" - keep this literal in sync with that path.
+            optionsBuilder.UseSqlite("Data Source=../SyncApp26.Infrastructure/SyncApp26.db");
 
             return new ApplicationDbContext(optionsBuilder.Options);
         }

@@ -115,6 +115,10 @@ export class AuthenticationService {
     if (response.user) {
       localStorage.setItem('currentUser', JSON.stringify(response.user));
     }
+    // A fresh login always ends any impersonation. Not injecting ImpersonationService here (it would
+    // create a cycle through HttpClient) - these are its two stash keys, inlined.
+    localStorage.removeItem('impersonationOriginalToken');
+    localStorage.removeItem('impersonationOriginalUser');
   }
 
   forgotPassword(request: ForgotPasswordRequest): Observable<MessageResponse> {
@@ -128,6 +132,11 @@ export class AuthenticationService {
   logout(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
+    // Must also clear any stashed impersonation session - otherwise a different person logging in
+    // afterward on the same machine would see the "Return to my account" banner and could hand
+    // themselves the previous admin's still-valid token. See ImpersonationService for the key names.
+    localStorage.removeItem('impersonationOriginalToken');
+    localStorage.removeItem('impersonationOriginalUser');
     // Full reload, not router navigation: root services cache the session's data and
     // nothing resets them, so the next account would see the previous one's.
     window.location.href = '/login';

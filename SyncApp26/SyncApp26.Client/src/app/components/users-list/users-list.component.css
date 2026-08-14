@@ -1,1 +1,10 @@
 /* Users List Component Styles */
+
+/* View as / Roles / Edit / Delete: p-1.5 reads fine to a mouse but is well under the 44px touch
+   target on a card grid that's already single-column on phones. Bump it only for coarse pointers
+   so the desktop density (a manager working a long list) is untouched. */
+@media (pointer: coarse) {
+  .user-card-action {
+    padding: 0.875rem;
+  }
+}

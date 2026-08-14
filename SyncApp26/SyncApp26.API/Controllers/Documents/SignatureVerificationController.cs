@@ -5,6 +5,7 @@ using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.SignatureVerification;
 using SyncApp26.Shared.DTOs.Response.SignatureVerification;
 using SyncApp26.API.Extensions;
+using SyncApp26.API.Filters;
 
 namespace SyncApp26.API.Controllers
 {
@@ -81,6 +82,7 @@ namespace SyncApp26.API.Controllers
         /// records. Ids the caller is not allowed to see are silently omitted from the result.
         /// </summary>
         [HttpPost("verification-status/batch")]
+        [AllowDuringImpersonation]
         public async Task<IActionResult> GetVerificationStatusBatch([FromBody] BatchVerificationStatusRequestDTO request)
         {
             if (!TryGetCallerId(out var callerId))
@@ -141,6 +143,7 @@ namespace SyncApp26.API.Controllers
         /// not an error.
         /// </summary>
         [HttpPost("verification-status/by-users")]
+        [AllowDuringImpersonation]
         public async Task<IActionResult> GetVerificationStatusForUsers([FromBody] VerificationStatusForUsersRequestDTO request)
         {
             if (!TryGetCallerId(out var callerId))

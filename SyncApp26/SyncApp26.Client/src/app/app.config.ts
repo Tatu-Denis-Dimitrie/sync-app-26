@@ -5,12 +5,15 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
+import { errorInterceptor } from './interceptors/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // errorInterceptor second, so it observes the real backend response after authInterceptor
+    // has attached the bearer token.
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimations()
   ]
 };
