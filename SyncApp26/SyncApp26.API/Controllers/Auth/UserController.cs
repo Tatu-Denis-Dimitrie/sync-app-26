@@ -42,6 +42,8 @@ namespace SyncApp26.API.Controllers
             AssignedToId = user.AssignedToId,
             AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
             Function = user.Function?.Name ?? "Unknown",
+            WorkSiteId = user.WorkSiteId,
+            WorkSite = user.WorkSite?.Name,
             Address = user.Address,
             BadgeNumber = user.BadgeNumber,
             BloodType = user.BloodType,
@@ -76,7 +78,7 @@ namespace SyncApp26.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetAllUsers()
         {
-            var usersList = await _userService.GetAllUsersAsync();
+            var usersList = await _userService.GetAllUsersIncludingAdminsAsync();
             var users = usersList.AsEnumerable();
 
             // Admin and SSM/SU officers see every employee — an officer's duty spans all of them,

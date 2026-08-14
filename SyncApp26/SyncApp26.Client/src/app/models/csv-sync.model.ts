@@ -48,6 +48,8 @@ export interface User {
   assignedToPersonalId?: string;
   assignedToName?: string;
   function?: string;
+  workSiteId?: string;
+  workSite?: string;
   address?: string;
   badgeNumber?: string;
   bloodType?: BloodType;
@@ -68,6 +70,13 @@ export interface Department {
   isActive: boolean;
   lineManagerCount: number;
   employeeCount: number;
+  deletedAt?: string | Date;
+}
+
+export interface WorkSite {
+  id: string;
+  name: string;
+  isActive: boolean;
   deletedAt?: string | Date;
 }
 

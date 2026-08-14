@@ -29,6 +29,7 @@ namespace SyncApp26.Tests.Services.Sync
                 new UserRepository(_dbFixture.Context),
                 new DepartmentRepository(_dbFixture.Context),
                 new FunctionRepository(_dbFixture.Context),
+                new WorkSiteRepository(_dbFixture.Context),
                 _notificationMock.Object,
                 new ImportHistoryRepository(_dbFixture.Context),
                 new UserChangeHistoryRepository(_dbFixture.Context),
@@ -49,6 +50,14 @@ namespace SyncApp26.Tests.Services.Sync
             _dbFixture.Context.Functions.Add(function);
             _dbFixture.Context.SaveChanges();
             return function;
+        }
+
+        private WorkSite SeedWorkSite(string name)
+        {
+            var workSite = new WorkSite { Id = Guid.NewGuid(), Name = name, CreatedAt = DateTime.UtcNow };
+            _dbFixture.Context.WorkSites.Add(workSite);
+            _dbFixture.Context.SaveChanges();
+            return workSite;
         }
 
         // isCsvManaged defaults to true because most tests here describe accounts that came from a
@@ -78,7 +87,7 @@ namespace SyncApp26.Tests.Services.Sync
         }
 
         private static CsvUserDTO MakeCsvUser(string personalId, string firstName = "John", string lastName = "Doe",
-            string? email = null, string departmentName = "Engineering", string? assignedToPersonalId = null, string? function = null) => new()
+            string? email = null, string departmentName = "Engineering", string? assignedToPersonalId = null, string? function = null, string? workSite = null) => new()
         {
             PersonalId = personalId,
             FirstName = firstName,
@@ -86,7 +95,8 @@ namespace SyncApp26.Tests.Services.Sync
             Email = email ?? $"{personalId}@example.com",
             DepartmentName = departmentName,
             AssignedToPersonalId = assignedToPersonalId,
-            Function = function
+            Function = function,
+            WorkSite = workSite
         };
 
         private static UserSyncItemDTO MakeNewItem(CsvUserDTO csvData) => new() { Id = Guid.NewGuid().ToString(), Status = "new", CsvData = csvData };
@@ -415,6 +425,7 @@ namespace SyncApp26.Tests.Services.Sync
                 new UserRepository(_dbFixture.Context),
                 new DepartmentRepository(_dbFixture.Context),
                 new FunctionRepository(_dbFixture.Context),
+                new WorkSiteRepository(_dbFixture.Context),
                 _notificationMock.Object,
                 new ImportHistoryRepository(_dbFixture.Context),
                 new UserChangeHistoryRepository(_dbFixture.Context),
@@ -455,6 +466,35 @@ namespace SyncApp26.Tests.Services.Sync
 
             var persisted = _dbFixture.Context.Users.Single(u => u.PersonalId == "P1");
             Assert.Equal(function.Id, persisted.FunctionId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_NewUserWithWorkSite_ResolvesExistingWorkSiteByName()
+        {
+            SeedDepartment("Engineering");
+            var workSite = SeedWorkSite("Main Plant");
+            var service = CreateService();
+            var request = new SyncRequestDTO { Items = { MakeNewItem(MakeCsvUser("P1", departmentName: "Engineering", workSite: "Main Plant")) } };
+
+            await service.SyncUsers(request);
+
+            var persisted = _dbFixture.Context.Users.Single(u => u.PersonalId == "P1");
+            Assert.Equal(workSite.Id, persisted.WorkSiteId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_NewUserWithUnknownWorkSite_LeavesWorkSiteNullWithoutError()
+        {
+            SeedDepartment("Engineering");
+            var service = CreateService();
+            var request = new SyncRequestDTO { Items = { MakeNewItem(MakeCsvUser("P1", departmentName: "Engineering", workSite: "Nonexistent Site")) } };
+
+            var result = await service.SyncUsers(request);
+
+            Assert.Equal(1, result.RecordsProcessed);
+            Assert.Equal(0, result.RecordsFailed);
+            var persisted = _dbFixture.Context.Users.Single(u => u.PersonalId == "P1");
+            Assert.Null(persisted.WorkSiteId);
         }
 
         // ───────────────────────── SyncUsers: modified, with conflicts ─────────────────────────

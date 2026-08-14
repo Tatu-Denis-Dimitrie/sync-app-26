@@ -1,0 +1,15 @@
+namespace SyncApp26.Domain.Entities
+{
+    public class WorkSite
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public bool IsActive { get; set; } = true; // Default to active
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public DateTime? DeletedAt { get; set; }
+
+        // Navigation properties
+        public ICollection<User> Users { get; set; } = new List<User>();
+    }
+}

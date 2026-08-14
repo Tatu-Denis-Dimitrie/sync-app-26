@@ -137,7 +137,7 @@ Immutable audit log for signature changes.
 Immutable audit row written on every document/training signing event, separate from the flat signature fields on UserDocument/PeriodicTraining above.
 - Id, UserDocumentId, PeriodicTrainingId (nullable)
 - SignerRole (User, Manager, Admin), SignerUserId
-- SignerFullNameSnapshot, SignerPositionSnapshot, SignerBadgeNumberSnapshot (signer identity frozen at signing time; badge number is null on records signed under schema V1, which had no such field)
+- SignerFullNameSnapshot, SignerPositionSnapshot, SignerBadgeNumberSnapshot, SignerWorkSiteNameSnapshot (signer identity frozen at signing time; badge number is null on records signed under schema V1, work-site name is null on records signed under schema V1/V2, since neither field existed yet)
 - SignatureMethod, SignatureData
 - MaterialTaughtSnapshot, DurationHoursSnapshot, TrainingDateSnapshot (training content frozen at signing time, when linked to a PeriodicTraining)
 - IpAddress, SignedAt, CreatedAt

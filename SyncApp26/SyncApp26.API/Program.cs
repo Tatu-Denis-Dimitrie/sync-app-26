@@ -63,6 +63,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IWorkSiteRepository, WorkSiteRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserChangeHistoryRepository, UserChangeHistoryRepository>();
 builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
@@ -77,6 +78,7 @@ builder.Services.AddScoped<ISignatureAnomalyAlertRepository, SignatureAnomalyAle
 
 // Services
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddScoped<IWorkSiteService, WorkSiteService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
 builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();

@@ -232,6 +232,7 @@ namespace SyncApp26.Infrastructure.Services
             _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
+                .Include(u => u.WorkSite)
                 .Include(u => u.Function)
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
@@ -756,7 +757,7 @@ namespace SyncApp26.Infrastructure.Services
                         }
                         else
                         {
-                            Row("Locul de muncă:", F(user.Department?.Name));
+                            Row("Locul de muncă:", F(user.WorkSite?.Name));
                             Row("Marca:", F(user.BadgeNumber));
                             Row("Domiciliul:", F(user.Address));
                         }
@@ -823,7 +824,7 @@ namespace SyncApp26.Infrastructure.Services
                 }
 
                 DataRow("Funcția:", F(user.Function?.Name));
-                DataRow("Locul de muncă:", F(user.Department?.Name));
+                DataRow("Locul de muncă:", F(user.WorkSite?.Name));
 
                 if (ctx.IsSsm)
                 {
@@ -1190,6 +1191,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1211,6 +1214,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1240,6 +1245,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1257,6 +1264,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1287,6 +1296,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1313,6 +1324,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1346,6 +1359,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1438,6 +1453,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1507,12 +1524,14 @@ namespace SyncApp26.Infrastructure.Services
         {
             var signerUser = await _context.Users
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .FirstOrDefaultAsync(u => u.Id == signerUserId);
             if (signerUser == null) return;
 
             var fullNameSnapshot = $"{signerUser.FirstName} {signerUser.LastName}";
             var positionSnapshot = signerUser.Function?.Name ?? string.Empty;
             var badgeNumberSnapshot = signerUser.BadgeNumber;
+            var workSiteNameSnapshot = signerUser.WorkSite?.Name;
             var signedAtOffset = new DateTimeOffset(signedAt, TimeSpan.Zero);
 
             // Links to the same signer's most recent signature across all their documents, not
@@ -1532,6 +1551,7 @@ namespace SyncApp26.Infrastructure.Services
                 fullNameSnapshot,
                 positionSnapshot,
                 badgeNumberSnapshot,
+                workSiteNameSnapshot,
                 training?.MaterialTaught,
                 training?.DurationHours,
                 training?.TrainingDate,
@@ -1551,6 +1571,7 @@ namespace SyncApp26.Infrastructure.Services
                 SignerFullNameSnapshot = fullNameSnapshot,
                 SignerPositionSnapshot = positionSnapshot,
                 SignerBadgeNumberSnapshot = badgeNumberSnapshot,
+                SignerWorkSiteNameSnapshot = workSiteNameSnapshot,
                 SignatureMethod = signatureMethod,
                 SignatureData = signatureData,
                 MaterialTaughtSnapshot = training?.MaterialTaught,
@@ -1750,6 +1771,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1819,6 +1842,7 @@ namespace SyncApp26.Infrastructure.Services
             var users = await _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
+                .Include(u => u.WorkSite)
                 .Include(u => u.Function)
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
@@ -1868,6 +1892,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1886,6 +1912,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1908,6 +1936,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)

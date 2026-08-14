@@ -16,6 +16,7 @@ namespace SyncApp26.Application.Services
         string SignerFullNameSnapshot,
         string SignerPositionSnapshot,
         string? SignerBadgeNumberSnapshot,
+        string? SignerWorkSiteNameSnapshot,
         string? MaterialTaughtSnapshot,
         decimal? DurationHoursSnapshot,
         DateTime? TrainingDateSnapshot,
@@ -32,7 +33,7 @@ namespace SyncApp26.Application.Services
     {
         /// <summary>The schema version new signatures are created with. Bump this — and add a new
         /// SerializeVN case below — when the field set changes; never edit an existing case.</summary>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public static string Serialize(SignatureCanonicalInput input)
         {
@@ -40,6 +41,7 @@ namespace SyncApp26.Application.Services
             {
                 1 => SerializeV1(input),
                 2 => SerializeV2(input),
+                3 => SerializeV3(input),
                 _ => throw new NotSupportedException($"Unknown signature canonical schema version {input.Version}.")
             };
         }
@@ -73,6 +75,27 @@ namespace SyncApp26.Application.Services
             AppendField(sb, input.SignerFullNameSnapshot);
             AppendField(sb, input.SignerPositionSnapshot);
             AppendField(sb, input.SignerBadgeNumberSnapshot);
+            AppendField(sb, input.MaterialTaughtSnapshot);
+            AppendField(sb, FormatDuration(input.DurationHoursSnapshot));
+            AppendField(sb, FormatTrainingDate(input.TrainingDateSnapshot));
+            AppendField(sb, input.SignedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+            AppendField(sb, input.PreviousSignatureHash);
+            return sb.ToString();
+        }
+
+        // V2 plus the signer's work-site name at the moment they signed. Frozen from here on,
+        // same as V1/V2 — reassigning the signer to a different work site later must not
+        // retroactively invalidate a past signature, so this is a name snapshot (mirrors
+        // SignerPositionSnapshot storing Function?.Name rather than an id), not a live lookup.
+        private static string SerializeV3(SignatureCanonicalInput input)
+        {
+            var sb = new StringBuilder();
+            AppendField(sb, input.Version.ToString(CultureInfo.InvariantCulture));
+            AppendField(sb, input.SignerUserId.ToString("D"));
+            AppendField(sb, input.SignerFullNameSnapshot);
+            AppendField(sb, input.SignerPositionSnapshot);
+            AppendField(sb, input.SignerBadgeNumberSnapshot);
+            AppendField(sb, input.SignerWorkSiteNameSnapshot);
             AppendField(sb, input.MaterialTaughtSnapshot);
             AppendField(sb, FormatDuration(input.DurationHoursSnapshot));
             AppendField(sb, FormatTrainingDate(input.TrainingDateSnapshot));

@@ -21,6 +21,8 @@ interface BackendUser {
   assignedToPersonalId?: string;
   assignedToName?: string;
   function?: string;
+  workSiteId?: string;
+  workSite?: string;
   address?: string;
   badgeNumber?: string;
   bloodType?: BloodType;
@@ -145,6 +147,8 @@ export class UserSyncService {
       assignedToPersonalId: backendUser.assignedToPersonalId,
       assignedToName: backendUser.assignedToName,
       function: this.normalizeFunction(backendUser.function),
+      workSiteId: backendUser.workSiteId,
+      workSite: backendUser.workSite,
       address: backendUser.address,
       badgeNumber: backendUser.badgeNumber,
       bloodType: backendUser.bloodType,

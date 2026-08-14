@@ -117,7 +117,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var controller = CreateController();
             StubEmptyDocumentSets();
             var users = new[] { MakeUser(), MakeUser() };
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(users);
+            _userServiceMock.Setup(s => s.GetAllUsersIncludingAdminsAsync()).ReturnsAsync(users);
 
             var result = await controller.GetAllUsers();
 
@@ -137,7 +137,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var self = MakeUser(id: callerId);
             var myReport = MakeUser(assignedToId: callerId);
             var unrelated = MakeUser();
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { self, myReport, unrelated });
+            _userServiceMock.Setup(s => s.GetAllUsersIncludingAdminsAsync()).ReturnsAsync(new[] { self, myReport, unrelated });
 
             var result = await controller.GetAllUsers();
 
@@ -157,7 +157,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
             StubEmptyDocumentSets();
             var users = new[] { MakeUser(), MakeUser() };
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(users);
+            _userServiceMock.Setup(s => s.GetAllUsersIncludingAdminsAsync()).ReturnsAsync(users);
 
             var result = await controller.GetAllUsers();
 

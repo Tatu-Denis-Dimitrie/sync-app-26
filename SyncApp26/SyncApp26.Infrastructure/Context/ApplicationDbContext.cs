@@ -35,6 +35,7 @@ namespace SyncApp26.Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<WorkSite> WorkSites { get; set; }
         public DbSet<UserChangeHistory> UserChangeHistories { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
         public DbSet<DocumentSignatureToken> DocumentSignatureTokens { get; set; }
@@ -113,6 +114,12 @@ namespace SyncApp26.Infrastructure.Context
                     .HasForeignKey(e => e.DepartmentId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // Configure relationship with WorkSite
+                entity.HasOne(e => e.WorkSite)
+                    .WithMany(w => w.Users)
+                    .HasForeignKey(e => e.WorkSiteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 // Configure self-referencing relationship for line manager
                 entity.HasOne(e => e.AssignedTo)
                     .WithMany(u => u.AssignedUsers)
@@ -123,10 +130,23 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.HasIndex(e => e.DepartmentId);
                 entity.HasIndex(e => e.PersonalId).IsUnique();
+                entity.HasIndex(e => e.WorkSiteId);
             });
 
             // Configure Department entity
             modelBuilder.Entity<Department>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            // Configure WorkSite entity
+            modelBuilder.Entity<WorkSite>(entity =>
             {
                 entity.HasKey(e => e.Id);
 
@@ -345,6 +365,7 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.SignerFullNameSnapshot).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.SignerPositionSnapshot).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.SignerBadgeNumberSnapshot).HasMaxLength(100);
+                entity.Property(e => e.SignerWorkSiteNameSnapshot).HasMaxLength(200);
                 entity.Property(e => e.SignatureData).IsRequired();
 
                 entity.HasOne(e => e.UserDocument)

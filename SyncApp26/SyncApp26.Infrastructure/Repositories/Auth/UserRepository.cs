@@ -20,6 +20,7 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
@@ -27,16 +28,34 @@ namespace SyncApp26.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
 
+        // Admin-excluding by design: the callers of this one (CSV sync, bulk initial training)
+        // operate on the employee roster, where an app administrator has no place.
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.DeletedAt == null)
                 .WithoutRole(Roles.Admin)
+                .ToListAsync();
+        }
+
+        // Same roster, admins included — for the user-management screen, where hiding an account
+        // the moment it is granted the Admin role reads as "the change didn't save".
+        public async Task<IEnumerable<User>> GetAllUsersIncludingAdminsAsync()
+        {
+            return await _context.Users
+                .Include(u => u.Department)
+                .Include(u => u.Function)
+                .Include(u => u.WorkSite)
+                .Include(u => u.AssignedTo)
+                .Include(u => u.InitialTrainings)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
+                .Where(u => u.DeletedAt == null)
                 .ToListAsync();
         }
 
@@ -49,6 +68,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Where(u => u.DeletedAt == null)
                 .WithoutRole(Roles.Admin)
@@ -74,9 +94,20 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.DepartmentId == departmentId && u.DeletedAt == null)
+                .WithoutRole(Roles.Admin)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<User>> GetUsersByWorkSiteIdAsync(Guid workSiteId)
+        {
+            return await _context.Users
+                .Include(u => u.WorkSite)
+                .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
+                .Where(u => u.WorkSiteId == workSiteId && u.DeletedAt == null)
                 .WithoutRole(Roles.Admin)
                 .ToListAsync();
         }
@@ -86,6 +117,7 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.AssignedToId == assignedToId && u.DeletedAt == null)
@@ -129,6 +161,7 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.DeletedAt == null)
@@ -140,6 +173,7 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.DeletedAt == null)
@@ -186,6 +220,7 @@ namespace SyncApp26.Infrastructure.Repositories
             return await _context.Users
                 .Include(u => u.Department)
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .Include(u => u.AssignedTo)
                 .Include(u => u.RoleAssignments).ThenInclude(a => a.Role)
                 .Where(u => u.DeletedAt == null)

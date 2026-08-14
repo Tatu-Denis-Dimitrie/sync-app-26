@@ -11,6 +11,7 @@ public class CsvUserDTO
     public required string DepartmentName { get; set; }
     public string? AssignedToPersonalId { get; set; } // Line manager personal ID for lookup
     public string? Function { get; set; }
+    public string? WorkSite { get; set; }
 }
 
 public class UserComparisonDTO
@@ -33,6 +34,7 @@ public class CsvUserDataDTO
     public string? AssignedToPersonalId { get; set; } // Line manager personal ID
     public string? AssignedToName { get; set; } // Line manager display name
     public string? Function { get; set; }
+    public string? WorkSite { get; set; }
 }
 
 public class FieldConflictDTO

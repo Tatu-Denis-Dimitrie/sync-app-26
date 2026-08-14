@@ -455,6 +455,10 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<Guid>("SignerUserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SignerWorkSiteNameSnapshot")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("TrainingDateSnapshot")
                         .HasColumnType("TEXT");
 
@@ -584,6 +588,9 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("WorkSiteId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedToId");
@@ -601,6 +608,8 @@ namespace SyncApp26.Infrastructure.Migrations
 
                     b.HasIndex("PersonalId")
                         .IsUnique();
+
+                    b.HasIndex("WorkSiteId");
 
                     b.HasIndex("DepartmentId", "DeletedAt")
                         .HasDatabaseName("IX_Users_DepartmentId_DeletedAt");
@@ -979,6 +988,37 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("UserSignatureHistories");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.WorkSite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("WorkSites");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.DataChangeRequest", b =>
                 {
                     b.HasOne("SyncApp26.Domain.Entities.ImportHistory", "AutoResolvedByImportHistory")
@@ -1118,11 +1158,18 @@ namespace SyncApp26.Infrastructure.Migrations
                         .WithMany("Users")
                         .HasForeignKey("FunctionId");
 
+                    b.HasOne("SyncApp26.Domain.Entities.WorkSite", "WorkSite")
+                        .WithMany("Users")
+                        .HasForeignKey("WorkSiteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("AssignedTo");
 
                     b.Navigation("Department");
 
                     b.Navigation("Function");
+
+                    b.Navigation("WorkSite");
                 });
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.UserChangeHistory", b =>
@@ -1241,6 +1288,11 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("PeriodicTrainings");
 
                     b.Navigation("RoleAssignments");
+                });
+
+            modelBuilder.Entity("SyncApp26.Domain.Entities.WorkSite", b =>
+                {
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

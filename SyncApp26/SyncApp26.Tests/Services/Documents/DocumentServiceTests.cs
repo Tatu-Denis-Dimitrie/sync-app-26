@@ -36,9 +36,9 @@ namespace SyncApp26.Tests.Services.Documents
         // the service captured the *correct* values, not just *some* non-null value.
         private static string ExpectedHmac(Guid signerUserId, string fullName, string position,
             string? material, decimal? duration, DateTime? trainingDate, DateTimeOffset signedAt,
-            string? badgeNumber = null)
+            string? badgeNumber = null, string? workSite = null)
         {
-            var input = new SignatureCanonicalInput(signerUserId, fullName, position, badgeNumber, material, duration, trainingDate, signedAt, null, SignatureCanonicalSerializer.CurrentVersion);
+            var input = new SignatureCanonicalInput(signerUserId, fullName, position, badgeNumber, workSite, material, duration, trainingDate, signedAt, null, SignatureCanonicalSerializer.CurrentVersion);
             var canonical = SignatureCanonicalSerializer.Serialize(input);
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(TestKey));
             return Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
@@ -738,6 +738,7 @@ namespace SyncApp26.Tests.Services.Documents
                 fullName,
                 position,
                 signer.BadgeNumber,
+                signer.WorkSite?.Name,
                 training.MaterialTaught,
                 training.DurationHours,
                 training.TrainingDate,
@@ -760,6 +761,7 @@ namespace SyncApp26.Tests.Services.Documents
                 SignerFullNameSnapshot = fullName,
                 SignerPositionSnapshot = position,
                 SignerBadgeNumberSnapshot = signer.BadgeNumber,
+                SignerWorkSiteNameSnapshot = signer.WorkSite?.Name,
                 SignatureMethod = "Draw",
                 SignatureData = "sig-manual",
                 MaterialTaughtSnapshot = training.MaterialTaught,

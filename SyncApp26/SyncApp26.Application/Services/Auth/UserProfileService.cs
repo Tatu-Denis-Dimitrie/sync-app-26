@@ -83,6 +83,7 @@ namespace SyncApp26.Application.Services
                 DepartmentId = request.DepartmentId,
                 AssignedToId = request.AssignedToId,
                 FunctionId = await ResolveFunctionIdAsync(request.Function),
+                WorkSiteId = request.WorkSiteId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -181,6 +182,7 @@ namespace SyncApp26.Application.Services
             existingUser.DepartmentId = request.DepartmentId;
             existingUser.AssignedToId = request.AssignedToId;
             existingUser.FunctionId = resolvedFunctionId;
+            existingUser.WorkSiteId = request.WorkSiteId;
             existingUser.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(existingUser);

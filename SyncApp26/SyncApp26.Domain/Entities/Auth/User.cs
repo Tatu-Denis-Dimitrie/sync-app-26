@@ -7,6 +7,7 @@ namespace SyncApp26.Domain.Entities
         public Guid Id { get; set; }
         public Guid? DepartmentId { get; set; }
         public Guid? FunctionId { get; set; }
+        public Guid? WorkSiteId { get; set; }
         public Guid? AssignedToId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
@@ -50,6 +51,7 @@ namespace SyncApp26.Domain.Entities
         public User? AssignedTo { get; set; }  // Line manager
         public ICollection<User> AssignedUsers { get; set; } = new List<User>();  // Direct reports
         public Function? Function { get; set; }
+        public WorkSite? WorkSite { get; set; }
         public ICollection<PeriodicTraining> PeriodicTrainings { get; set; } = new List<PeriodicTraining>();
         public ICollection<UserInitialTraining> InitialTrainings { get; set; } = new List<UserInitialTraining>();
 
