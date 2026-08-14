@@ -14,6 +14,7 @@ namespace SyncApp26.Application.IServices
         Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType);
         Task<IEnumerable<UserDocument>> GetAllDocumentsAsync();
         Task<UserDocument?> GetDocumentByIdAsync(Guid documentId);
+        Task<Dictionary<Guid, string>> GetDocumentTypesByIdsAsync(IEnumerable<Guid> documentIds);
         Task<bool> UpdateDocumentSignatureAsync(Guid documentId, Guid signerUserId, string signerRole, string signatureMethod, string signatureData, string ipAddress, Guid? periodicTrainingId = null);
         Task<Guid?> GetCurrentTrainingIdForDocumentAsync(Guid documentId);
         Task<int> BulkSignDocumentsAsync(Guid signerUserId, string signatureMethod, string signatureData, string ipAddress);

@@ -1223,6 +1223,17 @@ namespace SyncApp26.Infrastructure.Services
                 .FirstOrDefaultAsync(d => d.Id == documentId);
         }
 
+        public async Task<Dictionary<Guid, string>> GetDocumentTypesByIdsAsync(IEnumerable<Guid> documentIds)
+        {
+            var ids = documentIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<Guid, string>();
+
+            return await _context.UserDocuments
+                .Where(d => ids.Contains(d.Id))
+                .Select(d => new { d.Id, d.DocumentType })
+                .ToDictionaryAsync(d => d.Id, d => d.DocumentType);
+        }
+
         public async Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(Guid userId)
         {
             return await _context.UserDocuments

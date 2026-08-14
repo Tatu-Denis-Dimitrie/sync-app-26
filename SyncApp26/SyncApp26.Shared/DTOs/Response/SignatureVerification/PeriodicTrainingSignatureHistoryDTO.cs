@@ -9,6 +9,10 @@ namespace SyncApp26.Shared.DTOs.Response.SignatureVerification
         /// signature-verification endpoints.</summary>
         public Guid UserId { get; set; }
 
+        /// <summary>The training's document type ("SSM"/"SU"), used by the controller to apply the
+        /// SsmOfficer/SuOfficer access exception alongside the self/admin/line-manager rule.</summary>
+        public string? DocumentType { get; set; }
+
         /// <summary>Key: SignerRole ("User", "Manager", "Admin"). Each list is ordered by SignedAt ascending.</summary>
         public Dictionary<string, List<SignatureVersionSummaryDTO>> VersionsByRole { get; set; } = new();
     }

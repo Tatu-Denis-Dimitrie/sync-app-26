@@ -258,6 +258,7 @@ namespace SyncApp26.Infrastructure.Services
             {
                 PeriodicTrainingId = periodicTrainingId,
                 UserId = training.UserId,
+                DocumentType = training.DocumentType,
                 VersionsByRole = versionsByRole
             };
         }
@@ -344,6 +345,7 @@ namespace SyncApp26.Infrastructure.Services
                 {
                     SignatureId = record.Id,
                     SignerUserId = record.SignerUserId,
+                    UserDocumentId = record.UserDocumentId,
                     Status = "Legacy",
                     IsHashValid = false,
                     IsChainValid = false,
@@ -386,6 +388,7 @@ namespace SyncApp26.Infrastructure.Services
             {
                 SignatureId = record.Id,
                 SignerUserId = record.SignerUserId,
+                UserDocumentId = record.UserDocumentId,
                 Status = status,
                 IsHashValid = isHashValid,
                 IsChainValid = isChainValid,
