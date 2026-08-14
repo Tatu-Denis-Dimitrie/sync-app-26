@@ -250,6 +250,70 @@ namespace SyncApp26.Tests.Services.Requests
             Assert.Equal(newValue, actual);
         }
 
+        // DateOfBirth is the one self-service field with a DateTime? type. Before date support
+        // existed, approving it wrote a history entry and silently left the user untouched.
+        [Fact]
+        public async Task ResolveRequestAsync_Approved_AppliesNullableDateProperty()
+        {
+            var user = SeedUser();
+            var request = SeedRequest(user.Id, "{\"DateOfBirth\":\"1990-01-15\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(new DateTime(1990, 1, 15), _dbFixture.Context.Users.Single(u => u.Id == user.Id).DateOfBirth);
+        }
+
+        // The browser sends "yyyy-MM-dd"; parsing must not depend on the server's culture, or a
+        // day/month swap would silently store the wrong birth date.
+        [Fact]
+        public async Task ResolveRequestAsync_Approved_ParsesDateInvariantlyRegardlessOfServerCulture()
+        {
+            var original = System.Globalization.CultureInfo.CurrentCulture;
+            try
+            {
+                System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("ro-RO");
+
+                var user = SeedUser();
+                var request = SeedRequest(user.Id, "{\"DateOfBirth\":\"2001-03-04\"}");
+                var service = CreateService();
+                var admin = SeedAdmin();
+
+                await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+                _dbFixture.Context.ChangeTracker.Clear();
+                Assert.Equal(new DateTime(2001, 3, 4), _dbFixture.Context.Users.Single(u => u.Id == user.Id).DateOfBirth);
+            }
+            finally
+            {
+                System.Globalization.CultureInfo.CurrentCulture = original;
+            }
+        }
+
+        // A request that restates the user's existing date must not manufacture a history row —
+        // the stored original is formatted the same way the request is, so the diff sees equality.
+        [Fact]
+        public async Task ResolveRequestAsync_UnchangedDate_RecordsNoHistoryEntry()
+        {
+            var user = SeedUser();
+            user.DateOfBirth = new DateTime(1985, 6, 30);
+            _dbFixture.Context.SaveChanges();
+
+            var service = CreateService();
+            var created = await service.CreateRequestAsync(user.Id, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"DateOfBirth\":\"1985-06-30\"}",
+                Reason = "No real change"
+            });
+
+            await service.ResolveRequestAsync(created.Id, SeedAdmin(), new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Empty(_dbFixture.Context.UserChangeHistories.Where(h => h.UserId == user.Id && h.FieldName == "DateOfBirth"));
+        }
+
         [Fact]
         public async Task ResolveRequestAsync_Approved_AppliesEnumProperty()
         {

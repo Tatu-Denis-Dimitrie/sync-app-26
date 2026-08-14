@@ -8,6 +8,7 @@ using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Domain.Exceptions;
 using SyncApp26.Infrastructure.Services;
+using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
 using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Services.Documents
@@ -106,6 +107,226 @@ namespace SyncApp26.Tests.Services.Documents
             _dbFixture.Context.PeriodicTrainings.Add(training);
             _dbFixture.Context.SaveChanges();
             return training;
+        }
+
+        // Revising a signed training's content resets UserDocument's Manager* columns so the manager
+        // can sign again. Section 3 "Admis la lucru" records a one-time approval, so it must keep
+        // showing the manager's FIRST signature and never the columns the re-sign overwrote.
+        // (The periodic table is deliberately the opposite — see the per-row test below.)
+        [Fact]
+        public async Task ManagerReSignAfterTrainingRevision_KeepsFirstSignatureFrozenInAuditRecord()
+        {
+            var service = CreateService();
+            var trainingService = new PeriodicTrainingService(_dbFixture.Context);
+
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SSM", "PendingUser");
+            var training = SeedTraining(owner, doc, "Norme initiale", 2m, new DateTime(2026, 1, 15), manager.Id);
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Type", "USER-FIRST", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "MANAGER-FIRST", "1.1.1.1", training.Id);
+
+            Assert.Equal("MANAGER-FIRST", _dbFixture.Context.UserDocuments.Find(doc.Id)!.ManagerSignatureData);
+
+            // Real revision path: changing signed content clears the document's signature columns.
+            await trainingService.UpdateAsync(training.Id, new UpdatePeriodicTrainingDTO
+            {
+                TrainingDate = new DateTime(2026, 2, 20),
+                DurationHours = 4m,
+                MaterialTaught = "Norme revizuite",
+                InstructorId = manager.Id
+            });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.UserDocuments.Find(doc.Id)!.ManagerSignatureData);
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Type", "USER-SECOND", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "MANAGER-SECOND", "1.1.1.1", training.Id);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+
+            // The mutable column tracks the newest capture...
+            Assert.Equal("MANAGER-SECOND", _dbFixture.Context.UserDocuments.Find(doc.Id)!.ManagerSignatureData);
+
+            // ...while the earliest audit record — the one the PDF renders from — stays on the first.
+            // Sorted in memory: SQLite's EF provider can't order by DateTimeOffset server-side,
+            // which is why the production lookup does the same.
+            var managerRecords = _dbFixture.Context.SignatureRecords
+                .Where(r => r.UserDocumentId == doc.Id && r.SignerRole == "Manager")
+                .ToList();
+            var earliestManagerRecord = managerRecords
+                .OrderBy(r => r.SignedAt).ThenBy(r => r.CreatedAt)
+                .First();
+            Assert.Equal("MANAGER-FIRST", earliestManagerRecord.SignatureData);
+            Assert.Equal("Type", earliestManagerRecord.SignatureMethod);
+
+            // Both captures are retained; the render picks the first, not merely the only one.
+            Assert.Equal(2, managerRecords.Count);
+
+            // Decisive check that the RENDER is frozen, not just the audit row: rewriting the
+            // document's mutable manager column to something wildly different must not change a
+            // single byte of the generated PDF. If any render site ever reads that column again,
+            // the two documents diverge and this fails.
+            async Task<byte[]> RenderAsync()
+            {
+                _dbFixture.Context.ChangeTracker.Clear();
+                var u = await _dbFixture.Context.Users
+                    .Include(x => x.Function).Include(x => x.AssignedTo).ThenInclude(m => m!.Function)
+                    .Include(x => x.PeriodicTrainings).Include(x => x.InitialTrainings)
+                    .FirstAsync(x => x.Id == owner.Id);
+                return await service.GeneratePdfBytesAsync(u, _dbFixture.Context.UserDocuments.Find(doc.Id)!);
+            }
+
+            var beforeTamper = await RenderAsync();
+            Assert.NotEmpty(beforeTamper);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var tampered = _dbFixture.Context.UserDocuments.Find(doc.Id)!;
+            tampered.ManagerSignatureData = "TAMPERED-MANAGER-SIGNATURE-VALUE";
+            tampered.ManagerSignatureMethod = "Type";
+            _dbFixture.Context.SaveChanges();
+
+            var afterTamper = await RenderAsync();
+
+            // Compared as decompressed page content, not raw bytes: the PDF header carries a
+            // CreationDate that changes between generations and would mask the real comparison.
+            Assert.Equal(PdfContentStreams(beforeTamper), PdfContentStreams(afterTamper));
+        }
+
+        // The periodic-training table logs separate sessions, so each row shows the manager
+        // signature captured for THAT row — not the document's first one, the way section 3 does.
+        [Fact]
+        public async Task PeriodicTrainingRow_ShowsThatRowsOwnManagerSignature_NotTheFirstOne()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SSM", "PendingUser");
+            var firstSession = SeedTraining(owner, doc, "Sesiunea 1", 2m, new DateTime(2026, 1, 15), manager.Id);
+            var secondSession = SeedTraining(owner, doc, "Sesiunea 2", 3m, new DateTime(2026, 6, 20), manager.Id);
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "SIG-SESSION-ONE", "1.1.1.1", firstSession.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "SIG-SESSION-TWO", "1.1.1.1", secondSession.Id);
+
+            async Task<string> RenderAsync()
+            {
+                _dbFixture.Context.ChangeTracker.Clear();
+                var u = await _dbFixture.Context.Users
+                    .Include(x => x.Function).Include(x => x.AssignedTo).ThenInclude(m => m!.Function)
+                    .Include(x => x.PeriodicTrainings).Include(x => x.InitialTrainings)
+                    .FirstAsync(x => x.Id == owner.Id);
+                return PdfContentStreams(await service.GeneratePdfBytesAsync(u, _dbFixture.Context.UserDocuments.Find(doc.Id)!));
+            }
+
+            var before = await RenderAsync();
+
+            // Rewrite ONLY the second session's own record. If each row rendered the document's
+            // first signature, this row would be reading session one's record and nothing would move.
+            _dbFixture.Context.ChangeTracker.Clear();
+            var secondRecord = _dbFixture.Context.SignatureRecords
+                .Single(r => r.PeriodicTrainingId == secondSession.Id && r.SignerRole == "Manager");
+            secondRecord.SignatureData = "SIG-SESSION-TWO-EDITED-TO-A-VERY-DIFFERENT-VALUE";
+            _dbFixture.Context.SaveChanges();
+
+            var after = await RenderAsync();
+
+            Assert.NotEqual(before, after);
+        }
+
+        // "3. Admis la lucru" prints a "Data:" line. When nobody filled in User.AdmittedDate it used
+        // to render as a blank rule even though the signature block right below already showed when
+        // the manager signed; it now falls back to that same date.
+        [Fact]
+        public async Task AdmittedToWorkDate_WhenNotExplicitlySet_FallsBackToManagerSigningDate()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SSM", "PendingUser");
+            var training = SeedTraining(owner, doc, "Norme initiale", 2m, new DateTime(2026, 1, 15), manager.Id);
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Type", "USER-SIG", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "MANAGER-SIG", "1.1.1.1", training.Id);
+
+            async Task<string> RenderAsync()
+            {
+                _dbFixture.Context.ChangeTracker.Clear();
+                var u = await _dbFixture.Context.Users
+                    .Include(x => x.Function).Include(x => x.AssignedTo).ThenInclude(m => m!.Function)
+                    .Include(x => x.PeriodicTrainings).Include(x => x.InitialTrainings)
+                    .FirstAsync(x => x.Id == owner.Id);
+                var pdf = await service.GeneratePdfBytesAsync(u, _dbFixture.Context.UserDocuments.Find(doc.Id)!);
+                return PdfContentStreams(pdf);
+            }
+
+            // AdmittedDate is still null here — the line must already carry the signing date.
+            Assert.Null(_dbFixture.Context.Users.Find(owner.Id)!.AdmittedDate);
+            var withFallback = await RenderAsync();
+
+            // Setting AdmittedDate explicitly to that same day must render identically, which is only
+            // true if the blank case resolved to the manager's signing date rather than an empty rule.
+            var managerSignedOn = _dbFixture.Context.SignatureRecords
+                .Where(r => r.UserDocumentId == doc.Id && r.SignerRole == "Manager")
+                .ToList()
+                .OrderBy(r => r.SignedAt).ThenBy(r => r.CreatedAt)
+                .First().SignedAt.UtcDateTime.Date;
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var toUpdate = _dbFixture.Context.Users.Find(owner.Id)!;
+            toUpdate.AdmittedDate = managerSignedOn;
+            _dbFixture.Context.SaveChanges();
+
+            var withExplicitDate = await RenderAsync();
+
+            Assert.Equal(withExplicitDate, withFallback);
+        }
+
+        // Concatenates every decompressed stream in a PDF — the drawing operators actually rendered,
+        // free of the timestamped file header.
+        private static string PdfContentStreams(byte[] pdf)
+        {
+            var raw = Encoding.Latin1.GetString(pdf);
+            var sb = new StringBuilder();
+            int pos = 0;
+            while (true)
+            {
+                int start = raw.IndexOf("stream", pos, StringComparison.Ordinal);
+                if (start < 0) break;
+                int dataStart = start + "stream".Length;
+                while (dataStart < raw.Length && (raw[dataStart] == '\r' || raw[dataStart] == '\n')) dataStart++;
+                int end = raw.IndexOf("endstream", dataStart, StringComparison.Ordinal);
+                if (end < 0) break;
+
+                var chunk = Encoding.Latin1.GetBytes(raw.Substring(dataStart, end - dataStart));
+                try
+                {
+                    using var input = new MemoryStream(chunk);
+                    using var inflate = new System.IO.Compression.ZLibStream(input, System.IO.Compression.CompressionMode.Decompress);
+                    using var output = new MemoryStream();
+                    inflate.CopyTo(output);
+                    sb.Append(Encoding.Latin1.GetString(output.ToArray()));
+                }
+                catch { /* not a flate stream (embedded font or image) — nothing to compare */ }
+
+                pos = end + "endstream".Length;
+            }
+            return sb.ToString();
         }
 
         [Fact]

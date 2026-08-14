@@ -75,6 +75,8 @@ export class BasicUserComponent implements OnInit {
   availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
     { key: 'LastName', label: 'Last Name', type: 'text' },
     { key: 'FirstName', label: 'First Name', type: 'text' },
+    { key: 'DateOfBirth', label: 'Date of Birth', type: 'date' },
+    { key: 'PlaceOfBirth', label: 'Place of Birth', type: 'text' },
     { key: 'Department', label: 'Department (Name)', type: 'select' },
     { key: 'Function', label: 'Function (Name)', type: 'text' },
     { key: 'Address', label: 'Address', type: 'text' },

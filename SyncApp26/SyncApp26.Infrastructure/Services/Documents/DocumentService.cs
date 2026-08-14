@@ -394,11 +394,15 @@ namespace SyncApp26.Infrastructure.Services
 
             if (applyOfficerSwap)
             {
+                // Every field here comes from the manager's FIRST signature record, never from the
+                // document's Manager* columns: a periodic-training revision resets those and the
+                // manager re-signs, which would otherwise swap this block's image and date for the
+                // newer capture. Falls back to the document only for pre-SignatureRecord documents.
                 var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
                 renderedInstructorName = managerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
                 renderedInstructorPosition = managerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
-                renderedInstructorSigMethod = document.ManagerSignatureMethod;
-                renderedInstructorSigData = document.ManagerSignatureData;
+                renderedInstructorSigMethod = managerRecord?.SignatureMethod ?? document.ManagerSignatureMethod;
+                renderedInstructorSigData = managerRecord?.SignatureData ?? document.ManagerSignatureData;
                 renderedInstructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
             }
             else
@@ -922,6 +926,11 @@ namespace SyncApp26.Infrastructure.Services
         // the periodic-training page.
         private static void RenderAdmittedToWorkItem(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx)
         {
+            // "Admis la lucru" records a one-time approval, so every field here comes from the
+            // manager's FIRST signature — image and date included — and never the newer capture a
+            // later periodic-training revision forces onto the document's Manager* columns.
+            var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+
             col.Item().Text("3. Admis la lucru").Bold();
             col.Item().Height(3);
             col.Item().Row(r =>
@@ -938,17 +947,24 @@ namespace SyncApp26.Infrastructure.Services
             col.Item().Height(4);
             col.Item().Row(r =>
             {
+                // Same fallback shape as the two rows above: the explicitly recorded admission date
+                // wins, otherwise the moment the manager actually signed this admission — the date
+                // the signature block below already prints — so the line is never left blank.
+                var admittedOn = user.AdmittedDate
+                    ?? managerRecord?.SignedAt.UtcDateTime
+                    ?? document.ManagerSignedAt;
                 r.ConstantItem(160).Text("Data:").Bold();
-                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedDate?.ToString("dd.MM.yyyy")));
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admittedOn?.ToString("dd.MM.yyyy")));
             });
             col.Item().Height(6);
 
-            var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
             col.Item().Width(220).Column(c => RenderSignatureBlock(c, "Semnătura:",
                 new SignatureBlockData(
                     managerRecord?.SignerFullNameSnapshot ?? user.AdmittedByName ?? ctx.ManagerName,
                     managerRecord?.SignerPositionSnapshot ?? user.AdmittedByFunction ?? ctx.ManagerFunction,
-                    document.ManagerSignatureMethod, document.ManagerSignatureData, managerRecord?.SignedAt.UtcDateTime)));
+                    managerRecord?.SignatureMethod ?? document.ManagerSignatureMethod,
+                    managerRecord?.SignatureData ?? document.ManagerSignatureData,
+                    managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt)));
         }
 
         // ══════════════════════════════════════════════════════
@@ -1065,12 +1081,19 @@ namespace SyncApp26.Infrastructure.Services
 
             if (applyOfficerSwap)
             {
-                var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
-                instructorName = managerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
-                instructorPosition = managerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
-                instructorSigMethod = document.ManagerSignatureMethod;
-                instructorSigData = document.ManagerSignatureData;
-                instructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
+                // Each row shows the manager signature captured for THAT training session, not the
+                // document's first one — this table is a log of separate sessions, so a row must
+                // keep the signature and date it was actually signed with. (Section 3 "Admis la
+                // lucru" is the opposite case: one-time approval, always the first signature.)
+                // Falls back to the earliest record, then the document columns, for rows signed
+                // before per-training records existed.
+                var rowManagerRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "Manager"))
+                    ?? ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+                instructorName = rowManagerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
+                instructorPosition = rowManagerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
+                instructorSigMethod = rowManagerRecord?.SignatureMethod ?? document.ManagerSignatureMethod;
+                instructorSigData = rowManagerRecord?.SignatureData ?? document.ManagerSignatureData;
+                instructorSignedAt = rowManagerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
             }
             else
             {
