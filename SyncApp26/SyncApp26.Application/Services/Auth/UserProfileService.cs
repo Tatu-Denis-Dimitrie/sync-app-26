@@ -44,7 +44,7 @@ namespace SyncApp26.Application.Services
             return unknownFunction?.Id;
         }
 
-        public async Task<UserResponseDTO> CreateUserAsync(UserRequestDTO request)
+        public async Task<UserResponseDTO> CreateUserAsync(UserRequestDTO request, Guid? actingUserId = null)
         {
             if (string.IsNullOrEmpty(request.FirstName) ||
                 string.IsNullOrEmpty(request.LastName) ||
@@ -95,7 +95,10 @@ namespace SyncApp26.Application.Services
 
             await _userService.AddUserAsync(user);
 
-            if (request.AssignedToId.HasValue)
+            // A caller cannot use "create a user reporting to me" to hand themselves the LineManager
+            // role - mirrors the self-assignment guard in UpdateUserAsync, applied here defensively
+            // even though AddUser is admin-only today.
+            if (request.AssignedToId.HasValue && request.AssignedToId.Value != actingUserId)
             {
                 var managerToPromote = await _userService.GetUserByIdAsync(request.AssignedToId.Value);
                 if (managerToPromote != null && !managerToPromote.RoleAssignments.Any(a => a.Role.Name == Roles.LineManager))

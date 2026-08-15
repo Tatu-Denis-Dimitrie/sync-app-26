@@ -65,25 +65,47 @@ namespace SyncApp26.API.Controllers
             }
 
             var normalizedEmail = request.Email.ToLowerInvariant().Trim();
-            
-            // Check if user has an account
-            var existingUser = await _userService.GetUserByEmailAsync(normalizedEmail);
-            
-            if (existingUser != null)
-            {
-                // User has an account. Send them to login.
-                var loginUrl = _configuration["Frontend:LoginUrl"] ?? "http://localhost:4200/login";
-                await _emailService.SendDocumentSignatureEmailForRegisteredUserAsync(existingUser.Email, request.DocumentName, loginUrl);
-            }
-            else
-            {
-                // User does not have an account. Generate secure link and send it.
-                var token = await _documentSignatureService.GenerateSignatureTokenAsync(normalizedEmail, request.DocumentId, request.DocumentName);
-                
-                var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
-                var secureLink = $"{frontendUrl}/sign/{token}";
 
-                await _emailService.SendDocumentSignatureEmailWithLinkAsync(normalizedEmail, request.DocumentName, secureLink);
+            // This endpoint is anonymous by design — it's how a signer with no account yet gets their
+            // first invite — so the guard against minting tokens for arbitrary (email, documentId) pairs
+            // is that the email must actually belong to a party in this document's chain (the owner,
+            // their line manager, or an SSM/SU officer for its type). A mismatch is treated the same as
+            // success, without sending anything, so the response can't be used to enumerate emails.
+            var document = await _documentService.GetDocumentByIdAsync(request.DocumentId);
+            if (document != null)
+            {
+                bool isSsm = document.DocumentType?.ToUpperInvariant() == "SSM";
+                bool isEligible = string.Equals(document.User?.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(document.User?.AssignedTo?.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase);
+
+                if (!isEligible)
+                {
+                    var officers = await _userService.GetUsersInRoleAsync(isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
+                    isEligible = officers.Any(o => string.Equals(o.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (isEligible)
+                {
+                    // Check if user has an account
+                    var existingUser = await _userService.GetUserByEmailAsync(normalizedEmail);
+
+                    if (existingUser != null)
+                    {
+                        // User has an account. Send them to login.
+                        var loginUrl = _configuration["Frontend:LoginUrl"] ?? "http://localhost:4200/login";
+                        await _emailService.SendDocumentSignatureEmailForRegisteredUserAsync(existingUser.Email, request.DocumentName, loginUrl);
+                    }
+                    else
+                    {
+                        // User does not have an account. Generate secure link and send it.
+                        var token = await _documentSignatureService.GenerateSignatureTokenAsync(normalizedEmail, request.DocumentId, request.DocumentName);
+
+                        var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+                        var secureLink = $"{frontendUrl}/sign/{token}";
+
+                        await _emailService.SendDocumentSignatureEmailWithLinkAsync(normalizedEmail, request.DocumentName, secureLink);
+                    }
+                }
             }
 
             return Ok(new { message = "Signature request processed successfully." });
@@ -236,7 +258,7 @@ namespace SyncApp26.API.Controllers
                 return Ok(new { message = "No documents to sign.", jobId = (string?)null });
 
             string jobId = Guid.NewGuid().ToString();
-            var progress = new BulkSignProgress { Total = total, Signed = 0, Completed = false };
+            var progress = new BulkSignProgress { OwnerUserId = userId, Total = total, Signed = 0, Completed = false };
             BulkSignJobs[jobId] = progress;
 
             _ = Task.Run(async () =>
@@ -268,8 +290,14 @@ namespace SyncApp26.API.Controllers
         [Authorize(Roles = Roles.SsmOfficer + "," + Roles.SuOfficer + "," + Roles.LineManager)]
         public IActionResult GetBulkSignStatus(string jobId)
         {
+            if (User.GetUserId() is not { } userId)
+                return Unauthorized();
+
             if (BulkSignJobs.TryGetValue(jobId, out var progress))
             {
+                if (progress.OwnerUserId != userId)
+                    return Forbid();
+
                 return Ok(new { total = progress.Total, signed = progress.Signed, completed = progress.Completed, error = progress.Error });
             }
             return NotFound(new { message = "Job not found" });
@@ -289,6 +317,7 @@ namespace SyncApp26.API.Controllers
 
     public class BulkSignProgress
     {
+        public Guid OwnerUserId { get; set; }
         public int Total { get; set; }
         public int Signed { get; set; }
         public bool Completed { get; set; }

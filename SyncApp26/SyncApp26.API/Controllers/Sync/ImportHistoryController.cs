@@ -9,7 +9,7 @@ namespace SyncApp26.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = Roles.Admin)]
     public class ImportHistoryController : ControllerBase
     {
         private readonly IImportHistoryService _importHistoryService;

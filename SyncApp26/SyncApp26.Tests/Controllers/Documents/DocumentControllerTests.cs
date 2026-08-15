@@ -211,6 +211,46 @@ namespace SyncApp26.Tests.Controllers.Documents
         }
 
         [Fact]
+        public async Task GetUserDocuments_AsOwner_ReturnsOk()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId, role: Roles.BasicUser);
+            var doc = MakeDocument(user: MakeUser(id: callerId));
+            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(callerId)).ReturnsAsync(new[] { doc });
+
+            var result = await controller.GetUserDocuments(callerId);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetUserDocuments_AsOwnLineManager_ReturnsOk()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController(managerId, role: Roles.LineManager);
+            var report = MakeUser(assignedToId: managerId);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(report.Id)).ReturnsAsync(report);
+            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(report.Id)).ReturnsAsync(new[] { MakeDocument(user: report) });
+
+            var result = await controller.GetUserDocuments(report.Id);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetUserDocuments_AsUnrelatedBasicUser_ReturnsForbid()
+        {
+            var controller = CreateController(Guid.NewGuid(), role: Roles.BasicUser);
+            var target = MakeUser();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(target.Id)).ReturnsAsync(target);
+
+            var result = await controller.GetUserDocuments(target.Id);
+
+            Assert.IsType<ForbidResult>(result);
+            _documentServiceMock.Verify(s => s.GetUserDocumentsAsync(It.IsAny<Guid>()), Times.Never);
+        }
+
+        [Fact]
         public async Task GetAllDocuments_NonAdmin_FiltersToOwnDocuments()
         {
             var callerId = Guid.NewGuid();

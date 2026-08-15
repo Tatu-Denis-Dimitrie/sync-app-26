@@ -43,7 +43,9 @@ export class UserSyncSignalrService {
 
         const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
         this.hubConnection = new signalR.HubConnectionBuilder()
-            .withUrl(baseUrl + '/hubs/sync')
+            .withUrl(baseUrl + '/hubs/sync', {
+                accessTokenFactory: () => localStorage.getItem('authToken') ?? ''
+            })
             .withAutomaticReconnect()
             .build();
 

@@ -12,10 +12,11 @@ namespace SyncApp26.Tests.Controllers.Documents
     public class PeriodicTrainingControllerTests
     {
         private readonly Mock<IPeriodicTrainingService> _periodicTrainingServiceMock = new();
+        private readonly Mock<IUserService> _userServiceMock = new();
 
         private PeriodicTrainingController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
-            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object);
+            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object, _userServiceMock.Object);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }
@@ -101,6 +102,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var id = Guid.NewGuid();
             var dto = new UpdatePeriodicTrainingDTO { Occupation = "Welder" };
             var response = new PeriodicTrainingResponseDTO { Id = id, Occupation = "Welder" };
+            _periodicTrainingServiceMock.Setup(s => s.GetByIdAsync(id)).ReturnsAsync(new PeriodicTrainingResponseDTO { Id = id });
             _periodicTrainingServiceMock.Setup(s => s.UpdateAsync(id, dto)).ReturnsAsync(response);
 
             var result = await controller.Update(id, dto);
@@ -128,6 +130,7 @@ namespace SyncApp26.Tests.Controllers.Documents
             var controller = CreateController();
             var id = Guid.NewGuid();
             var dto = new UpdatePeriodicTrainingDTO();
+            _periodicTrainingServiceMock.Setup(s => s.GetByIdAsync(id)).ReturnsAsync(new PeriodicTrainingResponseDTO { Id = id });
             _periodicTrainingServiceMock.Setup(s => s.UpdateAsync(id, dto)).ThrowsAsync(new InvalidOperationException("boom"));
 
             var result = await controller.Update(id, dto);
@@ -153,6 +156,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var controller = CreateController();
             var id = Guid.NewGuid();
+            _periodicTrainingServiceMock.Setup(s => s.GetByIdAsync(id)).ReturnsAsync(new PeriodicTrainingResponseDTO { Id = id });
             _periodicTrainingServiceMock.Setup(s => s.DeleteAsync(id)).ReturnsAsync(true);
 
             var result = await controller.Delete(id);

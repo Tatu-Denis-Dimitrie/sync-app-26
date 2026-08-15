@@ -145,6 +145,30 @@ namespace SyncApp26.Tests.Services.Auth
         }
 
         [Fact]
+        public async Task CreateUserAsync_AssignedToIsActingUser_SkipsPromotion()
+        {
+            // Defence in depth: a caller cannot use "create a user reporting to me" to hand
+            // themselves the LineManager role, even if the endpoint's role restriction were ever
+            // loosened.
+            var service = CreateService();
+            var departmentId = Guid.NewGuid();
+            var caller = MakeUser(roleName: Roles.BasicUser);
+
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(caller.Id)).ReturnsAsync(caller);
+            _userServiceMock.Setup(s => s.GetRoleByNameAsync(Roles.LineManager)).ReturnsAsync(new Role { Id = Guid.NewGuid(), Name = Roles.LineManager });
+            _functionServiceMock.Setup(s => s.GetByNameAsync("Unknown")).ReturnsAsync((Function?)null);
+
+            var request = ValidUserRequest(departmentId);
+            request.AssignedToId = caller.Id;
+
+            var result = await service.CreateUserAsync(request, actingUserId: caller.Id);
+
+            Assert.True(result.Success);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
+        [Fact]
         public async Task CreateUserAsync_ManagerAlreadyLineManager_DoesNotUpdateManagerRole()
         {
             var service = CreateService();

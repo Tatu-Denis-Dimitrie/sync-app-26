@@ -49,6 +49,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("scheduled-for-deletion")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ActionResult<IEnumerable<DepartmentGETResponseDTO>>> GetScheduledForDeletionDepartments()
         {
             var departments = await _departmentService.GetDeletedDepartmentsAsync();

@@ -93,9 +93,11 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var controller = CreateController();
             var user = MakeUser(email: "existing@example.com");
+            var documentId = Guid.NewGuid();
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(documentId)).ReturnsAsync(MakeDocument(id: documentId, user: user));
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("existing@example.com")).ReturnsAsync(user);
 
-            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "existing@example.com", DocumentId = Guid.NewGuid(), DocumentName = "SSM" });
+            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "existing@example.com", DocumentId = documentId, DocumentName = "SSM" });
 
             Assert.IsType<OkObjectResult>(result);
             _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailForRegisteredUserAsync(user.Email, "SSM", It.IsAny<string>()), Times.Once);
@@ -105,14 +107,34 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task RequestSignature_UnknownUser_SendsSecureLinkEmail()
         {
             var controller = CreateController();
+            var owner = MakeUser(email: "new@example.com");
+            var documentId = Guid.NewGuid();
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(documentId)).ReturnsAsync(MakeDocument(id: documentId, user: owner));
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
-            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync("new@example.com", It.IsAny<Guid>(), "SSM", null))
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync("new@example.com", documentId, "SSM", null))
                 .ReturnsAsync("tok");
 
-            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "new@example.com", DocumentId = Guid.NewGuid(), DocumentName = "SSM" });
+            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "new@example.com", DocumentId = documentId, DocumentName = "SSM" });
 
             Assert.IsType<OkObjectResult>(result);
             _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync("new@example.com", "SSM", It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task RequestSignature_EmailNotInDocumentChain_DoesNotSendAndStillReturnsOk()
+        {
+            // Guards against minting a token, or leaking an existing-account distinction, for an
+            // email that has no standing on this document (not the owner, their manager, or an officer).
+            var controller = CreateController();
+            var documentId = Guid.NewGuid();
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(documentId)).ReturnsAsync(MakeDocument(id: documentId));
+            _userServiceMock.Setup(s => s.GetUsersInRoleAsync(Roles.SsmOfficer)).ReturnsAsync(new List<User>());
+
+            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "outsider@example.com", DocumentId = documentId, DocumentName = "SSM" });
+
+            Assert.IsType<OkObjectResult>(result);
+            _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailForRegisteredUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         // ───────────────────────── ValidateToken ─────────────────────────
