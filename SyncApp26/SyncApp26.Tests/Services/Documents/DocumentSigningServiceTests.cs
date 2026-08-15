@@ -50,6 +50,137 @@ namespace SyncApp26.Tests.Services.Documents
             _userServiceMock.Setup(s => s.IsInRoleAsync(user.Id, role)).ReturnsAsync(isOfficer);
         }
 
+        // ───────────────────────── Separation of duties ─────────────────────────
+        // The trainee never countersigns their own document, however many roles they hold. Someone
+        // else holding both LineManager and the officer role still fills both slots — that is the
+        // case the last two tests in this section protect.
+
+        [Fact]
+        public async Task RequestSigningTokenAsync_OwnerWhoIsOfficer_CannotTakeInstructorSlotOnOwnDocument()
+        {
+            var service = CreateService();
+            var owner = MakeUser();
+            var document = MakeDocument(user: owner, status: "PendingInstructor");
+            document.ManagerSignedAt = DateTime.UtcNow;
+            SetOfficer(owner, document.DocumentType!, true); // genuinely an SSM officer — for other people
+
+            var result = await service.RequestSigningTokenAsync(document, owner);
+
+            Assert.False(result.Success);
+            Assert.Contains("cannot countersign your own document", result.ErrorMessage);
+            _documentSignatureServiceMock.Verify(
+                s => s.GenerateSignatureTokenAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid?>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task ConsumeSigningTokenAsync_OwnerWhoIsOfficer_CannotTakeInstructorSlotOnOwnDocument()
+        {
+            var service = CreateService();
+            var owner = MakeUser();
+            var document = MakeDocument(user: owner, status: "PendingInstructor");
+            var token = new DocumentSignatureToken { DocumentId = document.Id, Email = owner.Email };
+
+            _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(owner.Email)).ReturnsAsync(owner);
+            SetOfficer(owner, document.DocumentType!, true);
+
+            var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest
+            { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", IpAddress = "1.2.3.4" });
+
+            Assert.False(result.Success);
+            Assert.Contains("cannot countersign your own document", result.ErrorMessage);
+            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task ConsumeSigningTokenAsync_OwnerWhoIsTheirOwnAssignedManager_CannotTakeManagerSlot()
+        {
+            // Reachable today: CSV sync has no self-assignment guard, so AssignedToId can equal Id.
+            var service = CreateService();
+            var owner = MakeUser();
+            owner.AssignedToId = owner.Id;
+            var document = MakeDocument(user: owner, status: "PendingManager");
+            var token = new DocumentSignatureToken { DocumentId = document.Id, Email = owner.Email };
+
+            _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(owner.Email)).ReturnsAsync(owner);
+            SetOfficer(owner, document.DocumentType!, false);
+
+            var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest
+            { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", IpAddress = "1.2.3.4" });
+
+            Assert.False(result.Success);
+            Assert.Contains("cannot countersign your own document", result.ErrorMessage);
+            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task ConsumeSigningTokenAsync_DifferentOfficer_SignsTheSameDocumentNormally()
+        {
+            // The counterpart to the refusal above: the slot isn't closed, it just needs someone else.
+            var service = CreateService();
+            var owner = MakeUser();
+            var otherOfficer = MakeUser();
+            var document = MakeDocument(user: owner, status: "PendingInstructor");
+            var token = new DocumentSignatureToken { DocumentId = document.Id, Email = otherOfficer.Email };
+
+            _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(otherOfficer.Email)).ReturnsAsync(otherOfficer);
+            SetOfficer(otherOfficer, document.DocumentType!, true);
+            _documentSignatureServiceMock.Setup(s => s.ConsumeTokenAsync("tok")).ReturnsAsync(true);
+
+            var result = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest
+            { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", IpAddress = "1.2.3.4" });
+
+            Assert.True(result.Success);
+            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(
+                document.Id, otherOfficer.Id, "Instructor", "Draw", "data", "1.2.3.4", null), Times.Once);
+        }
+
+        [Fact]
+        public async Task ConsumeSigningTokenAsync_DualRoleNonOwner_StillFillsBothManagerAndInstructorSlots()
+        {
+            // Rule the separation-of-duties change must NOT break: one person who is both the
+            // employee's line manager and the SSM officer signs both steps of that employee's document.
+            var service = CreateService();
+            var dualRole = MakeUser();
+            var owner = MakeUser(assignedToId: dualRole.Id);
+            owner.AssignedTo = dualRole;
+
+            var document = MakeDocument(user: owner, status: "PendingManager");
+            var token = new DocumentSignatureToken { DocumentId = document.Id, Email = dualRole.Email };
+
+            _documentSignatureServiceMock.Setup(s => s.ValidateTokenAsync("tok")).ReturnsAsync(token);
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(document.Id)).ReturnsAsync(document);
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(dualRole.Email)).ReturnsAsync(dualRole);
+            SetOfficer(dualRole, document.DocumentType!, true);
+            _documentSignatureServiceMock.Setup(s => s.ConsumeTokenAsync("tok")).ReturnsAsync(true);
+            _userServiceMock.Setup(s => s.GetUsersInRoleAsync(It.IsAny<string>())).ReturnsAsync(new List<User> { dualRole });
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(It.IsAny<string>(), document.Id, It.IsAny<string>(), It.IsAny<Guid?>()))
+                .ReturnsAsync("next-tok");
+
+            var managerStep = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest
+            { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", IpAddress = "1.2.3.4" });
+            Assert.True(managerStep.Success);
+
+            // Same person, now at the officer step of the very same document.
+            document.Status = "PendingInstructor";
+            var instructorStep = await service.ConsumeSigningTokenAsync(new ConsumeSigningTokenRequest
+            { Token = "tok", SignatureMethod = "Draw", SignatureData = "data", IpAddress = "1.2.3.4" });
+            Assert.True(instructorStep.Success);
+
+            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, dualRole.Id, "Manager", "Draw", "data", "1.2.3.4", null), Times.Once);
+            _documentServiceMock.Verify(s => s.UpdateDocumentSignatureAsync(document.Id, dualRole.Id, "Instructor", "Draw", "data", "1.2.3.4", null), Times.Once);
+        }
+
         // ───────────────────────── RequestSigningTokenAsync ─────────────────────────
 
         [Fact]
@@ -189,7 +320,8 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task RequestSigningTokenAsync_EmployeeTriesDuringInstructorStep_Fails()
         {
             // The caller has a legitimate relation to the document (they're the employee) but it's
-            // the officer's turn now, not theirs.
+            // the officer's turn now, not theirs — and being the trainee is precisely what bars them
+            // from that slot, so the refusal names the separation-of-duties rule.
             var service = CreateService();
             var owner = MakeUser();
             var document = MakeDocument(user: owner, status: "PendingInstructor");
@@ -199,7 +331,7 @@ namespace SyncApp26.Tests.Services.Documents
             var result = await service.RequestSigningTokenAsync(document, owner);
 
             Assert.False(result.Success);
-            Assert.Contains("Instructor signature not required", result.ErrorMessage);
+            Assert.Contains("cannot countersign your own document", result.ErrorMessage);
         }
 
         [Fact]

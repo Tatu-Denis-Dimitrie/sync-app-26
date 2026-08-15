@@ -35,7 +35,9 @@ namespace SyncApp26.Infrastructure.Services
         }
 
         // Returnează numărul de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU.
-        public async Task<int> GetPendingDocumentsForOfficerAsync(string documentType)
+        // Excludes the officer's own document — they cannot countersign it, so counting it here would
+        // promise a bulk run more documents than it can actually sign.
+        public async Task<int> GetPendingDocumentsForOfficerAsync(string documentType, Guid signerUserId)
         {
             var type = DocumentTypes.Normalize(documentType);
             return await _context.UserDocuments
@@ -43,13 +45,15 @@ namespace SyncApp26.Infrastructure.Services
                 .CountAsync(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
+                    d.UserId != signerUserId &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
                     d.Status == DocumentStatuses.PendingInstructor);
         }
 
         // Returnează lista de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU (pentru bulk progres)
         // Returns ALL pending documents ordered oldest-first so signatures are applied in creation order.
-        public async Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType)
+        // Must stay filtered identically to the count above, or the job's progress total never completes.
+        public async Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType, Guid signerUserId)
         {
             var type = DocumentTypes.Normalize(documentType);
             var allPending = await _context.UserDocuments
@@ -60,6 +64,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Where(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
+                    d.UserId != signerUserId &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
                     d.Status == DocumentStatuses.PendingInstructor)
                 .ToListAsync();
@@ -246,6 +251,12 @@ namespace SyncApp26.Infrastructure.Services
             // deliberately different exception types so callers can tell them apart.
             if (doc.Status != DocumentStatuses.PendingInstructor)
                 throw new InvalidOperationException("Document is not pending an officer signature.");
+
+            // Separation of duties. The officer queues already exclude the signer's own document, so
+            // reaching this is a bug rather than a user action — fail loudly instead of writing a
+            // signature the rule forbids.
+            if (doc.UserId == signerUserId)
+                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
 
             var docType = DocumentTypes.Normalize(doc.DocumentType);
             var requiredOfficerRole = docType switch
@@ -1297,7 +1308,10 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
+                // d.UserId != managerId: a user can end up as their own AssignedTo (CSV sync has no
+                // self-assignment guard), and nobody countersigns their own document.
                 .Where(d => d.User != null && d.User.AssignedToId == managerId
+                    && d.UserId != managerId
                     && d.Status == DocumentStatuses.PendingManager
                     && d.UserSignedAt != null
                     && d.ManagerSignedAt == null)
@@ -1357,7 +1371,10 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
+                // The officer role is company-wide, so without the owner exclusion an officer's own
+                // document would sit in their own "awaiting my signature" queue.
                 .Where(d => d.Status == DocumentStatuses.PendingInstructor
+                    && d.UserId != instructorId
                     && d.ManagerSignedAt != null
                     && d.InstructorSignedAt == null
                     && d.DocumentType != null
@@ -1804,7 +1821,9 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
-                .Where(d => d.User != null && (
+                // d.UserId != signerUserId guards all three branches at once: nobody countersigns
+                // their own document, whether they reached it as its manager or as an officer.
+                .Where(d => d.User != null && d.UserId != signerUserId && (
                     (d.Status == DocumentStatuses.PendingManager && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User.AssignedToId == signerUserId)
                     || (isSsmOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Ssm && d.Status == DocumentStatuses.PendingInstructor && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
                     || (isSuOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Su && d.Status == DocumentStatuses.PendingInstructor && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
@@ -1817,6 +1836,11 @@ namespace SyncApp26.Infrastructure.Services
 
         private async Task SignSingleDocumentInBulkAsync(UserDocument doc, Guid signerUserId, string signerFullName, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
         {
+            // Same defence in depth as SignSingleDocumentAsOfficerAsync: the loader above already
+            // filters these out, so this only fires if that filter is ever loosened.
+            if (doc.UserId == signerUserId)
+                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
+
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
             var signerRole = doc.Status == DocumentStatuses.PendingManager ? "Manager" : "Instructor";
 

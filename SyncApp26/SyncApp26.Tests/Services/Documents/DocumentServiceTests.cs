@@ -780,6 +780,96 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Equal("Instructor", instructorRecord.SignerRole);
         }
 
+        // ───────────────────────── Separation of duties ─────────────────────────
+
+        [Fact]
+        public async Task BulkSignDocumentsAsync_SkipsTheSignersOwnDocument_ButSignsColleagues()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var officer = SeedUser("Radu", "Stanescu", function, roleName: Roles.SuOfficer);
+            var colleague = SeedUser("Adela", "Popescu", function);
+
+            // The officer is also an employee with an SU document of their own, at the same step.
+            var ownDoc = SeedDocument(officer, "SU", "PendingInstructor");
+            ownDoc.UserSignedAt = DateTime.UtcNow;
+            ownDoc.ManagerSignedAt = DateTime.UtcNow;
+            var colleagueDoc = SeedDocument(colleague, "SU", "PendingInstructor");
+            colleagueDoc.UserSignedAt = DateTime.UtcNow;
+            colleagueDoc.ManagerSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            SeedTraining(colleague, colleagueDoc, "Norme SU", 2m, new DateTime(2026, 1, 15));
+            SeedTraining(officer, ownDoc, "Norme SU", 2m, new DateTime(2026, 1, 15));
+
+            var count = await service.BulkSignDocumentsAsync(officer.Id, "Type", "Radu Stanescu", "9.9.9.9");
+
+            Assert.Equal(1, count);
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(DocumentStatuses.Completed, _dbFixture.Context.UserDocuments.Find(colleagueDoc.Id)!.Status);
+            Assert.Equal(DocumentStatuses.PendingInstructor, _dbFixture.Context.UserDocuments.Find(ownDoc.Id)!.Status);
+            Assert.Empty(_dbFixture.Context.SignatureRecords.Where(r => r.UserDocumentId == ownDoc.Id));
+        }
+
+        [Fact]
+        public async Task OfficerQueue_CountAndList_BothExcludeTheOfficersOwnDocument()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var officer = SeedUser("Radu", "Stanescu", function, roleName: Roles.SsmOfficer);
+            var colleague = SeedUser("Adela", "Popescu", function);
+
+            var ownDoc = SeedDocument(officer, "SSM", "PendingInstructor");
+            var colleagueDoc = SeedDocument(colleague, "SSM", "PendingInstructor");
+            _dbFixture.Context.SaveChanges();
+
+            var count = await service.GetPendingDocumentsForOfficerAsync("SSM", officer.Id);
+            var list = await service.GetPendingDocumentsForOfficerListAsync("SSM", officer.Id);
+
+            // Count and list must agree, or the bulk-sign job's progress total never completes.
+            Assert.Equal(1, count);
+            Assert.Equal(count, list.Count);
+            Assert.Equal(colleagueDoc.Id, Assert.Single(list).Id);
+            Assert.DoesNotContain(list, d => d.Id == ownDoc.Id);
+        }
+
+        [Fact]
+        public async Task InstructorPendingQueue_ExcludesTheOfficersOwnDocument()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var officer = SeedUser("Radu", "Stanescu", function, roleName: Roles.SsmOfficer);
+            var colleague = SeedUser("Adela", "Popescu", function);
+
+            var ownDoc = SeedDocument(officer, "SSM", "PendingInstructor");
+            ownDoc.ManagerSignedAt = DateTime.UtcNow;
+            var colleagueDoc = SeedDocument(colleague, "SSM", "PendingInstructor");
+            colleagueDoc.ManagerSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+
+            var pending = await service.GetInstructorPendingSignaturesAsync(officer.Id);
+
+            Assert.Equal(colleagueDoc.Id, Assert.Single(pending).Id);
+            Assert.DoesNotContain(pending, d => d.Id == ownDoc.Id);
+        }
+
+        [Fact]
+        public async Task SignSingleDocumentAsOfficerAsync_OwnDocument_ThrowsEvenThoughOfficerRoleIsHeld()
+        {
+            // Defence in depth: the queues already filter this out, so reaching here means a query
+            // was loosened — refuse rather than write a signature the rule forbids.
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var officer = SeedUser("Radu", "Stanescu", function, roleName: Roles.SsmOfficer);
+            var ownDoc = SeedDocument(officer, "SSM", "PendingInstructor");
+            _dbFixture.Context.SaveChanges();
+
+            await Assert.ThrowsAsync<DocumentSigningAuthorizationException>(() =>
+                service.SignSingleDocumentAsOfficerAsync(ownDoc, officer.Id, "Type", "Radu Stanescu", "9.9.9.9"));
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(DocumentStatuses.PendingInstructor, _dbFixture.Context.UserDocuments.Find(ownDoc.Id)!.Status);
+        }
+
         [Fact]
         public void SignatureRecords_SameVersionForSameTrainingAndRole_IsAllowed()
         {

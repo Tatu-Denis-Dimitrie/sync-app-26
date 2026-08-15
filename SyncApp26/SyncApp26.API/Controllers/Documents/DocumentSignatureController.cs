@@ -231,7 +231,7 @@ namespace SyncApp26.API.Controllers
 
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
-            int total = await _documentService.GetPendingDocumentsForOfficerAsync(documentType);
+            int total = await _documentService.GetPendingDocumentsForOfficerAsync(documentType, userId);
             if (total == 0)
                 return Ok(new { message = "No documents to sign.", jobId = (string?)null });
 
@@ -245,7 +245,7 @@ namespace SyncApp26.API.Controllers
                 var docService = scope.ServiceProvider.GetRequiredService<IDocumentService>();
                 try
                 {
-                    var baseQuery = await docService.GetPendingDocumentsForOfficerListAsync(documentType);
+                    var baseQuery = await docService.GetPendingDocumentsForOfficerListAsync(documentType, userId);
                     foreach (var doc in baseQuery)
                     {
                         await docService.SignSingleDocumentAsOfficerAsync(doc, userId, request.SignatureMethod, request.SignatureData, ipAddress);
@@ -279,7 +279,10 @@ namespace SyncApp26.API.Controllers
         [Authorize(Roles = Roles.SsmOfficer + "," + Roles.SuOfficer + "," + Roles.LineManager)]
         public async Task<IActionResult> GetPendingSsmAdminCount([FromQuery] string documentType = DocumentTypes.Ssm)
         {
-            var count = await _documentService.GetPendingDocumentsForOfficerAsync(documentType);
+            if (User.GetUserId() is not { } userId)
+                return Unauthorized();
+
+            var count = await _documentService.GetPendingDocumentsForOfficerAsync(documentType, userId);
             return Ok(new { count });
         }
     }

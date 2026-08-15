@@ -25,8 +25,8 @@ namespace SyncApp26.Application.IServices
         Task<IEnumerable<UserDocument>> GetInstructorSignedDocumentsAsync(Guid instructorId);
         Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document);
         Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false);
-        Task<int> GetPendingDocumentsForOfficerAsync(string documentType);
-        Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType);
+        Task<int> GetPendingDocumentsForOfficerAsync(string documentType, Guid signerUserId);
+        Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType, Guid signerUserId);
         Task SignSingleDocumentAsOfficerAsync(UserDocument doc, Guid signerUserId, string signatureMethod, string signatureData, string ipAddress);
         Task<List<UserDocument>> GetAdminPendingDocumentsAsync();
         Task<List<UserDocument>> GetAdminSignedDocumentsAsync();
