@@ -7,6 +7,9 @@ namespace SyncApp26.Shared.DTOs.Response.SignatureVerification
         /// <summary>Empty (Guid.Empty) when Status is "NotFound" — there is no record to attribute a signer to.</summary>
         public Guid SignerUserId { get; set; }
 
+        /// <summary>Empty (Guid.Empty) when Status is "NotFound". Lets callers resolve the owning document's type (SSM/SU) for officer-scoped access checks.</summary>
+        public Guid UserDocumentId { get; set; }
+
         /// <summary>"Valid", "Invalid", "ChainBroken", "Legacy", or "NotFound".</summary>
         public string Status { get; set; } = string.Empty;
 

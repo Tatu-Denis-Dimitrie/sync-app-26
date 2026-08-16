@@ -35,7 +35,9 @@ namespace SyncApp26.Infrastructure.Services
         }
 
         // Returnează numărul de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU.
-        public async Task<int> GetPendingDocumentsForOfficerAsync(string documentType)
+        // Excludes the officer's own document — they cannot countersign it, so counting it here would
+        // promise a bulk run more documents than it can actually sign.
+        public async Task<int> GetPendingDocumentsForOfficerAsync(string documentType, Guid signerUserId)
         {
             var type = DocumentTypes.Normalize(documentType);
             return await _context.UserDocuments
@@ -43,13 +45,15 @@ namespace SyncApp26.Infrastructure.Services
                 .CountAsync(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
+                    d.UserId != signerUserId &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
                     d.Status == DocumentStatuses.PendingInstructor);
         }
 
         // Returnează lista de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU (pentru bulk progres)
         // Returns ALL pending documents ordered oldest-first so signatures are applied in creation order.
-        public async Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType)
+        // Must stay filtered identically to the count above, or the job's progress total never completes.
+        public async Task<List<UserDocument>> GetPendingDocumentsForOfficerListAsync(string documentType, Guid signerUserId)
         {
             var type = DocumentTypes.Normalize(documentType);
             var allPending = await _context.UserDocuments
@@ -60,6 +64,7 @@ namespace SyncApp26.Infrastructure.Services
                 .Where(d =>
                     d.DocumentType != null && d.DocumentType.ToUpper() == type &&
                     d.User != null &&
+                    d.UserId != signerUserId &&
                     !d.User.RoleAssignments.Any(a => a.Role.Name == Roles.Admin) &&
                     d.Status == DocumentStatuses.PendingInstructor)
                 .ToListAsync();
@@ -232,6 +237,7 @@ namespace SyncApp26.Infrastructure.Services
             _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
+                .Include(u => u.WorkSite)
                 .Include(u => u.Function)
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate).ThenBy(pt => pt.CreatedAt))
@@ -245,6 +251,12 @@ namespace SyncApp26.Infrastructure.Services
             // deliberately different exception types so callers can tell them apart.
             if (doc.Status != DocumentStatuses.PendingInstructor)
                 throw new InvalidOperationException("Document is not pending an officer signature.");
+
+            // Separation of duties. The officer queues already exclude the signer's own document, so
+            // reaching this is a bug rather than a user action — fail loudly instead of writing a
+            // signature the rule forbids.
+            if (doc.UserId == signerUserId)
+                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
 
             var docType = DocumentTypes.Normalize(doc.DocumentType);
             var requiredOfficerRole = docType switch
@@ -393,11 +405,15 @@ namespace SyncApp26.Infrastructure.Services
 
             if (applyOfficerSwap)
             {
+                // Every field here comes from the manager's FIRST signature record, never from the
+                // document's Manager* columns: a periodic-training revision resets those and the
+                // manager re-signs, which would otherwise swap this block's image and date for the
+                // newer capture. Falls back to the document only for pre-SignatureRecord documents.
                 var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
                 renderedInstructorName = managerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
                 renderedInstructorPosition = managerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
-                renderedInstructorSigMethod = document.ManagerSignatureMethod;
-                renderedInstructorSigData = document.ManagerSignatureData;
+                renderedInstructorSigMethod = managerRecord?.SignatureMethod ?? document.ManagerSignatureMethod;
+                renderedInstructorSigData = managerRecord?.SignatureData ?? document.ManagerSignatureData;
                 renderedInstructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
             }
             else
@@ -756,7 +772,7 @@ namespace SyncApp26.Infrastructure.Services
                         }
                         else
                         {
-                            Row("Locul de muncă:", F(user.Department?.Name));
+                            Row("Locul de muncă:", F(user.WorkSite?.Name));
                             Row("Marca:", F(user.BadgeNumber));
                             Row("Domiciliul:", F(user.Address));
                         }
@@ -823,7 +839,7 @@ namespace SyncApp26.Infrastructure.Services
                 }
 
                 DataRow("Funcția:", F(user.Function?.Name));
-                DataRow("Locul de muncă:", F(user.Department?.Name));
+                DataRow("Locul de muncă:", F(user.WorkSite?.Name));
 
                 if (ctx.IsSsm)
                 {
@@ -921,6 +937,11 @@ namespace SyncApp26.Infrastructure.Services
         // the periodic-training page.
         private static void RenderAdmittedToWorkItem(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx)
         {
+            // "Admis la lucru" records a one-time approval, so every field here comes from the
+            // manager's FIRST signature — image and date included — and never the newer capture a
+            // later periodic-training revision forces onto the document's Manager* columns.
+            var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+
             col.Item().Text("3. Admis la lucru").Bold();
             col.Item().Height(3);
             col.Item().Row(r =>
@@ -937,17 +958,24 @@ namespace SyncApp26.Infrastructure.Services
             col.Item().Height(4);
             col.Item().Row(r =>
             {
+                // Same fallback shape as the two rows above: the explicitly recorded admission date
+                // wins, otherwise the moment the manager actually signed this admission — the date
+                // the signature block below already prints — so the line is never left blank.
+                var admittedOn = user.AdmittedDate
+                    ?? managerRecord?.SignedAt.UtcDateTime
+                    ?? document.ManagerSignedAt;
                 r.ConstantItem(160).Text("Data:").Bold();
-                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedDate?.ToString("dd.MM.yyyy")));
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admittedOn?.ToString("dd.MM.yyyy")));
             });
             col.Item().Height(6);
 
-            var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
             col.Item().Width(220).Column(c => RenderSignatureBlock(c, "Semnătura:",
                 new SignatureBlockData(
                     managerRecord?.SignerFullNameSnapshot ?? user.AdmittedByName ?? ctx.ManagerName,
                     managerRecord?.SignerPositionSnapshot ?? user.AdmittedByFunction ?? ctx.ManagerFunction,
-                    document.ManagerSignatureMethod, document.ManagerSignatureData, managerRecord?.SignedAt.UtcDateTime)));
+                    managerRecord?.SignatureMethod ?? document.ManagerSignatureMethod,
+                    managerRecord?.SignatureData ?? document.ManagerSignatureData,
+                    managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt)));
         }
 
         // ══════════════════════════════════════════════════════
@@ -1064,12 +1092,19 @@ namespace SyncApp26.Infrastructure.Services
 
             if (applyOfficerSwap)
             {
-                var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
-                instructorName = managerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
-                instructorPosition = managerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
-                instructorSigMethod = document.ManagerSignatureMethod;
-                instructorSigData = document.ManagerSignatureData;
-                instructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
+                // Each row shows the manager signature captured for THAT training session, not the
+                // document's first one — this table is a log of separate sessions, so a row must
+                // keep the signature and date it was actually signed with. (Section 3 "Admis la
+                // lucru" is the opposite case: one-time approval, always the first signature.)
+                // Falls back to the earliest record, then the document columns, for rows signed
+                // before per-training records existed.
+                var rowManagerRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "Manager"))
+                    ?? ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+                instructorName = rowManagerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
+                instructorPosition = rowManagerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
+                instructorSigMethod = rowManagerRecord?.SignatureMethod ?? document.ManagerSignatureMethod;
+                instructorSigData = rowManagerRecord?.SignatureData ?? document.ManagerSignatureData;
+                instructorSignedAt = rowManagerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
             }
             else
             {
@@ -1190,6 +1225,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1212,6 +1249,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1223,11 +1262,24 @@ namespace SyncApp26.Infrastructure.Services
                 .FirstOrDefaultAsync(d => d.Id == documentId);
         }
 
+        public async Task<Dictionary<Guid, string>> GetDocumentTypesByIdsAsync(IEnumerable<Guid> documentIds)
+        {
+            var ids = documentIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<Guid, string>();
+
+            return await _context.UserDocuments
+                .Where(d => ids.Contains(d.Id))
+                .Select(d => new { d.Id, d.DocumentType })
+                .ToDictionaryAsync(d => d.Id, d => d.DocumentType);
+        }
+
         public async Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(Guid userId)
         {
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1247,6 +1299,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1254,7 +1308,10 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
+                // d.UserId != managerId: a user can end up as their own AssignedTo (CSV sync has no
+                // self-assignment guard), and nobody countersigns their own document.
                 .Where(d => d.User != null && d.User.AssignedToId == managerId
+                    && d.UserId != managerId
                     && d.Status == DocumentStatuses.PendingManager
                     && d.UserSignedAt != null
                     && d.ManagerSignedAt == null)
@@ -1275,6 +1332,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1303,6 +1362,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1310,7 +1371,10 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings)
+                // The officer role is company-wide, so without the owner exclusion an officer's own
+                // document would sit in their own "awaiting my signature" queue.
                 .Where(d => d.Status == DocumentStatuses.PendingInstructor
+                    && d.UserId != instructorId
                     && d.ManagerSignedAt != null
                     && d.InstructorSignedAt == null
                     && d.DocumentType != null
@@ -1335,6 +1399,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1427,6 +1493,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1496,12 +1564,14 @@ namespace SyncApp26.Infrastructure.Services
         {
             var signerUser = await _context.Users
                 .Include(u => u.Function)
+                .Include(u => u.WorkSite)
                 .FirstOrDefaultAsync(u => u.Id == signerUserId);
             if (signerUser == null) return;
 
             var fullNameSnapshot = $"{signerUser.FirstName} {signerUser.LastName}";
             var positionSnapshot = signerUser.Function?.Name ?? string.Empty;
             var badgeNumberSnapshot = signerUser.BadgeNumber;
+            var workSiteNameSnapshot = signerUser.WorkSite?.Name;
             var signedAtOffset = new DateTimeOffset(signedAt, TimeSpan.Zero);
 
             // Links to the same signer's most recent signature across all their documents, not
@@ -1521,6 +1591,7 @@ namespace SyncApp26.Infrastructure.Services
                 fullNameSnapshot,
                 positionSnapshot,
                 badgeNumberSnapshot,
+                workSiteNameSnapshot,
                 training?.MaterialTaught,
                 training?.DurationHours,
                 training?.TrainingDate,
@@ -1540,6 +1611,7 @@ namespace SyncApp26.Infrastructure.Services
                 SignerFullNameSnapshot = fullNameSnapshot,
                 SignerPositionSnapshot = positionSnapshot,
                 SignerBadgeNumberSnapshot = badgeNumberSnapshot,
+                SignerWorkSiteNameSnapshot = workSiteNameSnapshot,
                 SignatureMethod = signatureMethod,
                 SignatureData = signatureData,
                 MaterialTaughtSnapshot = training?.MaterialTaught,
@@ -1739,6 +1811,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1747,7 +1821,9 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.InitialTrainings)
                 .Include(d => d.User)
                     .ThenInclude(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
-                .Where(d => d.User != null && (
+                // d.UserId != signerUserId guards all three branches at once: nobody countersigns
+                // their own document, whether they reached it as its manager or as an officer.
+                .Where(d => d.User != null && d.UserId != signerUserId && (
                     (d.Status == DocumentStatuses.PendingManager && d.UserSignedAt != null && d.ManagerSignedAt == null && d.User.AssignedToId == signerUserId)
                     || (isSsmOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Ssm && d.Status == DocumentStatuses.PendingInstructor && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
                     || (isSuOfficer && d.DocumentType != null && d.DocumentType.ToUpper() == DocumentTypes.Su && d.Status == DocumentStatuses.PendingInstructor && d.ManagerSignedAt != null && d.InstructorSignedAt == null)
@@ -1760,6 +1836,11 @@ namespace SyncApp26.Infrastructure.Services
 
         private async Task SignSingleDocumentInBulkAsync(UserDocument doc, Guid signerUserId, string signerFullName, string signatureMethod, string signatureData, string ipAddress, DateTime timestamp)
         {
+            // Same defence in depth as SignSingleDocumentAsOfficerAsync: the loader above already
+            // filters these out, so this only fires if that filter is ever loosened.
+            if (doc.UserId == signerUserId)
+                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
+
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
             var signerRole = doc.Status == DocumentStatuses.PendingManager ? "Manager" : "Instructor";
 
@@ -1808,6 +1889,7 @@ namespace SyncApp26.Infrastructure.Services
             var users = await _context.Users
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
+                .Include(u => u.WorkSite)
                 .Include(u => u.Function)
                 .Include(u => u.InitialTrainings)
                 .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
@@ -1857,6 +1939,8 @@ namespace SyncApp26.Infrastructure.Services
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
+                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.AssignedTo)
@@ -1875,6 +1959,8 @@ namespace SyncApp26.Infrastructure.Services
             return await _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)
@@ -1897,6 +1983,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ThenInclude(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
                 .Include(d => d.User)

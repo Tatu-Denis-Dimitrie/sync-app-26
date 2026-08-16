@@ -10,7 +10,8 @@ import { AuthenticationService, roleLabel } from '../../services/authentication.
 import { NotificationService } from '../../services/notification.service';
 import { RoleService, Role } from '../../services/role.service';
 import { ImpersonationService } from '../../services/impersonation.service';
-import { User, UserRole, Department } from '../../models/csv-sync.model';
+import { User, UserRole, Department, WorkSite } from '../../models/csv-sync.model';
+import { WorkSiteService } from '../../services/work-site.service';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 import { roleNameBadgeColor } from '../../shared/utils/role.util';
@@ -126,7 +127,8 @@ export class UsersListComponent implements OnInit {
     private route: ActivatedRoute,
     private notificationService: NotificationService,
     private roleService: RoleService,
-    private impersonationService: ImpersonationService
+    private impersonationService: ImpersonationService,
+    private workSiteService: WorkSiteService
   ) { }
 
   logout(): void {
@@ -139,6 +141,10 @@ export class UsersListComponent implements OnInit {
 
     this.users$.subscribe(users => {
       this.allUsers = users;
+    });
+
+    this.workSiteService.getAll().subscribe(workSites => {
+      this.availableWorkSites = workSites.filter(w => w.isActive);
     });
 
     // Check for department filter from query params
@@ -439,12 +445,14 @@ export class UsersListComponent implements OnInit {
     email: '',
     departmentId: '',
     function: '',
+    workSiteId: '',
     role: UserRole.BasicUser,
     assignedToId: ''
   };
 
   allUsers: User[] = [];
   availableFunctions: string[] = [];
+  availableWorkSites: WorkSite[] = [];
 
   openEditModal(user: User, event: Event): void {
     event.stopPropagation();
@@ -455,6 +463,7 @@ export class UsersListComponent implements OnInit {
       email: user.email,
       departmentId: user.departmentId,
       function: user.function || '',
+      workSiteId: user.workSiteId || '',
       role: user.role || UserRole.BasicUser,
       assignedToId: user.assignedToId || ''
     };
@@ -520,6 +529,7 @@ export class UsersListComponent implements OnInit {
       email: this.editForm.email,
       departmentId: this.editForm.departmentId,
       function: this.editForm.function || null,
+      workSiteId: this.editForm.workSiteId || null,
       assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
     };
 

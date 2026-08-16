@@ -8,7 +8,7 @@ namespace SyncApp26.Application.Services;
 public class CsvValidationService : ICsvValidationService
 {
     private static readonly string[] RequiredHeaders = { "PersonalId", "FirstName", "LastName", "Email", "DepartmentName" };
-    private static readonly string[] OptionalHeaders = { "AssignedToPersonalId", "Function" };
+    private static readonly string[] OptionalHeaders = { "AssignedToPersonalId", "Function", "WorkSite" };
     private static readonly Regex EmailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
 
     public async Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName, HashSet<string>? existingDepartments = null)
@@ -277,6 +277,8 @@ public class CsvValidationService : ICsvValidationService
                 map["AssignedToPersonalId"] = i;
             else if (normalized == NormalizeHeaderName("Function") || normalized == "jobfunction")
                 map["Function"] = i;
+            else if (normalized == NormalizeHeaderName("WorkSite") || normalized == "punctdelucru")
+                map["WorkSite"] = i;
         }
 
         return map;
@@ -384,6 +386,16 @@ public class CsvValidationService : ICsvValidationService
             if (!string.IsNullOrWhiteSpace(function) && function.Length > 100)
             {
                 warnings.Add($"Row {rowNumber}: Function is too long (max 100 characters)");
+            }
+        }
+
+        // Validate WorkSite (optional)
+        if (columnMap.TryGetValue("WorkSite", out int workSiteIdx))
+        {
+            var workSite = values[workSiteIdx];
+            if (!string.IsNullOrWhiteSpace(workSite) && workSite.Length > 100)
+            {
+                warnings.Add($"Row {rowNumber}: WorkSite is too long (max 100 characters)");
             }
         }
 

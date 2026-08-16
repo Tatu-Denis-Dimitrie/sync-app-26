@@ -19,11 +19,13 @@ namespace SyncApp26.API.Controllers
 
         private readonly ISignatureVerificationService _verificationService;
         private readonly IUserService _userService;
+        private readonly IDocumentService _documentService;
 
-        public SignatureVerificationController(ISignatureVerificationService verificationService, IUserService userService)
+        public SignatureVerificationController(ISignatureVerificationService verificationService, IUserService userService, IDocumentService documentService)
         {
             _verificationService = verificationService;
             _userService = userService;
+            _documentService = documentService;
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────────────
@@ -37,15 +39,22 @@ namespace SyncApp26.API.Controllers
 
         private bool CallerIsAdmin => User.IsInRole(Roles.Admin);
 
+        /// <summary>True when the caller is an SsmOfficer/SuOfficer whose role matches this document's type — mirrors ClaimsPrincipalExtensions.CanInitiateFor, but for reading verification status rather than initiating a document.</summary>
+        private bool CallerIsOfficerForType(string? documentType) =>
+            DocumentTypes.IsSsm(documentType) && User.IsInRole(Roles.SsmOfficer)
+            || DocumentTypes.IsSu(documentType) && User.IsInRole(Roles.SuOfficer);
+
         /// <summary>
         /// Returns true when the caller is allowed to see verification status for signatures
         /// made by the given signer.
-        /// Admins: any signer. Line Managers: their own direct reports only. Everyone else: themselves only.
+        /// Admins: any signer. Line Managers: their own direct reports only. SSM/SU Officers: any
+        /// signer on a document of their matching type. Everyone else: themselves only.
         /// </summary>
-        private async Task<bool> CanAccessSignaturesOfAsync(Guid signerUserId, Guid callerId)
+        private async Task<bool> CanAccessSignaturesOfAsync(Guid signerUserId, Guid callerId, string? documentType = null)
         {
             if (callerId == signerUserId) return true;
             if (CallerIsAdmin) return true;
+            if (CallerIsOfficerForType(documentType)) return true;
 
             if (User.IsInRole(Roles.LineManager))
             {
@@ -69,7 +78,11 @@ namespace SyncApp26.API.Controllers
             if (status == null)
                 return NotFound(new { message = "No signature record found with this id." });
 
-            if (!await CanAccessSignaturesOfAsync(status.SignerUserId, callerId))
+            var documentType = status.UserDocumentId == Guid.Empty
+                ? null
+                : (await _documentService.GetDocumentTypesByIdsAsync(new[] { status.UserDocumentId })).GetValueOrDefault(status.UserDocumentId);
+
+            if (!await CanAccessSignaturesOfAsync(status.SignerUserId, callerId, documentType))
                 return Forbid();
 
             return Ok(status);
@@ -96,13 +109,17 @@ namespace SyncApp26.API.Controllers
 
             var results = await _verificationService.GetVerificationStatusBatchAsync(request.SignatureIds);
 
+            var documentIds = results.Where(r => r.Status != "NotFound").Select(r => r.UserDocumentId).Distinct();
+            var documentTypesById = await _documentService.GetDocumentTypesByIdsAsync(documentIds);
+
             // "NotFound" entries carry no signer-attributable data, so they're safe to return
             // to any authenticated caller; everything else is filtered by the same access rule
             // as the single-id endpoint.
             var allowed = new List<object>();
             foreach (var result in results)
             {
-                if (result.Status == "NotFound" || await CanAccessSignaturesOfAsync(result.SignerUserId, callerId))
+                var documentType = documentTypesById.GetValueOrDefault(result.UserDocumentId);
+                if (result.Status == "NotFound" || await CanAccessSignaturesOfAsync(result.SignerUserId, callerId, documentType))
                     allowed.Add(result);
             }
 
@@ -113,8 +130,8 @@ namespace SyncApp26.API.Controllers
 
         /// <summary>
         /// Returns every SignatureRecord version for a periodic training, grouped by signer role.
-        /// Access follows the training's employee, not any individual signer: self, any admin, or
-        /// the employee's line manager.
+        /// Access follows the training's employee, not any individual signer: self, any admin, the
+        /// employee's line manager, or an SSM/SU officer matching the training's document type.
         /// </summary>
         [HttpGet("training/{periodicTrainingId:guid}/history")]
         public async Task<IActionResult> GetTrainingSignatureHistory(Guid periodicTrainingId)
@@ -126,7 +143,7 @@ namespace SyncApp26.API.Controllers
             if (history == null)
                 return NotFound(new { message = "No periodic training found with this id." });
 
-            if (!await CanAccessSignaturesOfAsync(history.UserId, callerId))
+            if (!await CanAccessSignaturesOfAsync(history.UserId, callerId, history.DocumentType))
                 return Forbid();
 
             return Ok(history);
@@ -159,11 +176,30 @@ namespace SyncApp26.API.Controllers
 
             var statusesByUser = await _verificationService.GetVerificationStatusForUsersAsync(userIds);
 
+            // Resolved once up front so the per-record officer check below (needed because a single
+            // employee can have both an SSM and an SU document) doesn't re-query per user.
+            var documentIds = statusesByUser.Values.SelectMany(list => list.Select(s => s.UserDocumentId)).Distinct();
+            var documentTypesById = await _documentService.GetDocumentTypesByIdsAsync(documentIds);
+
             var allowed = new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>();
             foreach (var userId in userIds)
             {
+                var userStatuses = statusesByUser.GetValueOrDefault(userId, new List<SignatureVerificationStatusResponseDTO>());
+
                 if (await CanAccessSignaturesOfAsync(userId, callerId))
-                    allowed[userId] = statusesByUser.GetValueOrDefault(userId, new List<SignatureVerificationStatusResponseDTO>());
+                {
+                    allowed[userId] = userStatuses;
+                    continue;
+                }
+
+                // Blanket access above already covers self/admin/line-manager; an officer without
+                // one of those still gets the subset of this employee's signatures that belong to
+                // their matching document type.
+                var officerVisible = userStatuses
+                    .Where(s => CallerIsOfficerForType(documentTypesById.GetValueOrDefault(s.UserDocumentId)))
+                    .ToList();
+                if (officerVisible.Count > 0)
+                    allowed[userId] = officerVisible;
             }
 
             return Ok(allowed);

@@ -5,6 +5,7 @@ import { ResetPasswordComponent } from './components/reset-password/reset-passwo
 import { AccessRestrictedComponent } from './components/access-restricted/access-restricted.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { DepartmentsComponent } from './components/departments/departments.component';
+import { WorkSitesComponent } from './components/work-sites/work-sites.component';
 import { UsersListComponent } from './components/users-list/users-list.component';
 import { EmployeesDetailComponent } from './components/employees-detail/employees-detail.component';
 import { ImportHistoryComponent } from './components/import-history/import-history.component';
@@ -44,6 +45,7 @@ export const routes: Routes = [
   // Admin only routes
   { path: 'dashboard', component: DashboardComponent, canActivate: [AdminGuard] },
   { path: 'departments', component: DepartmentsComponent, canActivate: [AdminGuard] },
+  { path: 'work-sites', component: WorkSitesComponent, canActivate: [AdminGuard] },
   { path: 'users', component: UsersListComponent, canActivate: [AdminGuard] },
   { path: 'employees', component: EmployeesDetailComponent, canActivate: [LineManagerGuard] },
   { path: 'employees/:id', component: EmployeesDetailComponent, canActivate: [LineManagerGuard] },

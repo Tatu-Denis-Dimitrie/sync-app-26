@@ -53,6 +53,34 @@ namespace SyncApp26.Infrastructure.Data
             await context.Departments.AddRangeAsync(departments);
             await context.SaveChangesAsync();
 
+            var workSites = new List<WorkSite>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Brasov",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddMonths(-6)
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Bucuresti",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddMonths(-6)
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Cluj-Napoca",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddMonths(-6)
+                }
+            };
+
+            await context.WorkSites.AddRangeAsync(workSites);
+            await context.SaveChangesAsync();
+
             var functions = new List<Function>
             {
                 // Engineering functions
@@ -505,11 +533,18 @@ namespace SyncApp26.Infrastructure.Data
                 }
             }
 
+            // Spread every seeded user across the three work sites round-robin, so each site has
+            // a mixed roster to exercise the per-site employee/signature stats on the admin page.
+            for (var i = 0; i < users.Count; i++)
+            {
+                users[i].WorkSiteId = workSites[i % workSites.Count].Id;
+            }
+
             await context.Users.AddRangeAsync(users);
             await context.SaveChangesAsync();
 
             Console.WriteLine("Database seeded successfully!");
-            Console.WriteLine($"Created {departments.Count} departments and {users.Count} users.");
+            Console.WriteLine($"Created {departments.Count} departments, {workSites.Count} work sites, and {users.Count} users.");
         }
     }
 }

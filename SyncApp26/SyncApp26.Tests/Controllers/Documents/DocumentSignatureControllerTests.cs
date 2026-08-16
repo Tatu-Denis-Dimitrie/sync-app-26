@@ -93,9 +93,11 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var controller = CreateController();
             var user = MakeUser(email: "existing@example.com");
+            var documentId = Guid.NewGuid();
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(documentId)).ReturnsAsync(MakeDocument(id: documentId, user: user));
             _userServiceMock.Setup(s => s.GetUserByEmailAsync("existing@example.com")).ReturnsAsync(user);
 
-            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "existing@example.com", DocumentId = Guid.NewGuid(), DocumentName = "SSM" });
+            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "existing@example.com", DocumentId = documentId, DocumentName = "SSM" });
 
             Assert.IsType<OkObjectResult>(result);
             _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailForRegisteredUserAsync(user.Email, "SSM", It.IsAny<string>()), Times.Once);
@@ -105,14 +107,34 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task RequestSignature_UnknownUser_SendsSecureLinkEmail()
         {
             var controller = CreateController();
+            var owner = MakeUser(email: "new@example.com");
+            var documentId = Guid.NewGuid();
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(documentId)).ReturnsAsync(MakeDocument(id: documentId, user: owner));
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
-            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync("new@example.com", It.IsAny<Guid>(), "SSM", null))
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync("new@example.com", documentId, "SSM", null))
                 .ReturnsAsync("tok");
 
-            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "new@example.com", DocumentId = Guid.NewGuid(), DocumentName = "SSM" });
+            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "new@example.com", DocumentId = documentId, DocumentName = "SSM" });
 
             Assert.IsType<OkObjectResult>(result);
             _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync("new@example.com", "SSM", It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task RequestSignature_EmailNotInDocumentChain_DoesNotSendAndStillReturnsOk()
+        {
+            // Guards against minting a token, or leaking an existing-account distinction, for an
+            // email that has no standing on this document (not the owner, their manager, or an officer).
+            var controller = CreateController();
+            var documentId = Guid.NewGuid();
+            _documentServiceMock.Setup(s => s.GetDocumentByIdAsync(documentId)).ReturnsAsync(MakeDocument(id: documentId));
+            _userServiceMock.Setup(s => s.GetUsersInRoleAsync(Roles.SsmOfficer)).ReturnsAsync(new List<User>());
+
+            var result = await controller.RequestSignature(new RequestSignatureDto { Email = "outsider@example.com", DocumentId = documentId, DocumentName = "SSM" });
+
+            Assert.IsType<OkObjectResult>(result);
+            _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailForRegisteredUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         // ───────────────────────── ValidateToken ─────────────────────────
@@ -313,7 +335,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task BulkSignAsync_NoPendingDocuments_ReturnsOkWithNullJobId()
         {
             var controller = CreateController(role: Roles.SsmOfficer);
-            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(0);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM", It.IsAny<Guid>())).ReturnsAsync(0);
 
             var result = await controller.BulkSignAsync(new BulkSignDto { SignatureData = "data" });
 
@@ -321,18 +343,46 @@ namespace SyncApp26.Tests.Controllers.Documents
             Assert.Null(GetProp<string?>(ok.Value!, "jobId"));
         }
 
+        // The officer queue excludes the signer's own document, which only works if the controller
+        // actually threads the caller's id through — It.IsAny would hide a wrong or empty Guid.
+        [Fact]
+        public async Task BulkSignAsync_PassesTheCallersOwnIdToTheOfficerQueue()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId, role: Roles.SsmOfficer);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM", callerId)).ReturnsAsync(0);
+
+            await controller.BulkSignAsync(new BulkSignDto { SignatureData = "data" });
+
+            _documentServiceMock.Verify(s => s.GetPendingDocumentsForOfficerAsync("SSM", callerId), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetPendingSsmAdminCount_PassesTheCallersOwnId()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId, role: Roles.SsmOfficer);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM", callerId)).ReturnsAsync(4);
+
+            var result = await controller.GetPendingSsmAdminCount("SSM");
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(4, GetProp<int>(ok.Value!, "count"));
+            _documentServiceMock.Verify(s => s.GetPendingDocumentsForOfficerAsync("SSM", callerId), Times.Once);
+        }
+
         [Fact]
         public async Task BulkSignAsync_PendingDocuments_StartsJobAndReturnsJobId()
         {
             var controller = CreateController(role: Roles.SsmOfficer);
-            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(3);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM", It.IsAny<Guid>())).ReturnsAsync(3);
 
             var scopeMock = new Mock<IServiceScope>();
             var providerMock = new Mock<IServiceProvider>();
             providerMock.Setup(p => p.GetService(typeof(IDocumentService))).Returns(_documentServiceMock.Object);
             scopeMock.Setup(s => s.ServiceProvider).Returns(providerMock.Object);
             _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
-            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerListAsync("SSM")).ReturnsAsync(new List<UserDocument>());
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerListAsync("SSM", It.IsAny<Guid>())).ReturnsAsync(new List<UserDocument>());
 
             var result = await controller.BulkSignAsync(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
 
@@ -388,13 +438,13 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetBulkSignStatus_KnownJob_ReturnsTotal()
         {
             var controller = CreateController(role: Roles.SsmOfficer);
-            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(5);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM", It.IsAny<Guid>())).ReturnsAsync(5);
             var scopeMock = new Mock<IServiceScope>();
             var providerMock = new Mock<IServiceProvider>();
             providerMock.Setup(p => p.GetService(typeof(IDocumentService))).Returns(_documentServiceMock.Object);
             scopeMock.Setup(s => s.ServiceProvider).Returns(providerMock.Object);
             _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
-            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerListAsync("SSM")).ReturnsAsync(new List<UserDocument>());
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerListAsync("SSM", It.IsAny<Guid>())).ReturnsAsync(new List<UserDocument>());
 
             var startResult = await controller.BulkSignAsync(new BulkSignDto { SignatureMethod = "Draw", SignatureData = "data" });
             var startOk = Assert.IsType<OkObjectResult>(startResult);
@@ -413,7 +463,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         public async Task GetPendingSsmAdminCount_ReturnsCount()
         {
             var controller = CreateController(role: Roles.SsmOfficer);
-            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM")).ReturnsAsync(7);
+            _documentServiceMock.Setup(s => s.GetPendingDocumentsForOfficerAsync("SSM", It.IsAny<Guid>())).ReturnsAsync(7);
 
             var result = await controller.GetPendingSsmAdminCount("SSM");
 

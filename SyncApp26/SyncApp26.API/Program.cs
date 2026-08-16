@@ -63,6 +63,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Repositories
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IWorkSiteRepository, WorkSiteRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserChangeHistoryRepository, UserChangeHistoryRepository>();
 builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
@@ -72,10 +73,12 @@ builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
 builder.Services.AddScoped<IDataChangeRequestRepository, DataChangeRequestRepository>();
 builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
 builder.Services.AddScoped<IImpersonationLogRepository, ImpersonationLogRepository>();
+builder.Services.AddScoped<ISignatureAnomalyAlertRepository, SignatureAnomalyAlertRepository>();
 
 
 // Services
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddScoped<IWorkSiteService, WorkSiteService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
 builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
@@ -140,6 +143,20 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuer = false,
         ValidateAudience = false,
         ClockSkew = TimeSpan.Zero
+    };
+    // SignalR's browser transport can't set an Authorization header, so the client sends the
+    // token as ?access_token= instead — only honored for the hub path.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 

@@ -350,6 +350,43 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("Roles");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureAnomalyAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AnomaliesFound")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ReadByAdminId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RecordsChecked")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsRead")
+                        .HasDatabaseName("IX_SignatureAnomalyAlerts_IsRead");
+
+                    b.HasIndex("OccurredAt")
+                        .HasDatabaseName("IX_SignatureAnomalyAlerts_OccurredAt");
+
+                    b.HasIndex("ReadByAdminId");
+
+                    b.ToTable("SignatureAnomalyAlerts");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -416,6 +453,10 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("SignerUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SignerWorkSiteNameSnapshot")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("TrainingDateSnapshot")
@@ -547,6 +588,9 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("WorkSiteId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedToId");
@@ -564,6 +608,8 @@ namespace SyncApp26.Infrastructure.Migrations
 
                     b.HasIndex("PersonalId")
                         .IsUnique();
+
+                    b.HasIndex("WorkSiteId");
 
                     b.HasIndex("DepartmentId", "DeletedAt")
                         .HasDatabaseName("IX_Users_DepartmentId_DeletedAt");
@@ -942,6 +988,37 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("UserSignatureHistories");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.WorkSite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("WorkSites");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.DataChangeRequest", b =>
                 {
                     b.HasOne("SyncApp26.Domain.Entities.ImportHistory", "AutoResolvedByImportHistory")
@@ -1029,6 +1106,16 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureAnomalyAlert", b =>
+                {
+                    b.HasOne("SyncApp26.Domain.Entities.User", "ReadByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ReadByAdminId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ReadByAdmin");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.SignatureRecord", b =>
                 {
                     b.HasOne("SyncApp26.Domain.Entities.PeriodicTraining", "PeriodicTraining")
@@ -1071,11 +1158,18 @@ namespace SyncApp26.Infrastructure.Migrations
                         .WithMany("Users")
                         .HasForeignKey("FunctionId");
 
+                    b.HasOne("SyncApp26.Domain.Entities.WorkSite", "WorkSite")
+                        .WithMany("Users")
+                        .HasForeignKey("WorkSiteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("AssignedTo");
 
                     b.Navigation("Department");
 
                     b.Navigation("Function");
+
+                    b.Navigation("WorkSite");
                 });
 
             modelBuilder.Entity("SyncApp26.Domain.Entities.UserChangeHistory", b =>
@@ -1194,6 +1288,11 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("PeriodicTrainings");
 
                     b.Navigation("RoleAssignments");
+                });
+
+            modelBuilder.Entity("SyncApp26.Domain.Entities.WorkSite", b =>
+                {
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

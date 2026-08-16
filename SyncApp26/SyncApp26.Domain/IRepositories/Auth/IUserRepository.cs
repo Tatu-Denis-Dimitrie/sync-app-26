@@ -6,8 +6,10 @@ namespace SyncApp26.Domain.IRepositories
     {
         Task<User?> GetUserByIdAsync(Guid id);
         Task<IEnumerable<User>> GetAllUsersAsync();
+        Task<IEnumerable<User>> GetAllUsersIncludingAdminsAsync();
         Task<List<User>> GetAllUsersForComparisonAsync();
         Task<IEnumerable<User>> GetUsersByDepartmentIdAsync(Guid departmentId);
+        Task<IEnumerable<User>> GetUsersByWorkSiteIdAsync(Guid workSiteId);
         Task<IEnumerable<User>> GetUsersAssignedToAsync(Guid assignedToId);
         Task AddUserAsync(User user);
         Task AddUsersAsync(IEnumerable<User> users);

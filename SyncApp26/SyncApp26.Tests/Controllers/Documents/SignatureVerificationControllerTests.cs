@@ -14,18 +14,22 @@ namespace SyncApp26.Tests.Controllers.Documents
     {
         private readonly Mock<ISignatureVerificationService> _verificationServiceMock = new();
         private readonly Mock<IUserService> _userServiceMock = new();
+        private readonly Mock<IDocumentService> _documentServiceMock = new();
 
         private SignatureVerificationController CreateController(Guid? callerId = null, string role = Roles.BasicUser)
         {
-            var controller = new SignatureVerificationController(_verificationServiceMock.Object, _userServiceMock.Object);
+            _documentServiceMock.Setup(s => s.GetDocumentTypesByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, string>());
+            var controller = new SignatureVerificationController(_verificationServiceMock.Object, _userServiceMock.Object, _documentServiceMock.Object);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }
 
-        private static SignatureVerificationStatusResponseDTO MakeStatus(Guid signatureId, Guid signerUserId, string status = "Valid") => new()
+        private static SignatureVerificationStatusResponseDTO MakeStatus(Guid signatureId, Guid signerUserId, string status = "Valid", Guid? userDocumentId = null) => new()
         {
             SignatureId = signatureId,
             SignerUserId = signerUserId,
+            UserDocumentId = userDocumentId ?? Guid.NewGuid(),
             Status = status,
             IsHashValid = status == "Valid",
             IsChainValid = status == "Valid",
@@ -33,10 +37,11 @@ namespace SyncApp26.Tests.Controllers.Documents
             VerifiedAt = DateTimeOffset.UtcNow
         };
 
-        private static PeriodicTrainingSignatureHistoryDTO MakeHistory(Guid periodicTrainingId, Guid userId) => new()
+        private static PeriodicTrainingSignatureHistoryDTO MakeHistory(Guid periodicTrainingId, Guid userId, string? documentType = null) => new()
         {
             PeriodicTrainingId = periodicTrainingId,
             UserId = userId,
+            DocumentType = documentType,
             VersionsByRole = new Dictionary<string, List<SignatureVersionSummaryDTO>>()
         };
 
@@ -145,6 +150,36 @@ namespace SyncApp26.Tests.Controllers.Documents
             Assert.IsType<ForbidResult>(result);
         }
 
+        [Fact]
+        public async Task GetVerificationStatus_SsmOfficerOnMatchingDocumentType_ReturnsOk()
+        {
+            var controller = CreateController(role: Roles.SsmOfficer);
+            var id = Guid.NewGuid();
+            var documentId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusAsync(id)).ReturnsAsync(MakeStatus(id, Guid.NewGuid(), userDocumentId: documentId));
+            _documentServiceMock.Setup(s => s.GetDocumentTypesByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, string> { [documentId] = "SSM" });
+
+            var result = await controller.GetVerificationStatus(id);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatus_SsmOfficerOnMismatchedDocumentType_ReturnsForbidden()
+        {
+            var controller = CreateController(role: Roles.SsmOfficer);
+            var id = Guid.NewGuid();
+            var documentId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusAsync(id)).ReturnsAsync(MakeStatus(id, Guid.NewGuid(), userDocumentId: documentId));
+            _documentServiceMock.Setup(s => s.GetDocumentTypesByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, string> { [documentId] = "SU" });
+
+            var result = await controller.GetVerificationStatus(id);
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
         // ───────────────────────── GetVerificationStatusBatch ─────────────────────────
 
         [Fact]
@@ -237,6 +272,31 @@ namespace SyncApp26.Tests.Controllers.Documents
             var ok = Assert.IsType<OkObjectResult>(result);
             var list = Assert.IsAssignableFrom<IEnumerable<object>>(ok.Value);
             Assert.Equal(2, list.Count());
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusBatch_SuOfficer_OnlyIncludesMatchingDocumentType()
+        {
+            var controller = CreateController(role: Roles.SuOfficer);
+            var suDocId = Guid.NewGuid();
+            var ssmDocId = Guid.NewGuid();
+            var suSignatureId = Guid.NewGuid();
+            var ssmSignatureId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusBatchAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new List<SignatureVerificationStatusResponseDTO>
+                {
+                    MakeStatus(suSignatureId, Guid.NewGuid(), userDocumentId: suDocId),
+                    MakeStatus(ssmSignatureId, Guid.NewGuid(), userDocumentId: ssmDocId)
+                });
+            _documentServiceMock.Setup(s => s.GetDocumentTypesByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, string> { [suDocId] = "SU", [ssmDocId] = "SSM" });
+
+            var result = await controller.GetVerificationStatusBatch(new BatchVerificationStatusRequestDTO { SignatureIds = new List<Guid> { suSignatureId, ssmSignatureId } });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var list = Assert.IsAssignableFrom<IEnumerable<object>>(ok.Value).Cast<SignatureVerificationStatusResponseDTO>().ToList();
+            Assert.Single(list);
+            Assert.Equal(suSignatureId, list[0].SignatureId);
         }
 
         // ───────────────────────── GetTrainingSignatureHistory ─────────────────────────
@@ -333,6 +393,32 @@ namespace SyncApp26.Tests.Controllers.Documents
             _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
                 .ReturnsAsync(MakeHistory(trainingId, employee.Id));
             _userServiceMock.Setup(s => s.GetUserByIdAsync(employee.Id)).ReturnsAsync(employee);
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_SsmOfficerOnMatchingDocumentType_ReturnsOk()
+        {
+            var controller = CreateController(role: Roles.SsmOfficer);
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync(MakeHistory(trainingId, Guid.NewGuid(), documentType: "SSM"));
+
+            var result = await controller.GetTrainingSignatureHistory(trainingId);
+
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTrainingSignatureHistory_SsmOfficerOnMismatchedDocumentType_ReturnsForbidden()
+        {
+            var controller = CreateController(role: Roles.SsmOfficer);
+            var trainingId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetSignatureHistoryForTrainingAsync(trainingId))
+                .ReturnsAsync(MakeHistory(trainingId, Guid.NewGuid(), documentType: "SU"));
 
             var result = await controller.GetTrainingSignatureHistory(trainingId);
 
@@ -452,6 +538,59 @@ namespace SyncApp26.Tests.Controllers.Documents
             var ok = Assert.IsType<OkObjectResult>(result);
             var dto = Assert.IsType<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>>(ok.Value);
             Assert.False(dto.ContainsKey(employee.Id));
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_SsmOfficer_IncludesOnlySsmSignaturesForNonManagedEmployee()
+        {
+            var controller = CreateController(role: Roles.SsmOfficer);
+            var employeeId = Guid.NewGuid();
+            var ssmDocId = Guid.NewGuid();
+            var suDocId = Guid.NewGuid();
+            var ssmSignatureId = Guid.NewGuid();
+            var suSignatureId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusForUsersAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>
+                {
+                    [employeeId] = new List<SignatureVerificationStatusResponseDTO>
+                    {
+                        MakeStatus(ssmSignatureId, employeeId, userDocumentId: ssmDocId),
+                        MakeStatus(suSignatureId, employeeId, userDocumentId: suDocId)
+                    }
+                });
+            _documentServiceMock.Setup(s => s.GetDocumentTypesByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, string> { [ssmDocId] = "SSM", [suDocId] = "SU" });
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid> { employeeId } });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var dto = Assert.IsType<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>>(ok.Value);
+            var visible = Assert.Single(dto[employeeId]);
+            Assert.Equal(ssmSignatureId, visible.SignatureId);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusForUsers_SuOfficer_ExcludesEmployeeWithNoMatchingDocumentType()
+        {
+            var controller = CreateController(role: Roles.SuOfficer);
+            var employeeId = Guid.NewGuid();
+            var ssmDocId = Guid.NewGuid();
+            _verificationServiceMock.Setup(s => s.GetVerificationStatusForUsersAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>
+                {
+                    [employeeId] = new List<SignatureVerificationStatusResponseDTO>
+                    {
+                        MakeStatus(Guid.NewGuid(), employeeId, userDocumentId: ssmDocId)
+                    }
+                });
+            _documentServiceMock.Setup(s => s.GetDocumentTypesByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new Dictionary<Guid, string> { [ssmDocId] = "SSM" });
+
+            var result = await controller.GetVerificationStatusForUsers(new VerificationStatusForUsersRequestDTO { UserIds = new List<Guid> { employeeId } });
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var dto = Assert.IsType<Dictionary<Guid, List<SignatureVerificationStatusResponseDTO>>>(ok.Value);
+            Assert.False(dto.ContainsKey(employeeId));
         }
     }
 }

@@ -147,13 +147,42 @@ export class AuthenticationService {
     return userStr ? JSON.parse(userStr) : null;
   }
 
+  // The JWT claim key .NET writes ClaimTypes.Role under - present as a single string when the user
+  // holds one role, and as an array when they hold several.
+  private static readonly ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+
+  // Roles and session validity must come from the signed token, not from currentUser in localStorage -
+  // that JSON is plain, unsigned storage a user can edit in devtools to grant themselves any role
+  // client-side. The token itself still gets rejected server-side, but guards need to reflect that
+  // before the API call ever happens, so they read the same source of truth.
+  private decodeToken(): Record<string, unknown> | null {
+    const token = localStorage.getItem('authToken');
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    try {
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(base64));
+    } catch {
+      return null;
+    }
+  }
+
+  private getRolesFromToken(): string[] {
+    const payload = this.decodeToken();
+    const raw = payload?.[AuthenticationService.ROLE_CLAIM];
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : [raw as string];
+  }
+
   isLoggedIn(): boolean {
-    return !!localStorage.getItem('authToken');
+    const payload = this.decodeToken();
+    const exp = payload?.['exp'];
+    return typeof exp === 'number' && exp * 1000 > Date.now();
   }
 
   hasRole(name: string): boolean {
-    const user = this.getCurrentUser();
-    return !!user?.roles?.includes(name);
+    return this.getRolesFromToken().includes(name);
   }
 
   isAdmin(): boolean {

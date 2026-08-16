@@ -15,11 +15,31 @@ namespace SyncApp26.API.Controllers
     public class PeriodicTrainingController : ControllerBase
     {
         private readonly IPeriodicTrainingService _periodicTrainingService;
+        private readonly IUserService _userService;
 
-        public PeriodicTrainingController(IPeriodicTrainingService periodicTrainingService)
+        public PeriodicTrainingController(IPeriodicTrainingService periodicTrainingService, IUserService userService)
         {
             _periodicTrainingService = periodicTrainingService;
+            _userService = userService;
         }
+
+        // Same officer-or-line-manager reach BulkCreate already enforces per document type, collapsed
+        // to a single check since a single training row carries no document type of its own.
+        private async Task<bool> CanWriteTrainingForUserAsync(Guid targetUserId)
+        {
+            if (User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer))
+                return true;
+
+            if (!User.IsInRole(Roles.LineManager) || User.GetUserId() is not { } callerId)
+                return false;
+
+            var target = await _userService.GetUserByIdAsync(targetUserId);
+            return target?.AssignedToId == callerId;
+        }
+
+        // Same as above, plus the trainee themselves — an employee may read their own training record.
+        private async Task<bool> CanReadTrainingForUserAsync(Guid targetUserId) =>
+            User.GetUserId() == targetUserId || await CanWriteTrainingForUserAsync(targetUserId);
 
         /// <summary>
         /// Create a new periodic training record for a user
@@ -27,6 +47,9 @@ namespace SyncApp26.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreatePeriodicTrainingDTO dto)
         {
+            if (!await CanWriteTrainingForUserAsync(dto.UserId))
+                return Forbid();
+
             try
             {
                 var result = await _periodicTrainingService.CreateAsync(dto);
@@ -48,6 +71,9 @@ namespace SyncApp26.API.Controllers
             if (result == null)
                 return NotFound(new { message = "Periodic training not found" });
 
+            if (!await CanReadTrainingForUserAsync(result.UserId))
+                return Forbid();
+
             return Ok(result);
         }
 
@@ -57,6 +83,9 @@ namespace SyncApp26.API.Controllers
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(Guid userId)
         {
+            if (!await CanReadTrainingForUserAsync(userId))
+                return Forbid();
+
             var result = await _periodicTrainingService.GetByUserIdAsync(userId);
             return Ok(result);
         }
@@ -67,6 +96,13 @@ namespace SyncApp26.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePeriodicTrainingDTO dto)
         {
+            var existing = await _periodicTrainingService.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { message = "Periodic training not found" });
+
+            if (!await CanWriteTrainingForUserAsync(existing.UserId))
+                return Forbid();
+
             try
             {
                 var result = await _periodicTrainingService.UpdateAsync(id, dto);
@@ -88,6 +124,13 @@ namespace SyncApp26.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
+            var existing = await _periodicTrainingService.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { message = "Periodic training not found" });
+
+            if (!await CanWriteTrainingForUserAsync(existing.UserId))
+                return Forbid();
+
             var success = await _periodicTrainingService.DeleteAsync(id);
             if (!success)
                 return NotFound(new { message = "Periodic training not found" });

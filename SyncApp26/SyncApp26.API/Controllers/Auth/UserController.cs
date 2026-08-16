@@ -42,12 +42,27 @@ namespace SyncApp26.API.Controllers
             AssignedToId = user.AssignedToId,
             AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
             Function = user.Function?.Name ?? "Unknown",
+            WorkSiteId = user.WorkSiteId,
+            WorkSite = user.WorkSite?.Name,
             Address = user.Address,
             BadgeNumber = user.BadgeNumber,
             BloodType = user.BloodType,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
+
+        // Admin and SSM/SU officers see every employee; everyone else may only reach their own
+        // profile or their direct reports'. Same idiom GetAllUsers already uses.
+        private bool CanAccessUser(User target)
+        {
+            if (User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer))
+            {
+                return true;
+            }
+
+            var currentUserId = User.GetUserId();
+            return currentUserId != null && (target.AssignedToId == currentUserId || target.Id == currentUserId);
+        }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<UserGETResponseDTO>> GetUserById(Guid id)
@@ -56,6 +71,11 @@ namespace SyncApp26.API.Controllers
             if (user == null)
             {
                 return NotFound();
+            }
+
+            if (!CanAccessUser(user))
+            {
+                return Forbid();
             }
 
             return Ok(MapToUserGETResponseDTO(user));
@@ -70,13 +90,18 @@ namespace SyncApp26.API.Controllers
                 return NotFound();
             }
 
+            if (!CanAccessUser(user))
+            {
+                return Forbid();
+            }
+
             return Ok(MapToUserGETResponseDTO(user));
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserGETResponseDTO>>> GetAllUsers()
         {
-            var usersList = await _userService.GetAllUsersAsync();
+            var usersList = await _userService.GetAllUsersIncludingAdminsAsync();
             var users = usersList.AsEnumerable();
 
             // Admin and SSM/SU officers see every employee — an officer's duty spans all of them,
@@ -117,6 +142,13 @@ namespace SyncApp26.API.Controllers
 
             var (items, totalCount) = await _userService.SearchUsersAsync(search, page, pageSize);
 
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything)
+            {
+                items = items.Where(CanAccessUser).ToList();
+                totalCount = items.Count;
+            }
+
             return Ok(new UserLookupPageDTO
             {
                 TotalCount = totalCount,
@@ -136,6 +168,12 @@ namespace SyncApp26.API.Controllers
         {
             var users = await _userService.GetUsersByDepartmentIdAsync(departmentId);
             var usersList = users.ToList();
+
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything)
+            {
+                usersList = usersList.Where(CanAccessUser).ToList();
+            }
 
             if (!usersList.Any())
             {
@@ -160,6 +198,12 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new { message = "Line manager not found" });
             }
 
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything && User.GetUserId() != assignedToId)
+            {
+                return Forbid();
+            }
+
             var users = await _userService.GetUsersAssignedToAsync(assignedToId);
             var responseList = users.Select(user =>
             {
@@ -172,9 +216,10 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<ActionResult<UserResponseDTO>> AddUser([FromBody] UserRequestDTO userRequestDTO)
         {
-            var result = await _userProfileService.CreateUserAsync(userRequestDTO);
+            var result = await _userProfileService.CreateUserAsync(userRequestDTO, User.GetUserId());
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
@@ -192,6 +237,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<ActionResult<UserResponseDTO>> UpdateUser(Guid id, [FromBody] UserRequestDTO userRequestDTO)
         {
             var existingUser = await _userService.GetUserByIdAsync(id);
@@ -204,11 +250,28 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
+            if (!User.IsInRole(Roles.Admin))
+            {
+                if (existingUser.AssignedToId != User.GetUserId())
+                {
+                    return Forbid();
+                }
+
+                // Email changes are admin-only on this route — combined with a line manager's own
+                // ownership reach, changing a report's email would otherwise open an account-takeover
+                // path via the anonymous forgot-password flow.
+                if (!string.Equals(existingUser.Email, userRequestDTO.Email, StringComparison.Ordinal))
+                {
+                    return Forbid();
+                }
+            }
+
             var result = await _userProfileService.UpdateUserAsync(existingUser, userRequestDTO);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<ActionResult<UserResponseDTO>> DeleteUser(Guid id)
         {
             var existingUser = await _userService.GetUserByIdAsync(id);
@@ -219,6 +282,11 @@ namespace SyncApp26.API.Controllers
                     Success = false,
                     Message = "User not found"
                 });
+            }
+
+            if (!User.IsInRole(Roles.Admin) && existingUser.AssignedToId != User.GetUserId())
+            {
+                return Forbid();
             }
 
             await _userService.DeleteUserAsync(id);

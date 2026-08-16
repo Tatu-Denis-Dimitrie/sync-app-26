@@ -84,6 +84,19 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.IsType<NotFoundResult>(result.Result);
         }
 
+        [Fact]
+        public async Task GetUserById_AsUnrelatedBasicUser_ReturnsForbid()
+        {
+            var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.BasicUser);
+            var user = MakeUser();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.GetUserById(user.Id);
+
+            Assert.IsType<ForbidResult>(result.Result);
+        }
+
         // ───────────────────────── GetUserByPersonalId ─────────────────────────
 
         [Fact]
@@ -117,7 +130,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var controller = CreateController();
             StubEmptyDocumentSets();
             var users = new[] { MakeUser(), MakeUser() };
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(users);
+            _userServiceMock.Setup(s => s.GetAllUsersIncludingAdminsAsync()).ReturnsAsync(users);
 
             var result = await controller.GetAllUsers();
 
@@ -137,7 +150,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var self = MakeUser(id: callerId);
             var myReport = MakeUser(assignedToId: callerId);
             var unrelated = MakeUser();
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(new[] { self, myReport, unrelated });
+            _userServiceMock.Setup(s => s.GetAllUsersIncludingAdminsAsync()).ReturnsAsync(new[] { self, myReport, unrelated });
 
             var result = await controller.GetAllUsers();
 
@@ -157,7 +170,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             controller.SetUser(Guid.NewGuid(), role: Roles.SsmOfficer);
             StubEmptyDocumentSets();
             var users = new[] { MakeUser(), MakeUser() };
-            _userServiceMock.Setup(s => s.GetAllUsersAsync()).ReturnsAsync(users);
+            _userServiceMock.Setup(s => s.GetAllUsersIncludingAdminsAsync()).ReturnsAsync(users);
 
             var result = await controller.GetAllUsers();
 
@@ -251,7 +264,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         public async Task AddUser_ServiceReportsFailure_ReturnsBadRequest()
         {
             var controller = CreateController();
-            _userProfileServiceMock.Setup(s => s.CreateUserAsync(It.IsAny<UserRequestDTO>()))
+            _userProfileServiceMock.Setup(s => s.CreateUserAsync(It.IsAny<UserRequestDTO>(), It.IsAny<Guid?>()))
                 .ReturnsAsync(new UserResponseDTO { Success = false, Message = "Department not found" });
 
             var result = await controller.AddUser(ValidUserRequest(Guid.NewGuid()));
@@ -266,7 +279,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             var request = ValidUserRequest(Guid.NewGuid());
-            _userProfileServiceMock.Setup(s => s.CreateUserAsync(request))
+            _userProfileServiceMock.Setup(s => s.CreateUserAsync(request, It.IsAny<Guid?>()))
                 .ReturnsAsync(new UserResponseDTO { Success = true, Message = "User created successfully" });
 
             var result = await controller.AddUser(request);
@@ -274,7 +287,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var ok = Assert.IsType<OkObjectResult>(result.Result);
             var dto = Assert.IsType<UserResponseDTO>(ok.Value);
             Assert.True(dto.Success);
-            _userProfileServiceMock.Verify(s => s.CreateUserAsync(request), Times.Once);
+            _userProfileServiceMock.Verify(s => s.CreateUserAsync(request, It.IsAny<Guid?>()), Times.Once);
         }
 
         // ───────────────────────── UpdateUser ─────────────────────────
@@ -325,6 +338,57 @@ namespace SyncApp26.Tests.Controllers.Auth
             _userProfileServiceMock.Verify(s => s.UpdateUserAsync(existing, request), Times.Once);
         }
 
+        [Fact]
+        public async Task UpdateUser_LineManagerOwnReport_Allowed()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController();
+            controller.SetUser(managerId, role: Roles.LineManager);
+            var existing = MakeUser(assignedToId: managerId);
+            var request = ValidUserRequest(Guid.NewGuid());
+            request.Email = existing.Email;
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+            _userProfileServiceMock.Setup(s => s.UpdateUserAsync(existing, request))
+                .ReturnsAsync(new UserResponseDTO { Success = true, Message = "User updated successfully" });
+
+            var result = await controller.UpdateUser(existing.Id, request);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdateUserAsync(existing, request), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUser_LineManagerStranger_ReturnsForbid()
+        {
+            var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.LineManager);
+            var existing = MakeUser(assignedToId: Guid.NewGuid());
+            var request = ValidUserRequest(Guid.NewGuid());
+            request.Email = existing.Email;
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+
+            var result = await controller.UpdateUser(existing.Id, request);
+
+            Assert.IsType<ForbidResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>(), It.IsAny<UserRequestDTO>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateUser_LineManagerChangesReportEmail_ReturnsForbid()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController();
+            controller.SetUser(managerId, role: Roles.LineManager);
+            var existing = MakeUser(assignedToId: managerId);
+            var request = ValidUserRequest(Guid.NewGuid()); // different email than existing.Email
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(existing.Id)).ReturnsAsync(existing);
+
+            var result = await controller.UpdateUser(existing.Id, request);
+
+            Assert.IsType<ForbidResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>(), It.IsAny<UserRequestDTO>()), Times.Never);
+        }
+
         // ───────────────────────── DeleteUser ─────────────────────────
 
         [Fact]
@@ -349,6 +413,35 @@ namespace SyncApp26.Tests.Controllers.Auth
 
             Assert.IsType<OkObjectResult>(result.Result);
             _userServiceMock.Verify(s => s.DeleteUserAsync(user.Id), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteUser_LineManagerOwnReport_Allowed()
+        {
+            var managerId = Guid.NewGuid();
+            var controller = CreateController();
+            controller.SetUser(managerId, role: Roles.LineManager);
+            var user = MakeUser(assignedToId: managerId);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.DeleteUser(user.Id);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            _userServiceMock.Verify(s => s.DeleteUserAsync(user.Id), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteUser_LineManagerStranger_ReturnsForbid()
+        {
+            var controller = CreateController();
+            controller.SetUser(Guid.NewGuid(), role: Roles.LineManager);
+            var user = MakeUser(assignedToId: Guid.NewGuid());
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.DeleteUser(user.Id);
+
+            Assert.IsType<ForbidResult>(result.Result);
+            _userServiceMock.Verify(s => s.DeleteUserAsync(It.IsAny<Guid>()), Times.Never);
         }
 
         // ───────────────────────── GetUserSSMSUForm ─────────────────────────

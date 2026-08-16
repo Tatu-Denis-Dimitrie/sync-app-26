@@ -9,6 +9,7 @@ namespace SyncApp26.Tests.Services.Security
             string fullName = "Adela Popescu",
             string position = "Operator",
             string? badgeNumber = "BADGE-4471",
+            string? workSite = "Sediul Central",
             string? material = "Norme SSM generale",
             decimal? duration = 2m,
             DateTime? trainingDate = null,
@@ -19,6 +20,7 @@ namespace SyncApp26.Tests.Services.Security
                 fullName,
                 position,
                 badgeNumber,
+                workSite,
                 material,
                 duration,
                 trainingDate ?? new DateTime(2026, 1, 15),
@@ -112,11 +114,11 @@ namespace SyncApp26.Tests.Services.Security
         }
 
         [Fact]
-        public void CurrentVersion_Is2()
+        public void CurrentVersion_Is3()
         {
             // Locks in which version new signatures are made under today — if this changes, it
             // should be a deliberate version bump (see the class doc comment), not an accident.
-            Assert.Equal(2, SignatureCanonicalSerializer.CurrentVersion);
+            Assert.Equal(3, SignatureCanonicalSerializer.CurrentVersion);
         }
 
         [Fact]
@@ -163,6 +165,17 @@ namespace SyncApp26.Tests.Services.Security
         }
 
         [Fact]
+        public void Serialize_V2AndV3_ProduceDifferentOutputForSameLogicalFields()
+        {
+            var v2 = MakeInput(version: 2);
+            var v3 = MakeInput(version: 3);
+
+            Assert.NotEqual(
+                SignatureCanonicalSerializer.Serialize(v2),
+                SignatureCanonicalSerializer.Serialize(v3));
+        }
+
+        [Fact]
         public void SerializeV1_IgnoresBadgeNumber_SoExistingSignaturesStillVerify()
         {
             // The badge number arrived with V2. If V1 ever started hashing it, every signature
@@ -189,8 +202,9 @@ namespace SyncApp26.Tests.Services.Security
         [Fact]
         public void SerializeV2_MustNeverChange_MatchesIndependentlyRebuiltFormat()
         {
-            // Same contract as the V1 test above: V2 is frozen now that it is CurrentVersion and
-            // real signatures are being made under it. Expected string rebuilt independently.
+            // Same contract as the V1 test above: V2 is frozen now that a V3 exists and real
+            // signatures were made under it while it was CurrentVersion. Expected string rebuilt
+            // independently.
             var input = MakeInput(fullName: "Ștefan Ionescu", version: 2);
 
             string Field(string? value)
@@ -205,6 +219,59 @@ namespace SyncApp26.Tests.Services.Security
                 Field(input.SignerFullNameSnapshot) +
                 Field(input.SignerPositionSnapshot) +
                 Field(input.SignerBadgeNumberSnapshot) +
+                Field(input.MaterialTaughtSnapshot) +
+                Field(input.DurationHoursSnapshot!.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.TrainingDateSnapshot!.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.SignedAt.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.PreviousSignatureHash);
+
+            Assert.Equal(expected, SignatureCanonicalSerializer.Serialize(input));
+        }
+
+        [Fact]
+        public void SerializeV2_IgnoresWorkSite_SoExistingSignaturesStillVerify()
+        {
+            // The work-site name arrived with V3. If V2 ever started hashing it, every signature
+            // made before the bump would stop verifying.
+            var withWorkSite = MakeInput(workSite: "Sediul Central", version: 2);
+            var withoutWorkSite = MakeInput(workSite: null, version: 2);
+
+            Assert.Equal(
+                SignatureCanonicalSerializer.Serialize(withWorkSite),
+                SignatureCanonicalSerializer.Serialize(withoutWorkSite));
+        }
+
+        [Fact]
+        public void SerializeV3_ChangedWorkSite_ProducesDifferentString()
+        {
+            var first = MakeInput(workSite: "Sediul Central", version: 3);
+            var second = MakeInput(workSite: "Depozit Nord", version: 3);
+
+            Assert.NotEqual(
+                SignatureCanonicalSerializer.Serialize(first),
+                SignatureCanonicalSerializer.Serialize(second));
+        }
+
+        [Fact]
+        public void SerializeV3_MustNeverChange_MatchesIndependentlyRebuiltFormat()
+        {
+            // Same contract as the V1/V2 tests above: V3 is frozen once real signatures exist
+            // under it. Expected string rebuilt independently.
+            var input = MakeInput(fullName: "Ștefan Ionescu", version: 3);
+
+            string Field(string? value)
+            {
+                var v = value ?? string.Empty;
+                return $"{System.Text.Encoding.UTF8.GetByteCount(v)}:{v}";
+            }
+
+            var expected =
+                Field("3") +
+                Field(input.SignerUserId.ToString("D")) +
+                Field(input.SignerFullNameSnapshot) +
+                Field(input.SignerPositionSnapshot) +
+                Field(input.SignerBadgeNumberSnapshot) +
+                Field(input.SignerWorkSiteNameSnapshot) +
                 Field(input.MaterialTaughtSnapshot) +
                 Field(input.DurationHoursSnapshot!.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)) +
                 Field(input.TrainingDateSnapshot!.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)) +

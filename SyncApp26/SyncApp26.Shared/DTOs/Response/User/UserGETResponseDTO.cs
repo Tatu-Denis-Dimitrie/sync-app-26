@@ -13,6 +13,8 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public Guid DepartmentId { get; set; }
         public required string DepartmentName { get; set; }
         public string? Function { get; set; }
+        public Guid? WorkSiteId { get; set; }
+        public string? WorkSite { get; set; }
         public Guid? AssignedToId { get; set; }
         public string? AssignedToName { get; set; }
         public string? Address { get; set; }

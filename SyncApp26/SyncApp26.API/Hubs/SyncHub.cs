@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace SyncApp26.API.Hubs;
 
+[Authorize]
 public class SyncHub : Hub
 {
     public async Task JoinGroup(string transferId)

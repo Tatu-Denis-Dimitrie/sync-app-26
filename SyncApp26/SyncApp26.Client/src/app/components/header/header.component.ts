@@ -5,6 +5,7 @@ import { AuthenticationService, User, rolesLabel, Roles } from '../../services/a
 import { DocumentSignatureService } from '../../services/document-signature.service';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
 import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/user-sync.signalr.service';
+import { SignatureAnomalyAlertService } from '../../services/signature-anomaly-alert.service';
 import { ImpersonationService } from '../../services/impersonation.service';
 import { filter, Subscription } from 'rxjs';
 
@@ -45,6 +46,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private documentSignatureService: DocumentSignatureService,
     private dataChangeRequestService: DataChangeRequestService,
     private signalrService: UserSyncSignalrService,
+    private signatureAnomalyAlertService: SignatureAnomalyAlertService,
     private impersonationService: ImpersonationService
   ) { }
 
@@ -89,6 +91,22 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
 
     if (this.isAdmin) {
+      // Seeds the badge from whatever the last sweep persisted, so an admin who logs in after the
+      // sweep already fired (and missed the live SignalR push below) still sees it immediately.
+      this.signatureAnomalyAlertService.getUnread().subscribe({
+        next: alerts => {
+          if (alerts.length > 0) {
+            const latest = alerts[0];
+            this.anomalyAlert = {
+              anomaliesFound: latest.anomaliesFound,
+              recordsChecked: latest.recordsChecked,
+              occurredAt: latest.occurredAt
+            };
+          }
+        },
+        error: () => {}
+      });
+
       this.anomalyAlertSubscription = this.signalrService.signatureAnomalyAlert$.subscribe(
         alert => this.anomalyAlert = alert
       );
@@ -131,6 +149,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   dismissAnomalyAlert(): void {
     this.anomalyAlert = null;
     this.isAnomalyPopoverOpen = false;
+    this.signatureAnomalyAlertService.dismissAll().subscribe({ error: () => {} });
   }
 
   checkAuthStatus(): void {

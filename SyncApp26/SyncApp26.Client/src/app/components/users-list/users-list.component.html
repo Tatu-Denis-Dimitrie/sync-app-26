@@ -970,6 +970,21 @@
                                                         </select>
                                                       </div>
                                                       <div class="space-y-2">
+                                                        <label class="text-sm font-medium text-foreground">Work Site</label>
+                                                        <select
+                                                          [(ngModel)]="editForm.workSiteId"
+                                                          name="workSiteId"
+                                                          class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                          >
+                                                          <option value="">No work site</option>
+                                                          @for (ws of availableWorkSites; track ws.id) {
+                                                            <option [value]="ws.id">
+                                                              {{ ws.name }}
+                                                            </option>
+                                                          }
+                                                        </select>
+                                                      </div>
+                                                      <div class="space-y-2">
                                                         <label class="text-sm font-medium text-foreground">Role</label>
                                                         <select
                                                           [(ngModel)]="editForm.role"

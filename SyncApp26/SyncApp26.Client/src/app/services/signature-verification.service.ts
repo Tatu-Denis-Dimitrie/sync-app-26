@@ -8,6 +8,7 @@ export type SignatureVerificationStatusValue = 'Valid' | 'Invalid' | 'ChainBroke
 export interface SignatureVerificationStatus {
   signatureId: string;
   signerUserId: string;
+  userDocumentId: string;
   status: SignatureVerificationStatusValue;
   isHashValid: boolean;
   isChainValid: boolean;
@@ -31,6 +32,7 @@ export interface SignatureVersionSummary {
 export interface PeriodicTrainingSignatureHistory {
   periodicTrainingId: string;
   userId: string;
+  documentType: string | null;
   versionsByRole: Record<string, SignatureVersionSummary[]>;
 }
 

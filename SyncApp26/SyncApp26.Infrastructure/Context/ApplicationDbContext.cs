@@ -35,6 +35,7 @@ namespace SyncApp26.Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<WorkSite> WorkSites { get; set; }
         public DbSet<UserChangeHistory> UserChangeHistories { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
         public DbSet<DocumentSignatureToken> DocumentSignatureTokens { get; set; }
@@ -50,6 +51,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
         public DbSet<ImpersonationLog> ImpersonationLogs { get; set; }
+        public DbSet<SignatureAnomalyAlert> SignatureAnomalyAlerts { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -112,6 +114,12 @@ namespace SyncApp26.Infrastructure.Context
                     .HasForeignKey(e => e.DepartmentId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // Configure relationship with WorkSite
+                entity.HasOne(e => e.WorkSite)
+                    .WithMany(w => w.Users)
+                    .HasForeignKey(e => e.WorkSiteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 // Configure self-referencing relationship for line manager
                 entity.HasOne(e => e.AssignedTo)
                     .WithMany(u => u.AssignedUsers)
@@ -122,10 +130,23 @@ namespace SyncApp26.Infrastructure.Context
                 entity.HasIndex(e => e.Email).IsUnique();
                 entity.HasIndex(e => e.DepartmentId);
                 entity.HasIndex(e => e.PersonalId).IsUnique();
+                entity.HasIndex(e => e.WorkSiteId);
             });
 
             // Configure Department entity
             modelBuilder.Entity<Department>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            // Configure WorkSite entity
+            modelBuilder.Entity<WorkSite>(entity =>
             {
                 entity.HasKey(e => e.Id);
 
@@ -344,6 +365,7 @@ namespace SyncApp26.Infrastructure.Context
                 entity.Property(e => e.SignerFullNameSnapshot).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.SignerPositionSnapshot).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.SignerBadgeNumberSnapshot).HasMaxLength(100);
+                entity.Property(e => e.SignerWorkSiteNameSnapshot).HasMaxLength(200);
                 entity.Property(e => e.SignatureData).IsRequired();
 
                 entity.HasOne(e => e.UserDocument)
@@ -451,6 +473,25 @@ namespace SyncApp26.Infrastructure.Context
 
                 entity.HasIndex(e => e.StartedAt)
                     .HasDatabaseName("IX_ImpersonationLogs_StartedAt");
+            });
+
+            // Configure SignatureAnomalyAlert entity (one row per sweep run with anomalies)
+            modelBuilder.Entity<SignatureAnomalyAlert>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Restrict, not Cascade: the admin who dismissed the alert doesn't own the row,
+                // same reasoning as ImpersonationLog's FKs above.
+                entity.HasOne(e => e.ReadByAdmin)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReadByAdminId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.OccurredAt)
+                    .HasDatabaseName("IX_SignatureAnomalyAlerts_OccurredAt");
+
+                entity.HasIndex(e => e.IsRead)
+                    .HasDatabaseName("IX_SignatureAnomalyAlerts_IsRead");
             });
         }
 

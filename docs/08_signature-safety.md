@@ -95,7 +95,7 @@ This provides a tamper-evident hash for the stored PDF snapshot and enables down
 Beyond the flat per-document/per-training signature fields described above, every signing event also writes an immutable SignatureRecord row — the authoritative audit trail for document and training signatures, distinct from the personal-signature audit trail (UserSignatureHistory).
 
 Frozen at signing time and never re-derived from live data on verification:
-- SignerFullNameSnapshot, SignerPositionSnapshot, SignerBadgeNumberSnapshot: the signer's identity as of that moment, so a later name or badge change never retroactively invalidates a past signature. The badge number arrived with schema V2 and is null on V1 records.
+- SignerFullNameSnapshot, SignerPositionSnapshot, SignerBadgeNumberSnapshot, SignerWorkSiteNameSnapshot: the signer's identity as of that moment, so a later name, badge, or work-site reassignment never retroactively invalidates a past signature. The badge number arrived with schema V2 (null on V1 records); the work-site name arrived with schema V3 (null on V1/V2 records).
 - MaterialTaughtSnapshot, DurationHoursSnapshot, TrainingDateSnapshot: the training content, when the record is linked to a PeriodicTraining row.
 
 ### HMAC chaining
@@ -112,7 +112,8 @@ The version number itself is bound into the hashed bytes as the first field (dom
 
 Schema versions to date:
 - **V1** — signer identity (id, full name, position), training content (material, duration, date), SignedAt as ISO-8601, previous hash. Frozen; records signed before the V2 bump still verify against it unchanged.
-- **V2** (current) — V1 plus the signer's badge number, inserted after the position field. New signatures are made under this schema; V1 records keep verifying under V1, which never reads the badge number.
+- **V2** — V1 plus the signer's badge number, inserted after the position field. Frozen; records signed before the V3 bump still verify against it unchanged, never reading the work-site name.
+- **V3** (current) — V2 plus the signer's work-site name, inserted after the badge number. New signatures are made under this schema; V1/V2 records keep verifying under their own schema.
 
 ### Verification service
 SignatureVerificationService recomputes each record's status on demand (never cached), returning one of: Valid, Invalid (recomputed hash no longer matches, e.g. training content changed since signing), ChainBroken (PreviousSignatureHash does not match the signer's actual prior record), Legacy (IsLegacyUnverified), or NotFound. Exposed via `GET /api/signatures/{id}/verification-status`, `POST /api/signatures/verification-status/batch`, and `GET /api/signatures/training/{periodicTrainingId}/history` (full signing history for a training, grouped by role), access-controlled the same way as document signatures (self, any admin, or the relevant line manager).

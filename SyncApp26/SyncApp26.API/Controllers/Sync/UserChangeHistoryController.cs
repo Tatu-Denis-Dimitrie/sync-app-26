@@ -4,6 +4,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.CSV.History;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -20,6 +21,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> GetAllUserChangeHistories()
         {
             var conflicts = await _userChangeHistoryService.GetAllUserChangeHistoriesAsync();
@@ -27,6 +29,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> GetUserChangeHistoryById(Guid id)
         {
             var conflict = await _userChangeHistoryService.GetUserChangeHistoryByIdAsync(id);
@@ -38,6 +41,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("byImportHistory/{importHistoryId}")]
+        [Authorize(Roles = Roles.Admin)]
         public async Task<IActionResult> GetUserChangeHistoriesByImportHistoryId(Guid importHistoryId)
         {
             var conflicts = await _userChangeHistoryService.GetUserChangeHistoriesByImportHistoryIdAsync(importHistoryId);
@@ -47,6 +51,11 @@ namespace SyncApp26.API.Controllers
         [HttpGet("byUser/{userId}")]
         public async Task<IActionResult> GetUserChangeHistoriesByUserId(Guid userId)
         {
+            if (!User.IsInRole(Roles.Admin) && User.GetUserId() != userId)
+            {
+                return Forbid();
+            }
+
             var conflicts = await _userChangeHistoryService.GetUserChangeHistoriesByUserIdAsync(userId);
             return Ok(conflicts);
         }

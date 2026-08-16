@@ -217,6 +217,22 @@ namespace SyncApp26.API.Controllers
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetUserDocuments(Guid userId)
         {
+            if (User.GetUserId() is not { } callerId)
+                return Unauthorized();
+
+            // Same reach as ViewPdf: this leaks signature images and signer IPs, so it needs the
+            // same owner/manager/officer/admin check rather than the plain [Authorize] it had before.
+            bool isSelf = userId == callerId;
+            bool isAdmin = User.IsInRole(Roles.Admin);
+            bool isOfficer = User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+
+            if (!isSelf && !isAdmin && !isOfficer)
+            {
+                var targetUser = await _userService.GetUserByIdAsync(userId);
+                if (targetUser == null) return NotFound();
+                if (targetUser.AssignedToId != callerId) return Forbid();
+            }
+
             var documents = await _documentService.GetUserDocumentsAsync(userId);
             return Ok(await MapDocumentsAsync(documents));
         }

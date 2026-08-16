@@ -4,6 +4,7 @@ using SyncApp26.Domain.IRepositories;
 using SyncApp26.Shared.DTOs.DataChange;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -93,6 +94,15 @@ namespace SyncApp26.Application.Services
             return MapToDTO(req);
         }
 
+        // Dates render as the same "yyyy-MM-dd" the request itself carries, so comparing a stored
+        // original against a requested value is a like-for-like string diff. Left to ToString(),
+        // a DateTime would pick up server culture and never match, logging a change on every resolve.
+        private static string? FormatFieldValue(object? value) => value switch
+        {
+            DateTime dt => dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            _ => value?.ToString()
+        };
+
         // Snapshots the User's current value for every field named in the requested changes, so
         // that resolving the request later can always diff against "what it was when requested"
         // instead of "whatever the live value happens to be right now".
@@ -112,7 +122,7 @@ namespace SyncApp26.Application.Services
                     var prop = userType.GetProperty(key);
                     if (prop != null)
                     {
-                        originalValues[key] = prop.GetValue(user)?.ToString();
+                        originalValues[key] = FormatFieldValue(prop.GetValue(user));
                     }
                 }
 
@@ -184,7 +194,7 @@ namespace SyncApp26.Application.Services
                             // this same change to the user before the request was resolved.
                             var oldValue = (originalValues != null && originalValues.TryGetValue(kv.Key, out var snapshotValue))
                                 ? snapshotValue ?? string.Empty
-                                : prop.GetValue(req.User)?.ToString() ?? string.Empty;
+                                : FormatFieldValue(prop.GetValue(req.User)) ?? string.Empty;
                             var newValue = kv.Value?.ToString() ?? string.Empty;
 
                             if (!string.Equals(oldValue, newValue, StringComparison.Ordinal))
@@ -225,6 +235,13 @@ namespace SyncApp26.Application.Services
                                     prop.SetValue(req.User, it);
                                 else if (prop.PropertyType == typeof(int?) && int.TryParse(stringValue, out var nit))
                                     prop.SetValue(req.User, nit);
+                                // Date fields (e.g. DateOfBirth) arrive as the browser's "yyyy-MM-dd";
+                                // parsed invariantly so the result doesn't shift with server culture,
+                                // and as a plain calendar date rather than an instant to convert.
+                                else if ((prop.PropertyType == typeof(DateTime) || prop.PropertyType == typeof(DateTime?))
+                                         && DateTime.TryParse(stringValue, CultureInfo.InvariantCulture,
+                                                DateTimeStyles.None, out var dt))
+                                    prop.SetValue(req.User, dt);
                                 else if (GetEnumType(prop.PropertyType) is { } enumType
                                          && !string.IsNullOrWhiteSpace(stringValue)
                                          && Enum.TryParse(enumType, stringValue, ignoreCase: true, out var enumValue)

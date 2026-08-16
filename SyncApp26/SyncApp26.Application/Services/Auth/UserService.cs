@@ -23,9 +23,19 @@ namespace SyncApp26.Application.Services
             return await _userRepository.GetAllUsersAsync();
         }
 
+        public async Task<IEnumerable<User>> GetAllUsersIncludingAdminsAsync()
+        {
+            return await _userRepository.GetAllUsersIncludingAdminsAsync();
+        }
+
         public async Task<IEnumerable<User>> GetUsersByDepartmentIdAsync(Guid departmentId)
         {
             return await _userRepository.GetUsersByDepartmentIdAsync(departmentId);
+        }
+
+        public async Task<IEnumerable<User>> GetUsersByWorkSiteIdAsync(Guid workSiteId)
+        {
+            return await _userRepository.GetUsersByWorkSiteIdAsync(workSiteId);
         }
 
         public async Task<IEnumerable<User>> GetUsersAssignedToAsync(Guid assignedToId)

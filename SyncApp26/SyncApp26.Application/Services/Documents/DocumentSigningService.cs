@@ -20,14 +20,22 @@ namespace SyncApp26.Application.Services
             _userService = userService;
         }
 
+        // Names both the problem and the way out: the step isn't blocked forever, it just needs a
+        // different person. Which officer role that is depends on the document type.
+        private static string SelfCountersignMessage(bool isSsm) =>
+            $"You cannot countersign your own document — another {(isSsm ? "SSM" : "SU")} officer must sign this step.";
+
         public async Task<SigningTokenResult> RequestSigningTokenAsync(UserDocument document, User caller)
         {
             bool isSsm = document.DocumentType?.ToUpperInvariant() == "SSM";
             bool isUser = document.UserId == caller.Id;
-            bool isManager = document.User?.AssignedToId == caller.Id;
+            // Separation of duties: the trainee never countersigns their own document, so both
+            // countersigning slots stay closed to them even when they legitimately hold these roles
+            // for other employees. Someone else holding both roles still fills both slots normally.
+            bool isManager = !isUser && document.User?.AssignedToId == caller.Id;
             // The officer for this document's type takes the Instructor's place in the chain — no
             // per-row InstructorId match anymore, and no admin override.
-            bool isInstructor = await _userService.IsInRoleAsync(caller.Id, isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
+            bool isInstructor = !isUser && await _userService.IsInRoleAsync(caller.Id, isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
 
             if (!isUser && !isManager && !isInstructor)
                 return new SigningTokenResult { Forbidden = true };
@@ -44,6 +52,8 @@ namespace SyncApp26.Application.Services
                 case "PendingManager":
                     if (isUser && document.UserSignedAt != null)
                         return new SigningTokenResult { ErrorMessage = "User already signed this document." };
+                    if (isUser)
+                        return new SigningTokenResult { ErrorMessage = SelfCountersignMessage(isSsm) };
                     if (!isManager)
                         return new SigningTokenResult { ErrorMessage = "Manager signature not required at this time." };
                     break;
@@ -51,6 +61,8 @@ namespace SyncApp26.Application.Services
                 case "PendingInstructor":
                     if (isManager && document.ManagerSignedAt != null)
                         return new SigningTokenResult { ErrorMessage = "Manager already signed this document." };
+                    if (isUser)
+                        return new SigningTokenResult { ErrorMessage = SelfCountersignMessage(isSsm) };
                     if (!isInstructor)
                         return new SigningTokenResult { ErrorMessage = "Instructor signature not required at this time." };
                     break;
@@ -83,9 +95,12 @@ namespace SyncApp26.Application.Services
             if (document != null && signerUser != null)
             {
                 bool isSsm = document.DocumentType?.ToUpperInvariant() == "SSM";
-                bool isManager = document.User?.AssignedToId == signerUser.Id;
+                // Same separation-of-duties rule as the gate below, so the signing page never offers
+                // a countersigning button that consuming the token would refuse.
+                bool isUser = document.UserId == signerUser.Id;
+                bool isManager = !isUser && document.User?.AssignedToId == signerUser.Id;
                 // The officer for this document's type takes the Instructor's place — no admin override.
-                bool isInstructor = await _userService.IsInRoleAsync(signerUser.Id, isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
+                bool isInstructor = !isUser && await _userService.IsInRoleAsync(signerUser.Id, isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
 
                 switch (document.Status)
                 {
@@ -133,10 +148,13 @@ namespace SyncApp26.Application.Services
 
             bool isSsm = document.DocumentType?.ToUpperInvariant() == "SSM";
             bool isUser = document.UserId == signerUserFromToken.Id;
-            bool isManager = document.User?.AssignedToId == signerUserFromToken.Id;
+            // Separation of duties, enforced at the authoritative gate: a token alone proves nothing
+            // about eligibility, so the trainee is refused the countersigning slots here even if one
+            // was minted for them. Non-owners keep both slots, dual roles included.
+            bool isManager = !isUser && document.User?.AssignedToId == signerUserFromToken.Id;
             // The officer for this document's type takes the Instructor's place in the chain — no
             // per-row InstructorId match anymore, and no admin override.
-            bool isInstructor = await _userService.IsInRoleAsync(signerUserFromToken.Id, isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
+            bool isInstructor = !isUser && await _userService.IsInRoleAsync(signerUserFromToken.Id, isSsm ? Roles.SsmOfficer : Roles.SuOfficer);
 
             string? signerRole = document.Status switch
             {
@@ -147,7 +165,16 @@ namespace SyncApp26.Application.Services
             };
 
             if (signerRole == null)
-                return new ConsumeSigningTokenResult { ErrorMessage = "This document is not awaiting your signature at this time." };
+            {
+                // Distinguish "it's not your turn" from "it will never be your turn on this document".
+                bool awaitingCountersignature = document.Status is "PendingManager" or "PendingInstructor";
+                return new ConsumeSigningTokenResult
+                {
+                    ErrorMessage = isUser && awaitingCountersignature
+                        ? SelfCountersignMessage(isSsm)
+                        : "This document is not awaiting your signature at this time."
+                };
+            }
 
             var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
             if (!isValidAndConsumed)

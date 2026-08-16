@@ -18,6 +18,7 @@ public class CsvSyncService : ICsvSyncService
     private readonly IUserRepository _userRepository;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IFunctionRepository _functionRepository;
+    private readonly IWorkSiteRepository _workSiteRepository;
     private readonly IImportHistoryRepository _importHistoryRepository;
     private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
     private readonly IDataChangeRequestRepository _dataChangeRequestRepository;
@@ -32,11 +33,12 @@ public class CsvSyncService : ICsvSyncService
         { "lastname", nameof(User.LastName) }
     };
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, IWorkSiteRepository workSiteRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
         _functionRepository = functionRepository;
+        _workSiteRepository = workSiteRepository;
         _notificationService = notificationService;
         _importHistoryRepository = importHistoryRepository;
         _userChangeHistoryRepository = userChangeHistoryRepositoryRepository;
@@ -151,7 +153,8 @@ public class CsvSyncService : ICsvSyncService
             DepartmentName = csvUser.DepartmentName,
             AssignedToPersonalId = csvUser.AssignedToPersonalId,
             AssignedToName = manager != null ? $"{manager.FirstName} {manager.LastName}" : null,
-            Function = csvUser.Function != null ? csvUser.Function.Trim() : null
+            Function = csvUser.Function != null ? csvUser.Function.Trim() : null,
+            WorkSite = csvUser.WorkSite != null ? csvUser.WorkSite.Trim() : null
         };
     }
 
@@ -175,6 +178,11 @@ public class CsvSyncService : ICsvSyncService
         var csvFunctionName = csvUser.Function?.Trim();
         AddFieldConflictIfDifferent(conflicts, "function", dbFunctionName ?? string.Empty, csvFunctionName,
             !string.Equals(dbFunctionName, csvFunctionName, StringComparison.OrdinalIgnoreCase));
+
+        var dbWorkSiteName = dbUser.WorkSite?.Name?.Trim();
+        var csvWorkSiteName = csvUser.WorkSite?.Trim();
+        AddFieldConflictIfDifferent(conflicts, "workSite", dbWorkSiteName ?? string.Empty, csvWorkSiteName,
+            !string.Equals(dbWorkSiteName, csvWorkSiteName, StringComparison.OrdinalIgnoreCase));
 
         // Check line manager
         var dbManagerName = dbUser.AssignedTo != null ? $"{dbUser.AssignedTo.FirstName} {dbUser.AssignedTo.LastName}" : null;
@@ -313,6 +321,7 @@ public class CsvSyncService : ICsvSyncService
             .ToList();
         var dbUserMap = dbUsers.ToDictionary(u => u.Id.ToString(), u => u);
         var functionCache = new Dictionary<string, Function?>(StringComparer.OrdinalIgnoreCase);
+        var workSiteCache = new Dictionary<string, WorkSite?>(StringComparer.OrdinalIgnoreCase);
 
         // Fetched once, not per new row - an import can create thousands of users in one pass.
         var basicUserRoleId = (await _userRepository.GetRoleByNameAsync(Roles.BasicUser))?.Id;
@@ -365,7 +374,7 @@ public class CsvSyncService : ICsvSyncService
             {
                 if (item.Status == "new" && item.CsvData != null)
                 {
-                    var newUser = await TryBuildNewUserAsync(item.CsvData, departments, dbUsers, functionCache, basicUserRoleId, result);
+                    var newUser = await TryBuildNewUserAsync(item.CsvData, departments, dbUsers, functionCache, workSiteCache, basicUserRoleId, result);
                     if (newUser == null)
                     {
                         continue;
@@ -400,11 +409,11 @@ public class CsvSyncService : ICsvSyncService
                         // If conflicts exist, apply only selected resolutions; otherwise sync every differing field
                         if (item.Conflicts.Any())
                         {
-                            hasChanges = await ApplySelectedConflictResolutionsAsync(item.Conflicts, csvData, existingUser, departments, dbUsers, functionCache, importHistory, result);
+                            hasChanges = await ApplySelectedConflictResolutionsAsync(item.Conflicts, csvData, existingUser, departments, dbUsers, functionCache, workSiteCache, importHistory, result);
                         }
                         else
                         {
-                            var (success, changed) = await ApplyAllDifferingFieldsAsync(csvData, existingUser, departments, dbUsers, functionCache, result);
+                            var (success, changed) = await ApplyAllDifferingFieldsAsync(csvData, existingUser, departments, dbUsers, functionCache, workSiteCache, result);
                             if (!success)
                             {
                                 continue;
@@ -544,7 +553,7 @@ public class CsvSyncService : ICsvSyncService
         return result;
     }
 
-    private async Task<User?> TryBuildNewUserAsync(CsvUserDTO csvData, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, Guid? basicUserRoleId, SyncResultDTO result)
+    private async Task<User?> TryBuildNewUserAsync(CsvUserDTO csvData, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, Dictionary<string, WorkSite?> workSiteCache, Guid? basicUserRoleId, SyncResultDTO result)
     {
         var department = departments.FirstOrDefault(d => d.Name.Equals(csvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
         if (department == null)
@@ -557,6 +566,7 @@ public class CsvSyncService : ICsvSyncService
 
         var assignedManager = await ResolveLineManagerByPersonalIdAsync(dbUsers, csvData.AssignedToPersonalId);
         var csvFunction = await ResolveExistingFunctionAsync(csvData.Function, functionCache);
+        var csvWorkSite = await ResolveExistingWorkSiteAsync(csvData.WorkSite, workSiteCache);
 
         var newUser = new User
         {
@@ -569,6 +579,8 @@ public class CsvSyncService : ICsvSyncService
             PersonalId = csvData.PersonalId,
             FunctionId = csvFunction?.Id,
             Function = csvFunction,
+            WorkSiteId = csvWorkSite?.Id,
+            WorkSite = csvWorkSite,
             IsCsvManaged = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -743,7 +755,7 @@ public class CsvSyncService : ICsvSyncService
         }
     }
 
-    private async Task<bool> ApplySelectedConflictResolutionsAsync(List<FieldConflictDTO> conflicts, CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, ImportHistory importHistory, SyncResultDTO result)
+    private async Task<bool> ApplySelectedConflictResolutionsAsync(List<FieldConflictDTO> conflicts, CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, Dictionary<string, WorkSite?> workSiteCache, ImportHistory importHistory, SyncResultDTO result)
     {
         bool hasChanges = false;
 
@@ -776,6 +788,9 @@ public class CsvSyncService : ICsvSyncService
                     break;
                 case "function":
                     hasChanges |= await ApplyFunctionResolutionAsync(csvData, existingUser, functionCache, importHistory);
+                    break;
+                case "worksite":
+                    hasChanges |= await ApplyWorkSiteResolutionAsync(csvData, existingUser, workSiteCache, importHistory);
                     break;
             }
         }
@@ -936,7 +951,34 @@ public class CsvSyncService : ICsvSyncService
         return true;
     }
 
-    private async Task<(bool Success, bool HasChanges)> ApplyAllDifferingFieldsAsync(CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, SyncResultDTO result)
+    private async Task<bool> ApplyWorkSiteResolutionAsync(CsvUserDTO csvData, User existingUser, Dictionary<string, WorkSite?> workSiteCache, ImportHistory importHistory)
+    {
+        var selectedCsvWorkSite = await ResolveExistingWorkSiteAsync(csvData.WorkSite, workSiteCache);
+        var selectedCsvWorkSiteName = csvData.WorkSite?.Trim();
+
+        if (existingUser.WorkSiteId == selectedCsvWorkSite?.Id)
+        {
+            return false;
+        }
+
+        var userChangeHistory = new UserChangeHistory
+        {
+            Id = Guid.NewGuid(),
+            ImportHistoryId = importHistory.Id,
+            UserId = existingUser.Id,
+            FieldName = "workSite",
+            OldValue = existingUser.WorkSite?.Name ?? string.Empty,
+            NewValue = selectedCsvWorkSiteName ?? string.Empty,
+            Status = "accepted"
+        };
+
+        existingUser.WorkSiteId = selectedCsvWorkSite?.Id;
+        existingUser.WorkSite = selectedCsvWorkSite;
+        await _userChangeHistoryRepository.AddAsync(userChangeHistory);
+        return true;
+    }
+
+    private async Task<(bool Success, bool HasChanges)> ApplyAllDifferingFieldsAsync(CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, Dictionary<string, WorkSite?> workSiteCache, SyncResultDTO result)
     {
         bool hasChanges = false;
 
@@ -956,6 +998,14 @@ public class CsvSyncService : ICsvSyncService
         {
             existingUser.FunctionId = csvFunction?.Id;
             existingUser.Function = csvFunction;
+            hasChanges = true;
+        }
+
+        var csvWorkSite = await ResolveExistingWorkSiteAsync(csvData.WorkSite, workSiteCache);
+        if (existingUser.WorkSiteId != csvWorkSite?.Id)
+        {
+            existingUser.WorkSiteId = csvWorkSite?.Id;
+            existingUser.WorkSite = csvWorkSite;
             hasChanges = true;
         }
 
@@ -999,6 +1049,8 @@ public class CsvSyncService : ICsvSyncService
             AssignedToId = user.AssignedTo?.Id,
             AssignedToName = user.AssignedTo != null ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}" : null,
             Function = user.Function?.Name,
+            WorkSiteId = user.WorkSiteId,
+            WorkSite = user.WorkSite?.Name,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
@@ -1020,6 +1072,24 @@ public class CsvSyncService : ICsvSyncService
         var existingFunction = await _functionRepository.GetByNameAsync(normalizedName);
         functionCache[normalizedName] = existingFunction;
         return existingFunction;
+    }
+
+    private async Task<WorkSite?> ResolveExistingWorkSiteAsync(string? workSiteName, Dictionary<string, WorkSite?> workSiteCache)
+    {
+        if (string.IsNullOrWhiteSpace(workSiteName))
+        {
+            return null;
+        }
+
+        var normalizedName = workSiteName.Trim();
+        if (workSiteCache.TryGetValue(normalizedName, out var cachedWorkSite))
+        {
+            return cachedWorkSite;
+        }
+
+        var existingWorkSite = await _workSiteRepository.GetByNameAsync(normalizedName);
+        workSiteCache[normalizedName] = existingWorkSite;
+        return existingWorkSite;
     }
 
     private async Task<User?> ResolveLineManagerByPersonalIdAsync(List<User> dbUsers, string? managerPersonalId)

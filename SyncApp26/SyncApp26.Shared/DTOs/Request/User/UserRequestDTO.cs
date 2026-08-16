@@ -19,6 +19,8 @@ namespace SyncApp26.Shared.DTOs.Request.User
         [StringLength(NameValidationConstants.FunctionMaxLength)]
         public string? Function { get; set; }
 
+        public Guid? WorkSiteId { get; set; }
+
         public Guid? AssignedToId { get; set; }
     }
 }
