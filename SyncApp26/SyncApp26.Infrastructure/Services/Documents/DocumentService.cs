@@ -124,6 +124,7 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
 
             var previousDocPtRows = await _context.PeriodicTrainings
+                .AsNoTracking()
                 .Where(pt => pt.UserId == userId
                     && pt.UserDocumentId != null
                     && allPreviousDocIds.Contains(pt.UserDocumentId.Value)
@@ -208,6 +209,7 @@ namespace SyncApp26.Infrastructure.Services
                 return;
 
             var mostRecentTraining = await _context.PeriodicTrainings
+                .AsNoTracking()
                 .Where(pt => pt.UserId == userId && pt.UserDocumentId != newDocId
                     && (pt.DocumentType == null || pt.DocumentType == documentType))
                 .OrderByDescending(pt => pt.CreatedAt)
@@ -233,8 +235,12 @@ namespace SyncApp26.Infrastructure.Services
 
         // Reloads a user with every navigation BuildDocument needs, PeriodicTrainings in
         // deterministic order (used after mutating training rows, ahead of a PDF snapshot).
+        // AsNoTracking: every call site only reads from the result to render a PDF, never mutates
+        // it — tracking it just grew the change tracker for nothing, worse the more training/
+        // document history the user already had.
         private Task<User?> LoadUserWithDocumentDataAsync(Guid userId) =>
             _context.Users
+                .AsNoTracking()
                 .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
                 .Include(u => u.Department)
                 .Include(u => u.WorkSite)
@@ -688,6 +694,7 @@ namespace SyncApp26.Infrastructure.Services
             if (docIds.Count == 0) return new Dictionary<(Guid, string), SignatureRecord>();
 
             var records = (await _context.SignatureRecords
+                    .AsNoTracking()
                     .Where(r => docIds.Contains(r.UserDocumentId) && r.PeriodicTrainingId != null)
                     .ToListAsync())
                 .OrderByDescending(r => r.SignedAt)
@@ -717,6 +724,7 @@ namespace SyncApp26.Infrastructure.Services
             if (docIds.Count == 0) return new Dictionary<string, SignatureRecord>();
 
             var records = (await _context.SignatureRecords
+                    .AsNoTracking()
                     .Where(r => docIds.Contains(r.UserDocumentId))
                     .ToListAsync())
                 .OrderBy(r => r.SignedAt)
@@ -1898,27 +1906,50 @@ namespace SyncApp26.Infrastructure.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
+        public async Task<BulkGenerateResult> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
         {
             var usersToGenerateFor = await ResolveBulkGenerateUserIdsAsync(selectedUserIds, restrictToAssignedToId);
 
             int generated = 0;
             int skipped = 0;
+            var generatedDocumentIds = new List<Guid>();
 
             foreach (var userId in usersToGenerateFor)
             {
                 try
                 {
-                    await GenerateDocumentAsync(userId, documentType, generatedByEmail);
+                    var doc = await GenerateDocumentAsync(userId, documentType, generatedByEmail);
+                    generatedDocumentIds.Add(doc.Id);
                     generated++;
                 }
                 catch
                 {
                     skipped++;
                 }
+                finally
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            return (generated, skipped);
+            return new BulkGenerateResult
+            {
+                Generated = generated,
+                Skipped = skipped,
+                GeneratedDocumentIds = generatedDocumentIds
+            };
+        }
+
+        public async Task<List<UserDocument>> GetPendingUserDocumentsByIdsAsync(IEnumerable<Guid> documentIds)
+        {
+            var ids = documentIds.Distinct().ToList();
+            if (ids.Count == 0) return new List<UserDocument>();
+
+            return await _context.UserDocuments
+                .AsNoTracking()
+                .Include(d => d.User)
+                .Where(d => ids.Contains(d.Id) && d.Status == DocumentStatuses.PendingUser)
+                .ToListAsync();
         }
 
         private async Task<List<Guid>> ResolveBulkGenerateUserIdsAsync(List<Guid>? selectedUserIds, Guid? restrictToAssignedToId)

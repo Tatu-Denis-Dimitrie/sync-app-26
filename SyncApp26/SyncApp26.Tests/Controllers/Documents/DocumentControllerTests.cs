@@ -95,9 +95,9 @@ namespace SyncApp26.Tests.Controllers.Documents
             // dropped from the request rather than failing the whole call.
             var controller = CreateController(role: Roles.SsmOfficer);
             _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
-                .ReturnsAsync((2, 0));
-            _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync(It.IsAny<string>()))
-                .ReturnsAsync(Array.Empty<UserDocument>());
+                .ReturnsAsync(new BulkGenerateResult { Generated = 2, Skipped = 0 });
+            _documentServiceMock.Setup(s => s.GetPendingUserDocumentsByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync(new List<UserDocument>());
 
             var result = await controller.BulkGenerateDocuments(new BulkGenerateDocumentDto { DocumentType = "Both" });
 
@@ -112,8 +112,8 @@ namespace SyncApp26.Tests.Controllers.Documents
             var callerId = Guid.NewGuid();
             var controller = CreateController(callerId, role: Roles.LineManager);
             _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
-                .ReturnsAsync((1, 0));
-            _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync(It.IsAny<string>())).ReturnsAsync(Array.Empty<UserDocument>());
+                .ReturnsAsync(new BulkGenerateResult { Generated = 1, Skipped = 0 });
+            _documentServiceMock.Setup(s => s.GetPendingUserDocumentsByIdsAsync(It.IsAny<IEnumerable<Guid>>())).ReturnsAsync(new List<UserDocument>());
 
             var request = new BulkGenerateDocumentDto { DocumentType = "SSM" };
             var result = await controller.BulkGenerateDocuments(request);
@@ -556,8 +556,14 @@ namespace SyncApp26.Tests.Controllers.Documents
             var alreadySigned = MakeDocument(user: MakeUser());
             alreadySigned.UserSignedAt = DateTime.UtcNow;
 
-            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>())).ReturnsAsync((2, 0));
-            _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync("SSM")).ReturnsAsync(new[] { needsEmail, alreadySigned });
+            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
+                .ReturnsAsync(new BulkGenerateResult
+                {
+                    Generated = 2,
+                    Skipped = 0,
+                    GeneratedDocumentIds = new List<Guid> { needsEmail.Id, alreadySigned.Id }
+                });
+            _documentServiceMock.Setup(s => s.GetPendingUserDocumentsByIdsAsync(It.IsAny<IEnumerable<Guid>>())).ReturnsAsync(new List<UserDocument> { needsEmail, alreadySigned });
             _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(needsEmail.Id)).ReturnsAsync((Guid?)null);
             _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(needsEmail.User!.Email, needsEmail.Id, It.IsAny<string>(), null))
                 .ReturnsAsync("tok");
@@ -576,8 +582,14 @@ namespace SyncApp26.Tests.Controllers.Documents
             var failingDoc = MakeDocument(user: MakeUser());
             var succeedingDoc = MakeDocument(user: MakeUser());
 
-            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>())).ReturnsAsync((2, 0));
-            _documentServiceMock.Setup(s => s.GetAllPendingUserDocumentsAsync("SSM")).ReturnsAsync(new[] { failingDoc, succeedingDoc });
+            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
+                .ReturnsAsync(new BulkGenerateResult
+                {
+                    Generated = 2,
+                    Skipped = 0,
+                    GeneratedDocumentIds = new List<Guid> { failingDoc.Id, succeedingDoc.Id }
+                });
+            _documentServiceMock.Setup(s => s.GetPendingUserDocumentsByIdsAsync(It.IsAny<IEnumerable<Guid>>())).ReturnsAsync(new List<UserDocument> { failingDoc, succeedingDoc });
             _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(It.IsAny<Guid>())).ReturnsAsync((Guid?)null);
             _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(failingDoc.User!.Email, failingDoc.Id, It.IsAny<string>(), null))
                 .ThrowsAsync(new InvalidOperationException("token generation failed"));
@@ -589,6 +601,40 @@ namespace SyncApp26.Tests.Controllers.Documents
             Assert.IsType<OkObjectResult>(result);
             _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync(succeedingDoc.User!.Email, It.IsAny<string>(), It.IsAny<string>()), Times.Once);
             _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync(failingDoc.User!.Email, It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task BulkGenerateDocuments_EmailsOnlyTheDocumentsThisRunGenerated()
+        {
+            // Regression: this used to email every PendingUser document in the database, so the mail
+            // volume grew with document history instead of with the run — an employee with 8 stale
+            // unsigned documents received 8 emails per bulk generation, and a 39-document run sent
+            // 312 sequential SMTP messages. Only the ids this run produced may be notified.
+            var controller = CreateController(role: Roles.SsmOfficer);
+            var freshlyGenerated = MakeDocument(user: MakeUser());
+            var staleBacklogDoc = MakeDocument(user: MakeUser());
+
+            _documentServiceMock.Setup(s => s.BulkGenerateDocumentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<Guid>?>(), It.IsAny<Guid?>()))
+                .ReturnsAsync(new BulkGenerateResult
+                {
+                    Generated = 1,
+                    Skipped = 0,
+                    GeneratedDocumentIds = new List<Guid> { freshlyGenerated.Id }
+                });
+            _documentServiceMock.Setup(s => s.GetPendingUserDocumentsByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+                .ReturnsAsync((IEnumerable<Guid> ids) =>
+                    new[] { freshlyGenerated, staleBacklogDoc }.Where(d => ids.Contains(d.Id)).ToList());
+            _documentServiceMock.Setup(s => s.GetCurrentTrainingIdForDocumentAsync(It.IsAny<Guid>())).ReturnsAsync((Guid?)null);
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), null))
+                .ReturnsAsync("tok");
+
+            var result = await controller.BulkGenerateDocuments(new BulkGenerateDocumentDto { DocumentType = "SSM" });
+
+            Assert.IsType<OkObjectResult>(result);
+            _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync(freshlyGenerated.User!.Email, It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+            _emailServiceMock.Verify(s => s.SendDocumentSignatureEmailWithLinkAsync(staleBacklogDoc.User!.Email, It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            // The whole-backlog query must not be reachable from this path at all.
+            _documentServiceMock.Verify(s => s.GetAllPendingUserDocumentsAsync(It.IsAny<string>()), Times.Never);
         }
 
         // ───────────────────────── Additional GetAllDocuments edge case ─────────────────────────

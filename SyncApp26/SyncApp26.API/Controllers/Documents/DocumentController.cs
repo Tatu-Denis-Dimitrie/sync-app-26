@@ -130,19 +130,20 @@ namespace SyncApp26.API.Controllers
                 return Forbid();
 
             int totalGenerated = 0, totalSkipped = 0;
+            var generatedIdsByType = new List<(string Type, List<Guid> DocumentIds)>();
 
             foreach (var (type, restrictToAssignedToId) in typesToProcess)
             {
-                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds, restrictToAssignedToId);
-                totalGenerated += generated;
-                totalSkipped += skipped;
+                var result = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds, restrictToAssignedToId);
+                totalGenerated += result.Generated;
+                totalSkipped += result.Skipped;
+                generatedIdsByType.Add((type, result.GeneratedDocumentIds));
             }
 
-            // Send signature request emails to all employees with pending documents
             int emailsSent = 0;
-            foreach (var (type, _) in typesToProcess)
+            foreach (var (type, documentIds) in generatedIdsByType)
             {
-                var pendingDocs = await _documentService.GetAllPendingUserDocumentsAsync(type);
+                var pendingDocs = await _documentService.GetPendingUserDocumentsByIdsAsync(documentIds);
                 foreach (var doc in pendingDocs)
                 {
                     if (doc.User?.Email is { Length: > 0 } userEmail && doc.UserSignedAt == null)
