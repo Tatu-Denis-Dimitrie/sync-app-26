@@ -78,6 +78,7 @@ export class EmployeesDetailComponent implements OnInit {
           this.selectedUser = users.find(u => u.id === params['id']) || null;
           if (this.selectedUser) {
             this.loadUserConflicts(this.selectedUser.id);
+            this.loadUserDocuments(this.selectedUser.id);
           }
         });
       }
