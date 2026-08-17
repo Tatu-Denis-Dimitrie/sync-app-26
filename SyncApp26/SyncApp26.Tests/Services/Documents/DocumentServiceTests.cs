@@ -986,6 +986,60 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
+        public async Task PeriodicTrainingRow_CopiedIntoNewerDocument_StillShowsOriginalSigningDate()
+        {
+            // CopyHistoricalPeriodicTrainingRowsAsync gives the copy a brand-new Id (SourceRowId
+            // points back to the original) - the render must resolve signatures through that chain,
+            // or every row carried into a new document (i.e. most rows on any multi-session
+            // document) renders with a missing "-" signing date instead of the real one.
+            //
+            // Two sessions on doc1, both signed as "User": session one seeds
+            // ctx.InitialTrainingSignatures (earliest-record-wins, feeds the cover page) which is
+            // already cross-document and would mask this bug if tampered. Session two is what this
+            // test tampers and checks, isolating the periodic-table-row lookup this fix touches.
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc1 = SeedDocument(owner, "SU", "PendingUser");
+            var session1 = SeedTraining(owner, doc1, "Norme SSM v1", 2m, new DateTime(2026, 1, 15));
+            var session2 = SeedTraining(owner, doc1, "Norme SSM v2", 2m, new DateTime(2026, 3, 10));
+
+            await service.UpdateDocumentSignatureAsync(doc1.Id, owner.Id, "User", "Draw", "sig-session-one", "1.2.3.4", session1.Id);
+            await service.UpdateDocumentSignatureAsync(doc1.Id, owner.Id, "User", "Draw", "sig-session-two", "1.2.3.4", session2.Id);
+
+            var doc2 = await service.GenerateDocumentAsync(owner.Id, "SU", "admin@example.com");
+            var copiedRow2 = _dbFixture.Context.PeriodicTrainings
+                .Single(pt => pt.UserDocumentId == doc2.Id && pt.SourceRowId == session2.Id);
+            Assert.NotEqual(session2.Id, copiedRow2.Id);
+
+            async Task<string> RenderDoc2Async()
+            {
+                _dbFixture.Context.ChangeTracker.Clear();
+                var u = await _dbFixture.Context.Users
+                    .Include(x => x.Function).Include(x => x.AssignedTo).ThenInclude(m => m!.Function)
+                    .Include(x => x.PeriodicTrainings).Include(x => x.InitialTrainings)
+                    .FirstAsync(x => x.Id == owner.Id);
+                return PdfContentStreams(await service.GeneratePdfBytesAsync(u, _dbFixture.Context.UserDocuments.Find(doc2.Id)!));
+            }
+
+            var before = await RenderDoc2Async();
+
+            // The only SignatureRecord for session two's signature is keyed to session2.Id (the
+            // ORIGINAL row), never to copiedRow2.Id. Moving its date must move copiedRow2's rendered
+            // date too, if the lookup resolves through SourceRowId - if it were keyed on
+            // copiedRow2.Id instead, this edit would have no effect on doc2's render.
+            _dbFixture.Context.ChangeTracker.Clear();
+            var session2Record = _dbFixture.Context.SignatureRecords
+                .Single(r => r.PeriodicTrainingId == session2.Id && r.SignerRole == "User");
+            session2Record.SignedAt = session2Record.SignedAt.AddDays(30);
+            _dbFixture.Context.SaveChanges();
+
+            var after = await RenderDoc2Async();
+
+            Assert.NotEqual(before, after);
+        }
+
+        [Fact]
         public async Task UpdateDocumentSignatureAsync_NewPeriodicTrainingAddedUnderNewerSchemaVersion_BothSignaturesValidate()
         {
             // Realistic combination: the employee already signed one training session on this

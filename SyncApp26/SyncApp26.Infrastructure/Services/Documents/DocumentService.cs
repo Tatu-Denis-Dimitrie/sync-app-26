@@ -672,13 +672,23 @@ namespace SyncApp26.Infrastructure.Services
                 periodicSignatures, initialTrainingSignatures);
         }
 
-        // One SignatureRecord per (training, role) for this document — keyed by the same
-        // PeriodicTrainingId/SignerRole that CreateSignatureRecordAsync stamps on every record,
-        // picking the latest per key (a training row can be re-signed after Step 2's revision reset).
-        private async Task<Dictionary<(Guid TrainingId, string Role), SignatureRecord>> LoadPeriodicSignatureLookupAsync(Guid documentId)
+        // One SignatureRecord per (training, role) — keyed by the same PeriodicTrainingId/SignerRole
+        // that CreateSignatureRecordAsync stamps on every record, picking the latest per key (a
+        // training row can be re-signed after Step 2's revision reset). Scoped by user+type rather
+        // than a single document's UserDocumentId: CopyHistoricalPeriodicTrainingRowsAsync carries a
+        // row's SignatureRecord-bearing original into every later document, but the record itself
+        // always stays attached to the FIRST document it was signed on — a document-scoped query
+        // would never see it for any later document that only holds the copy.
+        private async Task<Dictionary<(Guid TrainingId, string Role), SignatureRecord>> LoadPeriodicSignatureLookupAsync(Guid userId, string? documentType)
         {
+            var docIds = await _context.UserDocuments
+                .Where(d => d.UserId == userId && d.DocumentType == documentType)
+                .Select(d => d.Id)
+                .ToListAsync();
+            if (docIds.Count == 0) return new Dictionary<(Guid, string), SignatureRecord>();
+
             var records = (await _context.SignatureRecords
-                    .Where(r => r.UserDocumentId == documentId && r.PeriodicTrainingId != null)
+                    .Where(r => docIds.Contains(r.UserDocumentId) && r.PeriodicTrainingId != null)
                     .ToListAsync())
                 .OrderByDescending(r => r.SignedAt)
                 .ThenByDescending(r => r.CreatedAt)
@@ -1078,7 +1088,13 @@ namespace SyncApp26.Infrastructure.Services
             string? userSigData = training.UserSignatureData;
             string? userSigMethod = training.UserSignatureMethod;
 
-            var officerRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "Instructor"));
+            // A row carried into a newer document by CopyHistoricalPeriodicTrainingRowsAsync gets a
+            // fresh Id of its own, but the SignatureRecord created when it was actually signed is
+            // still keyed to the ORIGINAL row's Id (SourceRowId) — looking up by training.Id alone
+            // would miss it and print "-" for every copied row's date, which is most of the table.
+            var signatureLookupId = training.SourceRowId ?? training.Id;
+
+            var officerRecord = ctx.PeriodicSignatures.GetValueOrDefault((signatureLookupId, "Instructor"));
 
             // Legacy rows signed before the SSM/SU officer took over the Instructor slot (Faza 2 of
             // the roles plan) really had a separate Admin/Verifier signer — keep those untouched.
@@ -1098,7 +1114,7 @@ namespace SyncApp26.Infrastructure.Services
                 // lucru" is the opposite case: one-time approval, always the first signature.)
                 // Falls back to the earliest record, then the document columns, for rows signed
                 // before per-training records existed.
-                var rowManagerRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "Manager"))
+                var rowManagerRecord = ctx.PeriodicSignatures.GetValueOrDefault((signatureLookupId, "Manager"))
                     ?? ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
                 instructorName = rowManagerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
                 instructorPosition = rowManagerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
@@ -1130,7 +1146,7 @@ namespace SyncApp26.Infrastructure.Services
                 }
                 else
                 {
-                    var legacyVerifierRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "Admin"));
+                    var legacyVerifierRecord = ctx.PeriodicSignatures.GetValueOrDefault((signatureLookupId, "Admin"));
                     verifierName = legacyVerifierRecord?.SignerFullNameSnapshot ?? training.VerifierName;
                     verifierPosition = legacyVerifierRecord?.SignerPositionSnapshot;
                     verifierSigMethod = training.VerifierSignatureMethod;
@@ -1155,7 +1171,7 @@ namespace SyncApp26.Infrastructure.Services
             // Name/position/timestamp come from the frozen SignatureRecord for this exact
             // (training, role) when one exists; falls back to live/row data otherwise (e.g. rows
             // predating this table, or not yet signed).
-            var userRecord = ctx.PeriodicSignatures.GetValueOrDefault((training.Id, "User"));
+            var userRecord = ctx.PeriodicSignatures.GetValueOrDefault((signatureLookupId, "User"));
 
             table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
                 new SignatureBlockData(
@@ -1196,7 +1212,7 @@ namespace SyncApp26.Infrastructure.Services
             var fileName = $"{timestamp}_{document.DocumentType}_{user.FirstName}_{user.LastName}_{document.Id}.pdf";
             var filePath = Path.Combine(docsFolder, fileName);
 
-            var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.Id);
+            var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.UserId, document.DocumentType);
             var initialTrainingSignatures = await LoadInitialTrainingSignatureLookupAsync(document.UserId, document.DocumentType);
 
             // Generate to memory first — if layout throws, the existing file on disk is NOT corrupted
@@ -1212,7 +1228,7 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false)
         {
-            var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.Id);
+            var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.UserId, document.DocumentType);
             var initialTrainingSignatures = await LoadInitialTrainingSignatureLookupAsync(document.UserId, document.DocumentType);
 
             return BuildDocument(user, document, periodicSignatures, initialTrainingSignatures, viewerIsAdmin).GeneratePdf();
