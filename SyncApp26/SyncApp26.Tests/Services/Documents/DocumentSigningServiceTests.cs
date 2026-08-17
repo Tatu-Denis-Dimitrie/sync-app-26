@@ -74,6 +74,28 @@ namespace SyncApp26.Tests.Services.Documents
         }
 
         [Fact]
+        public async Task RequestSigningTokenAsync_DualRoleManagerWhoAlreadySigned_CanStillRequestInstructorToken()
+        {
+            // The bug this guards: isManager's "Manager already signed" check must not pre-empt a
+            // dual-role manager+officer's instructor turn just because they signed the manager step
+            // themselves earlier in the same chain.
+            var service = CreateService();
+            var dualRole = MakeUser();
+            var owner = MakeUser(assignedToId: dualRole.Id);
+            owner.AssignedTo = dualRole;
+            var document = MakeDocument(user: owner, status: "PendingInstructor");
+            document.ManagerSignedAt = DateTime.UtcNow;
+            SetOfficer(dualRole, document.DocumentType!, true);
+            _documentSignatureServiceMock.Setup(s => s.GenerateSignatureTokenAsync(dualRole.Email, document.Id, It.IsAny<string>(), It.IsAny<Guid?>()))
+                .ReturnsAsync("instructor-tok");
+
+            var result = await service.RequestSigningTokenAsync(document, dualRole);
+
+            Assert.True(result.Success);
+            Assert.Equal("instructor-tok", result.Token);
+        }
+
+        [Fact]
         public async Task ConsumeSigningTokenAsync_OwnerWhoIsOfficer_CannotTakeInstructorSlotOnOwnDocument()
         {
             var service = CreateService();

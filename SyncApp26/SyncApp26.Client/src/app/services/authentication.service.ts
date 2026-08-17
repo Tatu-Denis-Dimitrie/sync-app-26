@@ -147,9 +147,12 @@ export class AuthenticationService {
     return userStr ? JSON.parse(userStr) : null;
   }
 
-  // The JWT claim key .NET writes ClaimTypes.Role under - present as a single string when the user
-  // holds one role, and as an array when they hold several.
-  private static readonly ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+  // JwtSecurityTokenHandler's default outbound claim map rewrites ClaimTypes.Role down to the short
+  // "role" name when it serializes the token - verified against a live token, the payload carries
+  // "role", not the long ClaimTypes URI. Checked as a fallback in case that mapping is ever disabled.
+  // Present as a single string when the user holds one role, and as an array when they hold several.
+  private static readonly ROLE_CLAIM = 'role';
+  private static readonly ROLE_CLAIM_LONG = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
 
   // Roles and session validity must come from the signed token, not from currentUser in localStorage -
   // that JSON is plain, unsigned storage a user can edit in devtools to grant themselves any role
@@ -170,7 +173,7 @@ export class AuthenticationService {
 
   private getRolesFromToken(): string[] {
     const payload = this.decodeToken();
-    const raw = payload?.[AuthenticationService.ROLE_CLAIM];
+    const raw = payload?.[AuthenticationService.ROLE_CLAIM] ?? payload?.[AuthenticationService.ROLE_CLAIM_LONG];
     if (!raw) return [];
     return Array.isArray(raw) ? raw : [raw as string];
   }

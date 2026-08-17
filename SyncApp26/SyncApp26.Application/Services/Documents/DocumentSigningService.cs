@@ -59,12 +59,17 @@ namespace SyncApp26.Application.Services
                     break;
 
                 case "PendingInstructor":
-                    if (isManager && document.ManagerSignedAt != null)
-                        return new SigningTokenResult { ErrorMessage = "Manager already signed this document." };
                     if (isUser)
                         return new SigningTokenResult { ErrorMessage = SelfCountersignMessage(isSsm) };
+                    // isInstructor takes priority: a dual-role manager+officer who already signed as
+                    // manager must still be able to sign as instructor. Only someone who is manager
+                    // but NOT the instructor hits the "already signed" message below.
                     if (!isInstructor)
+                    {
+                        if (isManager && document.ManagerSignedAt != null)
+                            return new SigningTokenResult { ErrorMessage = "Manager already signed this document." };
                         return new SigningTokenResult { ErrorMessage = "Instructor signature not required at this time." };
+                    }
                     break;
 
                 default:

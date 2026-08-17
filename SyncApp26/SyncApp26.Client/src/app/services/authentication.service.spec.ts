@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { AuthenticationService } from './authentication.service';
 
-const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+const ROLE_CLAIM = 'role';
 
 function makeToken(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
@@ -43,6 +43,13 @@ describe('AuthenticationService', () => {
       expect(service.hasRole('Admin')).toBeTrue();
       expect(service.hasRole('LineManager')).toBeTrue();
       expect(service.hasRole('SsmOfficer')).toBeFalse();
+    });
+
+    it('falls back to the long ClaimTypes role URI if the short claim is absent', () => {
+      const longClaim = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+      localStorage.setItem('authToken', makeToken({ [longClaim]: 'Admin', exp: Math.floor(Date.now() / 1000) + 3600 }));
+
+      expect(service.hasRole('Admin')).toBeTrue();
     });
 
     it('ignores a tampered currentUser entry that does not match the signed token', () => {
