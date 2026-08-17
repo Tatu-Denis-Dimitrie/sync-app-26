@@ -22,10 +22,16 @@ namespace SyncApp26.Infrastructure.Repositories
 
         public async Task<List<SignatureAnomalyAlert>> GetUnreadAsync()
         {
-            return await _context.SignatureAnomalyAlerts
+            // OccurredAt is a DateTimeOffset, which SQLite can't translate into an ORDER BY clause
+            // (unlike every other CreatedAt/timestamp in this codebase, which uses DateTime).
+            // The unread set is small (sweep-run alerts only), so sort client-side after fetching.
+            var unread = await _context.SignatureAnomalyAlerts
                 .Where(a => !a.IsRead)
-                .OrderByDescending(a => a.OccurredAt)
                 .ToListAsync();
+
+            return unread
+                .OrderByDescending(a => a.OccurredAt)
+                .ToList();
         }
 
         public async Task MarkAllAsReadAsync(Guid adminId)
