@@ -35,6 +35,29 @@ interface UserOption {
   departmentName: string;
 }
 
+// The job finishes at 'done' as soon as the documents exist; notification emails continue on the
+// server after that, so the client never waits on an email phase.
+type GenerationPhase = 'generating' | 'done';
+
+// Poll cadence for the generation job. The status endpoint only reads an in-memory dictionary, so
+// polling this often is cheap, and generation runs at roughly 30ms per document — a slower interval
+// would make the bar jump in large steps instead of tracking documents as they land.
+const GENERATION_POLL_MS = 400;
+
+interface BulkGenerateStatus {
+  total: number;
+  generated: number;
+  skipped: number;
+  phase: GenerationPhase;
+  emailsSent: number;
+  emailsFailed: number;
+  emailError: string | null;
+  emailsAborted: boolean;
+  completed: boolean;
+  message: string | null;
+  error: string | null;
+}
+
 interface BulkTrainingData {
   trainingDate: string;
   durationHours: number | null;
@@ -65,6 +88,13 @@ export class BulkTrainingModalComponent implements OnInit {
   submittedUserIds: string[] = [];
   submittedDocType = '';
   isGenerating = false;
+  // Progress is mirrored straight from the backend job — never incremented or animated locally,
+  // so the bar can only ever show documents the server has actually finished writing.
+  totalToGenerate = 0;
+  generatedCount = 0;
+  skippedCount = 0;
+  generationPhase: GenerationPhase = 'generating';
+  private pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
   errorMessage = '';
   validationMessage = '';
   pastDateWarning = false;
@@ -274,6 +304,11 @@ export class BulkTrainingModalComponent implements OnInit {
     this.submittedUserIds = [];
     this.submittedDocType = '';
     this.isGenerating = false;
+    this.stopPollingGeneration();
+    this.totalToGenerate = 0;
+    this.generatedCount = 0;
+    this.skippedCount = 0;
+    this.generationPhase = 'generating';
     this.errorMessage = '';
     this.validationMessage = '';
     this.pastDateWarning = false;
@@ -382,23 +417,84 @@ export class BulkTrainingModalComponent implements OnInit {
     });
   }
 
+  get generationPercent(): number {
+    if (this.totalToGenerate <= 0) return 0;
+    const processed = this.generatedCount + this.skippedCount;
+    return Math.min(100, Math.round((processed / this.totalToGenerate) * 100));
+  }
+
+  get generationPhaseLabel(): string {
+    return 'Generating documents';
+  }
+
   generateDocuments() {
     this.isGenerating = true;
+    this.errorMessage = '';
+    this.generatedCount = 0;
+    this.skippedCount = 0;
+    this.totalToGenerate = 0;
+    this.generationPhase = 'generating';
+
     const payload = {
       documentType: this.submittedDocType,
       selectedUserIds: this.submittedUserIds.length > 0 ? this.submittedUserIds : null
     };
-    this.http.post<any>(`${environment.apiUrl}/Document/bulk-generate`, payload)
+
+    this.http.post<any>(`${environment.apiUrl}/Document/bulk-generate-async`, payload)
       .subscribe({
         next: (res) => {
-          this.isGenerating = false;
-          this.closeModal();
-          this.success.emit();
+          // No jobId means there was nothing to generate — behave as the old endpoint did.
+          if (!res?.jobId) {
+            this.isGenerating = false;
+            this.closeModal();
+            this.success.emit();
+            return;
+          }
+          this.totalToGenerate = res.total ?? 0;
+          this.pollGenerationProgress(res.jobId);
         },
         error: (err) => {
           this.isGenerating = false;
           console.error('Error generating documents:', err);
           this.errorMessage = 'Error generating documents. Please try again.';
+        }
+      });
+  }
+
+  private stopPollingGeneration(): void {
+    if (this.pollTimeoutId !== null) {
+      clearTimeout(this.pollTimeoutId);
+      this.pollTimeoutId = null;
+    }
+  }
+
+  private pollGenerationProgress(jobId: string): void {
+    this.http.get<BulkGenerateStatus>(`${environment.apiUrl}/Document/bulk-generate-status/${jobId}`)
+      .subscribe({
+        next: (status) => {
+          this.totalToGenerate = status.total;
+          this.generatedCount = status.generated;
+          this.skippedCount = status.skipped;
+          this.generationPhase = status.phase;
+
+          if (!status.completed) {
+            this.pollTimeoutId = setTimeout(() => this.pollGenerationProgress(jobId), GENERATION_POLL_MS);
+            return;
+          }
+
+          this.isGenerating = false;
+          if (status.error) {
+            this.errorMessage = `Error generating documents: ${status.error}`;
+            return;
+          }
+          // The job reports complete once the documents exist; their notification emails keep
+          // sending on the server afterwards, so there is nothing left to wait for here.
+          this.closeModal();
+          this.success.emit();
+        },
+        error: () => {
+          this.isGenerating = false;
+          this.errorMessage = 'Lost track of the generation job. Refresh to see the generated documents.';
         }
       });
   }

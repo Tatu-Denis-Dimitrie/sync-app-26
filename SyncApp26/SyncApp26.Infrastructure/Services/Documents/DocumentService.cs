@@ -1906,9 +1906,9 @@ namespace SyncApp26.Infrastructure.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<BulkGenerateResult> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
+        public async Task<BulkGenerateResult> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null, Action<int, int>? onProgress = null)
         {
-            var usersToGenerateFor = await ResolveBulkGenerateUserIdsAsync(selectedUserIds, restrictToAssignedToId);
+            var usersToGenerateFor = await GetBulkGenerateTargetUserIdsAsync(selectedUserIds, restrictToAssignedToId);
 
             int generated = 0;
             int skipped = 0;
@@ -1930,6 +1930,8 @@ namespace SyncApp26.Infrastructure.Services
                 {
                     _context.ChangeTracker.Clear();
                 }
+
+                onProgress?.Invoke(generated, skipped);
             }
 
             return new BulkGenerateResult
@@ -1952,7 +1954,7 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
         }
 
-        private async Task<List<Guid>> ResolveBulkGenerateUserIdsAsync(List<Guid>? selectedUserIds, Guid? restrictToAssignedToId)
+        public async Task<List<Guid>> GetBulkGenerateTargetUserIdsAsync(List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
         {
             var candidateUsers = await _context.Users
                 .WithoutRole(Roles.Admin)
