@@ -1900,42 +1900,16 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null)
         {
-            bool isSsmDocumentType = DocumentTypes.IsSsm(documentType);
-
-            var users = await _context.Users
-                .Include(u => u.AssignedTo).ThenInclude(m => m!.Function)
-                .Include(u => u.Department)
-                .Include(u => u.WorkSite)
-                .Include(u => u.Function)
-                .Include(u => u.InitialTrainings)
-                .Include(u => u.PeriodicTrainings.OrderBy(pt => pt.TrainingDate))
-                .WithoutRole(Roles.Admin)
-                .ToListAsync();
-
-            if (restrictToAssignedToId.HasValue)
-            {
-                var myEmployeeIds = users
-                    .Where(u => u.AssignedToId == restrictToAssignedToId.Value)
-                    .Select(u => u.Id)
-                    .ToList();
-
-                selectedUserIds = selectedUserIds == null || !selectedUserIds.Any()
-                    ? myEmployeeIds
-                    : selectedUserIds.Intersect(myEmployeeIds).ToList();
-            }
-
-            var usersToGenerateFor = users
-                .Where(u => selectedUserIds == null || selectedUserIds.Contains(u.Id))
-                .ToList();
+            var usersToGenerateFor = await ResolveBulkGenerateUserIdsAsync(selectedUserIds, restrictToAssignedToId);
 
             int generated = 0;
             int skipped = 0;
 
-            foreach (var user in usersToGenerateFor)
+            foreach (var userId in usersToGenerateFor)
             {
                 try
                 {
-                    await GenerateDocumentAsync(user.Id, documentType, generatedByEmail);
+                    await GenerateDocumentAsync(userId, documentType, generatedByEmail);
                     generated++;
                 }
                 catch
@@ -1945,6 +1919,32 @@ namespace SyncApp26.Infrastructure.Services
             }
 
             return (generated, skipped);
+        }
+
+        private async Task<List<Guid>> ResolveBulkGenerateUserIdsAsync(List<Guid>? selectedUserIds, Guid? restrictToAssignedToId)
+        {
+            var candidateUsers = await _context.Users
+                .WithoutRole(Roles.Admin)
+                .AsNoTracking()
+                .Select(u => new { u.Id, u.AssignedToId })
+                .ToListAsync();
+
+            if (restrictToAssignedToId.HasValue)
+            {
+                var myEmployeeIds = candidateUsers
+                    .Where(u => u.AssignedToId == restrictToAssignedToId.Value)
+                    .Select(u => u.Id)
+                    .ToList();
+
+                selectedUserIds = selectedUserIds == null || !selectedUserIds.Any()
+                    ? myEmployeeIds
+                    : selectedUserIds.Intersect(myEmployeeIds).ToList();
+            }
+
+            return candidateUsers
+                .Where(u => selectedUserIds == null || selectedUserIds.Contains(u.Id))
+                .Select(u => u.Id)
+                .ToList();
         }
 
         // Returns SSM documents pending admin signature (PendingAdmin status, signed by both employee and LM)
