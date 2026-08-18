@@ -74,12 +74,18 @@
               </div>
             </div>
           </div>
-          <div class="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
-            <h4 class="text-sm font-semibold text-foreground mb-2">Summary</h4>
-            <p class="text-sm text-muted-foreground">
-              {{ user.role === UserRole.LineManager ? 'Manager' : 'Employee' }} in {{ user.departmentName }} •
-              {{ getRelativeTime(user.updatedAt || user.createdAt) }}
-            </p>
+          <div class="mt-6 p-4 bg-muted/50 rounded-lg border border-border flex justify-between items-center">
+            <div>
+              <h4 class="text-sm font-semibold text-foreground mb-2">Summary</h4>
+              <p class="text-sm text-muted-foreground">
+                {{ user.role === UserRole.LineManager ? 'Manager' : 'Employee' }} in {{ user.departmentName }} •
+                {{ getRelativeTime(user.updatedAt || user.createdAt) }}
+              </p>
+            </div>
+            <button (click)="openDataChangeModal()"
+              class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition">
+              Request Data Change
+            </button>
           </div>
           @if (pendingUser.totalCount > 0 || pendingManager.totalCount > 0 || pendingInstructor.totalCount > 0) {
             <div
@@ -563,3 +569,81 @@
       } <!-- /mt-6 assigned users bg-card -->
     </div> <!-- /container -->
   </div> <!-- /basic-user-page -->
+
+<!-- Data Change Modal -->
+@if (showDataChangeModal) {
+  <div
+    class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-card w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-border">
+      <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
+        <h3 class="text-lg font-semibold text-foreground">Request Data Change</h3>
+        <button (click)="closeDataChangeModal()" class="text-muted-foreground hover:text-foreground">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+            </path>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto max-h-[70vh]">
+        @if (dataChangeSuccess) {
+          <div
+            class="mb-4 p-3 bg-green-50 text-green-800 rounded border border-green-200 text-sm">
+            {{ dataChangeSuccess }}
+          </div>
+        }
+        @if (dataChangeError) {
+          <div class="mb-4 p-3 bg-red-50 text-red-800 rounded border border-red-200 text-sm">
+            {{ dataChangeError }}
+          </div>
+        }
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-3">Fill in the fields you want to
+            change</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              @for (field of availableFields; track field) {
+                <div class="flex flex-col">
+                  <span class="text-xs text-muted-foreground mb-1">{{ field.label }}</span>
+                  @if (field.type === 'select') {
+                    <select [(ngModel)]="requestedChanges[field.key]"
+                      class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500">
+                      <option value="">(No change)</option>
+                      @if (field.key === 'Department') {
+                        @for (opt of availableDepartments; track opt) {
+                          <option [value]="opt">{{ opt }}</option>
+                        }
+                      } @else {
+                        @for (opt of field.options ?? []; track opt.value) {
+                          <option [value]="opt.value">{{ opt.label }}</option>
+                        }
+                      }
+                    </select>
+                  } @else {
+                    <input [type]="field.type" [(ngModel)]="requestedChanges[field.key]"
+                      [attr.maxlength]="field.key === 'FirstName' || field.key === 'LastName' || field.key === 'Function' || field.key === 'Address' || field.key === 'PlaceOfBirth' ? 100 : (field.key === 'BadgeNumber' ? 32 : null)"
+                      placeholder="Current value is okay (leave empty)"
+                      class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500" />
+                  }
+                </div>
+              }
+            </div>
+          </div>
+          <div class="pt-2">
+            <label class="block text-sm font-medium text-foreground mb-1">Reason for change</label>
+            <textarea [(ngModel)]="dataChangeReason" rows="3"
+              class="w-full rounded border-border bg-background px-3 py-2 text-sm focus:ring-teal-500"
+            placeholder="Please explain why you need these changes..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-border bg-muted/30 flex justify-end gap-3">
+        <button (click)="closeDataChangeModal()"
+        class="px-4 py-2 border border-border rounded text-sm text-foreground hover:bg-muted transition">Cancel</button>
+        <button (click)="submitDataChangeRequest()" [disabled]="isSubmittingDataChange"
+          class="px-4 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ isSubmittingDataChange ? 'Submitting...' : 'Submit Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
