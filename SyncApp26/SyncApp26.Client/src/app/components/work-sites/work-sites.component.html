@@ -116,8 +116,20 @@
                 }
               </div>
               <p class="mt-1 text-sm text-muted-foreground">
-                <span class="font-mono tabular-nums">{{ stats.employeeCount }}</span>
-                {{ stats.employeeCount === 1 ? 'employee' : 'employees' }}
+                @if (stats.employeeCount > 0) {
+                  <button
+                    type="button"
+                    (click)="openEmployeesModal(workSite)"
+                    class="underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 rounded"
+                    >
+                    <span class="font-mono tabular-nums">{{ stats.employeeCount }}</span>
+                    {{ stats.employeeCount === 1 ? 'employee' : 'employees' }}
+                  </button>
+                } @else {
+                  <span>
+                    <span class="font-mono tabular-nums">{{ stats.employeeCount }}</span> employees
+                  </span>
+                }
                 @if (stats.unsigned > 0) {
                   <span class="text-border"> · </span>
                   <span class="font-medium text-amber-600">
@@ -174,18 +186,16 @@
                   <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-              @if (!workSite.isActive) {
-                <button
-                  (click)="openDeleteModal(workSite)"
-                  class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive/40"
-                  [attr.aria-label]="'Delete ' + workSite.name"
-                  title="Delete"
-                  >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              }
+              <button
+                (click)="openDeleteModal(workSite)"
+                class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive/40"
+                [attr.aria-label]="'Delete ' + workSite.name"
+                title="Delete"
+                >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
               </div>
             </div>
           </div>
@@ -400,6 +410,68 @@
           </button>
           <button type="button" (click)="confirmRestore()" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
             Restore site
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Employees at Work Site Modal -->
+  @if (isEmployeesModalOpen && workSiteForEmployees; as workSite) {
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 text-left backdrop-blur-sm"
+      (click)="closeEmployeesModal()"
+      >
+      <div
+        class="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg border border-border bg-card p-6 shadow-lg"
+        (click)="$event.stopPropagation()"
+        >
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-semibold tracking-tight text-foreground">Employees at {{ workSite.name }}</h2>
+          <button (click)="closeEmployeesModal()" aria-label="Close" class="text-muted-foreground transition-colors hover:text-foreground">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="-mx-6 min-h-0 flex-1 divide-y divide-border overflow-y-auto border-y border-border px-6">
+          @for (employee of getEmployees(workSite.id); track employee.id) {
+            <div class="flex items-center justify-between gap-4 py-3">
+              <div class="min-w-0">
+                <button
+                  type="button"
+                  (click)="viewEmployee(employee)"
+                  class="truncate text-sm font-medium text-foreground underline decoration-dotted underline-offset-2 transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 rounded"
+                  >
+                  {{ employee.firstName }} {{ employee.lastName }}
+                </button>
+                <p class="truncate text-xs text-muted-foreground">
+                  {{ employee.departmentName }}
+                  @if (employee.function) {
+                    <span class="text-border"> · </span>{{ employee.function }}
+                  }
+                </p>
+              </div>
+              <div class="flex shrink-0 items-center gap-1.5">
+                <span
+                  class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                  [class]="employee.hasSignedSsm ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground'"
+                  >
+                  SSM
+                </span>
+                <span
+                  class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                  [class]="employee.hasSignedSu ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground'"
+                  >
+                  SU
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="mt-4 flex justify-end">
+          <button type="button" (click)="closeEmployeesModal()" class="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent">
+            Close
           </button>
         </div>
       </div>

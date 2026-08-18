@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { WorkSiteService } from '../../services/work-site.service';
 import { UserSyncService } from '../../services/user-sync.service';
 import { WorkSite, User } from '../../models/csv-sync.model';
@@ -51,7 +52,10 @@ export class WorkSitesComponent implements OnInit {
   isRestoreModalOpen = false;
   workSiteToRestore: WorkSite | null = null;
 
-  constructor(private workSiteService: WorkSiteService, private userSyncService: UserSyncService) {}
+  isEmployeesModalOpen = false;
+  workSiteForEmployees: WorkSite | null = null;
+
+  constructor(private workSiteService: WorkSiteService, private userSyncService: UserSyncService, private router: Router) {}
 
   ngOnInit(): void {
     this.loadWorkSites();
@@ -88,6 +92,12 @@ export class WorkSitesComponent implements OnInit {
 
   getStats(workSiteId: string): WorkSiteStats {
     return this.summarize(this.allUsers.filter(u => u.workSiteId === workSiteId));
+  }
+
+  getEmployees(workSiteId: string): User[] {
+    return this.allUsers
+      .filter(u => u.workSiteId === workSiteId)
+      .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
   }
 
   private summarize(employees: User[]): WorkSiteStats {
@@ -213,5 +223,22 @@ export class WorkSitesComponent implements OnInit {
       },
       error: () => this.errorMessage = 'Failed to restore work site.'
     });
+  }
+
+  // ───────────────────────── Employees ─────────────────────────
+
+  openEmployeesModal(workSite: WorkSite): void {
+    this.workSiteForEmployees = workSite;
+    this.isEmployeesModalOpen = true;
+  }
+
+  closeEmployeesModal(): void {
+    this.isEmployeesModalOpen = false;
+    this.workSiteForEmployees = null;
+  }
+
+  viewEmployee(employee: User): void {
+    this.closeEmployeesModal();
+    this.router.navigate(['/employees', employee.id]);
   }
 }
