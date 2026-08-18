@@ -33,10 +33,12 @@ namespace SyncApp26.Application.IServices
         Task<List<UserDocument>> GetPendingUserDocumentsByIdsAsync(IEnumerable<Guid> documentIds);
 
         Task<List<Guid>> GetBulkGenerateTargetUserIdsAsync(List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null);
-        Task<IEnumerable<UserDocument>> GetManagerPendingSignaturesAsync(Guid managerId);
-        Task<IEnumerable<UserDocument>> GetManagerSignedDocumentsAsync(Guid managerId);
-        Task<IEnumerable<UserDocument>> GetInstructorPendingSignaturesAsync(Guid instructorId);
-        Task<IEnumerable<UserDocument>> GetInstructorSignedDocumentsAsync(Guid instructorId);
+        Task<(List<UserDocument> Items, int TotalCount)> GetMyPendingSignaturesPageAsync(Guid userId, int page, int pageSize);
+        Task<(List<UserDocument> Items, int TotalCount)> GetMySignedDocumentsPageAsync(Guid userId, int page, int pageSize);
+        Task<(List<UserDocument> Items, int TotalCount)> GetManagerPendingSignaturesAsync(Guid managerId, int page, int pageSize);
+        Task<(List<UserDocument> Items, int TotalCount)> GetManagerSignedDocumentsAsync(Guid managerId, int page, int pageSize);
+        Task<(List<UserDocument> Items, int TotalCount)> GetInstructorPendingSignaturesAsync(Guid instructorId, int page, int pageSize);
+        Task<(List<UserDocument> Items, int TotalCount)> GetInstructorSignedDocumentsAsync(Guid instructorId, int page, int pageSize);
         Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document);
         Task<byte[]> GeneratePdfBytesAsync(User user, UserDocument document, bool viewerIsAdmin = false);
         Task<int> GetPendingDocumentsForOfficerAsync(string documentType, Guid signerUserId);

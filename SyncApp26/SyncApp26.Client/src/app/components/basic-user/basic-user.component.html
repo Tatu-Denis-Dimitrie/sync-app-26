@@ -93,197 +93,253 @@
             Request Data Change
           </button>
         </div>
-        @if (pendingUserSignatures.length > 0 || pendingManagerSignatures.length > 0 || pendingInstructorSignatures.length > 0) {
+        @if (pendingUser.totalCount > 0 || pendingManager.totalCount > 0 || pendingInstructor.totalCount > 0) {
           <div
             class="mt-8 border-t border-border pt-6">
             <h3 class="text-xl font-bold text-foreground mb-4">Documents Pending Signature</h3>
-            <div class="space-y-4">
-              @for (doc of pendingUserSignatures; track doc) {
-                <div
-                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg shadow-sm">
-                  <div>
-                    <h4 class="font-semibold text-yellow-900">{{ doc.documentType }} File</h4>
-                    <p class="text-sm text-yellow-700">Requires your signature as employee</p>
-                    <p class="text-xs text-yellow-600 mt-1">Generated: {{ formatDate(doc.generatedAt) }}</p>
+
+            @if (pendingUser.totalCount > 0) {
+              <h4 class="text-sm font-semibold text-muted-foreground mb-2">My Documents</h4>
+              <div class="space-y-4">
+                @for (doc of pendingUser.items; track doc) {
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-yellow-200 bg-yellow-50 rounded-lg shadow-sm">
+                    <div>
+                      <h4 class="font-semibold text-yellow-900">{{ doc.documentType }} File</h4>
+                      <p class="text-sm text-yellow-700">Requires your signature as employee</p>
+                      <p class="text-xs text-yellow-600 mt-1">Generated: {{ formatDate(doc.generatedAt) }}</p>
+                    </div>
+                    <div class="flex gap-2 mt-3 sm:mt-0">
+                      <button (click)="viewDocument(doc.id)"
+                        class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        View
+                      </button>
+                      <button (click)="signDocument(doc.id)"
+                        class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+                        Sign
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex gap-2 mt-3 sm:mt-0">
-                    <button (click)="viewDocument(doc.id)"
-                      class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                      View
-                    </button>
-                    <button (click)="signDocument(doc.id)"
-                      class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
-                      Sign
-                    </button>
-                  </div>
-                </div>
+                }
+              </div>
+              @if (pendingUser.totalCount > pendingUser.pageSize) {
+                <app-pagination [currentPage]="pendingUser.page" [totalItems]="pendingUser.totalCount"
+                [pageSize]="pendingUser.pageSize" (pageChange)="onPendingUserPageChange($event)"></app-pagination>
               }
-              @for (doc of pendingManagerSignatures; track doc) {
-                <div
-                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-blue-200 bg-blue-50 rounded-lg shadow-sm">
-                  <div>
-                    <h4 class="font-semibold text-blue-900">{{ doc.documentType }} File (Subordinate Employee)
-                    </h4>
-                    <p class="text-sm text-blue-700">Requires your countersignature as manager</p>
-                    <p class="text-xs text-blue-600 mt-1">Employee signed: {{ formatDate(doc.userSignedAt) }}
-                    </p>
+            }
+
+            @if (pendingManager.totalCount > 0) {
+              <h4 class="text-sm font-semibold text-muted-foreground mb-2 mt-6">Awaiting Your Countersignature</h4>
+              <div class="space-y-4">
+                @for (doc of pendingManager.items; track doc) {
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-blue-200 bg-blue-50 rounded-lg shadow-sm">
+                    <div>
+                      <h4 class="font-semibold text-blue-900">{{ doc.documentType }} File (Subordinate Employee)
+                      </h4>
+                      <p class="text-sm text-blue-700">Requires your countersignature as manager</p>
+                      <p class="text-xs text-blue-600 mt-1">Employee signed: {{ formatDate(doc.userSignedAt) }}
+                      </p>
+                    </div>
+                    <div class="flex gap-2 mt-3 sm:mt-0">
+                      <button (click)="viewDocument(doc.id)"
+                        class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        View
+                      </button>
+                      <button (click)="signDocument(doc.id)"
+                        class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+                        Countersign
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex gap-2 mt-3 sm:mt-0">
-                    <button (click)="viewDocument(doc.id)"
-                      class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                      View
-                    </button>
-                    <button (click)="signDocument(doc.id)"
-                      class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
-                      Countersign
-                    </button>
-                  </div>
-                </div>
+                }
+              </div>
+              @if (pendingManager.totalCount > pendingManager.pageSize) {
+                <app-pagination [currentPage]="pendingManager.page" [totalItems]="pendingManager.totalCount"
+                [pageSize]="pendingManager.pageSize" (pageChange)="onPendingManagerPageChange($event)"></app-pagination>
               }
-              @for (doc of pendingInstructorSignatures; track doc) {
-                <div
-                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-purple-200 bg-purple-50 rounded-lg shadow-sm">
-                  <div>
-                    <h4 class="font-semibold text-purple-900">{{ doc.documentType }} File (Training)
-                    </h4>
-                    <p class="text-sm text-purple-700">Requires your signature as instructor</p>
-                    <p class="text-xs text-purple-600 mt-1">Manager signed: {{ formatDate(doc.managerSignedAt) }}
-                    </p>
+            }
+
+            @if (pendingInstructor.totalCount > 0) {
+              <h4 class="text-sm font-semibold text-muted-foreground mb-2 mt-6">Awaiting Your Instructor Signature</h4>
+              <div class="space-y-4">
+                @for (doc of pendingInstructor.items; track doc) {
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-purple-200 bg-purple-50 rounded-lg shadow-sm">
+                    <div>
+                      <h4 class="font-semibold text-purple-900">{{ doc.documentType }} File (Training)
+                      </h4>
+                      <p class="text-sm text-purple-700">Requires your signature as instructor</p>
+                      <p class="text-xs text-purple-600 mt-1">Manager signed: {{ formatDate(doc.managerSignedAt) }}
+                      </p>
+                    </div>
+                    <div class="flex gap-2 mt-3 sm:mt-0">
+                      <button (click)="viewDocument(doc.id)"
+                        class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        View
+                      </button>
+                      <button (click)="signDocument(doc.id)"
+                        class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+                        Sign
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex gap-2 mt-3 sm:mt-0">
-                    <button (click)="viewDocument(doc.id)"
-                      class="px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 border border-gray-300 transition flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                      View
-                    </button>
-                    <button (click)="signDocument(doc.id)"
-                      class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
-                      Sign
-                    </button>
-                  </div>
-                </div>
+                }
+              </div>
+              @if (pendingInstructor.totalCount > pendingInstructor.pageSize) {
+                <app-pagination [currentPage]="pendingInstructor.page" [totalItems]="pendingInstructor.totalCount"
+                [pageSize]="pendingInstructor.pageSize" (pageChange)="onPendingInstructorPageChange($event)"></app-pagination>
               }
-            </div>
+            }
           </div>
         }
         <!-- COMPLETED SIGNATURES -->
-        @if (signedUserSignatures.length > 0 || signedManagerSignatures.length > 0 || signedInstructorSignatures.length > 0) {
+        @if (signedUser.totalCount > 0 || signedManager.totalCount > 0 || signedInstructor.totalCount > 0) {
           <div
             class="mt-8 border-t border-border pt-6">
             <h3 class="text-xl font-bold text-foreground mb-4">Signed Documents</h3>
-            <div class="space-y-4">
-              @for (doc of signedUserSignatures; track doc) {
-                <div
-                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
-                  <div>
-                    <h4 class="font-semibold text-green-900">{{ doc.documentType }} File</h4>
-                    <p class="text-sm text-green-700">Signed by you on {{ formatDate(doc.userSignedAt) }}</p>
-                    <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                        </path>
-                      </svg>
-                      <span>Secured &amp; Verified</span>
+
+            @if (signedUser.totalCount > 0) {
+              <h4 class="text-sm font-semibold text-muted-foreground mb-2">My Documents</h4>
+              <div class="space-y-4">
+                @for (doc of signedUser.items; track doc) {
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+                    <div>
+                      <h4 class="font-semibold text-green-900">{{ doc.documentType }} File</h4>
+                      <p class="text-sm text-green-700">Signed by you on {{ formatDate(doc.userSignedAt) }}</p>
+                      <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                          </path>
+                        </svg>
+                        <span>Secured &amp; Verified</span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
+                      <button (click)="viewDocument(doc.id)"
+                        class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        View PDF
+                      </button>
+                      <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                        {{ doc.status === 'Completed' ? 'Completed' : 'Awaiting manager' }}
+                      </span>
                     </div>
                   </div>
-                  <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
-                    <button (click)="viewDocument(doc.id)"
-                      class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                      View PDF
-                    </button>
-                    <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                      {{ doc.status === 'Completed' ? 'Completed' : 'Awaiting manager' }}
-                    </span>
-                  </div>
-                </div>
+                }
+              </div>
+              @if (signedUser.totalCount > signedUser.pageSize) {
+                <app-pagination [currentPage]="signedUser.page" [totalItems]="signedUser.totalCount"
+                [pageSize]="signedUser.pageSize" (pageChange)="onSignedUserPageChange($event)"></app-pagination>
               }
-              @for (doc of signedManagerSignatures; track doc) {
-                <div
-                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
-                  <div>
-                    <h4 class="font-semibold text-green-900">{{ doc.documentType }} File (Subordinate Employee)
-                    </h4>
-                    <p class="text-sm text-green-700">Countersigned by you on {{ formatDate(doc.managerSignedAt)
-                    }}</p>
-                    <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                        </path>
-                      </svg>
-                      <span>Secured &amp; Verified</span>
+            }
+
+            @if (signedManager.totalCount > 0) {
+              <h4 class="text-sm font-semibold text-muted-foreground mb-2 mt-6">Countersigned By You</h4>
+              <div class="space-y-4">
+                @for (doc of signedManager.items; track doc) {
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+                    <div>
+                      <h4 class="font-semibold text-green-900">{{ doc.documentType }} File (Subordinate Employee)
+                      </h4>
+                      <p class="text-sm text-green-700">Countersigned by you on {{ formatDate(doc.managerSignedAt)
+                      }}</p>
+                      <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                          </path>
+                        </svg>
+                        <span>Secured &amp; Verified</span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
+                      <button (click)="viewDocument(doc.id)"
+                        class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        View PDF
+                      </button>
+                      <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                        Completed
+                      </span>
                     </div>
                   </div>
-                  <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
-                    <button (click)="viewDocument(doc.id)"
-                      class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                      View PDF
-                    </button>
-                    <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                      Completed
-                    </span>
-                  </div>
-                </div>
+                }
+              </div>
+              @if (signedManager.totalCount > signedManager.pageSize) {
+                <app-pagination [currentPage]="signedManager.page" [totalItems]="signedManager.totalCount"
+                [pageSize]="signedManager.pageSize" (pageChange)="onSignedManagerPageChange($event)"></app-pagination>
               }
-              @for (doc of signedInstructorSignatures; track doc) {
-                <div
-                  class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
-                  <div>
-                    <h4 class="font-semibold text-green-900">{{ doc.documentType }} File (Training)
-                    </h4>
-                    <p class="text-sm text-green-700">Signed as instructor on {{ formatDate(doc.instructorSignedAt)
-                    }}</p>
-                    <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                        </path>
-                      </svg>
-                      <span>Secured &amp; Verified</span>
+            }
+
+            @if (signedInstructor.totalCount > 0) {
+              <h4 class="text-sm font-semibold text-muted-foreground mb-2 mt-6">Signed As Instructor</h4>
+              <div class="space-y-4">
+                @for (doc of signedInstructor.items; track doc) {
+                  <div
+                    class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-green-200 bg-green-50 rounded-lg shadow-sm">
+                    <div>
+                      <h4 class="font-semibold text-green-900">{{ doc.documentType }} File (Training)
+                      </h4>
+                      <p class="text-sm text-green-700">Signed as instructor on {{ formatDate(doc.instructorSignedAt)
+                      }}</p>
+                      <div class="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                          </path>
+                        </svg>
+                        <span>Secured &amp; Verified</span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
+                      <button (click)="viewDocument(doc.id)"
+                        class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                          </path>
+                        </svg>
+                        View PDF
+                      </button>
+                      <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                        Completed
+                      </span>
                     </div>
                   </div>
-                  <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-3 sm:mt-0">
-                    <button (click)="viewDocument(doc.id)"
-                      class="px-3 py-2 bg-white text-teal-700 text-sm font-medium rounded hover:bg-teal-50 border border-teal-300 transition flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                        </path>
-                      </svg>
-                      View PDF
-                    </button>
-                    <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                      Completed
-                    </span>
-                  </div>
-                </div>
+                }
+              </div>
+              @if (signedInstructor.totalCount > signedInstructor.pageSize) {
+                <app-pagination [currentPage]="signedInstructor.page" [totalItems]="signedInstructor.totalCount"
+                [pageSize]="signedInstructor.pageSize" (pageChange)="onSignedInstructorPageChange($event)"></app-pagination>
               }
-            </div>
+            }
           </div>
         }
         <!-- ── MY SIGNATURE ────────────────────────────────────────── -->

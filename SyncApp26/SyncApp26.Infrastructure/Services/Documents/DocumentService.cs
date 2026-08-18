@@ -1317,33 +1317,77 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<UserDocument>> GetManagerPendingSignaturesAsync(Guid managerId)
+        // Pushes the "PendingUser"/UserSignedAt filter into SQL rather than reusing
+        // GetUserDocumentsAsync (which two other callers depend on for the full, unfiltered set).
+        // Include trimmed to Department+Function — the only User navigations MapDocument reads —
+        // to avoid fetching unused InitialTrainings/PeriodicTrainings/WorkSite/AssignedTo data on
+        // every page, and to sidestep combining Skip/Take with multiple sibling collection Includes
+        // (a pattern EF Core warns about, even though it did not reproduce incorrect paging in
+        // testing against this EF Core 9 / SQLite combination).
+        public async Task<(List<UserDocument> Items, int TotalCount)> GetMyPendingSignaturesPageAsync(Guid userId, int page, int pageSize)
         {
-            return await _context.UserDocuments
+            var query = _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.WorkSite)
+                    .ThenInclude(u => u.Function)
+                .Where(d => d.UserId == userId && d.Status == DocumentStatuses.PendingUser);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        public async Task<(List<UserDocument> Items, int TotalCount)> GetMySignedDocumentsPageAsync(Guid userId, int page, int pageSize)
+        {
+            var query = _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
                 .Include(d => d.User)
                     .ThenInclude(u => u.Function)
+                .Where(d => d.UserId == userId && d.UserSignedAt != null);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        public async Task<(List<UserDocument> Items, int TotalCount)> GetManagerPendingSignaturesAsync(Guid managerId, int page, int pageSize)
+        {
+            var query = _context.UserDocuments
                 .Include(d => d.User)
-                    .ThenInclude(u => u.AssignedTo)
+                    .ThenInclude(u => u.Department)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.InitialTrainings)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings)
+                    .ThenInclude(u => u.Function)
                 // d.UserId != managerId: a user can end up as their own AssignedTo (CSV sync has no
                 // self-assignment guard), and nobody countersigns their own document.
                 .Where(d => d.User != null && d.User.AssignedToId == managerId
                     && d.UserId != managerId
                     && d.Status == DocumentStatuses.PendingManager
                     && d.UserSignedAt != null
-                    && d.ManagerSignedAt == null)
+                    && d.ManagerSignedAt == null);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
-        public async Task<IEnumerable<UserDocument>> GetManagerSignedDocumentsAsync(Guid managerId)
+        public async Task<(List<UserDocument> Items, int TotalCount)> GetManagerSignedDocumentsAsync(Guid managerId, int page, int pageSize)
         {
             var signedDocIds = await _context.SignatureRecords
                 .Where(r => r.SignerUserId == managerId && r.SignerRole == "Manager")
@@ -1351,50 +1395,41 @@ namespace SyncApp26.Infrastructure.Services
                 .Distinct()
                 .ToListAsync();
 
-            if (signedDocIds.Count == 0) return new List<UserDocument>();
+            if (signedDocIds.Count == 0) return (new List<UserDocument>(), 0);
 
-            return await _context.UserDocuments
+            var query = _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.WorkSite)
-                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.AssignedTo)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.InitialTrainings)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings)
-                .Where(d => signedDocIds.Contains(d.Id))
+                .Where(d => signedDocIds.Contains(d.Id));
+
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
         // "Pending my signature as instructor" is now a role question — is the caller the SsmOfficer/
         // SuOfficer for this document's type — not a per-row InstructorId match: that field stays null
         // until someone actually signs (see ApplySignatureToPeriodicTraining), so it can never
         // pre-identify who's still waiting to sign.
-        public async Task<IEnumerable<UserDocument>> GetInstructorPendingSignaturesAsync(Guid instructorId)
+        public async Task<(List<UserDocument> Items, int TotalCount)> GetInstructorPendingSignaturesAsync(Guid instructorId, int page, int pageSize)
         {
             bool isSsmOfficer = await _context.Users.Where(u => u.Id == instructorId).WithRole(Roles.SsmOfficer).AnyAsync();
             bool isSuOfficer = await _context.Users.Where(u => u.Id == instructorId).WithRole(Roles.SuOfficer).AnyAsync();
 
-            if (!isSsmOfficer && !isSuOfficer) return new List<UserDocument>();
+            if (!isSsmOfficer && !isSuOfficer) return (new List<UserDocument>(), 0);
 
-            return await _context.UserDocuments
+            var query = _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.WorkSite)
-                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.AssignedTo)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.InitialTrainings)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings)
                 // The officer role is company-wide, so without the owner exclusion an officer's own
                 // document would sit in their own "awaiting my signature" queue.
                 .Where(d => d.Status == DocumentStatuses.PendingInstructor
@@ -1402,15 +1437,22 @@ namespace SyncApp26.Infrastructure.Services
                     && d.ManagerSignedAt != null
                     && d.InstructorSignedAt == null
                     && d.DocumentType != null
-                    && ((isSsmOfficer && d.DocumentType.ToUpper() == DocumentTypes.Ssm) || (isSuOfficer && d.DocumentType.ToUpper() == DocumentTypes.Su)))
+                    && ((isSsmOfficer && d.DocumentType.ToUpper() == DocumentTypes.Ssm) || (isSuOfficer && d.DocumentType.ToUpper() == DocumentTypes.Su)));
+
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
         // "Documents I've signed as instructor" is a historical-fact question, so it's answered
         // from the SignatureRecord audit log rather than by re-resolving today's InstructorId —
         // which may have since been reassigned to someone else on that training row.
-        public async Task<IEnumerable<UserDocument>> GetInstructorSignedDocumentsAsync(Guid instructorId)
+        public async Task<(List<UserDocument> Items, int TotalCount)> GetInstructorSignedDocumentsAsync(Guid instructorId, int page, int pageSize)
         {
             var signedDocIds = await _context.SignatureRecords
                 .Where(r => r.SignerUserId == instructorId && r.SignerRole == "Instructor")
@@ -1418,24 +1460,23 @@ namespace SyncApp26.Infrastructure.Services
                 .Distinct()
                 .ToListAsync();
 
-            if (signedDocIds.Count == 0) return new List<UserDocument>();
+            if (signedDocIds.Count == 0) return (new List<UserDocument>(), 0);
 
-            return await _context.UserDocuments
+            var query = _context.UserDocuments
                 .Include(d => d.User)
                     .ThenInclude(u => u.Department)
                 .Include(d => d.User)
-                    .ThenInclude(u => u.WorkSite)
-                .Include(d => d.User)
                     .ThenInclude(u => u.Function)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.AssignedTo)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.InitialTrainings)
-                .Include(d => d.User)
-                    .ThenInclude(u => u.PeriodicTrainings)
-                .Where(d => signedDocIds.Contains(d.Id))
+                .Where(d => signedDocIds.Contains(d.Id));
+
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<HashSet<Guid>> GetUserIdsWithDocumentTypeAsync(string documentType)

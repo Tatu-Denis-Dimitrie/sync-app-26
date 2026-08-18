@@ -13,11 +13,13 @@ import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } 
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
+import { PaginationComponent } from '../pagination/pagination.component';
+import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
 
 @Component({
   selector: 'app-basic-user',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   templateUrl: './basic-user.component.html',
   styleUrls: ['./basic-user.component.css']
 })
@@ -26,12 +28,21 @@ export class BasicUserComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
 
-  pendingUserSignatures: any[] = [];
-  pendingManagerSignatures: any[] = [];
-  pendingInstructorSignatures: any[] = [];
-  signedUserSignatures: any[] = [];
-  signedManagerSignatures: any[] = [];
-  signedInstructorSignatures: any[] = [];
+  // Each of the 6 mini-lists is paginated server-side and fetched independently — see
+  // loadPendingSignatures() / the 6 load*Signatures() methods below.
+  pendingUser: DocumentPageState = emptyDocumentPageState(5);
+  pendingManager: DocumentPageState = emptyDocumentPageState(5);
+  pendingInstructor: DocumentPageState = emptyDocumentPageState(5);
+  signedUser: DocumentPageState = emptyDocumentPageState(5);
+  signedManager: DocumentPageState = emptyDocumentPageState(5);
+  signedInstructor: DocumentPageState = emptyDocumentPageState(5);
+
+  onPendingUserPageChange(page: number): void { this.loadPendingUserSignatures(page); }
+  onPendingManagerPageChange(page: number): void { this.loadPendingManagerSignatures(page); }
+  onPendingInstructorPageChange(page: number): void { this.loadPendingInstructorSignatures(page); }
+  onSignedUserPageChange(page: number): void { this.loadSignedUserSignatures(page); }
+  onSignedManagerPageChange(page: number): void { this.loadSignedManagerSignatures(page); }
+  onSignedInstructorPageChange(page: number): void { this.loadSignedInstructorSignatures(page); }
 
   // ── Saved Signature ──────────────────────────────────────────────────────
   savedSignature: UserSignature | null = null;
@@ -143,57 +154,57 @@ export class BasicUserComponent implements OnInit {
   }
 
   loadPendingSignatures(): void {
-    // 1. Fetch documents where the user is an employee and needs to sign
-    this.http.get<any[]>(`${environment.apiUrl}/Document/my-pending-signatures`).subscribe({
-      next: (docs) => {
-        this.pendingUserSignatures = docs;
-      },
-      error: (err) => console.error('Failed to load pending user signatures', err)
-    });
-
-    // 2. Fetch documents where the user is a manager and needs to sign
-    this.http.get<any[]>(`${environment.apiUrl}/Document/manager-pending-signatures`).subscribe({
-      next: (docs) => {
-        this.pendingManagerSignatures = docs;
-      },
-      error: (err) => console.error('Failed to load pending manager signatures', err)
-    });
-
-    // 3. Fetch documents where the user is the linked instructor and needs to sign. Any user can
-    // be selected as an instructor regardless of role, so this is fetched unconditionally, same
-    // as the manager queue above — it's just empty for anyone not currently an instructor.
-    this.http.get<any[]>(`${environment.apiUrl}/Document/instructor-pending-signatures`).subscribe({
-      next: (docs) => {
-        this.pendingInstructorSignatures = docs;
-      },
-      error: (err) => console.error('Failed to load pending instructor signatures', err)
-    });
-
-    // 4. Fetch documents completed by user
-    this.http.get<any[]>(`${environment.apiUrl}/Document/my-signed-documents`).subscribe({
-      next: (docs) => {
-        this.signedUserSignatures = docs;
-      },
-      error: (err) => console.error('Failed to load signed user documents', err)
-    });
-
-    // 5. Fetch documents completed by manager
+    this.loadPendingUserSignatures();
+    this.loadPendingManagerSignatures();
+    this.loadPendingInstructorSignatures();
+    this.loadSignedUserSignatures();
+    // Predates pagination, unrelated to it: manager-signed-documents is only meaningful for line
+    // managers, so it's the one load call gated by role (manager-pending-signatures is not).
     if (this.user?.role === UserRole.LineManager) {
-      this.http.get<any[]>(`${environment.apiUrl}/Document/manager-signed-documents`).subscribe({
-        next: (docs) => {
-          this.signedManagerSignatures = docs;
-        },
-        error: (err) => console.error('Failed to load signed manager documents', err)
-      });
+      this.loadSignedManagerSignatures();
     }
+    this.loadSignedInstructorSignatures();
+  }
 
-    // 6. Fetch documents completed as instructor
-    this.http.get<any[]>(`${environment.apiUrl}/Document/instructor-signed-documents`).subscribe({
-      next: (docs) => {
-        this.signedInstructorSignatures = docs;
-      },
-      error: (err) => console.error('Failed to load signed instructor documents', err)
+  private loadDocumentPage(endpoint: string, target: DocumentPageState, page: number,
+    assign: (state: DocumentPageState) => void, errorLabel: string): void {
+    const params = { page, pageSize: target.pageSize };
+    this.http.get<DocumentListPageResponse>(`${environment.apiUrl}/Document/${endpoint}`, { params }).subscribe({
+      next: (res) => assign({ ...target, items: res.items, totalCount: res.totalCount, page }),
+      error: (err) => console.error(`Failed to load ${errorLabel}`, err)
     });
+  }
+
+  // 1. Documents where the user is an employee and needs to sign
+  loadPendingUserSignatures(page = 1): void {
+    this.loadDocumentPage('my-pending-signatures', this.pendingUser, page, s => this.pendingUser = s, 'pending user signatures');
+  }
+
+  // 2. Documents where the user is a manager and needs to sign
+  loadPendingManagerSignatures(page = 1): void {
+    this.loadDocumentPage('manager-pending-signatures', this.pendingManager, page, s => this.pendingManager = s, 'pending manager signatures');
+  }
+
+  // 3. Documents where the user is the linked instructor and needs to sign. Any user can be
+  // selected as an instructor regardless of role, so this is fetched unconditionally, same as the
+  // manager queue above — it's just empty for anyone not currently an instructor.
+  loadPendingInstructorSignatures(page = 1): void {
+    this.loadDocumentPage('instructor-pending-signatures', this.pendingInstructor, page, s => this.pendingInstructor = s, 'pending instructor signatures');
+  }
+
+  // 4. Documents completed by user
+  loadSignedUserSignatures(page = 1): void {
+    this.loadDocumentPage('my-signed-documents', this.signedUser, page, s => this.signedUser = s, 'signed user documents');
+  }
+
+  // 5. Documents completed by manager
+  loadSignedManagerSignatures(page = 1): void {
+    this.loadDocumentPage('manager-signed-documents', this.signedManager, page, s => this.signedManager = s, 'signed manager documents');
+  }
+
+  // 6. Documents completed as instructor
+  loadSignedInstructorSignatures(page = 1): void {
+    this.loadDocumentPage('instructor-signed-documents', this.signedInstructor, page, s => this.signedInstructor = s, 'signed instructor documents');
   }
 
   signDocument(documentId: string): void {

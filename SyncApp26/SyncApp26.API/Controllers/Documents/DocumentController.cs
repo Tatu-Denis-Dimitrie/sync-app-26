@@ -5,6 +5,7 @@ using SyncApp26.API.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Response.SignatureVerification;
+using SyncApp26.Shared.DTOs.Response.Document;
 using SyncApp26.API.Extensions;
 using System.Collections.Concurrent;
 
@@ -467,72 +468,75 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("my-pending-signatures")]
-        public async Task<IActionResult> GetMyPendingSignatures()
+        public async Task<ActionResult<DocumentListPageDTO>> GetMyPendingSignatures([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            // Fetch documents where user is the employee and status is PendingUser
-            var myDocuments = await _documentService.GetUserDocumentsAsync(userId);
-            var pendingAsUser = myDocuments.Where(d => d.Status == "PendingUser");
-
-            return Ok(await MapDocumentsAsync(pendingAsUser));
+            var (items, totalCount) = await _documentService.GetMyPendingSignaturesPageAsync(userId, page, pageSize);
+            return Ok(new DocumentListPageDTO { Items = (await MapDocumentsAsync(items)).ToList(), TotalCount = totalCount });
         }
 
         [HttpGet("manager-pending-signatures")]
-        public async Task<IActionResult> GetManagerPendingSignatures()
+        public async Task<ActionResult<DocumentListPageDTO>> GetManagerPendingSignatures([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var pendingAsManager = await _documentService.GetManagerPendingSignaturesAsync(userId);
-
-            return Ok(await MapDocumentsAsync(pendingAsManager));
+            var (items, totalCount) = await _documentService.GetManagerPendingSignaturesAsync(userId, page, pageSize);
+            return Ok(new DocumentListPageDTO { Items = (await MapDocumentsAsync(items)).ToList(), TotalCount = totalCount });
         }
 
         [HttpGet("my-signed-documents")]
-        public async Task<IActionResult> GetMySignedDocuments()
+        public async Task<ActionResult<DocumentListPageDTO>> GetMySignedDocuments([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var myDocuments = await _documentService.GetUserDocumentsAsync(userId);
-            var signedAsUser = myDocuments.Where(d => d.UserSignedAt != null);
-
-            return Ok(await MapDocumentsAsync(signedAsUser));
+            var (items, totalCount) = await _documentService.GetMySignedDocumentsPageAsync(userId, page, pageSize);
+            return Ok(new DocumentListPageDTO { Items = (await MapDocumentsAsync(items)).ToList(), TotalCount = totalCount });
         }
 
         [HttpGet("manager-signed-documents")]
-        public async Task<IActionResult> GetManagerSignedDocuments()
+        public async Task<ActionResult<DocumentListPageDTO>> GetManagerSignedDocuments([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var signedAsManager = await _documentService.GetManagerSignedDocumentsAsync(userId);
-
-            return Ok(await MapDocumentsAsync(signedAsManager));
+            var (items, totalCount) = await _documentService.GetManagerSignedDocumentsAsync(userId, page, pageSize);
+            return Ok(new DocumentListPageDTO { Items = (await MapDocumentsAsync(items)).ToList(), TotalCount = totalCount });
         }
 
         [HttpGet("instructor-pending-signatures")]
-        public async Task<IActionResult> GetInstructorPendingSignatures()
+        public async Task<ActionResult<DocumentListPageDTO>> GetInstructorPendingSignatures([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var pendingAsInstructor = await _documentService.GetInstructorPendingSignaturesAsync(userId);
-
-            return Ok(await MapDocumentsAsync(pendingAsInstructor));
+            var (items, totalCount) = await _documentService.GetInstructorPendingSignaturesAsync(userId, page, pageSize);
+            return Ok(new DocumentListPageDTO { Items = (await MapDocumentsAsync(items)).ToList(), TotalCount = totalCount });
         }
 
         [HttpGet("instructor-signed-documents")]
-        public async Task<IActionResult> GetInstructorSignedDocuments()
+        public async Task<ActionResult<DocumentListPageDTO>> GetInstructorSignedDocuments([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var signedAsInstructor = await _documentService.GetInstructorSignedDocumentsAsync(userId);
-
-            return Ok(await MapDocumentsAsync(signedAsInstructor));
+            var (items, totalCount) = await _documentService.GetInstructorSignedDocumentsAsync(userId, page, pageSize);
+            return Ok(new DocumentListPageDTO { Items = (await MapDocumentsAsync(items)).ToList(), TotalCount = totalCount });
         }
 
         /// <summary>

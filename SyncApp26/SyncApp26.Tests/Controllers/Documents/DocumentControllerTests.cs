@@ -7,6 +7,7 @@ using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Shared.DTOs.Response.Document;
 using SyncApp26.Tests.TestHelpers;
 using static SyncApp26.API.Controllers.DocumentController;
 
@@ -504,7 +505,7 @@ namespace SyncApp26.Tests.Controllers.Documents
 
             var result = await controller.GetMyPendingSignatures();
 
-            Assert.IsType<UnauthorizedResult>(result);
+            Assert.IsType<UnauthorizedResult>(result.Result);
         }
 
         [Fact]
@@ -513,14 +514,29 @@ namespace SyncApp26.Tests.Controllers.Documents
             var callerId = Guid.NewGuid();
             var controller = CreateController(callerId);
             var pending = MakeDocument(user: MakeUser(id: callerId), status: "PendingUser");
-            var completed = MakeDocument(user: MakeUser(id: callerId), status: "Completed");
-            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(callerId)).ReturnsAsync(new[] { pending, completed });
+            _documentServiceMock.Setup(s => s.GetMyPendingSignaturesPageAsync(callerId, 1, 10))
+                .ReturnsAsync((new List<UserDocument> { pending }, 1));
 
             var result = await controller.GetMyPendingSignatures();
 
-            var ok = Assert.IsType<OkObjectResult>(result);
-            var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(ok.Value).Cast<object>().ToList();
-            Assert.Single(items);
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var page = Assert.IsType<DocumentListPageDTO>(ok.Value);
+            Assert.Single(page.Items);
+            Assert.Equal(1, page.TotalCount);
+        }
+
+        [Fact]
+        public async Task GetMyPendingSignatures_ClampsPageAndPageSize()
+        {
+            var callerId = Guid.NewGuid();
+            var controller = CreateController(callerId);
+            _documentServiceMock.Setup(s => s.GetMyPendingSignaturesPageAsync(callerId, 1, 100))
+                .ReturnsAsync((new List<UserDocument>(), 0));
+
+            var result = await controller.GetMyPendingSignatures(page: 0, pageSize: 500);
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            _documentServiceMock.Verify(s => s.GetMyPendingSignaturesPageAsync(callerId, 1, 100), Times.Once);
         }
 
         [Fact]
@@ -529,13 +545,15 @@ namespace SyncApp26.Tests.Controllers.Documents
             var managerId = Guid.NewGuid();
             var controller = CreateController(managerId);
             var awaiting = MakeDocument(status: "PendingManager");
-            _documentServiceMock.Setup(s => s.GetManagerPendingSignaturesAsync(managerId)).ReturnsAsync(new[] { awaiting });
+            _documentServiceMock.Setup(s => s.GetManagerPendingSignaturesAsync(managerId, 1, 10))
+                .ReturnsAsync((new List<UserDocument> { awaiting }, 1));
 
             var result = await controller.GetManagerPendingSignatures();
 
-            var ok = Assert.IsType<OkObjectResult>(result);
-            var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(ok.Value).Cast<object>().ToList();
-            Assert.Single(items);
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var page = Assert.IsType<DocumentListPageDTO>(ok.Value);
+            Assert.Single(page.Items);
+            Assert.Equal(1, page.TotalCount);
         }
 
         [Fact]
@@ -545,14 +563,15 @@ namespace SyncApp26.Tests.Controllers.Documents
             var controller = CreateController(callerId);
             var signed = MakeDocument(user: MakeUser(id: callerId));
             signed.UserSignedAt = DateTime.UtcNow;
-            var unsigned = MakeDocument(user: MakeUser(id: callerId));
-            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(callerId)).ReturnsAsync(new[] { signed, unsigned });
+            _documentServiceMock.Setup(s => s.GetMySignedDocumentsPageAsync(callerId, 1, 10))
+                .ReturnsAsync((new List<UserDocument> { signed }, 1));
 
             var result = await controller.GetMySignedDocuments();
 
-            var ok = Assert.IsType<OkObjectResult>(result);
-            var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(ok.Value).Cast<object>().ToList();
-            Assert.Single(items);
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var page = Assert.IsType<DocumentListPageDTO>(ok.Value);
+            Assert.Single(page.Items);
+            Assert.Equal(1, page.TotalCount);
         }
 
         [Fact]
@@ -562,13 +581,50 @@ namespace SyncApp26.Tests.Controllers.Documents
             var controller = CreateController(managerId);
             var signed = MakeDocument();
             signed.ManagerSignedAt = DateTime.UtcNow;
-            _documentServiceMock.Setup(s => s.GetManagerSignedDocumentsAsync(managerId)).ReturnsAsync(new[] { signed });
+            _documentServiceMock.Setup(s => s.GetManagerSignedDocumentsAsync(managerId, 1, 10))
+                .ReturnsAsync((new List<UserDocument> { signed }, 1));
 
             var result = await controller.GetManagerSignedDocuments();
 
-            var ok = Assert.IsType<OkObjectResult>(result);
-            var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(ok.Value).Cast<object>().ToList();
-            Assert.Single(items);
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var page = Assert.IsType<DocumentListPageDTO>(ok.Value);
+            Assert.Single(page.Items);
+            Assert.Equal(1, page.TotalCount);
+        }
+
+        [Fact]
+        public async Task GetInstructorPendingSignatures_ReturnsDocsFromService()
+        {
+            var instructorId = Guid.NewGuid();
+            var controller = CreateController(instructorId);
+            var awaiting = MakeDocument(status: "PendingInstructor");
+            _documentServiceMock.Setup(s => s.GetInstructorPendingSignaturesAsync(instructorId, 1, 10))
+                .ReturnsAsync((new List<UserDocument> { awaiting }, 1));
+
+            var result = await controller.GetInstructorPendingSignatures();
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var page = Assert.IsType<DocumentListPageDTO>(ok.Value);
+            Assert.Single(page.Items);
+            Assert.Equal(1, page.TotalCount);
+        }
+
+        [Fact]
+        public async Task GetInstructorSignedDocuments_ReturnsDocsFromService()
+        {
+            var instructorId = Guid.NewGuid();
+            var controller = CreateController(instructorId);
+            var signed = MakeDocument();
+            signed.InstructorSignedAt = DateTime.UtcNow;
+            _documentServiceMock.Setup(s => s.GetInstructorSignedDocumentsAsync(instructorId, 1, 10))
+                .ReturnsAsync((new List<UserDocument> { signed }, 1));
+
+            var result = await controller.GetInstructorSignedDocuments();
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var page = Assert.IsType<DocumentListPageDTO>(ok.Value);
+            Assert.Single(page.Items);
+            Assert.Equal(1, page.TotalCount);
         }
 
         [Fact]

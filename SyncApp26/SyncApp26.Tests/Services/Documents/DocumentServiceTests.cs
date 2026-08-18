@@ -651,11 +651,11 @@ namespace SyncApp26.Tests.Services.Documents
             _dbFixture.Context.SaveChanges();
             SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: instructor.Id);
 
-            var forAssignedManager = await service.GetManagerPendingSignaturesAsync(assignedManager.Id);
-            var forInstructor = await service.GetManagerPendingSignaturesAsync(instructor.Id);
+            var forAssignedManager = await service.GetManagerPendingSignaturesAsync(assignedManager.Id, 1, 50);
+            var forInstructor = await service.GetManagerPendingSignaturesAsync(instructor.Id, 1, 50);
 
-            Assert.Single(forAssignedManager);
-            Assert.Empty(forInstructor);
+            Assert.Single(forAssignedManager.Items);
+            Assert.Empty(forInstructor.Items);
         }
 
         [Fact]
@@ -688,11 +688,11 @@ namespace SyncApp26.Tests.Services.Documents
             });
             _dbFixture.Context.SaveChanges();
 
-            var forOriginal = await service.GetManagerSignedDocumentsAsync(originalInstructor.Id);
-            var forReassigned = await service.GetManagerSignedDocumentsAsync(reassignedInstructor.Id);
+            var forOriginal = await service.GetManagerSignedDocumentsAsync(originalInstructor.Id, 1, 50);
+            var forReassigned = await service.GetManagerSignedDocumentsAsync(reassignedInstructor.Id, 1, 50);
 
-            Assert.Single(forOriginal);
-            Assert.Empty(forReassigned);
+            Assert.Single(forOriginal.Items);
+            Assert.Empty(forReassigned.Items);
         }
 
         [Fact]
@@ -846,10 +846,256 @@ namespace SyncApp26.Tests.Services.Documents
             colleagueDoc.ManagerSignedAt = DateTime.UtcNow;
             _dbFixture.Context.SaveChanges();
 
-            var pending = await service.GetInstructorPendingSignaturesAsync(officer.Id);
+            var pending = await service.GetInstructorPendingSignaturesAsync(officer.Id, 1, 50);
 
-            Assert.Equal(colleagueDoc.Id, Assert.Single(pending).Id);
-            Assert.DoesNotContain(pending, d => d.Id == ownDoc.Id);
+            Assert.Equal(colleagueDoc.Id, Assert.Single(pending.Items).Id);
+            Assert.DoesNotContain(pending.Items, d => d.Id == ownDoc.Id);
+        }
+
+        [Fact]
+        public async Task GetInstructorSignedDocumentsAsync_UsesSignatureRecordHistory_NotCurrentInstructorId()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var originalInstructor = SeedUser("Elena", "Marin", function, roleName: Roles.SsmOfficer);
+            var reassignedInstructor = SeedUser("Ion", "Dobre", function, roleName: Roles.SsmOfficer);
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SSM", "Completed");
+            doc.InstructorSignedAt = DateTime.UtcNow;
+            _dbFixture.Context.SaveChanges();
+            var training = SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15), instructorId: reassignedInstructor.Id);
+
+            _dbFixture.Context.SignatureRecords.Add(new SignatureRecord
+            {
+                Id = Guid.NewGuid(),
+                UserDocumentId = doc.Id,
+                PeriodicTrainingId = training.Id,
+                SignerRole = "Instructor",
+                SignerUserId = originalInstructor.Id,
+                SignerFullNameSnapshot = "Elena Marin",
+                SignerPositionSnapshot = "Operator",
+                SignatureData = "sig",
+                SignedAt = DateTimeOffset.UtcNow,
+                Version = 1
+            });
+            _dbFixture.Context.SaveChanges();
+
+            var forOriginal = await service.GetInstructorSignedDocumentsAsync(originalInstructor.Id, 1, 50);
+            var forReassigned = await service.GetInstructorSignedDocumentsAsync(reassignedInstructor.Id, 1, 50);
+
+            Assert.Single(forOriginal.Items);
+            Assert.Empty(forReassigned.Items);
+        }
+
+        // ───────────────────────── Pagination correctness ─────────────────────────
+        // The one class of bug this whole region guards against: counting after Take instead of
+        // before it (TotalCount silently equal to the page size, not the real total), or getting
+        // the Skip/Take math off by one. Every paginated method gets one test walking real pages
+        // against a small seeded set, so the assertion is decisive rather than "some items came back".
+
+        [Fact]
+        public async Task GetMyPendingSignaturesPageAsync_FiltersToPendingUserStatus()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var pending = SeedDocument(owner, "SSM", DocumentStatuses.PendingUser);
+            SeedDocument(owner, "SU", DocumentStatuses.Completed);
+
+            var (items, totalCount) = await service.GetMyPendingSignaturesPageAsync(owner.Id, 1, 10);
+
+            Assert.Equal(pending.Id, Assert.Single(items).Id);
+            Assert.Equal(1, totalCount);
+        }
+
+        [Fact]
+        public async Task GetMySignedDocumentsPageAsync_FiltersToUserSignedNotNull()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var signed = SeedDocument(owner, "SSM", DocumentStatuses.PendingManager);
+            signed.UserSignedAt = DateTime.UtcNow;
+            SeedDocument(owner, "SU", DocumentStatuses.PendingUser);
+            _dbFixture.Context.SaveChanges();
+
+            var (items, totalCount) = await service.GetMySignedDocumentsPageAsync(owner.Id, 1, 10);
+
+            Assert.Equal(signed.Id, Assert.Single(items).Id);
+            Assert.Equal(1, totalCount);
+        }
+
+        // Five documents with distinct GeneratedAt, requesting the middle page — proves Skip/Take
+        // is applied correctly AND that TotalCount reflects all 5, not just the page of 2.
+        [Fact]
+        public async Task GetMyPendingSignaturesPageAsync_RespectsSkipAndTake()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var docs = SeedGeneratedAtSequence(owner, "SSM", DocumentStatuses.PendingUser, 5);
+
+            var (items, totalCount) = await service.GetMyPendingSignaturesPageAsync(owner.Id, 2, 2);
+
+            Assert.Equal(5, totalCount);
+            Assert.Equal(new[] { docs[2].Id, docs[1].Id }, items.Select(d => d.Id));
+        }
+
+        [Fact]
+        public async Task GetMyPendingSignaturesPageAsync_LastPageReturnsRemainder()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var docs = SeedGeneratedAtSequence(owner, "SSM", DocumentStatuses.PendingUser, 5);
+
+            var (items, totalCount) = await service.GetMyPendingSignaturesPageAsync(owner.Id, 3, 2);
+
+            Assert.Equal(5, totalCount);
+            Assert.Equal(docs[0].Id, Assert.Single(items).Id);
+        }
+
+        [Fact]
+        public async Task GetManagerPendingSignaturesAsync_RespectsSkipAndTake()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var manager = SeedUser("Radu", "Stanescu", function);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+            var docs = SeedGeneratedAtSequence(owner, "SSM", DocumentStatuses.PendingManager, 5,
+                d => d.UserSignedAt = DateTime.UtcNow);
+
+            var (items, totalCount) = await service.GetManagerPendingSignaturesAsync(manager.Id, 2, 2);
+
+            Assert.Equal(5, totalCount);
+            Assert.Equal(new[] { docs[2].Id, docs[1].Id }, items.Select(d => d.Id));
+        }
+
+        [Fact]
+        public async Task GetManagerSignedDocumentsAsync_RespectsSkipAndTake()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var manager = SeedUser("Radu", "Stanescu", function);
+            var owner = SeedUser("Adela", "Popescu", function);
+            var docs = SeedGeneratedAtSequence(owner, "SU", DocumentStatuses.Completed, 5);
+            foreach (var doc in docs)
+            {
+                _dbFixture.Context.SignatureRecords.Add(new SignatureRecord
+                {
+                    Id = Guid.NewGuid(),
+                    UserDocumentId = doc.Id,
+                    SignerRole = "Manager",
+                    SignerUserId = manager.Id,
+                    SignerFullNameSnapshot = "Radu Stanescu",
+                    SignerPositionSnapshot = "Operator",
+                    SignatureData = "sig",
+                    SignedAt = DateTimeOffset.UtcNow,
+                    Version = 1
+                });
+            }
+            _dbFixture.Context.SaveChanges();
+
+            var (items, totalCount) = await service.GetManagerSignedDocumentsAsync(manager.Id, 2, 2);
+
+            Assert.Equal(5, totalCount);
+            Assert.Equal(new[] { docs[2].Id, docs[1].Id }, items.Select(d => d.Id));
+        }
+
+        [Fact]
+        public async Task GetInstructorPendingSignaturesAsync_RespectsSkipAndTake()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var officer = SeedUser("Radu", "Stanescu", function, roleName: Roles.SsmOfficer);
+            var owner = SeedUser("Adela", "Popescu", function);
+            var docs = SeedGeneratedAtSequence(owner, "SSM", DocumentStatuses.PendingInstructor, 5,
+                d => d.ManagerSignedAt = DateTime.UtcNow);
+
+            var (items, totalCount) = await service.GetInstructorPendingSignaturesAsync(officer.Id, 2, 2);
+
+            Assert.Equal(5, totalCount);
+            Assert.Equal(new[] { docs[2].Id, docs[1].Id }, items.Select(d => d.Id));
+        }
+
+        [Fact]
+        public async Task GetInstructorSignedDocumentsAsync_RespectsSkipAndTake()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var officer = SeedUser("Radu", "Stanescu", function, roleName: Roles.SsmOfficer);
+            var owner = SeedUser("Adela", "Popescu", function);
+            var docs = SeedGeneratedAtSequence(owner, "SSM", DocumentStatuses.Completed, 5);
+            foreach (var doc in docs)
+            {
+                _dbFixture.Context.SignatureRecords.Add(new SignatureRecord
+                {
+                    Id = Guid.NewGuid(),
+                    UserDocumentId = doc.Id,
+                    SignerRole = "Instructor",
+                    SignerUserId = officer.Id,
+                    SignerFullNameSnapshot = "Radu Stanescu",
+                    SignerPositionSnapshot = "Operator",
+                    SignatureData = "sig",
+                    SignedAt = DateTimeOffset.UtcNow,
+                    Version = 1
+                });
+            }
+            _dbFixture.Context.SaveChanges();
+
+            var (items, totalCount) = await service.GetInstructorSignedDocumentsAsync(officer.Id, 2, 2);
+
+            Assert.Equal(5, totalCount);
+            Assert.Equal(new[] { docs[2].Id, docs[1].Id }, items.Select(d => d.Id));
+        }
+
+        // The Include-trim regression: the 5 original methods included both InitialTrainings and
+        // PeriodicTrainings (two sibling collections under User) alongside Skip/Take on the root
+        // query — a known EF Core cartesian-multiplication hazard. This seeds a user with 2+ rows in
+        // BOTH collections at once and proves TotalCount/Items.Count are still correct, against real
+        // SQLite (not a mock) — exactly where a cartesian blow-up would actually surface.
+        [Fact]
+        public async Task GetMyPendingSignaturesPageAsync_MultipleSiblingCollections_DoesNotMultiplyRows()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc1 = SeedDocument(owner, "SSM", DocumentStatuses.PendingUser);
+            var doc2 = SeedDocument(owner, "SU", DocumentStatuses.PendingUser);
+
+            SeedTraining(owner, doc1, "Norme SSM 1", 2m, new DateTime(2026, 1, 15));
+            SeedTraining(owner, doc1, "Norme SSM 2", 2m, new DateTime(2026, 2, 15));
+            _dbFixture.Context.UserInitialTrainings.Add(new UserInitialTraining
+            { Id = Guid.NewGuid(), UserId = owner.Id, DocumentType = "SSM", CreatedAt = DateTime.UtcNow });
+            _dbFixture.Context.UserInitialTrainings.Add(new UserInitialTraining
+            { Id = Guid.NewGuid(), UserId = owner.Id, DocumentType = "SU", CreatedAt = DateTime.UtcNow });
+            _dbFixture.Context.SaveChanges();
+
+            var (items, totalCount) = await service.GetMyPendingSignaturesPageAsync(owner.Id, 1, 10);
+
+            Assert.Equal(2, totalCount);
+            Assert.Equal(2, items.Count);
+            Assert.Equal(new[] { doc1.Id, doc2.Id }.OrderBy(id => id), items.Select(d => d.Id).OrderBy(id => id));
+        }
+
+        // Seeds `count` documents for `owner` with strictly increasing GeneratedAt (oldest first, so
+        // docs[^1] is newest) — every paginated method orders GeneratedAt descending, so this gives
+        // deterministic, distinct page contents to assert against.
+        private List<UserDocument> SeedGeneratedAtSequence(User owner, string documentType, string status, int count, Action<UserDocument>? mutate = null)
+        {
+            var docs = new List<UserDocument>();
+            var baseTime = DateTime.UtcNow.AddDays(-count);
+            for (int i = 0; i < count; i++)
+            {
+                var doc = SeedDocument(owner, documentType, status);
+                doc.GeneratedAt = baseTime.AddMinutes(i);
+                mutate?.Invoke(doc);
+                docs.Add(doc);
+            }
+            _dbFixture.Context.SaveChanges();
+            return docs;
         }
 
         [Fact]
