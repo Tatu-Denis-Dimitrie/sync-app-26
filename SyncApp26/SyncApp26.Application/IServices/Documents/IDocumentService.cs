@@ -19,6 +19,7 @@ namespace SyncApp26.Application.IServices
         Task<HashSet<Guid>> GetUserIdsWithDocumentTypeAsync(string documentType);
         Task<HashSet<Guid>> GetUserIdsWithUnsignedDocumentTypeAsync(string documentType);
         Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(Guid userId);
+        Task<(List<UserDocument> Items, int TotalCount)> GetUserDocumentsPageAsync(Guid userId, int page, int pageSize);
         Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType);
         Task<IEnumerable<UserDocument>> GetAllDocumentsAsync();
         Task<UserDocument?> GetDocumentByIdAsync(Guid documentId);

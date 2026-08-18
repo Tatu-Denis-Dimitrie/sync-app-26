@@ -44,6 +44,26 @@ namespace SyncApp26.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        // Ordered newest-first: unlike GetByUserIdAsync above, Skip/Take needs a deterministic
+        // order. Entries from the same import share near-identical CreatedAt values, so they stay
+        // adjacent — the client groups by import batch, and this keeps a batch from being split
+        // across pages in the common case.
+        public async Task<(List<UserChangeHistory> Items, int TotalCount)> GetByUserIdPageAsync(Guid userId, int page, int pageSize)
+        {
+            var query = _context.UserChangeHistories
+                .Include(c => c.ImportHistory)
+                .Where(c => c.UserId == userId);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
         public async Task AddAsync(UserChangeHistory userChangeHistory)
         {
             await _context.UserChangeHistories.AddAsync(userChangeHistory);

@@ -205,11 +205,12 @@ export class UserSyncService {
   /**
    * Get import conflict history for a user
    */
-  getImportConflictsByUserId(userId: string): Observable<UserChangeHistory[]> {
-    return this.http.get<UserChangeHistory[]>(`${environment.apiUrl}/UserChangeHistory/byUser/${userId}`).pipe(
+  getImportConflictsByUserId(userId: string, page = 1, pageSize = 10): Observable<{ items: UserChangeHistory[]; totalCount: number }> {
+    const params = { page, pageSize };
+    return this.http.get<{ items: UserChangeHistory[]; totalCount: number }>(`${environment.apiUrl}/UserChangeHistory/byUser/${userId}`, { params }).pipe(
       catchError(error => {
         console.error('Error fetching user change history:', error);
-        return of([]);
+        return of({ items: [], totalCount: 0 });
       })
     );
   }

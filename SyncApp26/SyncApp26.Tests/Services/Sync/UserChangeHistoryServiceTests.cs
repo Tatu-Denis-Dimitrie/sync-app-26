@@ -129,6 +129,24 @@ namespace SyncApp26.Tests.Services.Sync
             Assert.Equal(userA.Id, result[0].UserId);
         }
 
+        [Fact]
+        public async Task GetUserChangeHistoriesByUserIdPageAsync_RespectsSkipAndTakeAndFiltersToThatUser()
+        {
+            var userA = SeedUser();
+            var userB = SeedUser();
+            var baseTime = DateTime.UtcNow.AddDays(-5);
+            var entries = Enumerable.Range(0, 5)
+                .Select(i => SeedHistory(userA.Id, fieldName: $"field{i}", createdAt: baseTime.AddMinutes(i)))
+                .ToList();
+            SeedHistory(userB.Id);
+            var service = CreateService();
+
+            var (items, totalCount) = await service.GetUserChangeHistoriesByUserIdPageAsync(userA.Id, 2, 2);
+
+            Assert.Equal(5, totalCount);
+            Assert.Equal(new[] { entries[2].Id, entries[1].Id }, items.Select(i => i.Id));
+        }
+
         // ───────────────────────── AddUserChangeHistoryAsync ─────────────────────────
 
         [Fact]

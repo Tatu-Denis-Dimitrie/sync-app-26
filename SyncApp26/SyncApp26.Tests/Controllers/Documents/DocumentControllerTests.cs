@@ -430,13 +430,14 @@ namespace SyncApp26.Tests.Controllers.Documents
             var controller = CreateController();
             var user = MakeUser();
             var doc = MakeDocument(user: user);
-            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(user.Id)).ReturnsAsync(new[] { doc });
+            _documentServiceMock.Setup(s => s.GetUserDocumentsPageAsync(user.Id, 1, 10)).ReturnsAsync((new List<UserDocument> { doc }, 1));
 
             var result = await controller.GetUserDocuments(user.Id);
 
-            var ok = Assert.IsType<OkObjectResult>(result);
-            var items = Assert.IsAssignableFrom<System.Collections.IEnumerable>(ok.Value).Cast<object>().ToList();
-            Assert.Single(items);
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            var page = Assert.IsType<DocumentListPageDTO>(ok.Value);
+            Assert.Single(page.Items);
+            Assert.Equal(1, page.TotalCount);
         }
 
         [Fact]
@@ -445,11 +446,11 @@ namespace SyncApp26.Tests.Controllers.Documents
             var callerId = Guid.NewGuid();
             var controller = CreateController(callerId, role: Roles.BasicUser);
             var doc = MakeDocument(user: MakeUser(id: callerId));
-            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(callerId)).ReturnsAsync(new[] { doc });
+            _documentServiceMock.Setup(s => s.GetUserDocumentsPageAsync(callerId, 1, 10)).ReturnsAsync((new List<UserDocument> { doc }, 1));
 
             var result = await controller.GetUserDocuments(callerId);
 
-            Assert.IsType<OkObjectResult>(result);
+            Assert.IsType<OkObjectResult>(result.Result);
         }
 
         [Fact]
@@ -459,11 +460,11 @@ namespace SyncApp26.Tests.Controllers.Documents
             var controller = CreateController(managerId, role: Roles.LineManager);
             var report = MakeUser(assignedToId: managerId);
             _userServiceMock.Setup(s => s.GetUserByIdAsync(report.Id)).ReturnsAsync(report);
-            _documentServiceMock.Setup(s => s.GetUserDocumentsAsync(report.Id)).ReturnsAsync(new[] { MakeDocument(user: report) });
+            _documentServiceMock.Setup(s => s.GetUserDocumentsPageAsync(report.Id, 1, 10)).ReturnsAsync((new List<UserDocument> { MakeDocument(user: report) }, 1));
 
             var result = await controller.GetUserDocuments(report.Id);
 
-            Assert.IsType<OkObjectResult>(result);
+            Assert.IsType<OkObjectResult>(result.Result);
         }
 
         [Fact]
@@ -475,8 +476,8 @@ namespace SyncApp26.Tests.Controllers.Documents
 
             var result = await controller.GetUserDocuments(target.Id);
 
-            Assert.IsType<ForbidResult>(result);
-            _documentServiceMock.Verify(s => s.GetUserDocumentsAsync(It.IsAny<Guid>()), Times.Never);
+            Assert.IsType<ForbidResult>(result.Result);
+            _documentServiceMock.Verify(s => s.GetUserDocumentsPageAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
         }
 
         [Fact]

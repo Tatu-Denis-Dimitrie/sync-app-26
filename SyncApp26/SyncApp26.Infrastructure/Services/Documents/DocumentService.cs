@@ -1317,6 +1317,30 @@ namespace SyncApp26.Infrastructure.Services
                 .ToListAsync();
         }
 
+        // Paginated counterpart of GetUserDocumentsAsync, for the Employees detail page's
+        // "Documents & Signatures" list. GetUserDocumentsAsync itself is left untouched — a
+        // NotificationController caller depends on getting the full, unfiltered set to find a
+        // specific pending document. Include trimmed to Department+Function, same reasoning as the
+        // paged signature-queue methods below: MapDocument never reads the other 4 navigations.
+        public async Task<(List<UserDocument> Items, int TotalCount)> GetUserDocumentsPageAsync(Guid userId, int page, int pageSize)
+        {
+            var query = _context.UserDocuments
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Department)
+                .Include(d => d.User)
+                    .ThenInclude(u => u.Function)
+                .Where(d => d.UserId == userId);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(d => d.GeneratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
         // Pushes the "PendingUser"/UserSignedAt filter into SQL rather than reusing
         // GetUserDocumentsAsync (which two other callers depend on for the full, unfiltered set).
         // Include trimmed to Department+Function — the only User navigations MapDocument reads —

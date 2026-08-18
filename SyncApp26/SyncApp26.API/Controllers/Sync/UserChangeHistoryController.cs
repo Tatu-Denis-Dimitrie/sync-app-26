@@ -49,15 +49,18 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("byUser/{userId}")]
-        public async Task<IActionResult> GetUserChangeHistoriesByUserId(Guid userId)
+        public async Task<ActionResult<UserChangeHistoryPageDTO>> GetUserChangeHistoriesByUserId(Guid userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (!User.IsInRole(Roles.Admin) && User.GetUserId() != userId)
             {
                 return Forbid();
             }
 
-            var conflicts = await _userChangeHistoryService.GetUserChangeHistoriesByUserIdAsync(userId);
-            return Ok(conflicts);
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var (items, totalCount) = await _userChangeHistoryService.GetUserChangeHistoriesByUserIdPageAsync(userId, page, pageSize);
+            return Ok(new UserChangeHistoryPageDTO { Items = items, TotalCount = totalCount });
         }
 
         [HttpPost]

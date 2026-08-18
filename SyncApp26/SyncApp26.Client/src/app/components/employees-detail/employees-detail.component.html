@@ -459,7 +459,7 @@
                                         User History
                                       </h3>
                                       <span class="text-sm text-muted-foreground">
-                                        {{ importConflicts.length }} entries
+                                        {{ conflictsPage.totalCount }} entries
                                       </span>
                                     </div>
                                     @if (conflictsLoading) {
@@ -635,6 +635,10 @@
                                         </div>
                                       </div>
                                     }
+                                    @if (conflictsPage.totalCount > conflictsPage.pageSize) {
+                                      <app-pagination [currentPage]="conflictsPage.page" [totalItems]="conflictsPage.totalCount"
+                                      [pageSize]="conflictsPage.pageSize" (pageChange)="onConflictsPageChange($event)"></app-pagination>
+                                    }
                                   </div>
                                   <!-- Documents / Signatures -->
                                   <div class="mt-6 bg-card border border-border rounded-lg p-4">
@@ -643,7 +647,7 @@
                                         Documents & Signatures
                                       </h3>
                                       <span class="text-sm text-muted-foreground">
-                                        {{ userDocuments.length || 0 }} items
+                                        {{ documentsPage.totalCount || 0 }} items
                                       </span>
                                     </div>
                                     @if (documentsLoading) {
@@ -742,6 +746,10 @@
                                           </div>
                                         }
                                       </div>
+                                      @if (documentsPage.totalCount > documentsPage.pageSize) {
+                                        <app-pagination [currentPage]="documentsPage.page" [totalItems]="documentsPage.totalCount"
+                                        [pageSize]="documentsPage.pageSize" (pageChange)="onDocumentsPageChange($event)"></app-pagination>
+                                      }
                                     </div>
                                   </div>
                                 }

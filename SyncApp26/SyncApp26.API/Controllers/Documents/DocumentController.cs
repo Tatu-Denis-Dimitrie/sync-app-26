@@ -428,7 +428,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetUserDocuments(Guid userId)
+        public async Task<ActionResult<DocumentListPageDTO>> GetUserDocuments(Guid userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             if (User.GetUserId() is not { } callerId)
                 return Unauthorized();
@@ -446,8 +446,11 @@ namespace SyncApp26.API.Controllers
                 if (targetUser.AssignedToId != callerId) return Forbid();
             }
 
-            var documents = await _documentService.GetUserDocumentsAsync(userId);
-            return Ok(await MapDocumentsAsync(documents));
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var (documents, totalCount) = await _documentService.GetUserDocumentsPageAsync(userId, page, pageSize);
+            return Ok(new DocumentListPageDTO { Items = (await MapDocumentsAsync(documents)).ToList(), TotalCount = totalCount });
         }
 
         [HttpGet("all")]

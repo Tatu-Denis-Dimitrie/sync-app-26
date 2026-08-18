@@ -12,6 +12,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { formatDate as formatDateUtil, formatDateTime as formatDateTimeUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
+import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
 
 @Component({
   selector: 'app-employees-detail',
@@ -27,15 +28,20 @@ export class EmployeesDetailComponent implements OnInit {
   paginatedUsers$!: Observable<User[]>;
   departments$!: Observable<Department[]>;
   selectedUser: User | null = null;
-  importConflicts: UserChangeHistory[] = [];
+  conflictsPage: DocumentPageState = emptyDocumentPageState(5);
   conflictsLoading = false;
   conflictsError = '';
 
+  /** The grouping helpers below (getConflictGroupsByImport/getManualChanges) read from this. */
+  get importConflicts(): UserChangeHistory[] { return this.conflictsPage.items; }
+
   successMessage: string = '';
 
-  userDocuments: any[] = [];
+  documentsPage: DocumentPageState = emptyDocumentPageState(5);
   documentsLoading = false;
   documentsError = '';
+
+  get userDocuments(): any[] { return this.documentsPage.items; }
 
   private currentPage$ = new BehaviorSubject<number>(1);
   pageSize = 10;
@@ -120,9 +126,9 @@ export class EmployeesDetailComponent implements OnInit {
 
   closeDetails(): void {
     this.selectedUser = null;
-    this.importConflicts = [];
+    this.conflictsPage = emptyDocumentPageState(5);
     this.conflictsError = '';
-    this.userDocuments = [];
+    this.documentsPage = emptyDocumentPageState(5);
     this.documentsError = '';
     this.router.navigate(['/employees']);
   }
@@ -143,36 +149,45 @@ export class EmployeesDetailComponent implements OnInit {
     return formatDateUtil(date);
   }
 
-  loadUserConflicts(userId: string): void {
+  loadUserConflicts(userId: string, page = 1): void {
     this.conflictsLoading = true;
     this.conflictsError = '';
-    this.userSyncService.getImportConflictsByUserId(userId).subscribe({
-      next: conflicts => {
-        this.importConflicts = conflicts;
+    this.userSyncService.getImportConflictsByUserId(userId, page, this.conflictsPage.pageSize).subscribe({
+      next: res => {
+        this.conflictsPage = { ...this.conflictsPage, items: res.items, totalCount: res.totalCount, page };
         this.conflictsLoading = false;
       },
       error: () => {
         this.conflictsLoading = false;
         this.conflictsError = 'Failed to load conflict history.';
-        this.importConflicts = [];
+        this.conflictsPage = emptyDocumentPageState(this.conflictsPage.pageSize);
       }
     });
   }
 
-  loadUserDocuments(userId: string): void {
+  loadUserDocuments(userId: string, page = 1): void {
     this.documentsLoading = true;
     this.documentsError = '';
-    this.http.get<any[]>(`${environment.apiUrl}/Document/user/${userId}`).subscribe({
-      next: docs => {
-        this.userDocuments = docs;
+    const params = { page, pageSize: this.documentsPage.pageSize };
+    this.http.get<DocumentListPageResponse>(`${environment.apiUrl}/Document/user/${userId}`, { params }).subscribe({
+      next: res => {
+        this.documentsPage = { ...this.documentsPage, items: res.items, totalCount: res.totalCount, page };
         this.documentsLoading = false;
       },
       error: () => {
         this.documentsLoading = false;
         this.documentsError = 'Failed to load documents.';
-        this.userDocuments = [];
+        this.documentsPage = emptyDocumentPageState(this.documentsPage.pageSize);
       }
     });
+  }
+
+  onConflictsPageChange(page: number): void {
+    if (this.selectedUser) this.loadUserConflicts(this.selectedUser.id, page);
+  }
+
+  onDocumentsPageChange(page: number): void {
+    if (this.selectedUser) this.loadUserDocuments(this.selectedUser.id, page);
   }
 
   getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }> {

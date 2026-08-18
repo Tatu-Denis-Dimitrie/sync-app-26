@@ -110,6 +110,27 @@ namespace SyncApp26.Application.Services
             });
         }
 
+        public async Task<(List<UserChangeHistoryResponseDTO> Items, int TotalCount)> GetUserChangeHistoriesByUserIdPageAsync(Guid userId, int page, int pageSize)
+        {
+            var (userChangeHistories, totalCount) = await _userChangeHistoryRepository.GetByUserIdPageAsync(userId, page, pageSize);
+
+            var items = userChangeHistories.Select(c => new UserChangeHistoryResponseDTO
+            {
+                Id = c.Id,
+                ImportHistoryId = c.ImportHistoryId,
+                ImportDate = c.ImportHistory?.ImportDate,
+                ImportFileName = c.ImportHistory?.FileName,
+                UserId = c.UserId,
+                FieldName = c.FieldName,
+                OldValue = c.OldValue,
+                NewValue = c.NewValue,
+                Status = c.Status,
+                CreatedAt = c.CreatedAt
+            }).ToList();
+
+            return (items, totalCount);
+        }
+
         public async Task AddUserChangeHistoryAsync(UserChangeHistory userChangeHistory)
         {
             var conflict = new UserChangeHistory

@@ -13,4 +13,10 @@ namespace SyncApp26.Shared.DTOs.CSV.History
         public string? Status { get; set; } //accepted, rejected
         public DateTime CreatedAt { get; set; }
     }
+
+    public class UserChangeHistoryPageDTO
+    {
+        public List<UserChangeHistoryResponseDTO> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+    }
 }

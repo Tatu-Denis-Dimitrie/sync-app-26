@@ -8,6 +8,7 @@ namespace SyncApp26.Domain.IRepositories
         Task<UserChangeHistory?> GetByIdAsync(Guid id);
         Task<IEnumerable<UserChangeHistory>> GetByImportHistoryIdAsync(Guid importHistoryId);
         Task<IEnumerable<UserChangeHistory>> GetByUserIdAsync(Guid userId);
+        Task<(List<UserChangeHistory> Items, int TotalCount)> GetByUserIdPageAsync(Guid userId, int page, int pageSize);
         Task AddAsync(UserChangeHistory userChangeHistory);
         Task DeleteAsync(Guid id);
     }
