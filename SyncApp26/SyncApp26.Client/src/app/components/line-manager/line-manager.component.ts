@@ -5,7 +5,8 @@ import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserSyncService } from '../../services/user-sync.service';
-import { User, UserRole } from '../../models/csv-sync.model';
+import { DataChangeRequestService } from '../../services/data-change-request.service';
+import { User, UserRole, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -14,6 +15,7 @@ import { UserSignatureService, UserSignature, UserSignatureHistory } from '../..
 import { NotificationService } from '../../services/notification.service';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
+import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
 
@@ -81,9 +83,40 @@ export class LineManagerComponent implements OnInit {
   @ViewChild('sigCanvas') sigCanvasRef?: ElementRef<HTMLCanvasElement>;
   // ─────────────────────────────────────────────────────────────────────────
 
+  // ── Data Change Request ────────────────────────────────────────────────
+  showDataChangeModal = false;
+  isSubmittingDataChange = false;
+  dataChangeReason = '';
+  dataChangeError = '';
+  dataChangeSuccess = '';
+
+  availableDepartments: string[] = [];
+
+  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
+    { key: 'LastName', label: 'Last Name', type: 'text' },
+    { key: 'FirstName', label: 'First Name', type: 'text' },
+    { key: 'DateOfBirth', label: 'Date of Birth', type: 'date' },
+    { key: 'PlaceOfBirth', label: 'Place of Birth', type: 'text' },
+    { key: 'Department', label: 'Department (Name)', type: 'select' },
+    { key: 'Function', label: 'Function (Name)', type: 'text' },
+    { key: 'Address', label: 'Address', type: 'text' },
+    { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
+    { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS }
+  ];
+  selectedFieldKey = '';
+  newFieldValue = '';
+  requestedChanges: { [key: string]: string } = {};
+
+  get hasRequestedChanges(): boolean {
+    return Object.keys(this.requestedChanges).length > 0;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+
   constructor(
     private authService: AuthenticationService,
     private userSyncService: UserSyncService,
+    private dataChangeRequestService: DataChangeRequestService,
     private http: HttpClient,
     private router: Router,
     private userSignatureService: UserSignatureService,
@@ -119,6 +152,20 @@ export class LineManagerComponent implements OnInit {
 
     this.loadPendingSignatures();
     this.loadSavedSignature();
+    this.loadDepartments();
+  }
+
+  loadDepartments(): void {
+    this.userSyncService.getDepartments().subscribe({
+      next: (depts) => {
+        const currentDept = this.user?.departmentName;
+        this.availableDepartments = depts
+          .filter(d => d.isActive && d.name !== currentDept)
+          .map(d => d.name)
+          .sort((a, b) => a.localeCompare(b));
+      },
+      error: (err) => console.error('Failed to load departments', err)
+    });
   }
 
   loadPendingSignatures(): void {
@@ -352,6 +399,93 @@ export class LineManagerComponent implements OnInit {
 
   formatDateTime(d: string): string {
     return new Date(d).toLocaleString();
+  }
+
+  // ── Data Change Requests ──────────────────────────────────────────────────
+
+  openDataChangeModal(): void {
+    this.showDataChangeModal = true;
+    this.dataChangeError = '';
+    this.dataChangeSuccess = '';
+    this.dataChangeReason = '';
+    this.requestedChanges = {};
+  }
+
+  closeDataChangeModal(): void {
+    this.showDataChangeModal = false;
+  }
+
+  submitDataChangeRequest(): void {
+    const actualChanges: { [key: string]: string } = {};
+    for (const key of Object.keys(this.requestedChanges)) {
+      if (this.requestedChanges[key] && this.requestedChanges[key].trim() !== '') {
+        const val = this.requestedChanges[key].trim();
+        actualChanges[key] = val;
+      }
+    }
+
+    // Validation checks
+    if (Object.keys(actualChanges).length === 0) {
+      this.dataChangeError = 'Please fill in at least one field to change.';
+      return;
+    }
+
+    if (actualChanges['Email']) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(actualChanges['Email'])) {
+        this.dataChangeError = 'Please enter a valid email address.';
+        return;
+      }
+    }
+
+    if (actualChanges['DateOfBirth']) {
+      const dob = new Date(actualChanges['DateOfBirth']);
+      const today = new Date();
+      if (dob > today) {
+        this.dataChangeError = 'Date of Birth cannot be in the future.';
+        return;
+      }
+    }
+
+    if (
+      (actualChanges['FirstName'] && !isValidName(actualChanges['FirstName'])) ||
+      (actualChanges['LastName'] && !isValidName(actualChanges['LastName']))
+    ) {
+      this.dataChangeError = `First/last name: ${NAME_ERROR_MESSAGE}`;
+      return;
+    }
+
+    if (actualChanges['Function'] && !isValidFunction(actualChanges['Function'])) {
+      this.dataChangeError = `Function: ${FUNCTION_ERROR_MESSAGE}`;
+      return;
+    }
+
+    if (!this.dataChangeReason.trim()) {
+      this.dataChangeError = 'Please provide a reason for the change.';
+      return;
+    }
+
+    this.isSubmittingDataChange = true;
+    this.dataChangeError = '';
+
+    const payload = {
+      requestedChangesJson: JSON.stringify(actualChanges),
+      reason: this.dataChangeReason.trim()
+    };
+
+    this.dataChangeRequestService.createRequest(payload).subscribe({
+      next: (res) => {
+        this.isSubmittingDataChange = false;
+        this.dataChangeSuccess = 'Data change request submitted successfully. It is now pending admin approval.';
+        this.requestedChanges = {};
+        this.dataChangeReason = '';
+        setTimeout(() => this.closeDataChangeModal(), 3000);
+      },
+      error: (err) => {
+        this.isSubmittingDataChange = false;
+        this.dataChangeError = err.error?.message || 'Failed to submit request.';
+      }
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
