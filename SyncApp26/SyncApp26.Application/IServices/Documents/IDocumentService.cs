@@ -5,6 +5,14 @@ using SyncApp26.Domain.Entities;
 
 namespace SyncApp26.Application.IServices
 {
+    public class BulkGenerateResult
+    {
+        public int Generated { get; init; }
+        public int Skipped { get; init; }
+
+        public List<Guid> GeneratedDocumentIds { get; init; } = new();
+    }
+
     public interface IDocumentService
     {
         Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail);
@@ -18,7 +26,13 @@ namespace SyncApp26.Application.IServices
         Task<bool> UpdateDocumentSignatureAsync(Guid documentId, Guid signerUserId, string signerRole, string signatureMethod, string signatureData, string ipAddress, Guid? periodicTrainingId = null);
         Task<Guid?> GetCurrentTrainingIdForDocumentAsync(Guid documentId);
         Task<int> BulkSignDocumentsAsync(Guid signerUserId, string signatureMethod, string signatureData, string ipAddress);
-        Task<(int generated, int skipped)> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null);
+        /// <param name="onProgress">
+        /// Invoked after each target user is processed, with the running (generated, skipped) counts
+        /// </param>
+        Task<BulkGenerateResult> BulkGenerateDocumentsAsync(string documentType, string generatedByEmail, List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null, Action<int, int>? onProgress = null);
+        Task<List<UserDocument>> GetPendingUserDocumentsByIdsAsync(IEnumerable<Guid> documentIds);
+
+        Task<List<Guid>> GetBulkGenerateTargetUserIdsAsync(List<Guid>? selectedUserIds = null, Guid? restrictToAssignedToId = null);
         Task<IEnumerable<UserDocument>> GetManagerPendingSignaturesAsync(Guid managerId);
         Task<IEnumerable<UserDocument>> GetManagerSignedDocumentsAsync(Guid managerId);
         Task<IEnumerable<UserDocument>> GetInstructorPendingSignaturesAsync(Guid instructorId);

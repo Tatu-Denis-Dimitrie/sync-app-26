@@ -6,6 +6,7 @@ using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Response.SignatureVerification;
 using SyncApp26.API.Extensions;
+using System.Collections.Concurrent;
 
 namespace SyncApp26.API.Controllers
 {
@@ -21,6 +22,11 @@ namespace SyncApp26.API.Controllers
         private readonly IUserService _userService;
         private readonly ISignatureVerificationService _signatureVerificationService;
         private readonly IConfiguration _configuration;
+        private readonly IServiceScopeFactory _scopeFactory;
+
+        // Same in-memory job board as DocumentSignatureController's bulk-sign jobs: a bulk generation
+        // outlives its HTTP request, so its progress lives here and is polled by jobId.
+        private static readonly ConcurrentDictionary<string, BulkGenerateProgress> BulkGenerateJobs = new();
 
         public DocumentController(
             IDocumentService documentService,
@@ -29,7 +35,8 @@ namespace SyncApp26.API.Controllers
             IDocumentSigningService documentSigningService,
             IUserService userService,
             ISignatureVerificationService signatureVerificationService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IServiceScopeFactory scopeFactory)
         {
             _documentService = documentService;
             _emailService = emailService;
@@ -38,6 +45,7 @@ namespace SyncApp26.API.Controllers
             _userService = userService;
             _signatureVerificationService = signatureVerificationService;
             _configuration = configuration;
+            _scopeFactory = scopeFactory;
         }
 
         // Flat DTO — avoids serializing deep User navigation property chains
@@ -108,13 +116,178 @@ namespace SyncApp26.API.Controllers
             var adminEmail = User.GetEmail() ?? "admin@syncapp26.com";
             var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
 
-            var requestedTypes = request.DocumentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
-                ? new[] { "SSM", "SU" }
-                : new[] { request.DocumentType.ToUpper() };
+            var typesToProcess = ResolveAuthorizedTypes(request.DocumentType);
+            if (typesToProcess.Count == 0)
+                return Forbid();
 
-            // Each type is authorized independently: the officer for that type can generate for
-            // anyone; a line manager (with no officer duty on that type) is restricted to their own
-            // direct reports; anyone else is dropped from this request rather than failing it outright.
+            int totalGenerated = 0, totalSkipped = 0;
+            var generatedIdsByType = new List<(string Type, List<Guid> DocumentIds)>();
+            var countsByType = new Dictionary<string, int>();
+
+            foreach (var (type, restrictToAssignedToId) in typesToProcess)
+            {
+                var result = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds, restrictToAssignedToId);
+                totalGenerated += result.Generated;
+                totalSkipped += result.Skipped;
+                generatedIdsByType.Add((type, result.GeneratedDocumentIds));
+                countsByType[type] = result.Generated;
+            }
+
+            var emailOutcome = await SendSignatureRequestsAsync(
+                _documentService, _documentSignatureService, _emailService, frontendUrl, generatedIdsByType);
+
+            return Ok(new
+            {
+                message = BuildBulkGenerateMessage(totalGenerated, totalSkipped, countsByType, emailOutcome),
+                generated = totalGenerated,
+                skipped = totalSkipped,
+                generatedByType = countsByType,
+                emailsSent = emailOutcome.Sent,
+                emailsFailed = emailOutcome.Failed,
+                emailError = emailOutcome.FirstError
+            });
+        }
+
+        [HttpPost("bulk-generate-async")]
+        public async Task<IActionResult> BulkGenerateDocumentsAsync([FromBody] BulkGenerateDocumentDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.DocumentType))
+                return BadRequest(new { message = "DocumentType is required (SSM, SU, or Both)." });
+
+            if (User.GetUserId() is not { } userId)
+                return Unauthorized();
+
+            var typesToProcess = ResolveAuthorizedTypes(request.DocumentType);
+            if (typesToProcess.Count == 0)
+                return Forbid();
+
+            var adminEmail = User.GetEmail() ?? "admin@syncapp26.com";
+            var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
+
+            int total = 0;
+            foreach (var (_, restrictToAssignedToId) in typesToProcess)
+                total += (await _documentService.GetBulkGenerateTargetUserIdsAsync(request.SelectedUserIds, restrictToAssignedToId)).Count;
+
+            if (total == 0)
+                return Ok(new { message = "No documents to generate.", jobId = (string?)null, total = 0 });
+
+            var jobId = Guid.NewGuid().ToString();
+            var progress = new BulkGenerateProgress { OwnerUserId = userId, Total = total };
+            BulkGenerateJobs[jobId] = progress;
+
+            _ = Task.Run(async () =>
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var serviceProvider = scope.ServiceProvider;
+                var logger = serviceProvider.GetService<ILogger<DocumentController>>();
+
+                var generatedIdsByType = new List<(string Type, List<Guid> DocumentIds)>();
+
+                try
+                {
+                    var documentService = serviceProvider.GetRequiredService<IDocumentService>();
+
+                    int generatedBefore = 0, skippedBefore = 0;
+                    foreach (var (type, restrictToAssignedToId) in typesToProcess)
+                    {
+                        var result = await documentService.BulkGenerateDocumentsAsync(
+                            type, adminEmail, request.SelectedUserIds, restrictToAssignedToId,
+                            onProgress: (generated, skipped) =>
+                            {
+                                progress.Generated = generatedBefore + generated;
+                                progress.Skipped = skippedBefore + skipped;
+                            });
+
+                        generatedBefore += result.Generated;
+                        skippedBefore += result.Skipped;
+                        progress.Generated = generatedBefore;
+                        progress.Skipped = skippedBefore;
+                        progress.GeneratedByType[type] = result.Generated;
+                        generatedIdsByType.Add((type, result.GeneratedDocumentIds));
+                    }
+
+                    progress.Message = BuildBulkGenerateMessage(progress.Generated, progress.Skipped, progress.GeneratedByType, null);
+                }
+                catch (Exception ex)
+                {
+                    progress.Error = ex.Message;
+                    generatedIdsByType.Clear();
+                }
+                finally
+                {
+                    progress.Phase = "done";
+                    progress.Completed = true;
+                }
+
+                if (generatedIdsByType.Count == 0) return;
+
+                try
+                {
+                    var emailOutcome = await SendSignatureRequestsAsync(
+                        serviceProvider.GetRequiredService<IDocumentService>(),
+                        serviceProvider.GetRequiredService<IDocumentSignatureService>(),
+                        serviceProvider.GetRequiredService<IEmailService>(),
+                        frontendUrl, generatedIdsByType);
+
+                    progress.EmailsSent = emailOutcome.Sent;
+                    progress.EmailsFailed = emailOutcome.Failed;
+                    progress.EmailError = emailOutcome.FirstError;
+                    progress.EmailsAborted = emailOutcome.AbortedEarly;
+
+                    if (emailOutcome.Failed > 0)
+                        logger.LogWarning(
+                            "Bulk generate job {JobId}: {Sent} signature email(s) sent, {Failed} failed{Aborted}. First error: {Error}",
+                            jobId, emailOutcome.Sent, emailOutcome.Failed,
+                            emailOutcome.AbortedEarly ? " (remaining skipped after repeated failures)" : string.Empty,
+                            emailOutcome.FirstError);
+                    else
+                        logger.LogInformation("Bulk generate job {JobId}: {Sent} signature email(s) sent.", jobId, emailOutcome.Sent);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Bulk generate job {JobId}: signature email dispatch failed.", jobId);
+                }
+            });
+
+            return Ok(new { jobId, total });
+        }
+
+        [HttpGet("bulk-generate-status/{jobId}")]
+        public IActionResult GetBulkGenerateStatus(string jobId)
+        {
+            if (User.GetUserId() is not { } userId)
+                return Unauthorized();
+
+            if (!BulkGenerateJobs.TryGetValue(jobId, out var progress))
+                return NotFound(new { message = "Job not found" });
+
+            if (progress.OwnerUserId != userId)
+                return Forbid();
+
+            return Ok(new
+            {
+                total = progress.Total,
+                generated = progress.Generated,
+                skipped = progress.Skipped,
+                processed = progress.Generated + progress.Skipped,
+                phase = progress.Phase,
+                generatedByType = progress.GeneratedByType,
+                emailsSent = progress.EmailsSent,
+                emailsFailed = progress.EmailsFailed,
+                emailError = progress.EmailError,
+                emailsAborted = progress.EmailsAborted,
+                completed = progress.Completed,
+                message = progress.Message,
+                error = progress.Error
+            });
+        }
+
+        private List<(string Type, Guid? RestrictToAssignedToId)> ResolveAuthorizedTypes(string documentType)
+        {
+            var requestedTypes = documentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
+                ? new[] { "SSM", "SU" }
+                : new[] { documentType.ToUpper() };
+
             bool isLineManager = User.IsInRole(Roles.LineManager);
             var currentUserId = User.GetUserId();
             var typesToProcess = new List<(string Type, Guid? RestrictToAssignedToId)>();
@@ -126,49 +299,88 @@ namespace SyncApp26.API.Controllers
                     typesToProcess.Add((type, managerId));
             }
 
-            if (typesToProcess.Count == 0)
-                return Forbid();
+            return typesToProcess;
+        }
 
-            int totalGenerated = 0, totalSkipped = 0;
+        private static string BuildBulkGenerateMessage(int generated, int skipped, Dictionary<string, int> byType, BulkEmailOutcome? email)
+        {
+            var breakdown = byType.Count > 1
+                ? $" ({string.Join(", ", byType.Select(kv => $"{kv.Value} {kv.Key}"))})"
+                : string.Empty;
 
-            foreach (var (type, restrictToAssignedToId) in typesToProcess)
+            var message = $"Bulk generation complete. {generated} document(s) generated{breakdown}, {skipped} skipped.";
+
+            if (email is null)
+                return $"{message} Signature request emails are being sent in the background.";
+
+            if (email.Failed == 0)
+                return $"{message} {email.Sent} signature request(s) sent to employees.";
+
+            message += $" {email.Sent} signature request(s) sent, {email.Failed} failed";
+            if (email.AbortedEarly)
+                message += " — remaining notifications skipped because email delivery is failing repeatedly";
+            return string.IsNullOrWhiteSpace(email.FirstError) ? $"{message}." : $"{message}. First error: {email.FirstError}";
+        }
+
+        private sealed class BulkEmailOutcome
+        {
+            public int Sent { get; set; }
+            public int Failed { get; set; }
+            public string? FirstError { get; set; }
+            public bool AbortedEarly { get; set; }
+        }
+
+        // A misconfigured or unreachable SMTP server fails every message identically, and each
+        // attempt still burns a full connect timeout (~0.9s measured against smtp.gmail.com), so
+        // retrying it once per generated document turned a ~3 second generation into minutes of
+        // dead waiting. Stop after this many consecutive failures instead. The counter resets on
+        // every success, so an isolated bad recipient address never aborts the rest of the run.
+        private const int ConsecutiveEmailFailureLimit = 3;
+
+        private static async Task<BulkEmailOutcome> SendSignatureRequestsAsync(
+            IDocumentService documentService,
+            IDocumentSignatureService documentSignatureService,
+            IEmailService emailService,
+            string frontendUrl,
+            IReadOnlyList<(string Type, List<Guid> DocumentIds)> generatedIdsByType)
+        {
+            var outcome = new BulkEmailOutcome();
+            int consecutiveFailures = 0;
+
+            foreach (var (type, documentIds) in generatedIdsByType)
             {
-                var (generated, skipped) = await _documentService.BulkGenerateDocumentsAsync(type, adminEmail, request.SelectedUserIds, restrictToAssignedToId);
-                totalGenerated += generated;
-                totalSkipped += skipped;
-            }
-
-            // Send signature request emails to all employees with pending documents
-            int emailsSent = 0;
-            foreach (var (type, _) in typesToProcess)
-            {
-                var pendingDocs = await _documentService.GetAllPendingUserDocumentsAsync(type);
+                var pendingDocs = await documentService.GetPendingUserDocumentsByIdsAsync(documentIds);
                 foreach (var doc in pendingDocs)
                 {
-                    if (doc.User?.Email is { Length: > 0 } userEmail && doc.UserSignedAt == null)
+                    if (doc.User?.Email is not { Length: > 0 } userEmail || doc.UserSignedAt != null)
+                        continue;
+
+                    if (consecutiveFailures >= ConsecutiveEmailFailureLimit)
                     {
-                        try
-                        {
-                            var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(doc.Id);
-                            var token = await _documentSignatureService.GenerateSignatureTokenAsync(
-                                userEmail, doc.Id, $"{type} Document", currentRowId);
-                            var link = $"{frontendUrl}/sign/{token}";
-                            await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", link);
-                            emailsSent++;
-                        }
-                        catch { /* non-fatal per user */ }
+                        outcome.AbortedEarly = true;
+                        return outcome;
+                    }
+
+                    try
+                    {
+                        var currentRowId = await documentService.GetCurrentTrainingIdForDocumentAsync(doc.Id);
+                        var token = await documentSignatureService.GenerateSignatureTokenAsync(
+                            userEmail, doc.Id, $"{type} Document", currentRowId);
+                        var link = $"{frontendUrl}/sign/{token}";
+                        await emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", link);
+                        outcome.Sent++;
+                        consecutiveFailures = 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        outcome.Failed++;
+                        consecutiveFailures++;
+                        outcome.FirstError ??= ex.Message;
                     }
                 }
             }
 
-            var message = $"Bulk generation complete. {totalGenerated} document(s) generated, {totalSkipped} skipped. {emailsSent} signature request(s) sent to employees.";
-
-            return Ok(new
-            {
-                message,
-                generated = totalGenerated,
-                skipped = totalSkipped
-            });
+            return outcome;
         }
 
         [HttpPost("generate")]
@@ -434,5 +646,24 @@ namespace SyncApp26.API.Controllers
             var pdfBytes = await _documentService.GeneratePdfBytesAsync(docUser, document, viewerIsAdmin: isAdmin);
             return File(pdfBytes, "application/pdf", fileName);
         }
+    }
+
+    public class BulkGenerateProgress
+    {
+        public Guid OwnerUserId { get; set; }
+        public int Total { get; set; }
+        public int Generated { get; set; }
+        public int Skipped { get; set; }
+
+        /// <summary>"generating" → "emailing" → "done". Lets the client say what it is waiting on.</summary>
+        public string Phase { get; set; } = "generating";
+        public Dictionary<string, int> GeneratedByType { get; } = new();
+        public int EmailsSent { get; set; }
+        public int EmailsFailed { get; set; }
+        public string? EmailError { get; set; }
+        public bool EmailsAborted { get; set; }
+        public bool Completed { get; set; }
+        public string? Message { get; set; }
+        public string? Error { get; set; }
     }
 }

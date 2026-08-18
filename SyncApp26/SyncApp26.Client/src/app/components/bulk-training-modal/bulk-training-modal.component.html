@@ -330,17 +330,36 @@
                             }
                             @if (submitted) {
                               <div class="modal-footer flex-col gap-3">
-                                <!-- Loading overlay while generating -->
                                 @if (isGenerating) {
-                                  <div
-                                    class="flex flex-col items-center justify-center py-8 gap-3 w-full"
-                                    >
-                                    <div
-                                      class="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"
-                                    ></div>
-                                    <p class="text-sm text-gray-500">
-                                      Generating documents, please wait...
-                                    </p>
+                                  <div class="flex flex-col items-center justify-center py-8 gap-3 w-full">
+                                    <div class="w-full max-w-md">
+                                      <div class="flex justify-between mb-1">
+                                        <span class="text-xs font-medium text-teal-700">
+                                          {{ generationPhaseLabel }}
+                                        </span>
+                                        <span class="text-xs font-medium text-teal-700">
+                                          {{ generationPercent }}%
+                                        </span>
+                                      </div>
+                                      <div class="h-3 w-full rounded-full bg-gray-200 overflow-hidden">
+                                        <div
+                                          class="h-full rounded-full bg-teal-500 transition-[width] duration-300 ease-out"
+                                          [style.width.%]="generationPercent"
+                                        ></div>
+                                      </div>
+                                      <p class="text-sm text-gray-700 text-center mt-2">
+                                        <strong>{{ generatedCount }}</strong> of
+                                        <strong>{{ totalToGenerate }}</strong> documents generated
+                                      </p>
+                                      @if (skippedCount > 0) {
+                                        <p class="text-xs text-gray-500 text-center mt-1">
+                                          {{ skippedCount }} skipped
+                                        </p>
+                                      }
+                                      <p class="text-xs text-gray-500 text-center mt-1">
+                                        Signature request emails are sent in the background.
+                                      </p>
+                                    </div>
                                   </div>
                                 }
                                 @if (!isGenerating) {
