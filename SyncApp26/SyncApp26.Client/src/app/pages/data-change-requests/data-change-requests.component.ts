@@ -19,6 +19,7 @@ export class DataChangeRequestsComponent implements OnInit {
   isLoading = true;
   error = '';
   success = '';
+  warning = '';
 
   constructor(
     private service: DataChangeRequestService,
@@ -79,7 +80,8 @@ export class DataChangeRequestsComponent implements OnInit {
   resolveRequest(id: string, status: 'Approved' | 'Rejected'): void {
     this.error = '';
     this.success = '';
-    
+    this.warning = '';
+
     if (status === 'Rejected') {
       const confirmReject = confirm('Are you sure you want to reject this request?');
       if (!confirmReject) return;
@@ -87,10 +89,14 @@ export class DataChangeRequestsComponent implements OnInit {
 
     this.service.resolveRequest(id, { status }).subscribe({
       next: (res) => {
-        this.success = `Request has been ${status.toLowerCase()}.`;
         const index = this.requests.findIndex(r => r.id === id);
         if (index !== -1) {
-          this.requests[index] = res;
+          this.requests[index] = res.request;
+        }
+        if (res.emailError) {
+          this.warning = `The request was ${status.toLowerCase()}, but the confirmation email could not be sent to the employee.`;
+        } else {
+          this.success = `Request has been ${status.toLowerCase()}.`;
         }
         this.service.loadPendingCount();
       },

@@ -92,7 +92,9 @@ export class BasicUserComponent implements OnInit {
     { key: 'Function', label: 'Function (Name)', type: 'text' },
     { key: 'Address', label: 'Address', type: 'text' },
     { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
-    { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS }
+    { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS },
+    { key: 'CommuteRoute', label: 'Commute Route', type: 'text' },
+    { key: 'CommuteDurationMinutes', label: 'Commute Duration (minutes)', type: 'text' }
   ];
   selectedFieldKey = '';
   newFieldValue = '';

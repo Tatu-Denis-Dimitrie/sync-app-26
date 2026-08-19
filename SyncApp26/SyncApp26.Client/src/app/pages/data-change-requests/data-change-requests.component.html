@@ -17,6 +17,11 @@
         {{ error }}
       </div>
     }
+    @if (warning) {
+      <div class="mb-4 p-4 bg-amber-50 text-amber-800 rounded-lg border border-amber-200">
+        {{ warning }}
+      </div>
+    }
 
     @if (isLoading) {
       <div class="text-muted-foreground">Loading requests...</div>

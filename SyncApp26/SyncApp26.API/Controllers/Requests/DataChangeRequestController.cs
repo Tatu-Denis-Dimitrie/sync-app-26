@@ -116,11 +116,20 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> Resolve(Guid id, [FromBody] ResolveDataChangeRequestDTO dto)
         {
             var adminId = GetUserId();
+            DataChangeRequestDTO result;
             try
             {
-                var result = await _service.ResolveRequestAsync(id, adminId, dto);
-                
-                if (dto.Status == "Approved")
+                result = await _service.ResolveRequestAsync(id, adminId, dto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+
+            string? emailError = null;
+            if (dto.Status == "Approved")
+            {
+                try
                 {
                     var user = await _repository.GetUserByIdAsync(result.UserId);
                     if (user != null && !string.IsNullOrWhiteSpace(user.Email))
@@ -129,13 +138,13 @@ namespace SyncApp26.API.Controllers
                         await _emailService.SendEmailAsync(user.Email, "Data Change Request Approved", emailHtml);
                     }
                 }
+                catch (Exception ex)
+                {
+                    emailError = ex.Message;
+                }
+            }
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return Ok(new { request = result, emailError });
         }
     }
 }

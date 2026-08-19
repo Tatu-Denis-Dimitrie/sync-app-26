@@ -54,7 +54,7 @@ export class DataChangeRequestService {
     return this.http.get<{message: string}>(`${this.apiUrl}/confirm-email?reqId=${reqId}&token=${token}`);
   }
 
-  resolveRequest(id: string, dto: ResolveDataChangeRequestDto): Observable<DataChangeRequest> {
-    return this.http.put<DataChangeRequest>(`${this.apiUrl}/${id}/resolve`, dto);
+  resolveRequest(id: string, dto: ResolveDataChangeRequestDto): Observable<{ request: DataChangeRequest; emailError: string | null }> {
+    return this.http.put<{ request: DataChangeRequest; emailError: string | null }>(`${this.apiUrl}/${id}/resolve`, dto);
   }
 }
