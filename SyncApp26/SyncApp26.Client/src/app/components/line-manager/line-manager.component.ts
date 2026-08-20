@@ -33,12 +33,12 @@ export class LineManagerComponent implements OnInit {
 
   // Each of the 6 mini-lists is paginated server-side and fetched independently — see
   // loadPendingSignatures() / the 6 load*Signatures() methods below.
-  pendingUser: DocumentPageState = emptyDocumentPageState(5);
-  pendingManager: DocumentPageState = emptyDocumentPageState(5);
-  pendingInstructor: DocumentPageState = emptyDocumentPageState(5);
-  signedUser: DocumentPageState = emptyDocumentPageState(5);
-  signedManager: DocumentPageState = emptyDocumentPageState(5);
-  signedInstructor: DocumentPageState = emptyDocumentPageState(5);
+  pendingUser: DocumentPageState = emptyDocumentPageState(10);
+  pendingManager: DocumentPageState = emptyDocumentPageState(10);
+  pendingInstructor: DocumentPageState = emptyDocumentPageState(10);
+  signedUser: DocumentPageState = emptyDocumentPageState(10);
+  signedManager: DocumentPageState = emptyDocumentPageState(10);
+  signedInstructor: DocumentPageState = emptyDocumentPageState(10);
 
   onPendingUserPageChange(page: number): void { this.loadPendingUserSignatures(page); }
   onPendingManagerPageChange(page: number): void { this.loadPendingManagerSignatures(page); }
@@ -46,6 +46,20 @@ export class LineManagerComponent implements OnInit {
   onSignedUserPageChange(page: number): void { this.loadSignedUserSignatures(page); }
   onSignedManagerPageChange(page: number): void { this.loadSignedManagerSignatures(page); }
   onSignedInstructorPageChange(page: number): void { this.loadSignedInstructorSignatures(page); }
+
+  onPendingUserPageSizeChange(size: number): void { this.pendingUser = this.withPageSize(this.pendingUser, size); this.loadPendingUserSignatures(1); }
+  onPendingManagerPageSizeChange(size: number): void { this.pendingManager = this.withPageSize(this.pendingManager, size); this.loadPendingManagerSignatures(1); }
+  onPendingInstructorPageSizeChange(size: number): void { this.pendingInstructor = this.withPageSize(this.pendingInstructor, size); this.loadPendingInstructorSignatures(1); }
+  onSignedUserPageSizeChange(size: number): void { this.signedUser = this.withPageSize(this.signedUser, size); this.loadSignedUserSignatures(1); }
+  onSignedManagerPageSizeChange(size: number): void { this.signedManager = this.withPageSize(this.signedManager, size); this.loadSignedManagerSignatures(1); }
+  onSignedInstructorPageSizeChange(size: number): void { this.signedInstructor = this.withPageSize(this.signedInstructor, size); this.loadSignedInstructorSignatures(1); }
+
+  // Shared by the six handlers above, so the page size is set the same way everywhere — each
+  // handler still picks its own field and reload call.
+  private withPageSize(state: DocumentPageState, size: number): DocumentPageState {
+    state.pageSize = size;
+    return state;
+  }
 
   assignedUsers$!: Observable<User[]>;
   paginatedAssignedUsers$!: Observable<User[]>;
@@ -305,6 +319,11 @@ export class LineManagerComponent implements OnInit {
 
   onPageChange(page: number): void {
     this.currentPage = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
   }
 
   // ── Saved-signature methods ───────────────────────────────────────────────

@@ -591,7 +591,9 @@
                     [currentPage]="currentPage"
                     [pageSize]="pageSize"
                     [totalItems]="(totalItems$ | async) || 0"
+                    storageKey="documents-view"
                     (pageChange)="onPageChange($event)"
+                    (pageSizeChange)="onPageSizeChange($event)"
                   ></app-pagination>
                 </div>
               }
