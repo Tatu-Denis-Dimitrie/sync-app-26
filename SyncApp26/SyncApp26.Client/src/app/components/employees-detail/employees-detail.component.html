@@ -154,6 +154,7 @@
               [totalItems]="totalItems"
               [pageSize]="pageSize"
               (pageChange)="onPageChange($event)"
+              (pageSizeChange)="onPageSizeChange($event)"
             ></app-pagination>
           </div>
         </div>
@@ -637,7 +638,7 @@
                                     }
                                     @if (conflictsPage.totalCount > conflictsPage.pageSize) {
                                       <app-pagination [currentPage]="conflictsPage.page" [totalItems]="conflictsPage.totalCount"
-                                      [pageSize]="conflictsPage.pageSize" (pageChange)="onConflictsPageChange($event)"></app-pagination>
+                                      [pageSize]="conflictsPage.pageSize" (pageChange)="onConflictsPageChange($event)" (pageSizeChange)="onConflictsPageSizeChange($event)"></app-pagination>
                                     }
                                   </div>
                                   <!-- Documents / Signatures -->
@@ -748,7 +749,7 @@
                                       </div>
                                       @if (documentsPage.totalCount > documentsPage.pageSize) {
                                         <app-pagination [currentPage]="documentsPage.page" [totalItems]="documentsPage.totalCount"
-                                        [pageSize]="documentsPage.pageSize" (pageChange)="onDocumentsPageChange($event)"></app-pagination>
+                                        [pageSize]="documentsPage.pageSize" (pageChange)="onDocumentsPageChange($event)" (pageSizeChange)="onDocumentsPageSizeChange($event)"></app-pagination>
                                       }
                                     </div>
                                   </div>

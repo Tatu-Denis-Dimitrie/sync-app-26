@@ -135,7 +135,7 @@
                 </div>
                 @if (pendingUser.totalCount > pendingUser.pageSize) {
                   <app-pagination [currentPage]="pendingUser.page" [totalItems]="pendingUser.totalCount"
-                  [pageSize]="pendingUser.pageSize" (pageChange)="onPendingUserPageChange($event)"></app-pagination>
+                  [pageSize]="pendingUser.pageSize" (pageChange)="onPendingUserPageChange($event)" (pageSizeChange)="onPendingUserPageSizeChange($event)"></app-pagination>
                 }
               }
 
@@ -170,7 +170,7 @@
                 </div>
                 @if (pendingManager.totalCount > pendingManager.pageSize) {
                   <app-pagination [currentPage]="pendingManager.page" [totalItems]="pendingManager.totalCount"
-                  [pageSize]="pendingManager.pageSize" (pageChange)="onPendingManagerPageChange($event)"></app-pagination>
+                  [pageSize]="pendingManager.pageSize" (pageChange)="onPendingManagerPageChange($event)" (pageSizeChange)="onPendingManagerPageSizeChange($event)"></app-pagination>
                 }
               }
 
@@ -205,7 +205,7 @@
                 </div>
                 @if (pendingInstructor.totalCount > pendingInstructor.pageSize) {
                   <app-pagination [currentPage]="pendingInstructor.page" [totalItems]="pendingInstructor.totalCount"
-                  [pageSize]="pendingInstructor.pageSize" (pageChange)="onPendingInstructorPageChange($event)"></app-pagination>
+                  [pageSize]="pendingInstructor.pageSize" (pageChange)="onPendingInstructorPageChange($event)" (pageSizeChange)="onPendingInstructorPageSizeChange($event)"></app-pagination>
                 }
               }
             </div>
@@ -253,7 +253,7 @@
                 </div>
                 @if (signedUser.totalCount > signedUser.pageSize) {
                   <app-pagination [currentPage]="signedUser.page" [totalItems]="signedUser.totalCount"
-                  [pageSize]="signedUser.pageSize" (pageChange)="onSignedUserPageChange($event)"></app-pagination>
+                  [pageSize]="signedUser.pageSize" (pageChange)="onSignedUserPageChange($event)" (pageSizeChange)="onSignedUserPageSizeChange($event)"></app-pagination>
                 }
               }
 
@@ -294,7 +294,7 @@
                 </div>
                 @if (signedManager.totalCount > signedManager.pageSize) {
                   <app-pagination [currentPage]="signedManager.page" [totalItems]="signedManager.totalCount"
-                  [pageSize]="signedManager.pageSize" (pageChange)="onSignedManagerPageChange($event)"></app-pagination>
+                  [pageSize]="signedManager.pageSize" (pageChange)="onSignedManagerPageChange($event)" (pageSizeChange)="onSignedManagerPageSizeChange($event)"></app-pagination>
                 }
               }
 
@@ -335,7 +335,7 @@
                 </div>
                 @if (signedInstructor.totalCount > signedInstructor.pageSize) {
                   <app-pagination [currentPage]="signedInstructor.page" [totalItems]="signedInstructor.totalCount"
-                  [pageSize]="signedInstructor.pageSize" (pageChange)="onSignedInstructorPageChange($event)"></app-pagination>
+                  [pageSize]="signedInstructor.pageSize" (pageChange)="onSignedInstructorPageChange($event)" (pageSizeChange)="onSignedInstructorPageSizeChange($event)"></app-pagination>
                 }
               }
             </div>
@@ -563,7 +563,7 @@
         </div>
         @if (totalItems > pageSize) {
           <app-pagination [currentPage]="currentPage" [totalItems]="totalItems"
-          [pageSize]="pageSize" (pageChange)="onPageChange($event)"></app-pagination>
+          [pageSize]="pageSize" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
         }
       </div>
       } <!-- /mt-6 assigned users bg-card -->

@@ -502,7 +502,7 @@
                     <!-- Pagination -->
                     @if (totalItems > pageSize) {
                       <app-pagination [currentPage]="currentPage" [totalItems]="totalItems"
-                      [pageSize]="pageSize" (pageChange)="onPageChange($event)"></app-pagination>
+                      [pageSize]="pageSize" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
                     }
                   </div>
                 </div>

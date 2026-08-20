@@ -592,6 +592,7 @@
                     [pageSize]="pageSize"
                     [totalItems]="(totalItems$ | async) || 0"
                     (pageChange)="onPageChange($event)"
+                    (pageSizeChange)="onPageSizeChange($event)"
                   ></app-pagination>
                 </div>
               }

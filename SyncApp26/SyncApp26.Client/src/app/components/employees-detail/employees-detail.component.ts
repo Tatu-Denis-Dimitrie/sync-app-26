@@ -28,7 +28,7 @@ export class EmployeesDetailComponent implements OnInit {
   paginatedUsers$!: Observable<User[]>;
   departments$!: Observable<Department[]>;
   selectedUser: User | null = null;
-  conflictsPage: DocumentPageState = emptyDocumentPageState(5);
+  conflictsPage: DocumentPageState = emptyDocumentPageState(10);
   conflictsLoading = false;
   conflictsError = '';
 
@@ -37,7 +37,7 @@ export class EmployeesDetailComponent implements OnInit {
 
   successMessage: string = '';
 
-  documentsPage: DocumentPageState = emptyDocumentPageState(5);
+  documentsPage: DocumentPageState = emptyDocumentPageState(10);
   documentsLoading = false;
   documentsError = '';
 
@@ -126,15 +126,20 @@ export class EmployeesDetailComponent implements OnInit {
 
   closeDetails(): void {
     this.selectedUser = null;
-    this.conflictsPage = emptyDocumentPageState(5);
+    this.conflictsPage = emptyDocumentPageState(this.conflictsPage.pageSize);
     this.conflictsError = '';
-    this.documentsPage = emptyDocumentPageState(5);
+    this.documentsPage = emptyDocumentPageState(this.documentsPage.pageSize);
     this.documentsError = '';
     this.router.navigate(['/employees']);
   }
 
   onPageChange(page: number): void {
     this.currentPage = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
   }
 
   onSearchChange(): void {
@@ -186,8 +191,18 @@ export class EmployeesDetailComponent implements OnInit {
     if (this.selectedUser) this.loadUserConflicts(this.selectedUser.id, page);
   }
 
+  onConflictsPageSizeChange(size: number): void {
+    this.conflictsPage = { ...this.conflictsPage, pageSize: size };
+    if (this.selectedUser) this.loadUserConflicts(this.selectedUser.id, 1);
+  }
+
   onDocumentsPageChange(page: number): void {
     if (this.selectedUser) this.loadUserDocuments(this.selectedUser.id, page);
+  }
+
+  onDocumentsPageSizeChange(size: number): void {
+    this.documentsPage = { ...this.documentsPage, pageSize: size };
+    if (this.selectedUser) this.loadUserDocuments(this.selectedUser.id, 1);
   }
 
   getConflictGroupsByImport(): Array<{ importHistoryId: string; importDate?: string; importFileName?: string; conflicts: UserChangeHistory[] }> {

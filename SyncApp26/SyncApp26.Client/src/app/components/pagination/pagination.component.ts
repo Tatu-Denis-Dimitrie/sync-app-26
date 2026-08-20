@@ -7,7 +7,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
   imports: [],
   template: `
     <div class="flex items-center justify-between border-t border-border px-4 py-3 sm:px-6">
-      <div class="flex flex-1 justify-between sm:hidden">
+      <div class="flex flex-1 items-center justify-between sm:hidden">
         <button
           (click)="onPageChange(currentPage - 1)"
           [disabled]="currentPage === 1"
@@ -15,6 +15,14 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
           >
           Previous
         </button>
+        <select
+          class="rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground hover:bg-accent focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+          (change)="onPageSizeSelect($event)"
+          >
+          @for (size of pageSizeOptions; track size) {
+            <option [value]="size" [selected]="size === pageSize">{{ size }} / page</option>
+          }
+        </select>
         <button
           (click)="onPageChange(currentPage + 1)"
           [disabled]="currentPage === totalPages"
@@ -24,7 +32,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
         </button>
       </div>
       <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
+        <div class="flex items-center gap-4">
           <p class="text-sm text-muted-foreground">
             Showing
             <span class="font-medium">{{ startItem }}</span>
@@ -34,6 +42,18 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
             <span class="font-medium">{{ totalItems }}</span>
             results
           </p>
+          <div class="flex items-center gap-2">
+            <label for="pageSizeSelect" class="text-sm text-muted-foreground">Items per page:</label>
+            <select
+              id="pageSizeSelect"
+              class="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground hover:bg-accent focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+              (change)="onPageSizeSelect($event)"
+              >
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size" [selected]="size === pageSize">{{ size }}</option>
+              }
+            </select>
+          </div>
         </div>
         <div>
           <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
@@ -94,7 +114,9 @@ export class PaginationComponent {
   @Input() currentPage: number = 1;
   @Input() totalItems: number = 0;
   @Input() pageSize: number = 10;
+  @Input() pageSizeOptions: number[] = [5, 10, 15];
   @Output() pageChange = new EventEmitter<number>();
+  @Output() pageSizeChange = new EventEmitter<number>();
 
   get totalPages(): number {
     return Math.ceil(this.totalItems / this.pageSize);
@@ -146,6 +168,13 @@ export class PaginationComponent {
   onPageChange(page: number | string): void {
     if (typeof page === 'number' && page >= 1 && page <= this.totalPages && page !== this.currentPage) {
       this.pageChange.emit(page);
+    }
+  }
+
+  onPageSizeSelect(event: Event): void {
+    const size = Number((event.target as HTMLSelectElement).value);
+    if (size && size !== this.pageSize) {
+      this.pageSizeChange.emit(size);
     }
   }
 }
