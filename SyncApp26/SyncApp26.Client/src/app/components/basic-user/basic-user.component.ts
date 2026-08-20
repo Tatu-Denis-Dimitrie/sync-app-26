@@ -44,12 +44,19 @@ export class BasicUserComponent implements OnInit {
   onSignedManagerPageChange(page: number): void { this.loadSignedManagerSignatures(page); }
   onSignedInstructorPageChange(page: number): void { this.loadSignedInstructorSignatures(page); }
 
-  onPendingUserPageSizeChange(size: number): void { this.pendingUser = { ...this.pendingUser, pageSize: size }; this.loadPendingUserSignatures(1); }
-  onPendingManagerPageSizeChange(size: number): void { this.pendingManager = { ...this.pendingManager, pageSize: size }; this.loadPendingManagerSignatures(1); }
-  onPendingInstructorPageSizeChange(size: number): void { this.pendingInstructor = { ...this.pendingInstructor, pageSize: size }; this.loadPendingInstructorSignatures(1); }
-  onSignedUserPageSizeChange(size: number): void { this.signedUser = { ...this.signedUser, pageSize: size }; this.loadSignedUserSignatures(1); }
-  onSignedManagerPageSizeChange(size: number): void { this.signedManager = { ...this.signedManager, pageSize: size }; this.loadSignedManagerSignatures(1); }
-  onSignedInstructorPageSizeChange(size: number): void { this.signedInstructor = { ...this.signedInstructor, pageSize: size }; this.loadSignedInstructorSignatures(1); }
+  onPendingUserPageSizeChange(size: number): void { this.pendingUser = this.withPageSize(this.pendingUser, size); this.loadPendingUserSignatures(1); }
+  onPendingManagerPageSizeChange(size: number): void { this.pendingManager = this.withPageSize(this.pendingManager, size); this.loadPendingManagerSignatures(1); }
+  onPendingInstructorPageSizeChange(size: number): void { this.pendingInstructor = this.withPageSize(this.pendingInstructor, size); this.loadPendingInstructorSignatures(1); }
+  onSignedUserPageSizeChange(size: number): void { this.signedUser = this.withPageSize(this.signedUser, size); this.loadSignedUserSignatures(1); }
+  onSignedManagerPageSizeChange(size: number): void { this.signedManager = this.withPageSize(this.signedManager, size); this.loadSignedManagerSignatures(1); }
+  onSignedInstructorPageSizeChange(size: number): void { this.signedInstructor = this.withPageSize(this.signedInstructor, size); this.loadSignedInstructorSignatures(1); }
+
+  // Shared by the six handlers above, so the page size is set the same way everywhere — each
+  // handler still picks its own field and reload call.
+  private withPageSize(state: DocumentPageState, size: number): DocumentPageState {
+    state.pageSize = size;
+    return state;
+  }
 
   // ── Saved Signature ──────────────────────────────────────────────────────
   savedSignature: UserSignature | null = null;
