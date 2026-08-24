@@ -478,7 +478,8 @@ export class UserSyncService {
           dbValue: conflict.dbValue,
           csvValue: conflict.csvValue,
           selectedValue: conflict.selectedValue,
-          selected: conflict.selected
+          selected: conflict.selected,
+          selectedPendingValue: conflict.selectedPendingValue ?? null
         }))
       }));
 

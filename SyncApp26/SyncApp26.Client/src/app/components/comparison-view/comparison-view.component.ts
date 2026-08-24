@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { UserComparison, FieldConflict } from '../../models/csv-sync.model';
+import { UserComparison, FieldConflict, PendingRequestOption } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil } from '../../shared/utils/date-format.util';
 
 @Component({
@@ -14,7 +14,7 @@ import { formatDate as formatDateUtil } from '../../shared/utils/date-format.uti
 export class ComparisonViewComponent implements OnChanges {
   @Input() comparisons: UserComparison[] = [];
   @Output() selectionChange = new EventEmitter<UserComparison[]>();
-  @Output() fieldConflictResolved = new EventEmitter<{ comparisonId: string, field: string, value: 'db' | 'csv' }>();
+  @Output() fieldConflictResolved = new EventEmitter<{ comparisonId: string, field: string, value: 'db' | 'csv' | 'pending' }>();
 
   filterNew = true;
   filterModified = true;
@@ -30,8 +30,12 @@ export class ComparisonViewComponent implements OnChanges {
     return filtered.length > 0 && filtered.every(c => c.selected);
   }
 
+  // Conflicts needing a pending-vs-CSV decision are excluded: they are never bulk-selectable, so
+  // counting them here would leave the "select all" box permanently unticked.
   get allConflictsSelected(): boolean {
-    const conflicts = this.getFilteredComparisons().flatMap(c => c.conflicts);
+    const conflicts = this.getFilteredComparisons()
+      .flatMap(c => c.conflicts)
+      .filter(conflict => !this.conflictHasPendingChoice(conflict));
     return conflicts.length > 0 && conflicts.every(conflict => conflict.selected);
   }
 
@@ -117,14 +121,30 @@ export class ComparisonViewComponent implements OnChanges {
     this.selectionChange.emit(this.comparisons);
   }
 
-  resolveConflict(comparisonId: string, field: string, value: 'db' | 'csv'): void {
+  resolveConflict(comparisonId: string, field: string, value: 'db' | 'csv' | 'pending'): void {
     const comparison = this.comparisons.find(c => c.id === comparisonId);
     if (comparison) {
       const conflict = comparison.conflicts.find(c => c.field === field);
       if (conflict) {
         conflict.selectedValue = value;
+        if (value !== 'pending') {
+          delete conflict.selectedPendingValue;
+        }
         conflict.selected = true;
         this.fieldConflictResolved.emit({ comparisonId, field, value });
+      }
+    }
+  }
+
+  resolvePendingConflict(comparisonId: string, field: string, pendingValue: string): void {
+    const comparison = this.comparisons.find(c => c.id === comparisonId);
+    if (comparison) {
+      const conflict = comparison.conflicts.find(c => c.field === field);
+      if (conflict) {
+        conflict.selectedValue = 'pending';
+        conflict.selectedPendingValue = pendingValue;
+        conflict.selected = true;
+        this.fieldConflictResolved.emit({ comparisonId, field, value: 'pending' });
       }
     }
   }
@@ -139,11 +159,45 @@ export class ComparisonViewComponent implements OnChanges {
     }
   }
 
+  private conflictHasPendingChoice(conflict: FieldConflict): boolean {
+    return (conflict.pendingOptions?.length ?? 0) > 0;
+  }
+
+  hasPendingRequestChoice(comparison: UserComparison, field: string): boolean {
+    return comparison.conflicts.some(c => c.field === field && this.conflictHasPendingChoice(c));
+  }
+
+  getPendingOptions(comparison: UserComparison, field: string): PendingRequestOption[] {
+    return comparison.conflicts.find(c => c.field === field)?.pendingOptions ?? [];
+  }
+
+  isCsvValueSelected(comparison: UserComparison, field: string): boolean {
+    const conflict = comparison.conflicts.find(c => c.field === field);
+    return !!conflict && conflict.selected && conflict.selectedValue === 'csv';
+  }
+
+  isPendingOptionSelected(comparison: UserComparison, field: string, pendingValue: string): boolean {
+    const conflict = comparison.conflicts.find(c => c.field === field);
+    return !!conflict
+      && conflict.selected
+      && conflict.selectedValue === 'pending'
+      && conflict.selectedPendingValue === pendingValue;
+  }
+
+  getCsvConflictValue(comparison: UserComparison, field: string): string {
+    const conflict = comparison.conflicts.find(c => c.field === field);
+    const value = conflict?.csvValue;
+    return value === null || value === undefined || value === '' ? 'N/A' : String(value);
+  }
+
   toggleSelectAllConflicts(): void {
     const shouldSelectAll = !this.allConflictsSelected;
 
     this.getFilteredComparisons().forEach(comparison => {
       comparison.conflicts.forEach(conflict => {
+        if (this.conflictHasPendingChoice(conflict)) {
+          return;
+        }
         conflict.selected = shouldSelectAll;
         if (shouldSelectAll) {
           conflict.selectedValue = 'csv';

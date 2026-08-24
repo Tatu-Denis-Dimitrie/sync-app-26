@@ -89,14 +89,24 @@ export interface UserComparison {
   selected: boolean;
 }
 
+export interface PendingRequestOption {
+  value: string; 
+}
+
 export interface FieldConflict {
   field: keyof User;
   dbValue: any;
   csvValue: any;
-  selectedValue?: 'db' | 'csv';
+  selectedValue?: 'db' | 'csv' | 'pending';
   selected: boolean; // Whether this field should be synced
   hasPendingRequest?: boolean; // True if a pending DataChangeRequest is also targeting this field
   pendingRequestValue?: string; // The value(s) the pending request(s) are asking for, when hasPendingRequest is true
+  // Non-empty whenever a pending DataChangeRequest targets this field and there is something left to
+  // decide - one entry per distinct requested value. Such a conflict is never synced off the plain
+  // "select this field" checkbox: it needs an explicit selectedValue of 'csv' or 'pending'.
+  pendingOptions?: PendingRequestOption[];
+  // Which pendingOptions value was picked, when selectedValue is 'pending'.
+  selectedPendingValue?: string;
 }
 
 export interface CsvImport {
