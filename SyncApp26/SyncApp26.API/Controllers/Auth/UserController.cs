@@ -331,6 +331,7 @@ namespace SyncApp26.API.Controllers
                 Email = user.Email,
                 PersonalId = user.PersonalId,
                 DepartmentName = user.Department?.Name,
+                WorkSiteName = user.WorkSite?.Name,
                 FunctionName = user.Function?.Name,
                 Roles = user.RoleAssignments.Select(a => a.Role.Name).ToList(),
                 ManagerFirstName = user.AssignedTo?.FirstName,

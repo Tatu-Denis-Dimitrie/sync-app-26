@@ -13,6 +13,7 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public string Email { get; set; } = string.Empty;
         public string PersonalId { get; set; } = string.Empty;
         public string? DepartmentName { get; set; }
+        public string? WorkSiteName { get; set; }
         public string? FunctionName { get; set; }
         public List<string> Roles { get; set; } = new();
         public string? ManagerFirstName { get; set; }

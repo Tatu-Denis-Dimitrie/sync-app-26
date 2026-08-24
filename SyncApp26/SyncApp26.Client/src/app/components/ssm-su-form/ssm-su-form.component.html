@@ -155,7 +155,7 @@
             <h1>FIȘA DE SECURITATE ȘI SĂNĂTATE ÎN MUNCĂ</h1>
             <div class="cover-info">
               <p>
-                <strong>Unitatea:</strong> {{ userForm.departmentName || "N/A" }}
+                <strong>Unitatea:</strong> {{ userForm.workSiteName || "N/A" }}
               </p>
               <p><strong>Numele și prenumele:</strong> {{ getFullName() }}</p>
               <p>
@@ -250,7 +250,7 @@
                   <p><strong>Funcția:</strong> {{ userForm.functionName || "N/A" }}</p>
                   <p>
                     <strong>Locul de muncă:</strong>
-                    {{ userForm.departmentName || "N/A" }}
+                    {{ userForm.workSiteName || "N/A" }}
                   </p>
                   <p>
                     <strong>Autorizații:</strong>
@@ -754,12 +754,12 @@
                             <h1>FIȘA DE SECURITATE ÎN UTILIZARE</h1>
                             <div class="cover-info">
                               <p>
-                                <strong>Unitatea:</strong> {{ userForm.departmentName || "N/A" }}
+                                <strong>Unitatea:</strong> {{ userForm.workSiteName || "N/A" }}
                               </p>
                               <p><strong>Numele și prenumele:</strong> {{ getFullName() }}</p>
                               <p>
                                 <strong>Locul de muncă:</strong>
-                                {{ userForm.departmentName || "N/A" }}
+                                {{ userForm.workSiteName || "N/A" }}
                               </p>
                               <p>
                                 <strong>Marca:</strong>
@@ -841,7 +841,7 @@
                                   </p>
                                   <p>
                                     <strong>Locul de muncă:</strong>
-                                    {{ userForm.departmentName || "N/A" }}
+                                    {{ userForm.workSiteName || "N/A" }}
                                   </p>
                                   <p><strong>Funcția:</strong> {{ userForm.functionName || "N/A" }}</p>
                                 </div>
