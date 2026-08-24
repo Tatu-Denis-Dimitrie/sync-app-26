@@ -3,6 +3,7 @@ using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Repositories;
+using SyncApp26.Infrastructure.Services;
 using SyncApp26.Shared.DTOs.DataChange;
 using SyncApp26.Tests.TestHelpers;
 
@@ -15,7 +16,11 @@ namespace SyncApp26.Tests.Services.Requests
         public void Dispose() => _dbFixture.Dispose();
 
         private DataChangeRequestService CreateService() =>
-            new(new DataChangeRequestRepository(_dbFixture.Context), new UserChangeHistoryRepository(_dbFixture.Context));
+            new(
+                new DataChangeRequestRepository(_dbFixture.Context),
+                new UserChangeHistoryRepository(_dbFixture.Context),
+                new UserService(new UserRepository(_dbFixture.Context)),
+                new DocumentSignatureService(_dbFixture.Context));
 
         private User SeedUser(string firstName = "Old", Guid? departmentId = null, int? commuteDurationMinutes = null)
         {
@@ -362,10 +367,12 @@ namespace SyncApp26.Tests.Services.Requests
         }
 
         [Fact]
-        public async Task ResolveRequestAsync_EmailInChanges_NeverAppliedEvenWhenApproved()
+        public async Task ResolveRequestAsync_EmailInChanges_AppliedWhenApproved()
         {
+            // Only RequestEmailChangeAsync ever legitimately puts an "Email" key into a request
+            // (the generic Create action strips it), so once it's there, approval should apply it
+            // like any other field.
             var user = SeedUser(firstName: "Old");
-            var originalEmail = user.Email;
             var request = SeedRequest(user.Id, "{\"Email\":\"new@example.com\",\"FirstName\":\"New\"}");
             var service = CreateService();
             var admin = SeedAdmin();
@@ -374,8 +381,34 @@ namespace SyncApp26.Tests.Services.Requests
 
             _dbFixture.Context.ChangeTracker.Clear();
             var updatedUser = _dbFixture.Context.Users.Single(u => u.Id == user.Id);
-            Assert.Equal(originalEmail, updatedUser.Email);
+            Assert.Equal("new@example.com", updatedUser.Email);
             Assert.Equal("New", updatedUser.FirstName);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_EmailAlreadyTakenByAnotherUser_ThrowsAndLeavesRequestPending()
+        {
+            // The address could've been claimed by someone else in the gap between the request being
+            // made and an admin approving it - approval must fail cleanly, not silently succeed or
+            // throw the request into a half-applied state.
+            var user = SeedUser(firstName: "Old");
+            SeedUser(firstName: "Other"); // occupies "new@example.com" via a distinct seeded user below
+            var conflictingUser = _dbFixture.Context.Users.First(u => u.FirstName == "Other");
+            conflictingUser.Email = "new@example.com";
+            _dbFixture.Context.SaveChanges();
+
+            var request = SeedRequest(user.Id, "{\"Email\":\"new@example.com\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await Assert.ThrowsAsync<Exception>(() =>
+                service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" }));
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var untouchedUser = _dbFixture.Context.Users.Single(u => u.Id == user.Id);
+            Assert.NotEqual("new@example.com", untouchedUser.Email);
+            var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Pending", persistedRequest.Status);
         }
 
         [Fact]

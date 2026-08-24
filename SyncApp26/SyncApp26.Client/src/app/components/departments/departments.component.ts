@@ -35,7 +35,7 @@ export class DepartmentsComponent implements OnInit {
 
   private currentPage$ = new BehaviorSubject<number>(1);
   private refreshTrigger$ = new Subject<void>();
-  pageSize = 9; // 3x3 grid
+  pageSize = 10;
   totalItems = 0;
 
   get currentPage(): number { return this.currentPage$.value; }
@@ -209,6 +209,11 @@ navigateToDocuments(): void {
 
   onPageChange(event: any): void {
     this.currentPage = typeof event === 'number' ? event : event.page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
   }
 
   onSearchChange(): void {

@@ -14,5 +14,6 @@ namespace SyncApp26.Application.IServices
         Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending");
         Task<DataChangeRequestDTO> ChangeStatusAsync(Guid id, string status);
         Task<DataChangeRequestDTO> ResolveRequestAsync(Guid id, Guid adminId, ResolveDataChangeRequestDTO dto);
+        Task<AccountActionResult<DataChangeRequestDTO>> RequestEmailChangeAsync(Guid userId, RequestEmailChangeDTO dto);
     }
 }

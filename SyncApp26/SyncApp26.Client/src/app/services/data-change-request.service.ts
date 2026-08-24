@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, interval } from 'rxjs';
 import { switchMap, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { DataChangeRequest, CreateDataChangeRequestDto, ResolveDataChangeRequestDto } from '../models/data-change-request.model';
+import { DataChangeRequest, CreateDataChangeRequestDto, ResolveDataChangeRequestDto, RequestEmailChangeDto } from '../models/data-change-request.model';
 
 @Injectable({
   providedIn: 'root'
@@ -48,6 +48,10 @@ export class DataChangeRequestService {
 
   createRequest(dto: CreateDataChangeRequestDto): Observable<DataChangeRequest> {
     return this.http.post<DataChangeRequest>(this.apiUrl, dto);
+  }
+
+  requestEmailChange(dto: RequestEmailChangeDto): Observable<DataChangeRequest> {
+    return this.http.post<DataChangeRequest>(`${this.apiUrl}/request-email-change`, dto);
   }
 
   confirmEmailChange(reqId: string, token: string): Observable<{message: string}> {

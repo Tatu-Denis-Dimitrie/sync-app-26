@@ -779,7 +779,7 @@ namespace SyncApp26.Infrastructure.Services
                             info.Item().Height(8);
                         }
 
-                        Row("Unitatea:", F(user.Department?.Name));
+                        Row("Unitatea:", F(user.WorkSite?.Name));
                         Row("Numele și prenumele:", $"{user.FirstName} {user.LastName}");
 
                         if (ctx.IsSsm)

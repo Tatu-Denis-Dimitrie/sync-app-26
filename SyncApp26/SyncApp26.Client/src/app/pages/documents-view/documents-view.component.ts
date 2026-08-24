@@ -51,7 +51,7 @@ export class DocumentsViewComponent implements OnInit {
 
   private allDocuments: DocumentDto[] = [];
   private currentPage$ = new BehaviorSubject<number>(1);
-  pageSize = 15;
+  pageSize = 10;
   totalItems = 0;
   totalItems$!: Observable<number>;
   filteredDocuments$!: Observable<DocumentDto[]>;
@@ -255,6 +255,11 @@ export class DocumentsViewComponent implements OnInit {
   }
 
   onPageChange(page: number): void { this.currentPage = page; }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+  }
   onSearchChange(): void { this.currentPage = 1; }
   onFilterChange(): void { this.currentPage = 1; }
 

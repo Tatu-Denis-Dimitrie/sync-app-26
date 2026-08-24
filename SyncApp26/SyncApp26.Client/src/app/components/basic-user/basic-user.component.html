@@ -88,10 +88,16 @@
               {{ getRelativeTime(user.updatedAt || user.createdAt) }}
             </p>
           </div>
-          <button (click)="openDataChangeModal()"
-            class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition">
-            Request Data Change
-          </button>
+          <div class="flex gap-2">
+            <button (click)="openEmailChangeModal()"
+              class="px-4 py-2 bg-slate-700 text-white rounded text-sm hover:bg-slate-800 transition">
+              Change Email
+            </button>
+            <button (click)="openDataChangeModal()"
+              class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition">
+              Request Data Change
+            </button>
+          </div>
         </div>
         @if (pendingUser.totalCount > 0 || pendingManager.totalCount > 0 || pendingInstructor.totalCount > 0) {
           <div
@@ -129,7 +135,7 @@
               </div>
               @if (pendingUser.totalCount > pendingUser.pageSize) {
                 <app-pagination [currentPage]="pendingUser.page" [totalItems]="pendingUser.totalCount"
-                [pageSize]="pendingUser.pageSize" (pageChange)="onPendingUserPageChange($event)"></app-pagination>
+                [pageSize]="pendingUser.pageSize" storageKey="basic-user-pending-user" (pageChange)="onPendingUserPageChange($event)" (pageSizeChange)="onPendingUserPageSizeChange($event)"></app-pagination>
               }
             }
 
@@ -166,7 +172,7 @@
               </div>
               @if (pendingManager.totalCount > pendingManager.pageSize) {
                 <app-pagination [currentPage]="pendingManager.page" [totalItems]="pendingManager.totalCount"
-                [pageSize]="pendingManager.pageSize" (pageChange)="onPendingManagerPageChange($event)"></app-pagination>
+                [pageSize]="pendingManager.pageSize" storageKey="basic-user-pending-manager" (pageChange)="onPendingManagerPageChange($event)" (pageSizeChange)="onPendingManagerPageSizeChange($event)"></app-pagination>
               }
             }
 
@@ -203,7 +209,7 @@
               </div>
               @if (pendingInstructor.totalCount > pendingInstructor.pageSize) {
                 <app-pagination [currentPage]="pendingInstructor.page" [totalItems]="pendingInstructor.totalCount"
-                [pageSize]="pendingInstructor.pageSize" (pageChange)="onPendingInstructorPageChange($event)"></app-pagination>
+                [pageSize]="pendingInstructor.pageSize" storageKey="basic-user-pending-instructor" (pageChange)="onPendingInstructorPageChange($event)" (pageSizeChange)="onPendingInstructorPageSizeChange($event)"></app-pagination>
               }
             }
           </div>
@@ -251,7 +257,7 @@
               </div>
               @if (signedUser.totalCount > signedUser.pageSize) {
                 <app-pagination [currentPage]="signedUser.page" [totalItems]="signedUser.totalCount"
-                [pageSize]="signedUser.pageSize" (pageChange)="onSignedUserPageChange($event)"></app-pagination>
+                [pageSize]="signedUser.pageSize" storageKey="basic-user-signed-user" (pageChange)="onSignedUserPageChange($event)" (pageSizeChange)="onSignedUserPageSizeChange($event)"></app-pagination>
               }
             }
 
@@ -294,7 +300,7 @@
               </div>
               @if (signedManager.totalCount > signedManager.pageSize) {
                 <app-pagination [currentPage]="signedManager.page" [totalItems]="signedManager.totalCount"
-                [pageSize]="signedManager.pageSize" (pageChange)="onSignedManagerPageChange($event)"></app-pagination>
+                [pageSize]="signedManager.pageSize" storageKey="basic-user-signed-manager" (pageChange)="onSignedManagerPageChange($event)" (pageSizeChange)="onSignedManagerPageSizeChange($event)"></app-pagination>
               }
             }
 
@@ -337,7 +343,7 @@
               </div>
               @if (signedInstructor.totalCount > signedInstructor.pageSize) {
                 <app-pagination [currentPage]="signedInstructor.page" [totalItems]="signedInstructor.totalCount"
-                [pageSize]="signedInstructor.pageSize" (pageChange)="onSignedInstructorPageChange($event)"></app-pagination>
+                [pageSize]="signedInstructor.pageSize" storageKey="basic-user-signed-instructor" (pageChange)="onSignedInstructorPageChange($event)" (pageSizeChange)="onSignedInstructorPageSizeChange($event)"></app-pagination>
               }
             }
           </div>
@@ -610,6 +616,61 @@
         <button (click)="submitDataChangeRequest()" [disabled]="isSubmittingDataChange"
           class="px-4 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
           {{ isSubmittingDataChange ? 'Submitting...' : 'Submit Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showEmailChangeModal) {
+  <div
+    class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-card w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-border">
+      <div class="px-6 py-4 border-b border-border flex justify-between items-center bg-muted/30">
+        <h3 class="text-lg font-semibold text-foreground">Change Email</h3>
+        <button (click)="closeEmailChangeModal()" class="text-muted-foreground hover:text-foreground">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+            </path>
+          </svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <p class="text-sm text-muted-foreground mb-4">Your request will be reviewed by an administrator before it takes effect.</p>
+        @if (emailChangeSuccess) {
+          <div class="mb-4 p-3 bg-green-50 text-green-800 rounded border border-green-200 text-sm">
+            {{ emailChangeSuccess }}
+          </div>
+        }
+        @if (emailChangeError) {
+          <div class="mb-4 p-3 bg-red-50 text-red-800 rounded border border-red-200 text-sm">
+            {{ emailChangeError }}
+          </div>
+        }
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-1">New email address</label>
+            <div class="flex items-stretch rounded border border-border overflow-hidden focus-within:ring-2 focus-within:ring-teal-500">
+              <input type="text" [(ngModel)]="emailChangeLocalPart"
+                class="flex-1 min-w-0 px-3 py-2 text-sm bg-background focus:outline-none"
+                placeholder="new.name" />
+              <span class="px-3 py-2 text-sm text-muted-foreground bg-muted/50 border-l border-border whitespace-nowrap">&#64;{{ emailDomain }}</span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-foreground mb-1">Reason (optional)</label>
+            <textarea [(ngModel)]="emailChangeReason" rows="2"
+              class="w-full rounded border-border bg-background px-3 py-2 text-sm focus:ring-teal-500"
+              placeholder="e.g. changed my last name after marriage"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-border bg-muted/30 flex justify-end gap-3">
+        <button (click)="closeEmailChangeModal()"
+        class="px-4 py-2 border border-border rounded text-sm text-foreground hover:bg-muted transition">Cancel</button>
+        <button (click)="submitEmailChangeRequest()" [disabled]="isSubmittingEmailChange"
+          class="px-4 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ isSubmittingEmailChange ? 'Submitting...' : 'Submit Request' }}
         </button>
       </div>
     </div>

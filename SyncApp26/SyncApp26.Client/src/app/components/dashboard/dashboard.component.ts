@@ -540,6 +540,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.currentPage = page;
   }
 
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
+  }
+
   onSearchChange(): void {
     this.currentPage = 1;
   }

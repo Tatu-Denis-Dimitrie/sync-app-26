@@ -545,7 +545,9 @@
             [currentPage]="currentPage"
             [totalItems]="totalItems"
             [pageSize]="pageSize"
+            storageKey="departments"
             (pageChange)="onPageChange($event)"
+            (pageSizeChange)="onPageSizeChange($event)"
           ></app-pagination>
         </div>
       }

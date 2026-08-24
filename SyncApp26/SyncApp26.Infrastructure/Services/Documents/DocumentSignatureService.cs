@@ -62,5 +62,28 @@ namespace SyncApp26.Infrastructure.Services
 
             return true;
         }
+
+        // Signing tokens are keyed by a raw email string, not UserId - an outstanding link for an
+        // address that just got changed away from would otherwise fail post-change with "Signer
+        // account not found" instead of a clean re-request. Marking used (not deleting) keeps the
+        // row around for audit, same as a normal consume.
+        public async Task<int> InvalidateTokensForEmailAsync(string email)
+        {
+            var tokens = await _context.DocumentSignatureTokens
+                .Where(t => t.Email == email && !t.IsUsed && t.ExpiresAt >= DateTime.UtcNow)
+                .ToListAsync();
+
+            foreach (var token in tokens)
+            {
+                token.IsUsed = true;
+            }
+
+            if (tokens.Count > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return tokens.Count;
+        }
     }
 }

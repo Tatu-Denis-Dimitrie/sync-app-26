@@ -21,3 +21,8 @@ export interface CreateDataChangeRequestDto {
 export interface ResolveDataChangeRequestDto {
   status: string; // 'Approved' | 'Rejected'
 }
+
+export interface RequestEmailChangeDto {
+  newEmail: string;
+  reason?: string;
+}

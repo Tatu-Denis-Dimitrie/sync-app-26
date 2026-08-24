@@ -88,7 +88,7 @@ export class UsersListComponent implements OnInit {
   }
 
   private currentPage$ = new BehaviorSubject<number>(1);
-  pageSize = 15;
+  pageSize = 10;
   totalItems = 0;
 
   get currentPage(): number { return this.currentPage$.value; }
@@ -342,6 +342,11 @@ export class UsersListComponent implements OnInit {
 
   onPageChange(page: number): void {
     this.currentPage = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.currentPage = 1;
   }
 
   onSearchChange(): void {
