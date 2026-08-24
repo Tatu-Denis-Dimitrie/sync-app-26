@@ -90,6 +90,24 @@ namespace SyncApp26.API.Controllers
             return Ok(result);
         }
 
+        [HttpPost("request-email-change")]
+        [Authorize(Roles = Roles.BasicUser + "," + Roles.LineManager)]
+        public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeDTO dto)
+        {
+            var userId = GetUserId();
+            var result = await _service.RequestEmailChangeAsync(userId, dto);
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.ErrorMessage });
+            }
+
+            return Ok(result.Data);
+        }
+
+        // Dead scaffold from an earlier, abandoned design (self-service email change gated on an
+        // emailed confirmation link) - left in place unused. See the "self-service email change"
+        // plan doc for why the shipped design (same-domain + admin approval, no inbox verification)
+        // doesn't call this.
         [HttpGet("confirm-email")]
         [AllowAnonymous]
         public async Task<IActionResult> ConfirmEmailChange([FromQuery] Guid reqId, [FromQuery] string token)

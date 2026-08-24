@@ -7,23 +7,35 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SyncApp26.Application.Services
 {
     public class DataChangeRequestService : IDataChangeRequestService
     {
-        // Fields that must never be applied through this generic reflection-based flow,
-        // even if a client crafts a request bypassing the UI's available-fields list.
-        private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Email", "Role" };
+        // Fields that must never be applied through this generic reflection-based flow, even if a
+        // client crafts a request bypassing the UI's available-fields list. Email isn't listed here:
+        // the generic Create action (below) already strips it from any submitted request before it's
+        // ever saved, so the only way an "Email" key can reach ResolveRequestAsync is via
+        // RequestEmailChangeAsync's dedicated, domain-checked endpoint - it's safe to apply.
+        private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Role" };
 
         private readonly IDataChangeRequestRepository _repository;
         private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
+        private readonly IUserService _userService;
+        private readonly IDocumentSignatureService _documentSignatureService;
 
-        public DataChangeRequestService(IDataChangeRequestRepository repository, IUserChangeHistoryRepository userChangeHistoryRepository)
+        public DataChangeRequestService(
+            IDataChangeRequestRepository repository,
+            IUserChangeHistoryRepository userChangeHistoryRepository,
+            IUserService userService,
+            IDocumentSignatureService documentSignatureService)
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
+            _userService = userService;
+            _documentSignatureService = documentSignatureService;
         }
 
         private static Type? GetEnumType(Type propertyType)
@@ -94,6 +106,78 @@ namespace SyncApp26.Application.Services
             return MapToDTO(req);
         }
 
+        // Email can't go through CreateRequestAsync/Create like other fields (see BlockedFields
+        // below) because it needs its own validation: the new address must stay on the caller's
+        // current domain (this is for renaming a company mailbox after e.g. marriage, not switching
+        // to an unrelated address - see the plan doc for why no inbox verification is used here).
+        // The request still lands as a normal "Pending" row for an admin to approve, same as any
+        // other field change.
+        public async Task<AccountActionResult<DataChangeRequestDTO>> RequestEmailChangeAsync(Guid userId, RequestEmailChangeDTO dto)
+        {
+            var normalizedNewEmail = dto.NewEmail?.Trim().ToLowerInvariant() ?? string.Empty;
+            if (!Regex.IsMatch(normalizedNewEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("Invalid email format.");
+            }
+
+            var user = await _repository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("User not found.");
+            }
+
+            var currentDomain = user.Email.Split('@').Last();
+            var newDomain = normalizedNewEmail.Split('@').Last();
+            if (!string.Equals(currentDomain, newDomain, StringComparison.OrdinalIgnoreCase))
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail($"The new email must use the same domain as your current address (@{currentDomain}).");
+            }
+
+            if (string.Equals(normalizedNewEmail, user.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("This is already your current email address.");
+            }
+
+            var existingUser = await _userService.GetUserByEmailAsync(normalizedNewEmail);
+            if (existingUser != null)
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("This email address is already in use.");
+            }
+
+            var existingRequests = await _repository.GetByUserWithUserAsync(userId);
+            var hasPendingEmailChange = existingRequests.Any(r => r.Status == "Pending" && TryGetRequestedEmail(r.RequestedChangesJson) != null);
+            if (hasPendingEmailChange)
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("You already have a pending email change request awaiting admin review.");
+            }
+
+            var changesJson = JsonSerializer.Serialize(new Dictionary<string, string> { ["Email"] = normalizedNewEmail });
+            var created = await CreateRequestAsync(userId, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = changesJson,
+                Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Email address change (self-service)" : dto.Reason!
+            }, "Pending");
+
+            return AccountActionResult<DataChangeRequestDTO>.Ok(created);
+        }
+
+        private static string? TryGetRequestedEmail(string requestedChangesJson)
+        {
+            try
+            {
+                var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
+                if (changes != null && changes.TryGetValue("Email", out var value))
+                {
+                    return value?.ToString();
+                }
+            }
+            catch
+            {
+                // Malformed JSON is surfaced (and reported) wherever the request is actually resolved.
+            }
+            return null;
+        }
+
         // Dates render as the same "yyyy-MM-dd" the request itself carries, so comparing a stored
         // original against a requested value is a like-for-like string diff. Left to ToString(),
         // a DateTime would pick up server culture and never match, logging a change on every resolve.
@@ -152,6 +236,23 @@ namespace SyncApp26.Application.Services
 
             if (req == null) throw new Exception("Request not found");
             if (req.Status != "Pending") throw new Exception("Request is already resolved");
+
+            // Re-check email uniqueness right before applying: the address could've been claimed by
+            // someone else in the time between the request being made and an admin approving it.
+            string? oldEmailForCleanup = null;
+            if (dto.Status == "Approved")
+            {
+                var requestedEmail = TryGetRequestedEmail(req.RequestedChangesJson);
+                if (requestedEmail != null)
+                {
+                    var conflictUser = await _userService.GetUserByEmailAsync(requestedEmail);
+                    if (conflictUser != null && conflictUser.Id != req.UserId)
+                    {
+                        throw new Exception($"Cannot approve: {requestedEmail} has since been taken by another account.");
+                    }
+                    oldEmailForCleanup = req.User.Email;
+                }
+            }
 
             req.Status = dto.Status;
             req.ResolvedAt = DateTime.UtcNow;
@@ -219,7 +320,7 @@ namespace SyncApp26.Application.Services
                     {
                         foreach (var kv in changes)
                         {
-                            if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Email/Role changes
+                            if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Role changes
                             var prop = userType.GetProperty(kv.Key);
                             if (prop != null && prop.CanWrite)
                             {
@@ -266,6 +367,19 @@ namespace SyncApp26.Application.Services
             foreach (var entry in historyEntries)
             {
                 await _userChangeHistoryRepository.AddAsync(entry);
+            }
+
+            if (oldEmailForCleanup != null)
+            {
+                try
+                {
+                    await _documentSignatureService.InvalidateTokensForEmailAsync(oldEmailForCleanup);
+                }
+                catch
+                {
+                    // Best-effort - a stale signing link failing later with "Signer account not
+                    // found" is an acceptable fallback; it must never block the approval itself.
+                }
             }
 
             return MapToDTO(req);
