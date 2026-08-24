@@ -15,7 +15,7 @@ namespace SyncApp26.Tests.Services.Requests
         public void Dispose() => _dbFixture.Dispose();
 
         private DataChangeRequestService CreateService() =>
-            new(new DataChangeRequestRepository(_dbFixture.Context), new UserChangeHistoryRepository(_dbFixture.Context));
+            new(new DataChangeRequestRepository(_dbFixture.Context), new UserChangeHistoryRepository(_dbFixture.Context), new UserService(new UserRepository(_dbFixture.Context)));
 
         private User SeedUser(string firstName = "Old", Guid? departmentId = null, int? commuteDurationMinutes = null)
         {

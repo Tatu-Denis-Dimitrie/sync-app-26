@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SyncApp26.Application.Services
@@ -19,11 +20,13 @@ namespace SyncApp26.Application.Services
 
         private readonly IDataChangeRequestRepository _repository;
         private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
+        private readonly IUserService _userService;
 
-        public DataChangeRequestService(IDataChangeRequestRepository repository, IUserChangeHistoryRepository userChangeHistoryRepository)
+        public DataChangeRequestService(IDataChangeRequestRepository repository, IUserChangeHistoryRepository userChangeHistoryRepository, IUserService userService)
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
+            _userService = userService;
         }
 
         private static Type? GetEnumType(Type propertyType)
@@ -92,6 +95,74 @@ namespace SyncApp26.Application.Services
             await _repository.AddAsync(req);
             req.User = user;
             return MapToDTO(req);
+        }
+
+        // Email can't go through CreateRequestAsync/Create like other fields (see BlockedFields
+        // below) because it needs its own validation: the new address must stay on the caller's
+        // current domain (this is for renaming a company mailbox after e.g. marriage, not switching
+        // to an unrelated address - see the plan doc for why no inbox verification is used here).
+        // The request still lands as a normal "Pending" row for an admin to approve, same as any
+        // other field change.
+        public async Task<AccountActionResult<DataChangeRequestDTO>> RequestEmailChangeAsync(Guid userId, RequestEmailChangeDTO dto)
+        {
+            var normalizedNewEmail = dto.NewEmail?.Trim().ToLowerInvariant() ?? string.Empty;
+            if (!Regex.IsMatch(normalizedNewEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("Invalid email format.");
+            }
+
+            var user = await _repository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("User not found.");
+            }
+
+            var currentDomain = user.Email.Split('@').Last();
+            var newDomain = normalizedNewEmail.Split('@').Last();
+            if (!string.Equals(currentDomain, newDomain, StringComparison.OrdinalIgnoreCase))
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail($"The new email must use the same domain as your current address (@{currentDomain}).");
+            }
+
+            if (string.Equals(normalizedNewEmail, user.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("This is already your current email address.");
+            }
+
+            var existingUser = await _userService.GetUserByEmailAsync(normalizedNewEmail);
+            if (existingUser != null)
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("This email address is already in use.");
+            }
+
+            var existingRequests = await _repository.GetByUserWithUserAsync(userId);
+            var hasPendingEmailChange = existingRequests.Any(r => r.Status == "Pending" && ContainsEmailKey(r.RequestedChangesJson));
+            if (hasPendingEmailChange)
+            {
+                return AccountActionResult<DataChangeRequestDTO>.Fail("You already have a pending email change request awaiting admin review.");
+            }
+
+            var changesJson = JsonSerializer.Serialize(new Dictionary<string, string> { ["Email"] = normalizedNewEmail });
+            var created = await CreateRequestAsync(userId, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = changesJson,
+                Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Email address change (self-service)" : dto.Reason!
+            }, "Pending");
+
+            return AccountActionResult<DataChangeRequestDTO>.Ok(created);
+        }
+
+        private static bool ContainsEmailKey(string requestedChangesJson)
+        {
+            try
+            {
+                var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
+                return changes != null && changes.ContainsKey("Email");
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // Dates render as the same "yyyy-MM-dd" the request itself carries, so comparing a stored
