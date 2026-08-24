@@ -586,6 +586,10 @@
                         @for (opt of availableDepartments; track opt) {
                           <option [value]="opt">{{ opt }}</option>
                         }
+                      } @else if (field.key === 'WorkSite') {
+                        @for (opt of availableWorkSites; track opt) {
+                          <option [value]="opt">{{ opt }}</option>
+                        }
                       } @else {
                         @for (opt of field.options ?? []; track opt.value) {
                           <option [value]="opt.value">{{ opt.label }}</option>

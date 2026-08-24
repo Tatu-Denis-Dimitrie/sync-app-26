@@ -8,6 +8,7 @@ import { UserSignatureService, UserSignature, UserSignatureHistory } from '../..
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
+import { WorkSiteService } from '../../services/work-site.service';
 import { User, UserRole, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
@@ -108,6 +109,7 @@ export class BasicUserComponent implements OnInit {
   dataChangeSuccess = '';
   
   availableDepartments: string[] = [];
+  availableWorkSites: string[] = [];
   
   availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
     { key: 'LastName', label: 'Last Name', type: 'text' },
@@ -116,6 +118,7 @@ export class BasicUserComponent implements OnInit {
     { key: 'PlaceOfBirth', label: 'Place of Birth', type: 'text' },
     { key: 'Department', label: 'Department (Name)', type: 'select' },
     { key: 'Function', label: 'Function (Name)', type: 'text' },
+    { key: 'WorkSite', label: 'Work Site (Name)', type: 'select' },
     { key: 'Address', label: 'Address', type: 'text' },
     { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
     { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS },
@@ -137,6 +140,7 @@ export class BasicUserComponent implements OnInit {
     private userSyncService: UserSyncService,
     private userSignatureService: UserSignatureService,
     private dataChangeRequestService: DataChangeRequestService,
+    private workSiteService: WorkSiteService,
     private router: Router,
     private http: HttpClient
   ) { }
@@ -166,6 +170,7 @@ export class BasicUserComponent implements OnInit {
     this.loadPendingSignatures();
     this.loadSavedSignature();
     this.loadDepartments();
+    this.loadWorkSites();
   }
 
   loadDepartments(): void {
@@ -178,6 +183,19 @@ export class BasicUserComponent implements OnInit {
           .sort((a, b) => a.localeCompare(b));
       },
       error: (err) => console.error('Failed to load departments', err)
+    });
+  }
+
+  loadWorkSites(): void {
+    this.workSiteService.getAll().subscribe({
+      next: (sites) => {
+        const currentWorkSite = this.user?.workSite;
+        this.availableWorkSites = sites
+          .filter(s => s.isActive && s.name !== currentWorkSite)
+          .map(s => s.name)
+          .sort((a, b) => a.localeCompare(b));
+      },
+      error: (err) => console.error('Failed to load work sites', err)
     });
   }
 

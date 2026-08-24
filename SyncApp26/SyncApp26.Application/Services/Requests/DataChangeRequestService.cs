@@ -21,21 +21,26 @@ namespace SyncApp26.Application.Services
         // RequestEmailChangeAsync's dedicated, domain-checked endpoint - it's safe to apply.
         private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Role" };
 
+        private const string WorkSiteField = nameof(User.WorkSite);
+
         private readonly IDataChangeRequestRepository _repository;
         private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
         private readonly IUserService _userService;
         private readonly IDocumentSignatureService _documentSignatureService;
+        private readonly IWorkSiteRepository _workSiteRepository;
 
         public DataChangeRequestService(
             IDataChangeRequestRepository repository,
             IUserChangeHistoryRepository userChangeHistoryRepository,
             IUserService userService,
-            IDocumentSignatureService documentSignatureService)
+            IDocumentSignatureService documentSignatureService,
+            IWorkSiteRepository workSiteRepository)
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
             _userService = userService;
             _documentSignatureService = documentSignatureService;
+            _workSiteRepository = workSiteRepository;
         }
 
         private static Type? GetEnumType(Type propertyType)
@@ -161,6 +166,29 @@ namespace SyncApp26.Application.Services
             return AccountActionResult<DataChangeRequestDTO>.Ok(created);
         }
 
+        private static string? TryGetRequestedWorkSiteName(string requestedChangesJson)
+        {
+            try
+            {
+                var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
+                if (changes != null)
+                {
+                    foreach (var kv in changes)
+                    {
+                        if (string.Equals(kv.Key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return kv.Value?.ToString()?.Trim() ?? string.Empty;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Malformed JSON is surfaced (and reported) wherever the request is actually resolved.
+            }
+            return null;
+        }
+
         private static string? TryGetRequestedEmail(string requestedChangesJson)
         {
             try
@@ -203,6 +231,12 @@ namespace SyncApp26.Application.Services
                 var originalValues = new Dictionary<string, string?>();
                 foreach (var key in changes.Keys)
                 {
+                    if (string.Equals(key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                    {
+                        originalValues[key] = user.WorkSite?.Name ?? string.Empty;
+                        continue;
+                    }
+
                     var prop = userType.GetProperty(key);
                     if (prop != null)
                     {
@@ -254,6 +288,24 @@ namespace SyncApp26.Application.Services
                 }
             }
 
+            WorkSite? approvedWorkSite = null;
+            var requestedWorkSiteName = TryGetRequestedWorkSiteName(req.RequestedChangesJson);
+            if (dto.Status == "Approved" && requestedWorkSiteName != null)
+            {
+                if (requestedWorkSiteName.Length > 0)
+                {
+                    approvedWorkSite = await _workSiteRepository.GetByNameAsync(requestedWorkSiteName);
+                    if (approvedWorkSite == null)
+                    {
+                        throw new Exception($"Cannot approve: work site '{requestedWorkSiteName}' no longer exists.");
+                    }
+                    if (!approvedWorkSite.IsActive)
+                    {
+                        throw new Exception($"Cannot approve: work site '{approvedWorkSite.Name}' is no longer active.");
+                    }
+                }
+            }
+
             req.Status = dto.Status;
             req.ResolvedAt = DateTime.UtcNow;
             req.ResolvedByAdminId = adminId;
@@ -285,6 +337,31 @@ namespace SyncApp26.Application.Services
                     // Capture old values and build history entries
                     foreach (var kv in changes)
                     {
+                        if (string.Equals(kv.Key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var oldWorkSite = (originalValues != null && originalValues.TryGetValue(kv.Key, out var workSiteSnapshot))
+                                ? workSiteSnapshot ?? string.Empty
+                                : req.User.WorkSite?.Name ?? string.Empty;
+                            var newWorkSite = kv.Value?.ToString() ?? string.Empty;
+
+                            if (!string.Equals(oldWorkSite, newWorkSite, StringComparison.Ordinal))
+                            {
+                                historyEntries.Add(new UserChangeHistory
+                                {
+                                    Id = Guid.NewGuid(),
+                                    UserId = req.UserId,
+                                    FieldName = kv.Key,
+                                    OldValue = oldWorkSite,
+                                    NewValue = newWorkSite,
+                                    ImportHistoryId = null,
+                                    Status = statusLower,
+                                    CreatedAt = now
+                                });
+                            }
+
+                            continue;
+                        }
+
                         var prop = userType.GetProperty(kv.Key);
                         if (prop != null)
                         {
@@ -321,6 +398,13 @@ namespace SyncApp26.Application.Services
                         foreach (var kv in changes)
                         {
                             if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Role changes
+                            if (string.Equals(kv.Key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                            {
+                                req.User.WorkSiteId = approvedWorkSite?.Id;
+                                req.User.WorkSite = approvedWorkSite;
+                                continue;
+                            }
+
                             var prop = userType.GetProperty(kv.Key);
                             if (prop != null && prop.CanWrite)
                             {

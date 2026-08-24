@@ -20,9 +20,18 @@ namespace SyncApp26.Tests.Services.Requests
                 new DataChangeRequestRepository(_dbFixture.Context),
                 new UserChangeHistoryRepository(_dbFixture.Context),
                 new UserService(new UserRepository(_dbFixture.Context)),
-                new DocumentSignatureService(_dbFixture.Context));
+                new DocumentSignatureService(_dbFixture.Context),
+                new WorkSiteRepository(_dbFixture.Context));
 
-        private User SeedUser(string firstName = "Old", Guid? departmentId = null, int? commuteDurationMinutes = null)
+        private WorkSite SeedWorkSite(string name, bool isActive = true)
+        {
+            var workSite = new WorkSite { Id = Guid.NewGuid(), Name = name, IsActive = isActive, CreatedAt = DateTime.UtcNow };
+            _dbFixture.Context.WorkSites.Add(workSite);
+            _dbFixture.Context.SaveChanges();
+            return workSite;
+        }
+
+        private User SeedUser(string firstName = "Old", Guid? departmentId = null, int? commuteDurationMinutes = null, Guid? workSiteId = null)
         {
             var user = new User
             {
@@ -33,6 +42,7 @@ namespace SyncApp26.Tests.Services.Requests
                 PersonalId = Guid.NewGuid().ToString(),
                 DepartmentId = departmentId,
                 CommuteDurationMinutes = commuteDurationMinutes,
+                WorkSiteId = workSiteId,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
@@ -409,6 +419,144 @@ namespace SyncApp26.Tests.Services.Requests
             Assert.NotEqual("new@example.com", untouchedUser.Email);
             var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
             Assert.Equal("Pending", persistedRequest.Status);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_WorkSiteInChanges_AppliedWhenApproved()
+        {
+            var workSite = SeedWorkSite("Main Plant");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"WorkSite\":\"Main Plant\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var updatedUser = _dbFixture.Context.Users.Single(u => u.Id == user.Id);
+            Assert.Equal(workSite.Id, updatedUser.WorkSiteId);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_WorkSiteMatchedCaseInsensitively_AppliedWhenApproved()
+        {
+            var workSite = SeedWorkSite("Main Plant");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"WorkSite\":\"main plant\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(workSite.Id, _dbFixture.Context.Users.Single(u => u.Id == user.Id).WorkSiteId);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_WorkSiteNoLongerExists_ThrowsAndLeavesRequestPending()
+        {
+            // Same hazard as an email being claimed in the meantime: the named site may have been
+            // deleted between the request and the approval. Failing loudly beats silently clearing
+            // the user's work site.
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"WorkSite\":\"Ghost Site\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await Assert.ThrowsAsync<Exception>(() =>
+                service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" }));
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).WorkSiteId);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_WorkSiteNoLongerActive_ThrowsAndLeavesRequestPending()
+        {
+            SeedWorkSite("Retired Plant", isActive: false);
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"WorkSite\":\"Retired Plant\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await Assert.ThrowsAsync<Exception>(() =>
+                service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" }));
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).WorkSiteId);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_Rejected_DoesNotApplyWorkSite()
+        {
+            SeedWorkSite("Main Plant");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"WorkSite\":\"Main Plant\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Rejected" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).WorkSiteId);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_ApprovedWorkSite_RecordsHistoryUsingNamesNotIds()
+        {
+            // History is read by humans (and diffed against CSV imports, which carry names too), so
+            // both sides of a work-site change must be names rather than raw GUIDs.
+            var oldSite = SeedWorkSite("Old Plant");
+            SeedWorkSite("Main Plant");
+            var user = SeedUser(firstName: "Old", workSiteId: oldSite.Id);
+            var service = CreateService();
+            var created = await service.CreateRequestAsync(user.Id, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"WorkSite\":\"Main Plant\"}",
+                Reason = "Relocated"
+            });
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(created.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id);
+            Assert.Equal("WorkSite", history.FieldName);
+            Assert.Equal("Old Plant", history.OldValue);
+            Assert.Equal("Main Plant", history.NewValue);
+        }
+
+        [Fact]
+        public async Task CreateRequestAsync_WorkSiteChange_SnapshotsCurrentWorkSiteName()
+        {
+            var oldSite = SeedWorkSite("Old Plant");
+            var user = SeedUser(firstName: "Old", workSiteId: oldSite.Id);
+            var service = CreateService();
+
+            var created = await service.CreateRequestAsync(user.Id, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"WorkSite\":\"Main Plant\"}",
+                Reason = "Relocated"
+            });
+
+            Assert.Contains("\"WorkSite\":\"Old Plant\"", created.OriginalValuesJson);
+        }
+
+        [Fact]
+        public async Task CreateRequestAsync_WorkSiteChangeForUserWithoutWorkSite_SnapshotsEmptyString()
+        {
+            var user = SeedUser(firstName: "Old");
+            var service = CreateService();
+
+            var created = await service.CreateRequestAsync(user.Id, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"WorkSite\":\"Main Plant\"}",
+                Reason = "Relocated"
+            });
+
+            Assert.Contains("\"WorkSite\":\"\"", created.OriginalValuesJson);
         }
 
         [Fact]

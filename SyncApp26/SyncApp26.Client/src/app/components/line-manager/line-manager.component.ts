@@ -6,6 +6,7 @@ import { map, take } from 'rxjs/operators';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
+import { WorkSiteService } from '../../services/work-site.service';
 import { User, UserRole, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
@@ -117,6 +118,7 @@ export class LineManagerComponent implements OnInit {
   dataChangeSuccess = '';
 
   availableDepartments: string[] = [];
+  availableWorkSites: string[] = [];
 
   availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
     { key: 'LastName', label: 'Last Name', type: 'text' },
@@ -125,6 +127,7 @@ export class LineManagerComponent implements OnInit {
     { key: 'PlaceOfBirth', label: 'Place of Birth', type: 'text' },
     { key: 'Department', label: 'Department (Name)', type: 'select' },
     { key: 'Function', label: 'Function (Name)', type: 'text' },
+    { key: 'WorkSite', label: 'Work Site (Name)', type: 'select' },
     { key: 'Address', label: 'Address', type: 'text' },
     { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
     { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS },
@@ -145,6 +148,7 @@ export class LineManagerComponent implements OnInit {
     private authService: AuthenticationService,
     private userSyncService: UserSyncService,
     private dataChangeRequestService: DataChangeRequestService,
+    private workSiteService: WorkSiteService,
     private http: HttpClient,
     private router: Router,
     private userSignatureService: UserSignatureService,
@@ -181,6 +185,7 @@ export class LineManagerComponent implements OnInit {
     this.loadPendingSignatures();
     this.loadSavedSignature();
     this.loadDepartments();
+    this.loadWorkSites();
   }
 
   loadDepartments(): void {
@@ -193,6 +198,19 @@ export class LineManagerComponent implements OnInit {
           .sort((a, b) => a.localeCompare(b));
       },
       error: (err) => console.error('Failed to load departments', err)
+    });
+  }
+
+  loadWorkSites(): void {
+    this.workSiteService.getAll().subscribe({
+      next: (sites) => {
+        const currentWorkSite = this.user?.workSite;
+        this.availableWorkSites = sites
+          .filter(s => s.isActive && s.name !== currentWorkSite)
+          .map(s => s.name)
+          .sort((a, b) => a.localeCompare(b));
+      },
+      error: (err) => console.error('Failed to load work sites', err)
     });
   }
 

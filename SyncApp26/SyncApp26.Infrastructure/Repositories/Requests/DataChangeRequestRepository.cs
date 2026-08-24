@@ -22,6 +22,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.DataChangeRequests
                 .Include(x => x.User)
+                    .ThenInclude(u => u.WorkSite)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
         }
@@ -30,6 +31,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.DataChangeRequests
                 .Include(x => x.User)
+                    .ThenInclude(u => u.WorkSite)
                 .Where(x => x.UserId == userId)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
@@ -39,6 +41,7 @@ namespace SyncApp26.Infrastructure.Repositories
         {
             return await _context.DataChangeRequests
                 .Include(x => x.User)
+                    .ThenInclude(u => u.WorkSite)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
@@ -64,7 +67,9 @@ namespace SyncApp26.Infrastructure.Repositories
 
         public async Task<User> GetUserByIdAsync(Guid userId)
         {
-            return await _context.Users.FindAsync(userId);
+            return await _context.Users
+                .Include(u => u.WorkSite)
+                .FirstOrDefaultAsync(u => u.Id == userId);
         }
 
         public async Task UpdateUserAsync(User user)
