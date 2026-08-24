@@ -33,6 +33,7 @@ interface UserSSMSUForm {
   email: string;
   personalId: string;
   departmentName?: string;
+  workSiteName?: string;
   functionName?: string;
   managerFirstName?: string;
   managerLastName?: string;
