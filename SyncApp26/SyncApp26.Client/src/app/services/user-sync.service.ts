@@ -471,7 +471,8 @@ export class UserSyncService {
           email: c.csvUser.email,
           departmentName: c.csvUser.departmentName,
           assignedToPersonalId: c.csvUser.assignedToPersonalId || null,
-          function: c.csvUser.function || null
+          function: c.csvUser.function || null,
+          workSite: c.csvUser.workSite || null
         } : null,
         conflicts: c.conflicts.map(conflict => ({
           field: conflict.field,

@@ -64,7 +64,7 @@ namespace SyncApp26.Tests.Services.Sync
         // CSV import; pass false to model a seeded or self-registered account instead.
         private User SeedUser(string personalId, Guid departmentId, string firstName = "John", string lastName = "Doe",
             string? email = null, Guid? functionId = null, Guid? assignedToId = null, DateTime? updatedAt = null, string roleName = Roles.BasicUser,
-            bool isCsvManaged = true)
+            bool isCsvManaged = true, Guid? workSiteId = null)
         {
             var user = new User
             {
@@ -76,6 +76,7 @@ namespace SyncApp26.Tests.Services.Sync
                 DepartmentId = departmentId,
                 FunctionId = functionId,
                 AssignedToId = assignedToId,
+                WorkSiteId = workSiteId,
                 UpdatedAt = updatedAt,
                 IsCsvManaged = isCsvManaged,
                 CreatedAt = DateTime.UtcNow
@@ -266,6 +267,61 @@ namespace SyncApp26.Tests.Services.Sync
         }
 
         [Fact]
+        public async Task CompareWithDatabase_WorkSiteHasPendingRequest_OffersPendingVsCsvChoice()
+        {
+            var department = SeedDepartment("Engineering");
+            var worksite = SeedWorkSite("Brasov");
+            SeedWorkSite("Cluj-Napoca");
+            var user = SeedUser("P1", department.Id, workSiteId: worksite.Id);
+            SeedPendingRequest(user.Id, "{\"WorkSite\":\"Cluj-Napoca\"}", "{\"WorkSite\":\"Brasov\"}");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Engineering", workSite: "Bucuresti") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("workSite", conflict.Field);
+            Assert.True(conflict.HasPendingRequest);
+            Assert.Equal("Cluj-Napoca", Assert.Single(conflict.PendingOptions).Value);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_WorkSiteDiffersOnlyByCase_NotAConflict()
+        {
+            // Work sites are resolved case-insensitively when applied, so "brasov" and "Brasov" name
+            // the same site and must not be reported as a change.
+            var department = SeedDepartment("Engineering");
+            var worksite = SeedWorkSite("Brasov");
+            var user = SeedUser("P1", department.Id, workSiteId: worksite.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Engineering", workSite: "brasov") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            Assert.Empty(Assert.Single(result).Conflicts);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_WorkSiteWithNoPendingRequest_StillReportsPlainConflict()
+        {
+            var department = SeedDepartment("Engineering");
+            var worksite = SeedWorkSite("Brasov");
+            SeedWorkSite("Bucuresti");
+            var user = SeedUser("P1", department.Id, workSiteId: worksite.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Engineering", workSite: "Bucuresti") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("workSite", conflict.Field);
+            Assert.Equal("Brasov", conflict.DbValue);
+            Assert.Equal("Bucuresti", conflict.CsvValue);
+            Assert.False(conflict.HasPendingRequest);
+            Assert.Empty(conflict.PendingOptions);
+        }
+
+        [Fact]
         public async Task CompareWithDatabase_GenuineConflictWithOnePendingRequest_OffersPendingVsCsvChoice()
         {
             var department = SeedDepartment("Engineering");
@@ -400,6 +456,101 @@ namespace SyncApp26.Tests.Services.Sync
             Assert.Equal("Fernandez", history.NewValue);
             Assert.NotNull(history.ImportHistoryId);
             Assert.Equal(history.ImportHistoryId, persistedRequest.AutoResolvedByImportHistoryId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_WorkSiteConflictResolvedAsPending_AppliesRequestedSiteAndApprovesRequest()
+        {
+            var department = SeedDepartment("Engineering");
+            var brasov = SeedWorkSite("Brasov");
+            var cluj = SeedWorkSite("Cluj-Napoca");
+            SeedWorkSite("Bucuresti");
+            var user = SeedUser("P1", department.Id, workSiteId: brasov.Id);
+            var request = SeedPendingRequest(user.Id, "{\"WorkSite\":\"Cluj-Napoca\"}", "{\"WorkSite\":\"Brasov\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "workSite", DbValue = "Brasov", CsvValue = "Bucuresti", Selected = true,
+                SelectedValue = "pending", HasPendingRequest = true, PendingRequestValue = "Cluj-Napoca"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", departmentName: "Engineering", workSite: "Bucuresti"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(cluj.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").WorkSiteId);
+            var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Approved", persistedRequest.Status);
+            Assert.Null(persistedRequest.ResolvedByAdminId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_WorkSiteConflictResolvedAsCsv_AppliesCsvSiteAndRejectsRequest()
+        {
+            var department = SeedDepartment("Engineering");
+            var brasov = SeedWorkSite("Brasov");
+            SeedWorkSite("Cluj-Napoca");
+            var bucuresti = SeedWorkSite("Bucuresti");
+            var user = SeedUser("P1", department.Id, workSiteId: brasov.Id);
+            var request = SeedPendingRequest(user.Id, "{\"WorkSite\":\"Cluj-Napoca\"}", "{\"WorkSite\":\"Brasov\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "workSite", DbValue = "Brasov", CsvValue = "Bucuresti", Selected = true,
+                SelectedValue = "csv", HasPendingRequest = true, PendingRequestValue = "Cluj-Napoca"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", departmentName: "Engineering", workSite: "Bucuresti"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(bucuresti.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").WorkSiteId);
+            Assert.Equal("Rejected", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
+        public async Task SyncUsers_ImportAppliesSameWorkSiteAsPendingRequest_AutoApprovesRequest()
+        {
+            // The work-site equivalent of the LastName race above: an import lands exactly the site a
+            // pending request was asking for, so the request should auto-close rather than linger.
+            var department = SeedDepartment("Engineering");
+            var brasov = SeedWorkSite("Brasov");
+            var cluj = SeedWorkSite("Cluj-Napoca");
+            var user = SeedUser("P1", department.Id, workSiteId: brasov.Id);
+            var request = SeedPendingRequest(user.Id, "{\"WorkSite\":\"Cluj-Napoca\"}", "{\"WorkSite\":\"Brasov\"}");
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", departmentName: "Engineering", workSite: "Cluj-Napoca"));
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item }, FileName = "sites.csv" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(cluj.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").WorkSiteId);
+            var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Approved", persistedRequest.Status);
+            Assert.NotNull(persistedRequest.AutoResolvedByImportHistoryId);
+
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id && h.Status == "approved-by-import");
+            Assert.Equal("Brasov", history.OldValue);
+            Assert.Equal("Cluj-Napoca", history.NewValue);
+        }
+
+        [Fact]
+        public async Task SyncUsers_ImportAppliesDifferentWorkSiteThanPendingRequest_RequestStaysPending()
+        {
+            var department = SeedDepartment("Engineering");
+            var brasov = SeedWorkSite("Brasov");
+            SeedWorkSite("Cluj-Napoca");
+            var bucuresti = SeedWorkSite("Bucuresti");
+            var user = SeedUser("P1", department.Id, workSiteId: brasov.Id);
+            var request = SeedPendingRequest(user.Id, "{\"WorkSite\":\"Cluj-Napoca\"}", "{\"WorkSite\":\"Brasov\"}");
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", departmentName: "Engineering", workSite: "Bucuresti"));
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(bucuresti.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").WorkSiteId);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
         }
 
         [Fact]

@@ -23,16 +23,24 @@ public class CsvSyncService : ICsvSyncService
     private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
     private readonly IDataChangeRequestRepository _dataChangeRequestRepository;
 
-    // Fields a pending DataChangeRequest can name (as User property names) that this service knows
-    // how to compare against a CSV value textually. DataChangeRequest stores raw property values
-    // (e.g. a DepartmentId Guid), while the CSV compares department/function/manager by display
-    // name, so those aren't included here - there's no reliable text equivalence to auto-match on.
+
     private static readonly Dictionary<string, string> CsvFieldToUserProperty = new(StringComparer.OrdinalIgnoreCase)
     {
         { "firstname", nameof(User.FirstName) },
         { "lastname", nameof(User.LastName) },
-        { "email", nameof(User.Email) }
+        { "email", nameof(User.Email) },
+        { "worksite", nameof(User.WorkSite) }
     };
+
+    private static StringComparison ComparisonForCsvField(string csvFieldKey) =>
+        string.Equals(csvFieldKey, "worksite", StringComparison.OrdinalIgnoreCase)
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+    private static StringComparison ComparisonForProperty(string propertyName) =>
+        string.Equals(propertyName, nameof(User.WorkSite), StringComparison.OrdinalIgnoreCase)
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
 
     public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, IWorkSiteRepository workSiteRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository)
     {
@@ -176,10 +184,9 @@ public class CsvSyncService : ICsvSyncService
         AddFieldConflictIfDifferent(conflicts, "function", dbFunctionName ?? string.Empty, csvFunctionName,
             !string.Equals(dbFunctionName, csvFunctionName, StringComparison.OrdinalIgnoreCase));
 
-        var dbWorkSiteName = dbUser.WorkSite?.Name?.Trim();
-        var csvWorkSiteName = csvUser.WorkSite?.Trim();
-        AddFieldConflictIfDifferent(conflicts, "workSite", dbWorkSiteName ?? string.Empty, csvWorkSiteName,
-            !string.Equals(dbWorkSiteName, csvWorkSiteName, StringComparison.OrdinalIgnoreCase));
+        AddTextFieldConflict(conflicts, "workSite", "worksite",
+            dbUser.WorkSite?.Name?.Trim() ?? string.Empty, csvUser.WorkSite?.Trim() ?? string.Empty,
+            pendingValuesByCsvField);
 
         // Check line manager
         var dbManagerName = dbUser.AssignedTo != null ? $"{dbUser.AssignedTo.FirstName} {dbUser.AssignedTo.LastName}" : null;
@@ -208,10 +215,10 @@ public class CsvSyncService : ICsvSyncService
 
     private static void AddTextFieldConflict(List<FieldConflictDTO> conflicts, string field, string csvFieldKey, string dbValue, string csvValue, Dictionary<string, List<(Guid RequestId, string Value)>> pendingValuesByCsvField)
     {
-        var valuesDiffer = dbValue != csvValue;
+        var valuesDiffer = !string.Equals(dbValue, csvValue, ComparisonForCsvField(csvFieldKey));
 
         pendingValuesByCsvField.TryGetValue(csvFieldKey, out var pendingTargets);
-        var pendingOptions = BuildPendingFieldOptions(dbValue, csvValue, pendingTargets);
+        var pendingOptions = BuildPendingFieldOptions(csvFieldKey, dbValue, csvValue, pendingTargets);
 
         if (!valuesDiffer && pendingOptions.Count == 0)
         {
@@ -232,20 +239,25 @@ public class CsvSyncService : ICsvSyncService
 
     private sealed record PendingFieldOption(string Value, List<Guid> RequestIds);
 
-    private static List<PendingFieldOption> BuildPendingFieldOptions(string dbValue, string csvValue, List<(Guid RequestId, string Value)>? pendingTargets)
+    private static List<PendingFieldOption> BuildPendingFieldOptions(string csvFieldKey, string dbValue, string csvValue, List<(Guid RequestId, string Value)>? pendingTargets)
     {
         if (pendingTargets == null || pendingTargets.Count == 0)
         {
             return new List<PendingFieldOption>();
         }
 
+        var comparison = ComparisonForCsvField(csvFieldKey);
+        var comparer = comparison == StringComparison.OrdinalIgnoreCase
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+
         var options = pendingTargets
-            .GroupBy(p => p.Value, StringComparer.Ordinal)
+            .GroupBy(p => p.Value, comparer)
             .Select(g => new PendingFieldOption(g.Key, g.Select(p => p.RequestId).Distinct().ToList()))
             .ToList();
 
-        var nothingAtStake = string.Equals(dbValue, csvValue, StringComparison.Ordinal)
-            && options.All(o => string.Equals(o.Value, csvValue, StringComparison.Ordinal));
+        var nothingAtStake = string.Equals(dbValue, csvValue, comparison)
+            && options.All(o => string.Equals(o.Value, csvValue, comparison));
 
         return nothingAtStake ? new List<PendingFieldOption>() : options;
     }
@@ -696,10 +708,9 @@ public class CsvSyncService : ICsvSyncService
                     break;
                 }
 
-                var prop = typeof(User).GetProperty(kv.Key);
                 var newValue = kv.Value?.ToString() ?? string.Empty;
-                var currentValue = prop?.GetValue(existingUser)?.ToString() ?? string.Empty;
-                if (prop == null || !string.Equals(currentValue, newValue, StringComparison.Ordinal))
+                var currentValue = GetUserPropertyTextValue(kv.Key, existingUser);
+                if (!string.Equals(currentValue, newValue, ComparisonForProperty(kv.Key)))
                 {
                     fullySatisfied = false;
                     break;
@@ -776,7 +787,7 @@ public class CsvSyncService : ICsvSyncService
         {
             var fieldKey = conflict.Field.ToLower();
             var pendingOptions = pendingValuesByCsvField.TryGetValue(fieldKey, out var targets)
-                ? BuildPendingFieldOptions(GetUserTextValue(fieldKey, existingUser), GetCsvTextValue(fieldKey, csvData), targets)
+                ? BuildPendingFieldOptions(fieldKey, GetUserTextValue(fieldKey, existingUser), GetCsvTextValue(fieldKey, csvData), targets)
                 : new List<PendingFieldOption>();
 
             string? chosenPendingValue = null;
@@ -823,7 +834,7 @@ public class CsvSyncService : ICsvSyncService
                     hasChanges |= await ApplyFunctionResolutionAsync(csvData, existingUser, functionCache, importHistory);
                     break;
                 case "worksite":
-                    hasChanges |= await ApplyWorkSiteResolutionAsync(csvData, existingUser, workSiteCache, importHistory);
+                    hasChanges |= await ApplyWorkSiteResolutionAsync(csvData, existingUser, workSiteCache, importHistory, chosenPendingValue);
                     break;
             }
 
@@ -855,6 +866,7 @@ public class CsvSyncService : ICsvSyncService
     {
         "firstname" => csvData.FirstName,
         "lastname" => csvData.LastName,
+        "worksite" => csvData.WorkSite?.Trim() ?? string.Empty,
         _ => csvData.Email
     };
 
@@ -862,8 +874,22 @@ public class CsvSyncService : ICsvSyncService
     {
         "firstname" => user.FirstName,
         "lastname" => user.LastName,
+        "worksite" => user.WorkSite?.Name?.Trim() ?? string.Empty,
         _ => user.Email
     };
+
+    // The property-name counterpart of GetUserTextValue, for the request-driven paths that key off
+    // User property names rather than CSV field keys. WorkSite needs the override because reflecting
+    // its value yields the entity, whose ToString() is the type name rather than the site name.
+    private static string GetUserPropertyTextValue(string propertyName, User user)
+    {
+        if (string.Equals(propertyName, nameof(User.WorkSite), StringComparison.OrdinalIgnoreCase))
+        {
+            return user.WorkSite?.Name?.Trim() ?? string.Empty;
+        }
+
+        return typeof(User).GetProperty(propertyName)?.GetValue(user)?.ToString() ?? string.Empty;
+    }
 
     private async Task SettleDecidedRequestFieldsAsync(Dictionary<string, string> decidedValuesByProperty, List<DataChangeRequest> pendingRequestsForUser, ImportHistory importHistory)
     {
@@ -900,7 +926,7 @@ public class CsvSyncService : ICsvSyncService
             foreach (var key in decidedKeys)
             {
                 var requestedValue = changes[key]?.ToString() ?? string.Empty;
-                var wonThisField = string.Equals(requestedValue.Trim(), decidedValuesByProperty[key], StringComparison.Ordinal);
+                var wonThisField = string.Equals(requestedValue.Trim(), decidedValuesByProperty[key], ComparisonForProperty(key));
                 everyDecidedFieldWon &= wonThisField;
 
                 var oldValue = (originalValues != null && originalValues.TryGetValue(key, out var snapshot))
@@ -1102,10 +1128,13 @@ public class CsvSyncService : ICsvSyncService
         return true;
     }
 
-    private async Task<bool> ApplyWorkSiteResolutionAsync(CsvUserDTO csvData, User existingUser, Dictionary<string, WorkSite?> workSiteCache, ImportHistory importHistory)
+    // chosenPendingValue is the work site name an admin picked from a pending DataChangeRequest in
+    // preference to the CSV's value; null means the CSV value won.
+    private async Task<bool> ApplyWorkSiteResolutionAsync(CsvUserDTO csvData, User existingUser, Dictionary<string, WorkSite?> workSiteCache, ImportHistory importHistory, string? chosenPendingValue = null)
     {
-        var selectedCsvWorkSite = await ResolveExistingWorkSiteAsync(csvData.WorkSite, workSiteCache);
-        var selectedCsvWorkSiteName = csvData.WorkSite?.Trim();
+        var selectedName = chosenPendingValue ?? csvData.WorkSite;
+        var selectedCsvWorkSite = await ResolveExistingWorkSiteAsync(selectedName, workSiteCache);
+        var selectedCsvWorkSiteName = selectedName?.Trim();
 
         if (existingUser.WorkSiteId == selectedCsvWorkSite?.Id)
         {

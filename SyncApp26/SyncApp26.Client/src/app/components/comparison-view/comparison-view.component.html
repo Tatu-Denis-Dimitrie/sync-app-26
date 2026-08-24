@@ -215,6 +215,8 @@
                   'email',
                   'departmentName',
                   'assignedToName',
+                  'function',
+                  'workSite',
                   ]
                   ; track
                   field) {
@@ -845,6 +847,109 @@
                                                                                       </div>
                                                                                     </div>
                                                                                   }
+                                  <!--- Work Site --->
+                                  @if (comparison.dbUser || comparison.csvUser) {
+                                    <div class="grid grid-cols-[1fr,auto,1fr]">
+                                      <div class="p-4 bg-red-50/30">
+                                        <div class="flex items-center gap-3 mb-2">
+                                          <span
+                                            class="text-xs font-medium text-muted-foreground uppercase"
+                                            >Work Site (Database)</span
+                                            >
+                                          @if (hasFieldConflict(comparison, 'workSite')) {
+                                            <span class="text-xs text-red-600">- removed</span>
+                                          }
+                                          @if (fieldHasPendingRequest(comparison, 'workSite')) {
+                                            <span
+                                              class="text-xs text-amber-600"
+                                              title="A pending data change request wants this field to become a different value"
+                                              >⚠ pending request: {{ getPendingRequestValue(comparison, 'workSite') }}</span
+                                              >
+                                          }
+                                        </div>
+                                        <p
+                                          class="font-mono text-sm"
+                                          [class.line-through]="hasFieldConflict(comparison, 'workSite')"
+                                          [class.text-muted-foreground]="hasFieldConflict(comparison, 'workSite')"
+                                          >
+                                          {{ comparison.dbUser?.workSite || "N/A" }}
+                                        </p>
+                                      </div>
+                                      <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
+                                        @if (hasPendingRequestChoice(comparison, 'workSite')) {
+                                          <div class="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-start gap-1.5 whitespace-nowrap text-xs">
+                                            @for (option of getPendingOptions(comparison, 'workSite'); track option.value) {
+                                              <label class="flex items-center gap-1.5 cursor-pointer">
+                                                <input
+                                                  type="radio"
+                                                  [name]="'workSite-resolution-' + comparison.id"
+                                                  [checked]="isPendingOptionSelected(comparison, 'workSite', option.value)"
+                                                  (change)="resolvePendingConflict(comparison.id, 'workSite', option.value)"
+                                                  class="w-3.5 h-3.5"
+                                                  />
+                                                  <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                              </label>
+                                            }
+                                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                              <input
+                                                type="radio"
+                                                [name]="'workSite-resolution-' + comparison.id"
+                                                [checked]="isCsvValueSelected(comparison, 'workSite')"
+                                                (change)="resolveConflict(comparison.id, 'workSite', 'csv')"
+                                                class="w-3.5 h-3.5"
+                                                />
+                                                <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'workSite') }}</span>
+                                            </label>
+                                          </div>
+                                        }
+                                        @if (hasFieldConflict(comparison, 'workSite') && !hasPendingRequestChoice(comparison, 'workSite')) {
+                                          <div class="flex flex-col items-center gap-2">
+                                            <input
+                                              type="checkbox"
+                                              [checked]="isFieldSelected(comparison, 'workSite')"
+                                              (change)="toggleFieldSelection(comparison.id, 'workSite')"
+                                              class="w-4 h-4 rounded border-border"
+                                              title="Select to sync this field"
+                                              />
+                                              <svg
+                                                class="w-4 h-4 text-muted-foreground"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                                >
+                                                <path
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"
+                                                  stroke-width="2"
+                                                  d="M9 5l7 7-7 7"
+                                                ></path>
+                                              </svg>
+                                          </div>
+                                        }
+                                        @if (!hasFieldConflict(comparison, 'workSite') && !hasPendingRequestChoice(comparison, 'workSite')) {
+                                          <span class="text-muted-foreground">=</span>
+                                        }
+                                      </div>
+                                      <div class="p-4 bg-green-50/30">
+                                        <div class="flex items-center gap-3 mb-2">
+                                          <span
+                                            class="text-xs font-medium text-muted-foreground uppercase"
+                                            >Work Site (CSV)</span
+                                            >
+                                          @if (hasFieldConflict(comparison, 'workSite')) {
+                                            <span class="text-xs text-green-600">+ added</span>
+                                          }
+                                        </div>
+                                        <p
+                                          class="font-mono text-sm"
+                                          [class.font-semibold]="hasFieldConflict(comparison, 'workSite')"
+                                          [class.text-green-700]="hasFieldConflict(comparison, 'workSite')"
+                                          >
+                                          {{ comparison.csvUser?.workSite || "N/A" }}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  }
                                                                                   @if (hasConflicts(comparison)) {
                                                                                     <div
                                                                                       class="px-6 py-3 bg-blue-50/30 border-t border-border"
