@@ -322,6 +322,57 @@ namespace SyncApp26.Tests.Services.Sync
         }
 
         [Fact]
+        public async Task CompareWithDatabase_WorkSiteTextMatchesNoRegisteredSite_TreatedAsBlank()
+        {
+            var department = SeedDepartment("Engineering");
+            var worksite = SeedWorkSite("Brasov");
+            var user = SeedUser("P1", department.Id, workSiteId: worksite.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Engineering", workSite: "Bucharest") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var comparison = Assert.Single(result);
+            Assert.Null(comparison.CsvUser!.WorkSite);
+            var conflict = Assert.Single(comparison.Conflicts);
+            Assert.Equal("workSite", conflict.Field);
+            Assert.Equal("Brasov", conflict.DbValue);
+            Assert.Equal(string.Empty, conflict.CsvValue);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_WorkSiteTextMatchesNoRegisteredSiteAndDbHasNone_NotAConflict()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Engineering", workSite: "Bucharest") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var comparison = Assert.Single(result);
+            Assert.Null(comparison.CsvUser!.WorkSite);
+            Assert.Empty(comparison.Conflicts);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_WorkSiteTextMatchesRegisteredSiteWithDifferentCasing_NormalizedToRegisteredCasing()
+        {
+            var department = SeedDepartment("Engineering");
+            SeedWorkSite("Cluj-Napoca");
+            var user = SeedUser("P1", department.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Engineering", workSite: "cluj-napoca") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var comparison = Assert.Single(result);
+            Assert.Equal("Cluj-Napoca", comparison.CsvUser!.WorkSite);
+            var conflict = Assert.Single(comparison.Conflicts);
+            Assert.Equal("Cluj-Napoca", conflict.CsvValue);
+        }
+
+        [Fact]
         public async Task CompareWithDatabase_GenuineConflictWithOnePendingRequest_OffersPendingVsCsvChoice()
         {
             var department = SeedDepartment("Engineering");

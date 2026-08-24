@@ -63,6 +63,7 @@ public class CsvSyncService : ICsvSyncService
         var departments = (await _departmentRepository.GetAllDepartmentsAsync())
             .Where(d => d.IsActive) // Only consider active departments
             .ToList();
+        var registeredWorkSiteNames = BuildWorkSiteNameLookup(await _workSiteRepository.GetAllWorkSitesAsync());
 
         // Create a map of personalId to DB user for quick lookup
         var dbUserMap = dbUsers
@@ -81,6 +82,8 @@ public class CsvSyncService : ICsvSyncService
             {
                 continue;
             }
+
+            csvUser.WorkSite = NormalizeWorkSiteName(csvUser.WorkSite, registeredWorkSiteNames);
 
             var personalId = csvUser.PersonalId.Trim();
 
@@ -117,6 +120,35 @@ public class CsvSyncService : ICsvSyncService
     private static bool IsValidCsvRow(CsvUserDTO csvUser)
     {
         return !string.IsNullOrWhiteSpace(csvUser.PersonalId);
+    }
+
+    // Case-insensitive name -> registered site's exact-cased name, so a CSV value can be looked up
+    // regardless of how the importer typed it.
+    private static Dictionary<string, string> BuildWorkSiteNameLookup(IEnumerable<WorkSite> workSites)
+    {
+        var lookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var site in workSites)
+        {
+            var name = site.Name?.Trim();
+            if (!string.IsNullOrEmpty(name))
+            {
+                lookup[name] = name;
+            }
+        }
+        return lookup;
+    }
+
+    // Returns the registered site's canonical name when rawValue names one (case-insensitively), or
+    // null for blank input and for text that doesn't match any registered site.
+    private static string? NormalizeWorkSiteName(string? rawValue, Dictionary<string, string> registeredWorkSiteNames)
+    {
+        var trimmed = rawValue?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        return registeredWorkSiteNames.TryGetValue(trimmed, out var canonicalName) ? canonicalName : null;
     }
 
     private async Task<UserComparisonDTO> BuildExistingUserComparisonAsync(User dbUser, CsvUserDTO csvUser, List<User> dbUsers, List<DataChangeRequest> pendingRequestsForUser)
