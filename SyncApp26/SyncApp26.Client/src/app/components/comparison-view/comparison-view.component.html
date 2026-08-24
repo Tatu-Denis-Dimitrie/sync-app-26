@@ -227,7 +227,7 @@
                     class="grid grid-cols-[1fr,auto,1fr]"
                     >
                     <div class="p-4 bg-red-50/30">
-                      <div class="flex items-center justify-between mb-2">
+                      <div class="flex items-center gap-3 mb-2">
                         <span
                           class="text-xs font-medium text-muted-foreground uppercase"
                           >First Name (Database)</span
@@ -256,8 +256,34 @@
                           {{ comparison.dbUser?.firstName || "N/A" }}
                         </p>
                       </div>
-                      <div class="flex items-center justify-center bg-muted/20 px-2">
-                        @if (hasFieldConflict(comparison, 'firstName')) {
+                      <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
+                        @if (hasPendingRequestChoice(comparison, 'firstName')) {
+                          <div class="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-start gap-1.5 whitespace-nowrap text-xs">
+                            @for (option of getPendingOptions(comparison, 'firstName'); track option.value) {
+                              <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  [name]="'firstName-resolution-' + comparison.id"
+                                  [checked]="isPendingOptionSelected(comparison, 'firstName', option.value)"
+                                  (change)="resolvePendingConflict(comparison.id, 'firstName', option.value)"
+                                  class="w-3.5 h-3.5"
+                                  />
+                                  <span class="text-amber-900">Keep request: {{ option.value }}</span>
+                              </label>
+                            }
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="radio"
+                                [name]="'firstName-resolution-' + comparison.id"
+                                [checked]="isCsvValueSelected(comparison, 'firstName')"
+                                (change)="resolveConflict(comparison.id, 'firstName', 'csv')"
+                                class="w-3.5 h-3.5"
+                                />
+                                <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'firstName') }}</span>
+                            </label>
+                          </div>
+                        }
+                        @if (hasFieldConflict(comparison, 'firstName') && !hasPendingRequestChoice(comparison, 'firstName')) {
                           <div
                             class="flex flex-col items-center gap-2"
                             >
@@ -283,7 +309,7 @@
                               </svg>
                             </div>
                           }
-                          @if (!hasFieldConflict(comparison, 'firstName')) {
+                          @if (!hasFieldConflict(comparison, 'firstName') && !hasPendingRequestChoice(comparison, 'firstName')) {
                             <span
                               class="text-muted-foreground"
                               >=</span
@@ -291,7 +317,7 @@
                           }
                         </div>
                         <div class="p-4 bg-green-50/30">
-                          <div class="flex items-center justify-between mb-2">
+                          <div class="flex items-center gap-3 mb-2">
                             <span
                               class="text-xs font-medium text-muted-foreground uppercase"
                               >First Name (CSV)</span
@@ -323,7 +349,7 @@
                             class="grid grid-cols-[1fr,auto,1fr]"
                             >
                             <div class="p-4 bg-red-50/30">
-                              <div class="flex items-center justify-between mb-2">
+                              <div class="flex items-center gap-3 mb-2">
                                 <span
                                   class="text-xs font-medium text-muted-foreground uppercase"
                                   >Last Name (Database)</span
@@ -352,8 +378,34 @@
                                     {{ comparison.dbUser?.lastName || "N/A" }}
                                   </p>
                                 </div>
-                                <div class="flex items-center justify-center bg-muted/20 px-2">
-                                  @if (hasFieldConflict(comparison, 'lastName')) {
+                                <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
+                                  @if (hasPendingRequestChoice(comparison, 'lastName')) {
+                                    <div class="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-start gap-1.5 whitespace-nowrap text-xs">
+                                      @for (option of getPendingOptions(comparison, 'lastName'); track option.value) {
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            [name]="'lastName-resolution-' + comparison.id"
+                                            [checked]="isPendingOptionSelected(comparison, 'lastName', option.value)"
+                                            (change)="resolvePendingConflict(comparison.id, 'lastName', option.value)"
+                                            class="w-3.5 h-3.5"
+                                            />
+                                            <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                        </label>
+                                      }
+                                      <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input
+                                          type="radio"
+                                          [name]="'lastName-resolution-' + comparison.id"
+                                          [checked]="isCsvValueSelected(comparison, 'lastName')"
+                                          (change)="resolveConflict(comparison.id, 'lastName', 'csv')"
+                                          class="w-3.5 h-3.5"
+                                          />
+                                          <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'lastName') }}</span>
+                                      </label>
+                                    </div>
+                                  }
+                                  @if (hasFieldConflict(comparison, 'lastName') && !hasPendingRequestChoice(comparison, 'lastName')) {
                                     <div
                                       class="flex flex-col items-center gap-2"
                                       >
@@ -379,7 +431,7 @@
                                         </svg>
                                       </div>
                                     }
-                                    @if (!hasFieldConflict(comparison, 'lastName')) {
+                                    @if (!hasFieldConflict(comparison, 'lastName') && !hasPendingRequestChoice(comparison, 'lastName')) {
                                       <span
                                         class="text-muted-foreground"
                                         >=</span
@@ -387,7 +439,7 @@
                                     }
                                   </div>
                                   <div class="p-4 bg-green-50/30">
-                                    <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-3 mb-2">
                                       <span
                                         class="text-xs font-medium text-muted-foreground uppercase"
                                         >Last Name (CSV)</span
@@ -417,7 +469,7 @@
                                       class="grid grid-cols-[1fr,auto,1fr]"
                                       >
                                       <div class="p-4 bg-red-50/30">
-                                        <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-3 mb-2">
                                           <span
                                             class="text-xs font-medium text-muted-foreground uppercase"
                                             >Email (Database)</span
@@ -439,7 +491,7 @@
                                               {{ comparison.dbUser?.email || "N/A" }}
                                             </p>
                                           </div>
-                                          <div class="flex items-center justify-center bg-muted/20 px-2">
+                                          <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
                                             @if (hasFieldConflict(comparison, 'email')) {
                                               <div
                                                 class="flex flex-col items-center gap-2"
@@ -474,7 +526,7 @@
                                               }
                                             </div>
                                             <div class="p-4 bg-green-50/30">
-                                              <div class="flex items-center justify-between mb-2">
+                                              <div class="flex items-center gap-3 mb-2">
                                                 <span
                                                   class="text-xs font-medium text-muted-foreground uppercase"
                                                   >Email (CSV)</span
@@ -502,7 +554,7 @@
                                                           class="grid grid-cols-[1fr,auto,1fr]"
                                                           >
                                                           <div class="p-4 bg-red-50/30">
-                                                            <div class="flex items-center justify-between mb-2">
+                                                            <div class="flex items-center gap-3 mb-2">
                                                               <span
                                                                 class="text-xs font-medium text-muted-foreground uppercase"
                                                                 >Department (Database)</span
@@ -522,7 +574,7 @@
                                                                   {{ comparison.dbUser?.departmentName || "N/A" }}
                                                                 </p>
                                                               </div>
-                                                              <div class="flex items-center justify-center bg-muted/20 px-2">
+                                                              <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
                                                                 @if (hasFieldConflict(comparison, 'departmentName')) {
                                                                   <div
                                                                     class="flex flex-col items-center gap-2"
@@ -557,7 +609,7 @@
                                                                   }
                                                                 </div>
                                                                 <div class="p-4 bg-green-50/30">
-                                                                  <div class="flex items-center justify-between mb-2">
+                                                                  <div class="flex items-center gap-3 mb-2">
                                                                     <span
                                                                       class="text-xs font-medium text-muted-foreground uppercase"
                                                                       >Department (CSV)</span
@@ -585,7 +637,7 @@
                                                                     class="grid grid-cols-[1fr,auto,1fr]"
                                                                     >
                                                                     <div class="p-4 bg-red-50/30">
-                                                                      <div class="flex items-center justify-between mb-2">
+                                                                      <div class="flex items-center gap-3 mb-2">
                                                                         <span
                                                                           class="text-xs font-medium text-muted-foreground uppercase"
                                                                           >Line Manager (Database)</span
@@ -609,7 +661,7 @@
                                                                             {{ comparison.dbUser?.assignedToName || "None" }}
                                                                           </p>
                                                                         </div>
-                                                                        <div class="flex items-center justify-center bg-muted/20 px-2">
+                                                                        <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
                                                                           @if (hasFieldConflict(comparison, 'assignedToName')) {
                                                                             <div
                                                                               class="flex flex-col items-center gap-2"
@@ -646,7 +698,7 @@
                                                                             }
                                                                           </div>
                                                                           <div class="p-4 bg-green-50/30">
-                                                                            <div class="flex items-center justify-between mb-2">
+                                                                            <div class="flex items-center gap-3 mb-2">
                                                                               <span
                                                                                 class="text-xs font-medium text-muted-foreground uppercase"
                                                                                 >Line Manager (CSV)</span
@@ -679,7 +731,7 @@
                                                                             class="grid grid-cols-[1fr,auto,1fr]"
                                                                             >
                                                                             <div class="p-4 bg-red-50/30">
-                                                                              <div class="flex items-center justify-between mb-2">
+                                                                              <div class="flex items-center gap-3 mb-2">
                                                                                 <span
                                                                                   class="text-xs font-medium text-muted-foreground uppercase"
                                                                                   >Function (Database)</span
@@ -701,7 +753,7 @@
                                                                                     {{ comparison.dbUser?.function || "N/A" }}
                                                                                   </p>
                                                                                 </div>
-                                                                                <div class="flex items-center justify-center bg-muted/20 px-2">
+                                                                                <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
                                                                                   @if (hasFieldConflict(comparison, 'function')) {
                                                                                     <div
                                                                                       class="flex flex-col items-center gap-2"
@@ -736,7 +788,7 @@
                                                                                     }
                                                                                   </div>
                                                                                   <div class="p-4 bg-green-50/30">
-                                                                                    <div class="flex items-center justify-between mb-2">
+                                                                                    <div class="flex items-center gap-3 mb-2">
                                                                                       <span
                                                                                         class="text-xs font-medium text-muted-foreground uppercase"
                                                                                         >Function (CSV)</span

@@ -605,7 +605,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.currentComparisons = comparisons;
   }
 
-  onFieldConflictResolved(event: { comparisonId: string, field: string, value: 'db' | 'csv' }): void {
+  onFieldConflictResolved(event: { comparisonId: string, field: string, value: 'db' | 'csv' | 'pending' }): void {
     console.log('Conflict resolved:', event);
   }
 

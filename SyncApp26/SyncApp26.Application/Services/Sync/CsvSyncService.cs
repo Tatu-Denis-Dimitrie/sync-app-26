@@ -209,20 +209,14 @@ public class CsvSyncService : ICsvSyncService
         });
     }
 
-    // Like AddFieldConflictIfDifferent, but also surfaces a pending DataChangeRequest whose target
-    // value no longer matches the DB - even when the DB and CSV agree with each other - so a stale
-    // request (e.g. one superseded by an earlier import) never silently drops out of view.
-    private static void AddNameFieldConflict(List<FieldConflictDTO> conflicts, string field, string csvFieldKey, string dbValue, string csvValue, Dictionary<string, List<string>> pendingValuesByCsvField)
+    private static void AddNameFieldConflict(List<FieldConflictDTO> conflicts, string field, string csvFieldKey, string dbValue, string csvValue, Dictionary<string, List<(Guid RequestId, string Value)>> pendingValuesByCsvField)
     {
         var valuesDiffer = dbValue != csvValue;
 
         pendingValuesByCsvField.TryGetValue(csvFieldKey, out var pendingTargets);
-        var staleTargets = (pendingTargets ?? new List<string>())
-            .Where(v => !string.Equals(v, dbValue, StringComparison.Ordinal))
-            .Distinct()
-            .ToList();
+        var pendingOptions = BuildPendingFieldOptions(dbValue, csvValue, pendingTargets);
 
-        if (!valuesDiffer && staleTargets.Count == 0)
+        if (!valuesDiffer && pendingOptions.Count == 0)
         {
             return;
         }
@@ -233,16 +227,37 @@ public class CsvSyncService : ICsvSyncService
             DbValue = dbValue,
             CsvValue = csvValue,
             Selected = false,
-            HasPendingRequest = staleTargets.Count > 0,
-            PendingRequestValue = staleTargets.Count > 0 ? string.Join(", ", staleTargets) : null
+            HasPendingRequest = pendingOptions.Count > 0,
+            PendingRequestValue = pendingOptions.Count > 0 ? string.Join(", ", pendingOptions.Select(o => o.Value)) : null,
+            PendingOptions = pendingOptions.Select(o => new PendingRequestOptionDTO { Value = o.Value }).ToList()
         });
     }
 
-    // Maps CSV field keys (e.g. "lastname") to every distinct value a pending DataChangeRequest for
-    // this user is asking that field to become.
-    private static Dictionary<string, List<string>> GetPendingRequestValuesByCsvField(List<DataChangeRequest> pendingRequestsForUser)
+    private sealed record PendingFieldOption(string Value, List<Guid> RequestIds);
+
+    private static List<PendingFieldOption> BuildPendingFieldOptions(string dbValue, string csvValue, List<(Guid RequestId, string Value)>? pendingTargets)
     {
-        var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        if (pendingTargets == null || pendingTargets.Count == 0)
+        {
+            return new List<PendingFieldOption>();
+        }
+
+        var options = pendingTargets
+            .GroupBy(p => p.Value, StringComparer.Ordinal)
+            .Select(g => new PendingFieldOption(g.Key, g.Select(p => p.RequestId).Distinct().ToList()))
+            .ToList();
+
+        var nothingAtStake = string.Equals(dbValue, csvValue, StringComparison.Ordinal)
+            && options.All(o => string.Equals(o.Value, csvValue, StringComparison.Ordinal));
+
+        return nothingAtStake ? new List<PendingFieldOption>() : options;
+    }
+
+    // Maps CSV field keys (e.g. "lastname") to every distinct value a pending DataChangeRequest for
+    // this user is asking that field to become, along with the id of the request asking for it.
+    private static Dictionary<string, List<(Guid RequestId, string Value)>> GetPendingRequestValuesByCsvField(List<DataChangeRequest> pendingRequestsForUser)
+    {
+        var result = new Dictionary<string, List<(Guid RequestId, string Value)>>(StringComparer.OrdinalIgnoreCase);
         foreach (var request in pendingRequestsForUser)
         {
             foreach (var (propertyName, value) in TryGetRequestedFieldValues(request.RequestedChangesJson))
@@ -257,10 +272,10 @@ public class CsvSyncService : ICsvSyncService
 
                 if (!result.TryGetValue(csvField, out var values))
                 {
-                    values = new List<string>();
+                    values = new List<(Guid RequestId, string Value)>();
                     result[csvField] = values;
                 }
-                values.Add(value);
+                values.Add((request.Id, value));
             }
         }
         return result;
@@ -397,6 +412,8 @@ public class CsvSyncService : ICsvSyncService
                     if (existingUser != null)
                     {
                         var csvData = item.CsvData!;
+                        pendingRequestsByUserId.TryGetValue(existingUser.Id, out var pendingRequestsForUser);
+                        pendingRequestsForUser ??= new List<DataChangeRequest>();
 
                         if (item.Conflicts.Any())
                         {
@@ -409,7 +426,7 @@ public class CsvSyncService : ICsvSyncService
                         // If conflicts exist, apply only selected resolutions; otherwise sync every differing field
                         if (item.Conflicts.Any())
                         {
-                            hasChanges = await ApplySelectedConflictResolutionsAsync(item.Conflicts, csvData, existingUser, departments, dbUsers, functionCache, workSiteCache, importHistory, result);
+                            hasChanges = await ApplySelectedConflictResolutionsAsync(item.Conflicts, csvData, existingUser, departments, dbUsers, functionCache, workSiteCache, importHistory, result, pendingRequestsForUser);
                         }
                         else
                         {
@@ -421,12 +438,7 @@ public class CsvSyncService : ICsvSyncService
                             hasChanges = changed;
                         }
 
-                        // Whether or not this row itself changed anything, the user may now match a
-                        // pending DataChangeRequest (this import, or an earlier one) - close it out.
-                        if (pendingRequestsByUserId.TryGetValue(existingUser.Id, out var pendingRequestsForUser))
-                        {
-                            await AutoResolveSatisfiedRequestsAsync(existingUser, pendingRequestsForUser, importHistory, EnsureImportHistoryCreatedAsync);
-                        }
+                        await AutoResolveSatisfiedRequestsAsync(existingUser, pendingRequestsForUser, importHistory, EnsureImportHistoryCreatedAsync);
 
                         // Appearing in the CSV is itself the proof that the CSV owns this person, so
                         // adopt accounts that predate this flag or were first created another way -
@@ -622,8 +634,9 @@ public class CsvSyncService : ICsvSyncService
     {
         foreach (var conflict in conflicts)
         {
+
             var selectedValue = conflict.SelectedValue ?? (conflict.Selected ? "csv" : "db");
-            if (!selectedValue.Equals("db", StringComparison.OrdinalIgnoreCase))
+            if (selectedValue.Equals("csv", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -755,27 +768,50 @@ public class CsvSyncService : ICsvSyncService
         }
     }
 
-    private async Task<bool> ApplySelectedConflictResolutionsAsync(List<FieldConflictDTO> conflicts, CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, Dictionary<string, WorkSite?> workSiteCache, ImportHistory importHistory, SyncResultDTO result)
+    private async Task<bool> ApplySelectedConflictResolutionsAsync(List<FieldConflictDTO> conflicts, CsvUserDTO csvData, User existingUser, List<Department> departments, List<User> dbUsers, Dictionary<string, Function?> functionCache, Dictionary<string, WorkSite?> workSiteCache, ImportHistory importHistory, SyncResultDTO result, List<DataChangeRequest> pendingRequestsForUser)
     {
         bool hasChanges = false;
 
+        var pendingValuesByCsvField = GetPendingRequestValuesByCsvField(pendingRequestsForUser);
+        var overriddenRequestIds = new HashSet<Guid>();
+
         foreach (var conflict in conflicts.Where(c => c.Selected))
         {
-            // If no SelectedValue is specified, default to "csv"
-            var selectedValue = conflict.SelectedValue ?? "csv";
+            var fieldKey = conflict.Field.ToLower();
+            var pendingOptions = pendingValuesByCsvField.TryGetValue(fieldKey, out var targets)
+                ? BuildPendingFieldOptions(GetUserNameValue(fieldKey, existingUser), GetCsvNameValue(fieldKey, csvData), targets)
+                : new List<PendingFieldOption>();
 
-            if (selectedValue != "csv")
+            string? chosenPendingValue = null;
+
+            if (pendingOptions.Count > 0)
+            {
+                if (conflict.SelectedValue != "csv" && conflict.SelectedValue != "pending")
+                {
+                    continue;
+                }
+
+                if (conflict.SelectedValue == "pending")
+                {
+                    chosenPendingValue = ResolveChosenPendingValue(conflict, pendingOptions);
+                    if (chosenPendingValue == null)
+                    {
+                        continue;
+                    }
+                }
+            }
+            else if ((conflict.SelectedValue ?? "csv") != "csv")
             {
                 continue;
             }
 
-            switch (conflict.Field.ToLower())
+            switch (fieldKey)
             {
                 case "firstname":
-                    hasChanges |= await ApplyFirstNameResolutionAsync(csvData, existingUser, importHistory);
+                    hasChanges |= await ApplyFirstNameResolutionAsync(csvData, existingUser, importHistory, chosenPendingValue);
                     break;
                 case "lastname":
-                    hasChanges |= await ApplyLastNameResolutionAsync(csvData, existingUser, importHistory);
+                    hasChanges |= await ApplyLastNameResolutionAsync(csvData, existingUser, importHistory, chosenPendingValue);
                     break;
                 case "email":
                     hasChanges |= await ApplyEmailResolutionAsync(csvData, existingUser, importHistory);
@@ -793,14 +829,60 @@ public class CsvSyncService : ICsvSyncService
                     hasChanges |= await ApplyWorkSiteResolutionAsync(csvData, existingUser, workSiteCache, importHistory);
                     break;
             }
+
+            if (pendingOptions.Count > 0)
+            {
+                var appliedValue = (chosenPendingValue ?? GetCsvNameValue(fieldKey, csvData)).Trim();
+                foreach (var option in pendingOptions.Where(o => !string.Equals(o.Value.Trim(), appliedValue, StringComparison.Ordinal)))
+                {
+                    foreach (var requestId in option.RequestIds)
+                    {
+                        overriddenRequestIds.Add(requestId);
+                    }
+                }
+            }
         }
+
+        await RejectOverriddenPendingRequestsAsync(overriddenRequestIds, pendingRequestsForUser, importHistory);
 
         return hasChanges;
     }
 
-    private async Task<bool> ApplyFirstNameResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory)
+
+    private static string? ResolveChosenPendingValue(FieldConflictDTO conflict, List<PendingFieldOption> pendingOptions)
     {
-        if (existingUser.FirstName == csvData.FirstName)
+        if (conflict.SelectedPendingValue == null)
+        {
+            return pendingOptions.Count == 1 ? pendingOptions[0].Value : null;
+        }
+
+        return pendingOptions
+            .FirstOrDefault(o => string.Equals(o.Value, conflict.SelectedPendingValue, StringComparison.Ordinal))
+            ?.Value;
+    }
+
+    private static string GetCsvNameValue(string fieldKey, CsvUserDTO csvData) =>
+        fieldKey == "firstname" ? csvData.FirstName : csvData.LastName;
+
+    private static string GetUserNameValue(string fieldKey, User user) =>
+        fieldKey == "firstname" ? user.FirstName : user.LastName;
+
+    private async Task RejectOverriddenPendingRequestsAsync(HashSet<Guid> overriddenRequestIds, List<DataChangeRequest> pendingRequestsForUser, ImportHistory importHistory)
+    {
+        foreach (var request in pendingRequestsForUser.Where(r => r.Status == "Pending" && overriddenRequestIds.Contains(r.Id)))
+        {
+            request.Status = "Rejected";
+            request.ResolvedAt = DateTime.UtcNow;
+            request.ResolvedByAdminId = null;
+            request.AutoResolvedByImportHistoryId = importHistory.Id;
+            await _dataChangeRequestRepository.UpdateAsync(request);
+        }
+    }
+
+    private async Task<bool> ApplyFirstNameResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory, string? chosenPendingValue)
+    {
+        var newValue = (chosenPendingValue ?? csvData.FirstName).Trim();
+        if (existingUser.FirstName == newValue)
         {
             return false;
         }
@@ -812,18 +894,19 @@ public class CsvSyncService : ICsvSyncService
             UserId = existingUser.Id,
             FieldName = "firstname",
             OldValue = existingUser.FirstName,
-            NewValue = csvData.FirstName.Trim(),
+            NewValue = newValue,
             Status = "accepted"
         };
 
-        existingUser.FirstName = csvData.FirstName.Trim();
+        existingUser.FirstName = newValue;
         await _userChangeHistoryRepository.AddAsync(importConflict);
         return true;
     }
 
-    private async Task<bool> ApplyLastNameResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory)
+    private async Task<bool> ApplyLastNameResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory, string? chosenPendingValue)
     {
-        if (existingUser.LastName == csvData.LastName)
+        var newValue = (chosenPendingValue ?? csvData.LastName).Trim();
+        if (existingUser.LastName == newValue)
         {
             return false;
         }
@@ -835,11 +918,11 @@ public class CsvSyncService : ICsvSyncService
             UserId = existingUser.Id,
             FieldName = "lastname",
             OldValue = existingUser.LastName,
-            NewValue = csvData.LastName.Trim(),
+            NewValue = newValue,
             Status = "accepted"
         };
 
-        existingUser.LastName = csvData.LastName.Trim();
+        existingUser.LastName = newValue;
         await _userChangeHistoryRepository.AddAsync(importConflict);
         return true;
     }
