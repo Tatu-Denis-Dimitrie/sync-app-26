@@ -14,19 +14,28 @@ namespace SyncApp26.Application.Services
 {
     public class DataChangeRequestService : IDataChangeRequestService
     {
-        // Fields that must never be applied through this generic reflection-based flow,
-        // even if a client crafts a request bypassing the UI's available-fields list.
-        private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Email", "Role" };
+        // Fields that must never be applied through this generic reflection-based flow, even if a
+        // client crafts a request bypassing the UI's available-fields list. Email isn't listed here:
+        // the generic Create action (below) already strips it from any submitted request before it's
+        // ever saved, so the only way an "Email" key can reach ResolveRequestAsync is via
+        // RequestEmailChangeAsync's dedicated, domain-checked endpoint - it's safe to apply.
+        private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Role" };
 
         private readonly IDataChangeRequestRepository _repository;
         private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
         private readonly IUserService _userService;
+        private readonly IDocumentSignatureService _documentSignatureService;
 
-        public DataChangeRequestService(IDataChangeRequestRepository repository, IUserChangeHistoryRepository userChangeHistoryRepository, IUserService userService)
+        public DataChangeRequestService(
+            IDataChangeRequestRepository repository,
+            IUserChangeHistoryRepository userChangeHistoryRepository,
+            IUserService userService,
+            IDocumentSignatureService documentSignatureService)
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
             _userService = userService;
+            _documentSignatureService = documentSignatureService;
         }
 
         private static Type? GetEnumType(Type propertyType)
@@ -136,7 +145,7 @@ namespace SyncApp26.Application.Services
             }
 
             var existingRequests = await _repository.GetByUserWithUserAsync(userId);
-            var hasPendingEmailChange = existingRequests.Any(r => r.Status == "Pending" && ContainsEmailKey(r.RequestedChangesJson));
+            var hasPendingEmailChange = existingRequests.Any(r => r.Status == "Pending" && TryGetRequestedEmail(r.RequestedChangesJson) != null);
             if (hasPendingEmailChange)
             {
                 return AccountActionResult<DataChangeRequestDTO>.Fail("You already have a pending email change request awaiting admin review.");
@@ -152,17 +161,21 @@ namespace SyncApp26.Application.Services
             return AccountActionResult<DataChangeRequestDTO>.Ok(created);
         }
 
-        private static bool ContainsEmailKey(string requestedChangesJson)
+        private static string? TryGetRequestedEmail(string requestedChangesJson)
         {
             try
             {
                 var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
-                return changes != null && changes.ContainsKey("Email");
+                if (changes != null && changes.TryGetValue("Email", out var value))
+                {
+                    return value?.ToString();
+                }
             }
             catch
             {
-                return false;
+                // Malformed JSON is surfaced (and reported) wherever the request is actually resolved.
             }
+            return null;
         }
 
         // Dates render as the same "yyyy-MM-dd" the request itself carries, so comparing a stored
@@ -223,6 +236,23 @@ namespace SyncApp26.Application.Services
 
             if (req == null) throw new Exception("Request not found");
             if (req.Status != "Pending") throw new Exception("Request is already resolved");
+
+            // Re-check email uniqueness right before applying: the address could've been claimed by
+            // someone else in the time between the request being made and an admin approving it.
+            string? oldEmailForCleanup = null;
+            if (dto.Status == "Approved")
+            {
+                var requestedEmail = TryGetRequestedEmail(req.RequestedChangesJson);
+                if (requestedEmail != null)
+                {
+                    var conflictUser = await _userService.GetUserByEmailAsync(requestedEmail);
+                    if (conflictUser != null && conflictUser.Id != req.UserId)
+                    {
+                        throw new Exception($"Cannot approve: {requestedEmail} has since been taken by another account.");
+                    }
+                    oldEmailForCleanup = req.User.Email;
+                }
+            }
 
             req.Status = dto.Status;
             req.ResolvedAt = DateTime.UtcNow;
@@ -290,7 +320,7 @@ namespace SyncApp26.Application.Services
                     {
                         foreach (var kv in changes)
                         {
-                            if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Email/Role changes
+                            if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Role changes
                             var prop = userType.GetProperty(kv.Key);
                             if (prop != null && prop.CanWrite)
                             {
@@ -337,6 +367,19 @@ namespace SyncApp26.Application.Services
             foreach (var entry in historyEntries)
             {
                 await _userChangeHistoryRepository.AddAsync(entry);
+            }
+
+            if (oldEmailForCleanup != null)
+            {
+                try
+                {
+                    await _documentSignatureService.InvalidateTokensForEmailAsync(oldEmailForCleanup);
+                }
+                catch
+                {
+                    // Best-effort - a stale signing link failing later with "Signer account not
+                    // found" is an acceptable fallback; it must never block the approval itself.
+                }
             }
 
             return MapToDTO(req);
