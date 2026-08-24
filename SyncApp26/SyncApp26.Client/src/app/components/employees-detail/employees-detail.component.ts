@@ -262,8 +262,13 @@ export class EmployeesDetailComponent implements OnInit {
     return formatDateTimeUtil(date);
   }
 
+  private isAppliedStatus(status?: string | null): boolean {
+    const normalized = status?.trim().toLowerCase() ?? '';
+    return normalized.startsWith('accepted') || normalized.startsWith('approved');
+  }
+
   getConflictStatusColor(status?: string | null): string {
-    return status === 'accepted'
+    return this.isAppliedStatus(status)
       ? 'bg-green-500/10 text-green-700 border-green-500/20'
       : 'bg-red-500/10 text-red-700 border-red-500/20';
   }

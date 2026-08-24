@@ -480,6 +480,13 @@
                                                 >- removed</span
                                                 >
                                               }
+                                            @if (fieldHasPendingRequest(comparison, 'email')) {
+                                              <span
+                                                class="text-xs text-amber-600"
+                                                title="A pending data change request wants this field to become a different value"
+                                                >⚠ pending request: {{ getPendingRequestValue(comparison, 'email') }}</span
+                                                >
+                                            }
                                             </div>
                                             <p
                                               class="font-mono text-sm"
@@ -492,7 +499,33 @@
                                             </p>
                                           </div>
                                           <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
-                                            @if (hasFieldConflict(comparison, 'email')) {
+                                            @if (hasPendingRequestChoice(comparison, 'email')) {
+                                                <div class="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-start gap-1.5 whitespace-nowrap text-xs">
+                                                  @for (option of getPendingOptions(comparison, 'email'); track option.value) {
+                                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                                      <input
+                                                        type="radio"
+                                                        [name]="'email-resolution-' + comparison.id"
+                                                        [checked]="isPendingOptionSelected(comparison, 'email', option.value)"
+                                                        (change)="resolvePendingConflict(comparison.id, 'email', option.value)"
+                                                        class="w-3.5 h-3.5"
+                                                        />
+                                                        <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                                    </label>
+                                                  }
+                                                  <label class="flex items-center gap-1.5 cursor-pointer">
+                                                    <input
+                                                      type="radio"
+                                                      [name]="'email-resolution-' + comparison.id"
+                                                      [checked]="isCsvValueSelected(comparison, 'email')"
+                                                      (change)="resolveConflict(comparison.id, 'email', 'csv')"
+                                                      class="w-3.5 h-3.5"
+                                                      />
+                                                      <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'email') }}</span>
+                                                  </label>
+                                                </div>
+                                              }
+                                            @if (hasFieldConflict(comparison, 'email') && !hasPendingRequestChoice(comparison, 'email')) {
                                               <div
                                                 class="flex flex-col items-center gap-2"
                                                 >
@@ -518,7 +551,7 @@
                                                   </svg>
                                                 </div>
                                               }
-                                              @if (!hasFieldConflict(comparison, 'email')) {
+                                              @if (!hasFieldConflict(comparison, 'email') && !hasPendingRequestChoice(comparison, 'email')) {
                                                 <span
                                                   class="text-muted-foreground"
                                                   >=</span

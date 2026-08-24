@@ -634,6 +634,206 @@ namespace SyncApp26.Tests.Services.Sync
         }
 
         [Fact]
+        public async Task SyncUsers_RequestMixesDecidableAndUntouchableFields_CsvChosen_KeepsOnlyTheUntouchedField()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, lastName: "Garcia");
+            var request = SeedPendingRequest(
+                user.Id,
+                "{\"LastName\":\"Popescu\",\"CommuteDurationMinutes\":\"45\"}",
+                "{\"LastName\":\"Garcia\",\"CommuteDurationMinutes\":\"20\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "lastName", DbValue = "Garcia", CsvValue = "Smith", Selected = true,
+                SelectedValue = "csv", HasPendingRequest = true, PendingRequestValue = "Popescu"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", lastName: "Smith", departmentName: "Engineering"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("Smith", _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").LastName);
+
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Pending", persisted.Status);
+            Assert.DoesNotContain("LastName", persisted.RequestedChangesJson);
+            Assert.Contains("CommuteDurationMinutes", persisted.RequestedChangesJson);
+            Assert.DoesNotContain("LastName", persisted.OriginalValuesJson);
+
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id && h.Status == "rejected-by-import");
+            Assert.Equal("lastname", history.FieldName);
+            Assert.Equal("Garcia", history.OldValue);
+            Assert.Equal("Popescu", history.NewValue);
+        }
+
+        [Fact]
+        public async Task SyncUsers_RequestMixesDecidableAndUntouchableFields_PendingChosen_KeepsOnlyTheUntouchedField()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, lastName: "Garcia");
+            var request = SeedPendingRequest(
+                user.Id,
+                "{\"LastName\":\"Popescu\",\"CommuteDurationMinutes\":\"45\"}",
+                "{\"LastName\":\"Garcia\",\"CommuteDurationMinutes\":\"20\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "lastName", DbValue = "Garcia", CsvValue = "Smith", Selected = true,
+                SelectedValue = "pending", HasPendingRequest = true, PendingRequestValue = "Popescu"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", lastName: "Smith", departmentName: "Engineering"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("Popescu", _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").LastName);
+
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Pending", persisted.Status);
+            Assert.DoesNotContain("LastName", persisted.RequestedChangesJson);
+            Assert.Contains("CommuteDurationMinutes", persisted.RequestedChangesJson);
+
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id && h.Status == "approved-by-import");
+            Assert.Equal("lastname", history.FieldName);
+            Assert.Equal("Garcia", history.OldValue);
+            Assert.Equal("Popescu", history.NewValue);
+        }
+
+        [Fact]
+        public async Task SyncUsers_RequestMixesTwoDecidableFieldsSplitBothWays_ClosesAsRejected()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, firstName: "Dan", lastName: "Garcia");
+            var request = SeedPendingRequest(
+                user.Id,
+                "{\"FirstName\":\"Ion\",\"LastName\":\"Popescu\"}",
+                "{\"FirstName\":\"Dan\",\"LastName\":\"Garcia\"}");
+            var service = CreateService();
+            var conflicts = new List<FieldConflictDTO>
+            {
+                new() { Field = "firstName", DbValue = "Dan", CsvValue = "Daniel", Selected = true, SelectedValue = "pending", HasPendingRequest = true, PendingRequestValue = "Ion" },
+                new() { Field = "lastName", DbValue = "Garcia", CsvValue = "Smith", Selected = true, SelectedValue = "csv", HasPendingRequest = true, PendingRequestValue = "Popescu" }
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", firstName: "Daniel", lastName: "Smith", departmentName: "Engineering"), conflicts);
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var synced = _dbFixture.Context.Users.Single(u => u.PersonalId == "P1");
+            Assert.Equal("Ion", synced.FirstName);
+            Assert.Equal("Smith", synced.LastName);
+
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Rejected", persisted.Status);
+            Assert.NotNull(persisted.AutoResolvedByImportHistoryId);
+            Assert.Single(_dbFixture.Context.UserChangeHistories.Where(h => h.UserId == user.Id && h.Status == "approved-by-import"));
+            Assert.Single(_dbFixture.Context.UserChangeHistories.Where(h => h.UserId == user.Id && h.Status == "rejected-by-import"));
+        }
+
+        // ───────────────────────── Email: pending DataChangeRequest interaction ─────────────────────────
+
+        [Fact]
+        public async Task CompareWithDatabase_PendingEmailRequest_OffersPendingVsCsvChoice()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, email: "old@example.com");
+            SeedPendingRequest(user.Id, "{\"Email\":\"requested@example.com\"}", "{\"Email\":\"old@example.com\"}");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", email: "csv@example.com", departmentName: "Engineering") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("email", conflict.Field);
+            Assert.True(conflict.HasPendingRequest);
+            Assert.Equal("requested@example.com", Assert.Single(conflict.PendingOptions).Value);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_PendingEmailRequestButDbAndCsvAgree_StillOffersChoice()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, email: "same@example.com");
+            SeedPendingRequest(user.Id, "{\"Email\":\"requested@example.com\"}", "{\"Email\":\"same@example.com\"}");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", email: "same@example.com", departmentName: "Engineering") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("email", conflict.Field);
+            Assert.Equal("requested@example.com", Assert.Single(conflict.PendingOptions).Value);
+        }
+
+        [Fact]
+        public async Task SyncUsers_EmailConflictResolvedAsPending_AppliesRequestedEmailAndApprovesRequest()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, email: "old@example.com");
+            var request = SeedPendingRequest(user.Id, "{\"Email\":\"requested@example.com\"}", "{\"Email\":\"old@example.com\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "email", DbValue = "old@example.com", CsvValue = "csv@example.com", Selected = true,
+                SelectedValue = "pending", HasPendingRequest = true, PendingRequestValue = "requested@example.com"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", email: "csv@example.com", departmentName: "Engineering"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("requested@example.com", _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").Email);
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Approved", persisted.Status);
+            Assert.NotNull(persisted.AutoResolvedByImportHistoryId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_EmailConflictResolvedAsCsv_AppliesCsvEmailAndRejectsRequest()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, email: "old@example.com");
+            var request = SeedPendingRequest(user.Id, "{\"Email\":\"requested@example.com\"}", "{\"Email\":\"old@example.com\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "email", DbValue = "old@example.com", CsvValue = "csv@example.com", Selected = true,
+                SelectedValue = "csv", HasPendingRequest = true, PendingRequestValue = "requested@example.com"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", email: "csv@example.com", departmentName: "Engineering"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("csv@example.com", _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").Email);
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Rejected", persisted.Status);
+            Assert.NotNull(persisted.AutoResolvedByImportHistoryId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_EmailConflictWithPendingRequestButNoExplicitChoice_LeavesEmailAndRequestUntouched()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, email: "old@example.com");
+            var request = SeedPendingRequest(user.Id, "{\"Email\":\"requested@example.com\"}", "{\"Email\":\"old@example.com\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "email", DbValue = "old@example.com", CsvValue = "csv@example.com", Selected = true,
+                HasPendingRequest = true, PendingRequestValue = "requested@example.com"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", email: "csv@example.com", departmentName: "Engineering"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal("old@example.com", _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").Email);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
         public async Task SyncUsers_PendingRequestOnUnrelatedField_UntouchedByImport()
         {
             var department = SeedDepartment("Engineering");
