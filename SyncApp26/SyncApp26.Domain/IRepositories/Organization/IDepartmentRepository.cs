@@ -10,5 +10,6 @@ namespace SyncApp26.Domain.IRepositories
         Task UpdateDepartmentAsync(Department department);
         Task<IEnumerable<Department>> GetDeletedDepartmentsAsync();
         Task<Department?> GetDeletedDepartmentByIdAsync(Guid id);
+        Task<Department?> GetByNameAsync(string name);
     }
 }

@@ -53,5 +53,19 @@ namespace SyncApp26.Infrastructure.Repositories
                 .Where(d => d.DeletedAt != null)
                 .FirstOrDefaultAsync(d => d.Id == id);
         }
+
+        public async Task<Department?> GetByNameAsync(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return null;
+            }
+
+            var normalizedName = name.Trim();
+
+            return await _context.Departments
+                .Where(d => d.DeletedAt == null)
+                .FirstOrDefaultAsync(d => d.Name.ToLower() == normalizedName.ToLower());
+        }
     }
 }

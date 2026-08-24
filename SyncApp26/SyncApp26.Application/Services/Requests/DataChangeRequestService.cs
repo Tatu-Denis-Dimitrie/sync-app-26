@@ -21,26 +21,116 @@ namespace SyncApp26.Application.Services
         // RequestEmailChangeAsync's dedicated, domain-checked endpoint - it's safe to apply.
         private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Role" };
 
+        // "Department", "Function" and "WorkSite" all travel as the related entity's *name*, not its
+        // id - the client picks a name from a dropdown/free-text field (see availableFields on the
+        // basic-user/line-manager components), and that's what reads naturally everywhere the value is
+        // shown (this admin screen, UserChangeHistory, a CSV import). On the User entity, though, each
+        // one is a navigation property, not a string, so the reflection-based applier below can't
+        // write it directly - all three need the same explicit name -> entity resolution as WorkSite
+        // originally did on its own.
+        private const string DepartmentField = nameof(User.Department);
+        private const string FunctionField = nameof(User.Function);
         private const string WorkSiteField = nameof(User.WorkSite);
+
+        private static readonly HashSet<string> NavigationNameFields = new(StringComparer.OrdinalIgnoreCase)
+        {
+            DepartmentField, FunctionField, WorkSiteField
+        };
 
         private readonly IDataChangeRequestRepository _repository;
         private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
         private readonly IUserService _userService;
         private readonly IDocumentSignatureService _documentSignatureService;
         private readonly IWorkSiteRepository _workSiteRepository;
+        private readonly IDepartmentRepository _departmentRepository;
+        private readonly IFunctionRepository _functionRepository;
 
         public DataChangeRequestService(
             IDataChangeRequestRepository repository,
             IUserChangeHistoryRepository userChangeHistoryRepository,
             IUserService userService,
             IDocumentSignatureService documentSignatureService,
-            IWorkSiteRepository workSiteRepository)
+            IWorkSiteRepository workSiteRepository,
+            IDepartmentRepository departmentRepository,
+            IFunctionRepository functionRepository)
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
             _userService = userService;
             _documentSignatureService = documentSignatureService;
             _workSiteRepository = workSiteRepository;
+            _departmentRepository = departmentRepository;
+            _functionRepository = functionRepository;
+        }
+
+        private static string GetNavigationFieldCurrentName(string fieldKey, User user)
+        {
+            if (string.Equals(fieldKey, DepartmentField, StringComparison.OrdinalIgnoreCase))
+            {
+                return user.Department?.Name ?? string.Empty;
+            }
+            if (string.Equals(fieldKey, FunctionField, StringComparison.OrdinalIgnoreCase))
+            {
+                return user.Function?.Name ?? string.Empty;
+            }
+            return user.WorkSite?.Name ?? string.Empty;
+        }
+
+        private async Task<(Guid? Id, string CanonicalName, object? Entity)> ResolveNavigationTargetAsync(string fieldKey, string requestedName)
+        {
+            if (string.Equals(fieldKey, DepartmentField, StringComparison.OrdinalIgnoreCase))
+            {
+                var department = await _departmentRepository.GetByNameAsync(requestedName);
+                if (department == null)
+                {
+                    throw new Exception($"Cannot approve: department '{requestedName}' no longer exists.");
+                }
+                if (!department.IsActive)
+                {
+                    throw new Exception($"Cannot approve: department '{department.Name}' is no longer active.");
+                }
+                return (department.Id, department.Name, department);
+            }
+
+            if (string.Equals(fieldKey, FunctionField, StringComparison.OrdinalIgnoreCase))
+            {
+                var function = await _functionRepository.GetByNameAsync(requestedName);
+                if (function == null)
+                {
+                    throw new Exception($"Cannot approve: function '{requestedName}' no longer exists.");
+                }
+                return (function.Id, function.Name, function);
+            }
+
+            var workSite = await _workSiteRepository.GetByNameAsync(requestedName);
+            if (workSite == null)
+            {
+                throw new Exception($"Cannot approve: work site '{requestedName}' no longer exists.");
+            }
+            if (!workSite.IsActive)
+            {
+                throw new Exception($"Cannot approve: work site '{workSite.Name}' is no longer active.");
+            }
+            return (workSite.Id, workSite.Name, workSite);
+        }
+
+        private static void ApplyNavigationFieldTarget(string fieldKey, User user, Guid? id, object? entity)
+        {
+            if (string.Equals(fieldKey, DepartmentField, StringComparison.OrdinalIgnoreCase))
+            {
+                user.DepartmentId = id;
+                user.Department = entity as Department;
+            }
+            else if (string.Equals(fieldKey, FunctionField, StringComparison.OrdinalIgnoreCase))
+            {
+                user.FunctionId = id;
+                user.Function = entity as Function;
+            }
+            else
+            {
+                user.WorkSiteId = id;
+                user.WorkSite = entity as WorkSite;
+            }
         }
 
         private static Type? GetEnumType(Type propertyType)
@@ -166,7 +256,7 @@ namespace SyncApp26.Application.Services
             return AccountActionResult<DataChangeRequestDTO>.Ok(created);
         }
 
-        private static string? TryGetRequestedWorkSiteName(string requestedChangesJson)
+        private static string? TryGetRequestedValue(string requestedChangesJson, string key)
         {
             try
             {
@@ -175,7 +265,7 @@ namespace SyncApp26.Application.Services
                 {
                     foreach (var kv in changes)
                     {
-                        if (string.Equals(kv.Key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
                         {
                             return kv.Value?.ToString()?.Trim() ?? string.Empty;
                         }
@@ -231,9 +321,9 @@ namespace SyncApp26.Application.Services
                 var originalValues = new Dictionary<string, string?>();
                 foreach (var key in changes.Keys)
                 {
-                    if (string.Equals(key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                    if (NavigationNameFields.Contains(key))
                     {
-                        originalValues[key] = user.WorkSite?.Name ?? string.Empty;
+                        originalValues[key] = GetNavigationFieldCurrentName(key, user);
                         continue;
                     }
 
@@ -288,21 +378,20 @@ namespace SyncApp26.Application.Services
                 }
             }
 
-            WorkSite? approvedWorkSite = null;
-            var requestedWorkSiteName = TryGetRequestedWorkSiteName(req.RequestedChangesJson);
-            if (dto.Status == "Approved" && requestedWorkSiteName != null)
+            var resolvedNavigationTargets = new Dictionary<string, (Guid? Id, string CanonicalName, object? Entity)>(StringComparer.OrdinalIgnoreCase);
+            if (dto.Status == "Approved")
             {
-                if (requestedWorkSiteName.Length > 0)
+                foreach (var field in NavigationNameFields)
                 {
-                    approvedWorkSite = await _workSiteRepository.GetByNameAsync(requestedWorkSiteName);
-                    if (approvedWorkSite == null)
+                    var requestedName = TryGetRequestedValue(req.RequestedChangesJson, field);
+                    if (requestedName == null)
                     {
-                        throw new Exception($"Cannot approve: work site '{requestedWorkSiteName}' no longer exists.");
+                        continue; // request doesn't touch this field
                     }
-                    if (!approvedWorkSite.IsActive)
-                    {
-                        throw new Exception($"Cannot approve: work site '{approvedWorkSite.Name}' is no longer active.");
-                    }
+
+                    resolvedNavigationTargets[field] = requestedName.Length > 0
+                        ? await ResolveNavigationTargetAsync(field, requestedName)
+                        : (null, string.Empty, null);
                 }
             }
 
@@ -337,22 +426,22 @@ namespace SyncApp26.Application.Services
                     // Capture old values and build history entries
                     foreach (var kv in changes)
                     {
-                        if (string.Equals(kv.Key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                        if (NavigationNameFields.Contains(kv.Key))
                         {
-                            var oldWorkSite = (originalValues != null && originalValues.TryGetValue(kv.Key, out var workSiteSnapshot))
-                                ? workSiteSnapshot ?? string.Empty
-                                : req.User.WorkSite?.Name ?? string.Empty;
-                            var newWorkSite = kv.Value?.ToString() ?? string.Empty;
+                            var oldName = (originalValues != null && originalValues.TryGetValue(kv.Key, out var navigationSnapshot))
+                                ? navigationSnapshot ?? string.Empty
+                                : GetNavigationFieldCurrentName(kv.Key, req.User);
+                            var newName = kv.Value?.ToString() ?? string.Empty;
 
-                            if (!string.Equals(oldWorkSite, newWorkSite, StringComparison.Ordinal))
+                            if (!string.Equals(oldName, newName, StringComparison.Ordinal))
                             {
                                 historyEntries.Add(new UserChangeHistory
                                 {
                                     Id = Guid.NewGuid(),
                                     UserId = req.UserId,
                                     FieldName = kv.Key,
-                                    OldValue = oldWorkSite,
-                                    NewValue = newWorkSite,
+                                    OldValue = oldName,
+                                    NewValue = newName,
                                     ImportHistoryId = null,
                                     Status = statusLower,
                                     CreatedAt = now
@@ -365,11 +454,6 @@ namespace SyncApp26.Application.Services
                         var prop = userType.GetProperty(kv.Key);
                         if (prop != null)
                         {
-                            // Prefer the value snapshotted when the request was created. Falling back to
-                            // the live value only applies to legacy requests created before this snapshot
-                            // existed - otherwise, diffing against the live value would silently produce no
-                            // history entry whenever another write path (e.g. a CSV import) already applied
-                            // this same change to the user before the request was resolved.
                             var oldValue = (originalValues != null && originalValues.TryGetValue(kv.Key, out var snapshotValue))
                                 ? snapshotValue ?? string.Empty
                                 : FormatFieldValue(prop.GetValue(req.User)) ?? string.Empty;
@@ -398,10 +482,12 @@ namespace SyncApp26.Application.Services
                         foreach (var kv in changes)
                         {
                             if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Role changes
-                            if (string.Equals(kv.Key, WorkSiteField, StringComparison.OrdinalIgnoreCase))
+                            if (NavigationNameFields.Contains(kv.Key))
                             {
-                                req.User.WorkSiteId = approvedWorkSite?.Id;
-                                req.User.WorkSite = approvedWorkSite;
+                                var target = resolvedNavigationTargets.TryGetValue(kv.Key, out var resolved)
+                                    ? resolved
+                                    : (Id: (Guid?)null, CanonicalName: string.Empty, Entity: (object?)null);
+                                ApplyNavigationFieldTarget(kv.Key, req.User, target.Id, target.Entity);
                                 continue;
                             }
 

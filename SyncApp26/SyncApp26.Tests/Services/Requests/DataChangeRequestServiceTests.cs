@@ -21,7 +21,9 @@ namespace SyncApp26.Tests.Services.Requests
                 new UserChangeHistoryRepository(_dbFixture.Context),
                 new UserService(new UserRepository(_dbFixture.Context)),
                 new DocumentSignatureService(_dbFixture.Context),
-                new WorkSiteRepository(_dbFixture.Context));
+                new WorkSiteRepository(_dbFixture.Context),
+                new DepartmentRepository(_dbFixture.Context),
+                new FunctionRepository(_dbFixture.Context));
 
         private WorkSite SeedWorkSite(string name, bool isActive = true)
         {
@@ -31,7 +33,23 @@ namespace SyncApp26.Tests.Services.Requests
             return workSite;
         }
 
-        private User SeedUser(string firstName = "Old", Guid? departmentId = null, int? commuteDurationMinutes = null, Guid? workSiteId = null)
+        private Department SeedDepartment(string name, bool isActive = true)
+        {
+            var department = new Department { Id = Guid.NewGuid(), Name = name, IsActive = isActive, CreatedAt = DateTime.UtcNow };
+            _dbFixture.Context.Departments.Add(department);
+            _dbFixture.Context.SaveChanges();
+            return department;
+        }
+
+        private Function SeedFunction(string name)
+        {
+            var function = new Function { Id = Guid.NewGuid(), Name = name, CreatedAt = DateTime.UtcNow };
+            _dbFixture.Context.Functions.Add(function);
+            _dbFixture.Context.SaveChanges();
+            return function;
+        }
+
+        private User SeedUser(string firstName = "Old", Guid? departmentId = null, int? commuteDurationMinutes = null, Guid? workSiteId = null, Guid? functionId = null)
         {
             var user = new User
             {
@@ -43,6 +61,7 @@ namespace SyncApp26.Tests.Services.Requests
                 DepartmentId = departmentId,
                 CommuteDurationMinutes = commuteDurationMinutes,
                 WorkSiteId = workSiteId,
+                FunctionId = functionId,
                 CreatedAt = DateTime.UtcNow
             };
             _dbFixture.Context.Users.Add(user);
@@ -557,6 +576,186 @@ namespace SyncApp26.Tests.Services.Requests
             });
 
             Assert.Contains("\"WorkSite\":\"\"", created.OriginalValuesJson);
+        }
+
+        // ───────────────────────── Department / Function (same navigation-property hazard as WorkSite) ─────────────────────────
+
+        [Fact]
+        public async Task ResolveRequestAsync_DepartmentInChanges_AppliedWhenApproved()
+        {
+            // A department change travels as the department's *name*, so approving has to look the
+            // name up and set the FK - the reflection-based applier can't write a navigation property.
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Department\":\"Engineering\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(department.Id, _dbFixture.Context.Users.Single(u => u.Id == user.Id).DepartmentId);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_DepartmentMatchedCaseInsensitively_AppliedWhenApproved()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Department\":\"engineering\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(department.Id, _dbFixture.Context.Users.Single(u => u.Id == user.Id).DepartmentId);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_DepartmentNoLongerExists_ThrowsAndLeavesRequestPending()
+        {
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Department\":\"Ghost Dept\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await Assert.ThrowsAsync<Exception>(() =>
+                service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" }));
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).DepartmentId);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_DepartmentNoLongerActive_ThrowsAndLeavesRequestPending()
+        {
+            SeedDepartment("Retired Dept", isActive: false);
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Department\":\"Retired Dept\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await Assert.ThrowsAsync<Exception>(() =>
+                service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" }));
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).DepartmentId);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_Rejected_DoesNotApplyDepartment()
+        {
+            SeedDepartment("Engineering");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Department\":\"Engineering\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Rejected" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).DepartmentId);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_ApprovedDepartment_RecordsHistoryUsingNamesNotIds()
+        {
+            var oldDept = SeedDepartment("Old Dept");
+            SeedDepartment("Engineering");
+            var user = SeedUser(firstName: "Old", departmentId: oldDept.Id);
+            var service = CreateService();
+            var created = await service.CreateRequestAsync(user.Id, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"Department\":\"Engineering\"}",
+                Reason = "Transferred"
+            });
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(created.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id);
+            Assert.Equal("Department", history.FieldName);
+            Assert.Equal("Old Dept", history.OldValue);
+            Assert.Equal("Engineering", history.NewValue);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_FunctionInChanges_AppliedWhenApproved()
+        {
+            // Function has no IsActive flag, so approval only checks existence, not deactivation.
+            var function = SeedFunction("QA Engineer");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Function\":\"QA Engineer\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(function.Id, _dbFixture.Context.Users.Single(u => u.Id == user.Id).FunctionId);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_FunctionNoLongerExists_ThrowsAndLeavesRequestPending()
+        {
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Function\":\"Ghost Function\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await Assert.ThrowsAsync<Exception>(() =>
+                service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" }));
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).FunctionId);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_ApprovedFunction_RecordsHistoryUsingNamesNotIds()
+        {
+            var oldFunction = SeedFunction("Junior Engineer");
+            SeedFunction("QA Engineer");
+            var user = SeedUser(firstName: "Old", functionId: oldFunction.Id);
+            var service = CreateService();
+            var created = await service.CreateRequestAsync(user.Id, new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"Function\":\"QA Engineer\"}",
+                Reason = "Promoted"
+            });
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(created.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var history = _dbFixture.Context.UserChangeHistories.Single(h => h.UserId == user.Id);
+            Assert.Equal("Function", history.FieldName);
+            Assert.Equal("Junior Engineer", history.OldValue);
+            Assert.Equal("QA Engineer", history.NewValue);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_DepartmentAndWorkSiteBothInChanges_BothApplied()
+        {
+            // Two navigation-name fields in the same request must both resolve and apply, not just the
+            // first one encountered.
+            var department = SeedDepartment("Engineering");
+            var workSite = SeedWorkSite("Main Plant");
+            var user = SeedUser(firstName: "Old");
+            var request = SeedRequest(user.Id, "{\"Department\":\"Engineering\",\"WorkSite\":\"Main Plant\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var updatedUser = _dbFixture.Context.Users.Single(u => u.Id == user.Id);
+            Assert.Equal(department.Id, updatedUser.DepartmentId);
+            Assert.Equal(workSite.Id, updatedUser.WorkSiteId);
         }
 
         [Fact]
