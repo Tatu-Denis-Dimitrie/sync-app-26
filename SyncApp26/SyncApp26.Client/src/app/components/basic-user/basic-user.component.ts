@@ -88,6 +88,18 @@ export class BasicUserComponent implements OnInit {
   UserRole = UserRole;
   bloodTypeLabels = BLOOD_TYPE_LABELS;
 
+  // ── Change Email ────────────────────────────────────────────────────────
+  showEmailChangeModal = false;
+  isSubmittingEmailChange = false;
+  emailChangeLocalPart = '';
+  emailChangeReason = '';
+  emailChangeError = '';
+  emailChangeSuccess = '';
+
+  get emailDomain(): string {
+    return this.user?.email?.split('@')[1] || '';
+  }
+
   // ── Data Change Request ────────────────────────────────────────────────
   showDataChangeModal = false;
   isSubmittingDataChange = false;
@@ -355,6 +367,49 @@ export class BasicUserComponent implements OnInit {
 
   formatDateTime(d: string): string {
     return new Date(d).toLocaleString();
+  }
+
+  // ── Change Email ──────────────────────────────────────────────────────────
+
+  openEmailChangeModal(): void {
+    this.showEmailChangeModal = true;
+    this.emailChangeError = '';
+    this.emailChangeSuccess = '';
+    this.emailChangeLocalPart = '';
+    this.emailChangeReason = '';
+  }
+
+  closeEmailChangeModal(): void {
+    this.showEmailChangeModal = false;
+  }
+
+  submitEmailChangeRequest(): void {
+    const localPart = this.emailChangeLocalPart.trim();
+    if (!localPart || /[\s@]/.test(localPart)) {
+      this.emailChangeError = 'Please enter a valid email name (no spaces or @).';
+      return;
+    }
+
+    this.isSubmittingEmailChange = true;
+    this.emailChangeError = '';
+
+    const newEmail = `${localPart}@${this.emailDomain}`;
+    this.dataChangeRequestService.requestEmailChange({
+      newEmail,
+      reason: this.emailChangeReason.trim() || undefined
+    }).subscribe({
+      next: () => {
+        this.isSubmittingEmailChange = false;
+        this.emailChangeSuccess = 'Your email change request has been submitted. It is now pending admin approval.';
+        this.emailChangeLocalPart = '';
+        this.emailChangeReason = '';
+        setTimeout(() => this.closeEmailChangeModal(), 3000);
+      },
+      error: (err) => {
+        this.isSubmittingEmailChange = false;
+        this.emailChangeError = err.error?.message || 'Failed to submit request.';
+      }
+    });
   }
 
   // ── Data Change Requests ──────────────────────────────────────────────────
