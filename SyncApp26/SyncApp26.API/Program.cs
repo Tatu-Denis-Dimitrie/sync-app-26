@@ -46,9 +46,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Throttles anonymous/security-sensitive endpoints per client IP - there's no account-lockout
-// mechanism otherwise, so this is the only thing standing between them and scripted abuse
-// (credential stuffing on login, token guessing on password reset / document signing, etc.).
+// Per-IP fixed-window partition shared by all rate-limit policies below.
 static RateLimitPartition<string> IpFixedWindow(HttpContext httpContext, int permitLimit, TimeSpan window) =>
     RateLimitPartition.GetFixedWindowLimiter(
         partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -69,19 +67,12 @@ builder.Services.AddRateLimiter(options =>
             "{\"message\":\"Too many requests. Please wait a moment and try again.\"}", cancellationToken));
     };
 
-    // Generous per-IP ceiling applied to every request, on top of any endpoint-specific policy
-    // below - a backstop against scripted abuse/DoS rather than something normal usage should hit.
+    // Blanket ceiling, layered under any endpoint-specific policy below.
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
         httpContext => IpFixedWindow(httpContext, 300, TimeSpan.FromMinutes(1)));
 
     options.AddPolicy("login", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
-
-    // Register / verify-email / forgot-password / reset-password / social login - account
-    // creation, token guessing and enumeration all live here.
     options.AddPolicy("auth-sensitive", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
-
-    // Anonymous document-signature token endpoints - request-signature / validate-token /
-    // consume-token - the two latter are guessable-token targets.
     options.AddPolicy("signing-token", httpContext => IpFixedWindow(httpContext, 10, TimeSpan.FromMinutes(1)));
 });
 
@@ -227,10 +218,30 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+
+// Registered first - some downstream middleware short-circuits without calling next(), which
+// would otherwise skip a header middleware placed later.
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (!context.Request.Path.StartsWithSegments("/swagger"))
+    {
+        context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+    }
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    // Breaks local HTTP testing, so only enabled outside dev.
+    app.UseHsts();
 }
 
 app.UseHttpsRedirection();
