@@ -42,12 +42,30 @@ namespace SyncApp26.Tests.Controllers.Auth
         {
             var controller = CreateController();
             _accountServiceMock.Setup(s => s.RegisterAsync(It.IsAny<RegisterUserRequestDTO>()))
-                .ReturnsAsync(AccountActionResult<RegisteredAccountDTO>.Fail("Email is already registered."));
+                .ReturnsAsync(AccountActionResult<RegisteredAccountDTO>.Fail("Invalid email format."));
 
             var result = await controller.Register(ValidRegisterRequest());
 
             var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Contains("already registered", badRequest.Value!.ToString());
+            Assert.Contains("Invalid email format", badRequest.Value!.ToString());
+        }
+
+        [Fact]
+        public async Task Register_EmailAlreadyRegistered_ReturnsGenericSuccessWithoutSendingEmail()
+        {
+            var controller = CreateController();
+            _accountServiceMock.Setup(s => s.RegisterAsync(It.IsAny<RegisterUserRequestDTO>()))
+                .ReturnsAsync(AccountActionResult<RegisteredAccountDTO>.Ok(new RegisteredAccountDTO
+                {
+                    Email = "john.doe@example.com",
+                    FirstName = "John",
+                    AlreadyRegistered = true
+                }));
+
+            var result = await controller.Register(ValidRegisterRequest());
+
+            Assert.IsType<OkObjectResult>(result);
+            _emailServiceMock.Verify(s => s.SendVerificationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -448,7 +466,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
-        public async Task ForgotPassword_ServiceReportsFailure_ReturnsBadRequest()
+        public async Task ForgotPassword_AccountNotFound_ReturnsGenericSuccessWithoutSendingEmail()
         {
             var controller = CreateController();
             _accountServiceMock.Setup(s => s.RequestPasswordResetAsync(It.IsAny<string>()))
@@ -456,7 +474,8 @@ namespace SyncApp26.Tests.Controllers.Auth
 
             var result = await controller.ForgotPassword(new ForgotPasswordRequestDTO { Email = "noone@example.com" });
 
-            Assert.IsType<BadRequestObjectResult>(result);
+            Assert.IsType<OkObjectResult>(result);
+            _emailServiceMock.Verify(s => s.SendPasswordResetEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
         }
 
         [Fact]

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.API.Services;
@@ -24,6 +25,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("register")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> Register([FromBody] RegisterUserRequestDTO request)
         {
             try
@@ -35,6 +37,11 @@ namespace SyncApp26.API.Controllers
                 }
 
                 var registered = result.Data!;
+                if (registered.AlreadyRegistered)
+                {
+                    return Ok(new { message = "Registration successful. Check your email to verify your account." });
+                }
+
                 var apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
                 var verifyUrl = $"{apiBaseUrl}/api/authentication/verify-email?email={Uri.EscapeDataString(registered.Email)}&token={Uri.EscapeDataString(registered.EmailVerificationToken)}";
 
@@ -48,7 +55,7 @@ namespace SyncApp26.API.Controllers
                     return StatusCode(202, new { message = "Account created, but we could not send the verification email. Please contact an administrator.", error = emailEx.Message });
                 }
 
-                return Ok(new { message = "Registration successful. Please check your email to verify your account." });
+                return Ok(new { message = "Registration successful. Check your email to verify your account." });
             }
             catch (Exception ex)
             {
@@ -58,6 +65,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("verify-email")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string token)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
@@ -76,6 +84,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("login")]
         public async Task<IActionResult> Login([FromBody] LoginUserRequestDTO request)
         {
             try
@@ -115,6 +124,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("google-login")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDTO request)
         {
             try
@@ -155,6 +165,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("microsoft-login")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> MicrosoftLogin([FromBody] MicrosoftLoginRequestDTO request)
         {
             try
@@ -194,6 +205,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Email))
@@ -202,24 +214,24 @@ namespace SyncApp26.API.Controllers
             }
 
             var result = await _accountService.RequestPasswordResetAsync(request.Email);
-            if (!result.Success)
+            if (result.Success)
             {
-                return BadRequest(new { message = result.ErrorMessage });
+                var reset = result.Data!;
+                var resetUrl = BuildResetPasswordUrl(reset.Email, reset.Token);
+
+                await _emailService.SendPasswordResetEmailAsync(
+                    reset.Email,
+                    reset.FirstName,
+                    resetUrl,
+                    reset.ExpiresInMinutes);
             }
 
-            var reset = result.Data!;
-            var resetUrl = BuildResetPasswordUrl(reset.Email, reset.Token);
-
-            await _emailService.SendPasswordResetEmailAsync(
-                reset.Email,
-                reset.FirstName,
-                resetUrl,
-                reset.ExpiresInMinutes);
-
-            return Ok(new { message = "A password reset link has been sent." });
+            // Same response whether or not the account exists, so the caller can't tell.
+            return Ok(new { message = "A reset link has been sent to your email." });
         }
 
         [HttpPost("reset-password")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordWithTokenRequestDTO request)
         {
             if (request == null ||

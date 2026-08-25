@@ -83,7 +83,14 @@ namespace SyncApp26.Application.Services
             var existingUser = await _userService.GetUserByEmailAsync(normalizedEmail);
             if (existingUser != null)
             {
-                return AccountActionResult<RegisteredAccountDTO>.Fail("Email is already registered.");
+                // Same success shape as a real registration, just without creating anything or
+                // sending a verification email - the caller must not be able to tell the two apart.
+                return AccountActionResult<RegisteredAccountDTO>.Ok(new RegisteredAccountDTO
+                {
+                    Email = normalizedEmail,
+                    FirstName = existingUser.FirstName,
+                    AlreadyRegistered = true
+                });
             }
 
             var user = new User

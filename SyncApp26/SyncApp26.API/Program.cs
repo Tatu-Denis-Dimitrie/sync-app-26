@@ -13,6 +13,7 @@ using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,36 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials();
     });
+});
+
+// Per-IP fixed-window partition shared by all rate-limit policies below.
+static RateLimitPartition<string> IpFixedWindow(HttpContext httpContext, int permitLimit, TimeSpan window) =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = window,
+            QueueLimit = 0
+        });
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        return new ValueTask(context.HttpContext.Response.WriteAsync(
+            "{\"message\":\"Too many requests. Try again later.\"}", cancellationToken));
+    };
+
+    // Blanket ceiling, layered under any endpoint-specific policy below.
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
+        httpContext => IpFixedWindow(httpContext, 300, TimeSpan.FromMinutes(1)));
+
+    options.AddPolicy("login", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
+    options.AddPolicy("auth-sensitive", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
+    options.AddPolicy("signing-token", httpContext => IpFixedWindow(httpContext, 10, TimeSpan.FromMinutes(1)));
 });
 
 // Configure EF Core context and resolve relative SQLite path against ContentRoot.
@@ -187,14 +218,35 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+
+// Registered first - some downstream middleware short-circuits without calling next(), which
+// would otherwise skip a header middleware placed later.
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (!context.Request.Path.StartsWithSegments("/swagger"))
+    {
+        context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+    }
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    // Breaks local HTTP testing, so only enabled outside dev.
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
