@@ -1,92 +1,135 @@
 import { TestBed } from '@angular/core/testing';
+import { DOCUMENT } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { AuthenticationService } from './authentication.service';
-
-const ROLE_CLAIM = 'role';
-
-function makeToken(payload: Record<string, unknown>): string {
-  const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
-  const body = btoa(JSON.stringify(payload));
-  return `${header}.${body}.signature`;
-}
+import { AuthenticationService, Roles } from './authentication.service';
 
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
+  let httpMock: HttpTestingController;
+  let mockDocument: { location: { href: string } };
 
   beforeEach(() => {
-    localStorage.clear();
+    mockDocument = { location: { href: '' } };
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()]
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: DOCUMENT, useValue: mockDocument }
+      ]
     });
     service = TestBed.inject(AuthenticationService);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => httpMock.verify());
 
   it('should create', () => {
     expect(service).toBeTruthy();
   });
 
-  describe('hasRole', () => {
-    it('reads a single role from a string claim', () => {
-      localStorage.setItem('authToken', makeToken({ [ROLE_CLAIM]: 'Admin', exp: Math.floor(Date.now() / 1000) + 3600 }));
+  describe('hydrate', () => {
+    it('populates the session from an authenticated /me response', () => {
+      let completed = false;
+      service.hydrate().subscribe(() => (completed = true));
 
-      expect(service.hasRole('Admin')).toBeTrue();
-      expect(service.hasRole('LineManager')).toBeFalse();
+      httpMock.expectOne(r => r.url.endsWith('/authentication/me')).flush({
+        authenticated: true,
+        user: { id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: [Roles.Admin] }
+      });
+
+      expect(completed).toBeTrue();
+      expect(service.isLoggedIn()).toBeTrue();
+      expect(service.isAdmin()).toBeTrue();
+      expect(service.getCurrentUser()?.email).toBe('a@b.com');
     });
 
-    it('reads multiple roles from an array claim', () => {
-      localStorage.setItem('authToken', makeToken({ [ROLE_CLAIM]: ['Admin', 'LineManager'], exp: Math.floor(Date.now() / 1000) + 3600 }));
+    it('leaves the session empty for an unauthenticated /me response', () => {
+      service.hydrate().subscribe();
 
-      expect(service.hasRole('Admin')).toBeTrue();
-      expect(service.hasRole('LineManager')).toBeTrue();
-      expect(service.hasRole('SsmOfficer')).toBeFalse();
+      httpMock.expectOne(r => r.url.endsWith('/authentication/me')).flush({ authenticated: false });
+
+      expect(service.isLoggedIn()).toBeFalse();
+      expect(service.getCurrentUser()).toBeNull();
     });
 
-    it('falls back to the long ClaimTypes role URI if the short claim is absent', () => {
-      const longClaim = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
-      localStorage.setItem('authToken', makeToken({ [longClaim]: 'Admin', exp: Math.floor(Date.now() / 1000) + 3600 }));
+    it('resolves without throwing when /me itself fails - the app-initializer contract', () => {
+      let completed = false;
+      let errored = false;
+      service.hydrate().subscribe({ next: () => (completed = true), error: () => (errored = true) });
 
-      expect(service.hasRole('Admin')).toBeTrue();
+      httpMock.expectOne(r => r.url.endsWith('/authentication/me'))
+        .flush('boom', { status: 500, statusText: 'Server Error' });
+
+      expect(errored).toBeFalse();
+      expect(completed).toBeTrue();
+      expect(service.isLoggedIn()).toBeFalse();
     });
 
-    it('ignores a tampered currentUser entry that does not match the signed token', () => {
-      // The whole point of reading roles from the JWT: currentUser is plain localStorage JSON a
-      // user can edit in devtools, but it must not grant anything the token itself doesn't carry.
-      localStorage.setItem('authToken', makeToken({ [ROLE_CLAIM]: 'BasicUser', exp: Math.floor(Date.now() / 1000) + 3600 }));
-      localStorage.setItem('currentUser', JSON.stringify({ id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: ['Admin'] }));
+    it('populates the impersonator block when /me reports an active impersonation', () => {
+      service.hydrate().subscribe();
 
-      expect(service.hasRole('Admin')).toBeFalse();
-    });
+      httpMock.expectOne(r => r.url.endsWith('/authentication/me')).flush({
+        authenticated: true,
+        user: { id: 'target', email: 'target@test.com', firstName: 'T', lastName: 'U', roles: [Roles.BasicUser] },
+        impersonating: true,
+        impersonator: { id: 'admin', email: 'admin@test.com', firstName: 'Ad', lastName: 'Min', roles: [Roles.Admin] }
+      });
 
-    it('returns false when no token is stored', () => {
-      expect(service.hasRole('Admin')).toBeFalse();
+      expect(service.isImpersonating()).toBeTrue();
+      expect(service.impersonator()?.email).toBe('admin@test.com');
     });
   });
 
-  describe('isLoggedIn', () => {
-    it('returns false when no token is stored', () => {
-      expect(service.isLoggedIn()).toBeFalse();
-    });
+  describe('login', () => {
+    it('populates the session from the login response', () => {
+      service.login({ email: 'a@b.com', password: 'pw' }).subscribe();
 
-    it('returns true for a token with a future exp', () => {
-      localStorage.setItem('authToken', makeToken({ exp: Math.floor(Date.now() / 1000) + 3600 }));
+      httpMock.expectOne(r => r.url.endsWith('/authentication/login')).flush({
+        message: 'Login successful.',
+        user: { id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: [Roles.LineManager] }
+      });
 
       expect(service.isLoggedIn()).toBeTrue();
+      expect(service.isLineManager()).toBeTrue();
     });
+  });
 
-    it('returns false for an expired token', () => {
-      localStorage.setItem('authToken', makeToken({ exp: Math.floor(Date.now() / 1000) - 60 }));
+  describe('logout', () => {
+    it('posts to /logout, clears the session, and redirects to /login', () => {
+      service.login({ email: 'a@b.com', password: 'pw' }).subscribe();
+      httpMock.expectOne(r => r.url.endsWith('/authentication/login')).flush({
+        message: 'ok',
+        user: { id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: [Roles.Admin] }
+      });
+
+      service.logout();
+      httpMock.expectOne(r => r.url.endsWith('/authentication/logout')).flush({});
 
       expect(service.isLoggedIn()).toBeFalse();
+      expect(mockDocument.location.href).toBe('/login');
     });
 
-    it('returns false for a malformed token', () => {
-      localStorage.setItem('authToken', 'not-a-jwt');
+    it('still redirects to /login even if the logout call itself fails', () => {
+      service.logout();
+      httpMock.expectOne(r => r.url.endsWith('/authentication/logout'))
+        .flush('boom', { status: 500, statusText: 'Server Error' });
 
-      expect(service.isLoggedIn()).toBeFalse();
+      expect(mockDocument.location.href).toBe('/login');
     });
+  });
+
+  it('never touches localStorage for session state', () => {
+    service.login({ email: 'a@b.com', password: 'pw' }).subscribe();
+    httpMock.expectOne(r => r.url.endsWith('/authentication/login')).flush({
+      message: 'ok',
+      user: { id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: [Roles.Admin] }
+    });
+
+    expect(localStorage.getItem('authToken')).toBeNull();
+    expect(localStorage.getItem('currentUser')).toBeNull();
+    expect(localStorage.getItem('impersonationOriginalToken')).toBeNull();
+    expect(localStorage.getItem('impersonationOriginalUser')).toBeNull();
   });
 });

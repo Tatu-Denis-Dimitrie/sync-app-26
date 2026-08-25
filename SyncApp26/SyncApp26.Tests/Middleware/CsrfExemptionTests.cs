@@ -35,10 +35,32 @@ namespace SyncApp26.Tests.Middleware
         }
 
         [Theory]
+        [InlineData("/api/authentication/refresh")]
+        [InlineData("/api/authentication/logout")]
+        [InlineData("/API/AUTHENTICATION/REFRESH")]
+        public void IsExempt_IdentityMismatchPronePath_True(string path)
+        {
+            // IAntiforgery binds a token to the identity authenticated at mint time; /refresh and
+            // /logout are both called precisely when the access token may already be invalid, so the
+            // current request's identity won't match what the token was minted against - CSRF
+            // validation would 403 every time, confirmed via live browser testing.
+            Assert.True(CsrfExemption.IsExempt("POST", path, hasAuthorizationHeader: false));
+        }
+
+        [Theory]
+        [InlineData("/hubs/sync/negotiate")]
+        [InlineData("/hubs/sync")]
+        [InlineData("/HUBS/sync/negotiate")]
+        public void IsExempt_HubsPath_True(string path)
+        {
+            // SignalR's own HTTP client never goes through Angular's HttpClient/interceptors, so it
+            // can never attach X-XSRF-TOKEN - every negotiate call would 403 otherwise.
+            Assert.True(CsrfExemption.IsExempt("POST", path, hasAuthorizationHeader: false));
+        }
+
+        [Theory]
         [InlineData("/api/authentication/google-login")]
         [InlineData("/api/authentication/microsoft-login")]
-        [InlineData("/api/authentication/logout")]
-        [InlineData("/api/authentication/refresh")]
         [InlineData("/api/authentication/stop-impersonation")]
         [InlineData("/api/authentication/impersonate/00000000-0000-0000-0000-000000000000")]
         [InlineData("/api/Department")]

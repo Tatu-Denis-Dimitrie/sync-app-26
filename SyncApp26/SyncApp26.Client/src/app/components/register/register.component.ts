@@ -59,14 +59,6 @@ export class RegisterComponent {
       next: (response) => {
         this.isLoading = false;
         this.successMessage = response.message || 'Registration successful!';
-        
-        // Store token if needed
-        if (response.token) {
-          localStorage.setItem('authToken', response.token);
-        }
-        // A fresh account always ends any impersonation - see ImpersonationService for the key names.
-        localStorage.removeItem('impersonationOriginalToken');
-        localStorage.removeItem('impersonationOriginalUser');
 
         // Redirect to login after 2 seconds
         setTimeout(() => {

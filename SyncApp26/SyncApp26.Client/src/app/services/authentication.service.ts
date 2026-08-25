@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, finalize, map, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface RegisterRequest {
@@ -12,7 +13,6 @@ export interface RegisterRequest {
 
 export interface RegisterResponse {
   message: string;
-  token?: string;
 }
 
 export interface LoginRequest {
@@ -68,7 +68,6 @@ export interface User {
 }
 
 export interface LoginResponse {
-    token: string;
     message: string;
     user: User;
 }
@@ -81,13 +80,61 @@ export interface MessageResponse {
   message: string;
 }
 
+interface MeResponse {
+  authenticated: boolean;
+  user?: User;
+  impersonating?: boolean;
+  impersonator?: User;
+}
+
+interface Session {
+  user: User;
+  impersonating: boolean;
+  impersonator: User | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthenticationService {
   private apiUrl = environment.apiUrl + '/authentication';
 
-  constructor(private http: HttpClient) {}
+  // In-memory only - there is nothing left to read from localStorage. Populated by hydrate() and
+  // by a successful login/social login; cleared by logout() and a failed hydrate().
+  private sessionSubject = new BehaviorSubject<Session | null>(null);
+
+  constructor(private http: HttpClient, @Inject(DOCUMENT) private document: Document) {}
+
+  /**
+   * Populates session state from the server. Called once by the app initializer (app.config.ts),
+   * before the router's first navigation, so every guard below can stay synchronous - by the time
+   * any guard runs, this has already resolved. Must never throw or reject: an app-initializer
+   * factory that rejects aborts bootstrap entirely (blank page), and this is the first network call
+   * the app ever makes, so an unreachable API must not brick the UI - it just leaves the session
+   * empty, same as a genuinely logged-out visitor.
+   */
+  hydrate(): Observable<void> {
+    return this.http.get<MeResponse>(`${this.apiUrl}/me`).pipe(
+      tap(response => this.applyMeResponse(response)),
+      map(() => void 0),
+      catchError(() => {
+        this.sessionSubject.next(null);
+        return of(void 0);
+      })
+    );
+  }
+
+  private applyMeResponse(response: MeResponse): void {
+    if (!response.authenticated || !response.user) {
+      this.sessionSubject.next(null);
+      return;
+    }
+    this.sessionSubject.next({
+      user: response.user,
+      impersonating: !!response.impersonating,
+      impersonator: response.impersonator ?? null
+    });
+  }
 
   register(request: RegisterRequest): Observable<RegisterResponse> {
     return this.http.post<RegisterResponse>(`${this.apiUrl}/register`, request);
@@ -95,30 +142,21 @@ export class AuthenticationService {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request)
-      .pipe(tap(response => this.storeSession(response)));
+      .pipe(tap(response => this.applySessionFromLoginResponse(response)));
   }
 
   googleLogin(idToken: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/google-login`, { idToken })
-      .pipe(tap(response => this.storeSession(response)));
+      .pipe(tap(response => this.applySessionFromLoginResponse(response)));
   }
 
   microsoftLogin(idToken: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/microsoft-login`, { idToken })
-      .pipe(tap(response => this.storeSession(response)));
+      .pipe(tap(response => this.applySessionFromLoginResponse(response)));
   }
 
-  private storeSession(response: LoginResponse): void {
-    if (response.token) {
-      localStorage.setItem('authToken', response.token);
-    }
-    if (response.user) {
-      localStorage.setItem('currentUser', JSON.stringify(response.user));
-    }
-    // A fresh login always ends any impersonation. Not injecting ImpersonationService here (it would
-    // create a cycle through HttpClient) - these are its two stash keys, inlined.
-    localStorage.removeItem('impersonationOriginalToken');
-    localStorage.removeItem('impersonationOriginalUser');
+  private applySessionFromLoginResponse(response: LoginResponse): void {
+    this.sessionSubject.next({ user: response.user, impersonating: false, impersonator: null });
   }
 
   forgotPassword(request: ForgotPasswordRequest): Observable<MessageResponse> {
@@ -130,62 +168,27 @@ export class AuthenticationService {
   }
 
   logout(): void {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUser');
-    // Must also clear any stashed impersonation session - otherwise a different person logging in
-    // afterward on the same machine would see the "Return to my account" banner and could hand
-    // themselves the previous admin's still-valid token. See ImpersonationService for the key names.
-    localStorage.removeItem('impersonationOriginalToken');
-    localStorage.removeItem('impersonationOriginalUser');
-    // Full reload, not router navigation: root services cache the session's data and
-    // nothing resets them, so the next account would see the previous one's.
-    window.location.href = '/login';
+    this.http.post(`${this.apiUrl}/logout`, {}).pipe(
+      catchError(() => of(void 0)),
+      finalize(() => {
+        this.sessionSubject.next(null);
+        // Full reload, not router navigation: root services cache the session's data and nothing
+        // resets them, so the next account would see the previous one's.
+        this.document.location.href = '/login';
+      })
+    ).subscribe();
   }
 
   getCurrentUser(): User | null {
-    const userStr = localStorage.getItem('currentUser');
-    return userStr ? JSON.parse(userStr) : null;
-  }
-
-  // JwtSecurityTokenHandler's default outbound claim map rewrites ClaimTypes.Role down to the short
-  // "role" name when it serializes the token - verified against a live token, the payload carries
-  // "role", not the long ClaimTypes URI. Checked as a fallback in case that mapping is ever disabled.
-  // Present as a single string when the user holds one role, and as an array when they hold several.
-  private static readonly ROLE_CLAIM = 'role';
-  private static readonly ROLE_CLAIM_LONG = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
-
-  // Roles and session validity must come from the signed token, not from currentUser in localStorage -
-  // that JSON is plain, unsigned storage a user can edit in devtools to grant themselves any role
-  // client-side. The token itself still gets rejected server-side, but guards need to reflect that
-  // before the API call ever happens, so they read the same source of truth.
-  private decodeToken(): Record<string, unknown> | null {
-    const token = localStorage.getItem('authToken');
-    if (!token) return null;
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    try {
-      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(atob(base64));
-    } catch {
-      return null;
-    }
-  }
-
-  private getRolesFromToken(): string[] {
-    const payload = this.decodeToken();
-    const raw = payload?.[AuthenticationService.ROLE_CLAIM] ?? payload?.[AuthenticationService.ROLE_CLAIM_LONG];
-    if (!raw) return [];
-    return Array.isArray(raw) ? raw : [raw as string];
+    return this.sessionSubject.value?.user ?? null;
   }
 
   isLoggedIn(): boolean {
-    const payload = this.decodeToken();
-    const exp = payload?.['exp'];
-    return typeof exp === 'number' && exp * 1000 > Date.now();
+    return this.sessionSubject.value !== null;
   }
 
   hasRole(name: string): boolean {
-    return this.getRolesFromToken().includes(name);
+    return this.sessionSubject.value?.user.roles.includes(name) ?? false;
   }
 
   isAdmin(): boolean {
@@ -207,5 +210,17 @@ export class AuthenticationService {
   /** Either officer duty - used to gate the shared "stored signature" page. */
   isOfficer(): boolean {
     return this.isSsmOfficer() || this.isSuOfficer();
+  }
+
+  // The two below back ImpersonationService, which has no session state of its own anymore - /me
+  // is the only place that knows the impersonator's identity (the token itself only carries their
+  // id), so ImpersonationService reads it from here instead of duplicating the lookup.
+
+  isImpersonating(): boolean {
+    return this.sessionSubject.value?.impersonating ?? false;
+  }
+
+  impersonator(): User | null {
+    return this.sessionSubject.value?.impersonator ?? null;
   }
 }
