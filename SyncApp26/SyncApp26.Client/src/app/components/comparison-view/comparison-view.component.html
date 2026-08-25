@@ -584,89 +584,109 @@
                                               </div>
                                             }
                                             <!-- Department -->
-                                                      @if (comparison.dbUser || comparison.csvUser) {
-                                                        <div
-                                                          class="grid grid-cols-[1fr,auto,1fr]"
+                                            @if (comparison.dbUser || comparison.csvUser) {
+                                              <div class="grid grid-cols-[1fr,auto,1fr]">
+                                                <div class="p-4 bg-red-50/30">
+                                                  <div class="flex items-center gap-3 mb-2">
+                                                    <span
+                                                      class="text-xs font-medium text-muted-foreground uppercase"
+                                                      >Department (Database)</span
+                                                      >
+                                                    @if (hasFieldConflict(comparison, 'departmentName')) {
+                                                      <span class="text-xs text-red-600">- removed</span>
+                                                    }
+                                                    @if (fieldHasPendingRequest(comparison, 'departmentName')) {
+                                                      <span
+                                                        class="text-xs text-amber-600"
+                                                        title="A pending data change request wants this field to become a different value"
+                                                        >⚠ pending request: {{ getPendingRequestValue(comparison, 'departmentName') }}</span
+                                                        >
+                                                    }
+                                                  </div>
+                                                  <p
+                                                    class="font-mono text-sm"
+                                                    [class.line-through]="hasFieldConflict(comparison, 'departmentName')"
+                                                    [class.text-muted-foreground]="hasFieldConflict(comparison, 'departmentName')"
+                                                    >
+                                                    {{ comparison.dbUser?.departmentName || "N/A" }}
+                                                  </p>
+                                                </div>
+                                                <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
+                                                  @if (hasPendingRequestChoice(comparison, 'departmentName')) {
+                                                    <div class="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-start gap-1.5 whitespace-nowrap text-xs">
+                                                      @for (option of getPendingOptions(comparison, 'departmentName'); track option.value) {
+                                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                                          <input
+                                                            type="radio"
+                                                            [name]="'departmentName-resolution-' + comparison.id"
+                                                            [checked]="isPendingOptionSelected(comparison, 'departmentName', option.value)"
+                                                            (change)="resolvePendingConflict(comparison.id, 'departmentName', option.value)"
+                                                            class="w-3.5 h-3.5"
+                                                            />
+                                                            <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                                        </label>
+                                                      }
+                                                      <label class="flex items-center gap-1.5 cursor-pointer">
+                                                        <input
+                                                          type="radio"
+                                                          [name]="'departmentName-resolution-' + comparison.id"
+                                                          [checked]="isCsvValueSelected(comparison, 'departmentName')"
+                                                          (change)="resolveConflict(comparison.id, 'departmentName', 'csv')"
+                                                          class="w-3.5 h-3.5"
+                                                          />
+                                                          <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'departmentName') }}</span>
+                                                      </label>
+                                                    </div>
+                                                  }
+                                                  @if (hasFieldConflict(comparison, 'departmentName') && !hasPendingRequestChoice(comparison, 'departmentName')) {
+                                                    <div class="flex flex-col items-center gap-2">
+                                                      <input
+                                                        type="checkbox"
+                                                        [checked]="isFieldSelected(comparison, 'departmentName')"
+                                                        (change)="toggleFieldSelection(comparison.id, 'departmentName')"
+                                                        class="w-4 h-4 rounded border-border"
+                                                        title="Select to sync this field"
+                                                        />
+                                                        <svg
+                                                          class="w-4 h-4 text-muted-foreground"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          viewBox="0 0 24 24"
                                                           >
-                                                          <div class="p-4 bg-red-50/30">
-                                                            <div class="flex items-center gap-3 mb-2">
-                                                              <span
-                                                                class="text-xs font-medium text-muted-foreground uppercase"
-                                                                >Department (Database)</span
-                                                                >
-                                                                @if (hasFieldConflict(comparison, 'departmentName')) {
-                                                                  <span
-                                                                    class="text-xs text-red-600"
-                                                                    >- removed</span
-                                                                    >
-                                                                  }
-                                                                </div>
-                                                                <p
-                                                                  class="font-mono text-sm"
-                                                                  [class.line-through]="hasFieldConflict(comparison, 'departmentName')"
-                                                                  [class.text-muted-foreground]="hasFieldConflict(comparison, 'departmentName')"
-                                                                  >
-                                                                  {{ comparison.dbUser?.departmentName || "N/A" }}
-                                                                </p>
-                                                              </div>
-                                                              <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
-                                                                @if (hasFieldConflict(comparison, 'departmentName')) {
-                                                                  <div
-                                                                    class="flex flex-col items-center gap-2"
-                                                                    >
-                                                                    <input
-                                                                      type="checkbox"
-                                                                      [checked]="isFieldSelected(comparison, 'departmentName')"
-                                                                      (change)="toggleFieldSelection(comparison.id, 'departmentName')"
-                                                                      class="w-4 h-4 rounded border-border"
-                                                                      title="Select to sync this field"
-                                                                      />
-                                                                      <svg
-                                                                        class="w-4 h-4 text-muted-foreground"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                        >
-                                                                        <path
-                                                                          stroke-linecap="round"
-                                                                          stroke-linejoin="round"
-                                                                          stroke-width="2"
-                                                                          d="M9 5l7 7-7 7"
-                                                                        ></path>
-                                                                      </svg>
-                                                                    </div>
-                                                                  }
-                                                                  @if (!hasFieldConflict(comparison, 'departmentName')) {
-                                                                    <span
-                                                                      class="text-muted-foreground"
-                                                                      >=</span
-                                                                      >
-                                                                  }
-                                                                </div>
-                                                                <div class="p-4 bg-green-50/30">
-                                                                  <div class="flex items-center gap-3 mb-2">
-                                                                    <span
-                                                                      class="text-xs font-medium text-muted-foreground uppercase"
-                                                                      >Department (CSV)</span
-                                                                      >
-                                                                      @if (hasFieldConflict(comparison, 'departmentName')) {
-                                                                        <span
-                                                                          class="text-xs text-green-600"
-                                                                          >+ added</span
-                                                                          >
-                                                                        }
-                                                                      </div>
-                                                                      <p
-                                                                        class="font-mono text-sm"
-                                                                        [class.font-semibold]="hasFieldConflict(comparison, 'departmentName')"
-                                                                        [class.text-green-700]="hasFieldConflict(comparison, 'departmentName')"
-                                                                        >
-                                                                        {{ comparison.csvUser?.departmentName || "N/A" }}
-                                                                      </p>
-                                                                    </div>
-                                                                  </div>
-                                                                }
-                                                                <!-- Line Manager -->
+                                                          <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M9 5l7 7-7 7"
+                                                          ></path>
+                                                        </svg>
+                                                    </div>
+                                                  }
+                                                  @if (!hasFieldConflict(comparison, 'departmentName') && !hasPendingRequestChoice(comparison, 'departmentName')) {
+                                                    <span class="text-muted-foreground">=</span>
+                                                  }
+                                                </div>
+                                                <div class="p-4 bg-green-50/30">
+                                                  <div class="flex items-center gap-3 mb-2">
+                                                    <span
+                                                      class="text-xs font-medium text-muted-foreground uppercase"
+                                                      >Department (CSV)</span
+                                                      >
+                                                    @if (hasFieldConflict(comparison, 'departmentName')) {
+                                                      <span class="text-xs text-green-600">+ added</span>
+                                                    }
+                                                  </div>
+                                                  <p
+                                                    class="font-mono text-sm"
+                                                    [class.font-semibold]="hasFieldConflict(comparison, 'departmentName')"
+                                                    [class.text-green-700]="hasFieldConflict(comparison, 'departmentName')"
+                                                    >
+                                                    {{ comparison.csvUser?.departmentName || "N/A" }}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            }
+                                                                                <!-- Line Manager -->
                                                                 @if (comparison.dbUser || comparison.csvUser) {
                                                                   <div
                                                                     class="grid grid-cols-[1fr,auto,1fr]"
@@ -761,92 +781,108 @@
                                                                           }
                                                                         </div>
                                                                         <!--- Function --->
-                                                                        @if (comparison.dbUser || comparison.csvUser) {
-                                                                          <div
-                                                                            class="grid grid-cols-[1fr,auto,1fr]"
-                                                                            >
-                                                                            <div class="p-4 bg-red-50/30">
-                                                                              <div class="flex items-center gap-3 mb-2">
-                                                                                <span
-                                                                                  class="text-xs font-medium text-muted-foreground uppercase"
-                                                                                  >Function (Database)</span
-                                                                                  >
-                                                                                  @if (hasFieldConflict(comparison, 'function')) {
-                                                                                    <span
-                                                                                      class="text-xs text-red-600"
-                                                                                      >- removed</span
-                                                                                      >
-                                                                                    }
-                                                                                  </div>
-                                                                                  <p
-                                                                                    class="font-mono text-sm"
-                                                                                    [class.line-through]="hasFieldConflict(comparison, 'function')"
-                [class.text-muted-foreground]="
-                  hasFieldConflict(comparison, 'function')
-                "
-                                                                                    >
-                                                                                    {{ comparison.dbUser?.function || "N/A" }}
-                                                                                  </p>
-                                                                                </div>
-                                                                                <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
-                                                                                  @if (hasFieldConflict(comparison, 'function')) {
-                                                                                    <div
-                                                                                      class="flex flex-col items-center gap-2"
-                                                                                      >
-                                                                                      <input
-                                                                                        type="checkbox"
-                                                                                        [checked]="isFieldSelected(comparison, 'function')"
-                                                                                        (change)="toggleFieldSelection(comparison.id, 'function')"
-                                                                                        class="w-4 h-4 rounded border-border"
-                                                                                        title="Select to sync this field"
-                                                                                        />
-                                                                                        <svg
-                                                                                          class="w-4 h-4 text-muted-foreground"
-                                                                                          fill="none"
-                                                                                          stroke="currentColor"
-                                                                                          viewBox="0 0 24 24"
-                                                                                          >
-                                                                                          <path
-                                                                                            stroke-linecap="round"
-                                                                                            stroke-linejoin="round"
-                                                                                            stroke-width="2"
-                                                                                            d="M9 5l7 7-7 7"
-                                                                                          ></path>
-                                                                                        </svg>
-                                                                                      </div>
-                                                                                    }
-                                                                                    @if (!hasFieldConflict(comparison, 'function')) {
-                                                                                      <span
-                                                                                        class="text-muted-foreground"
-                                                                                        >=</span
-                                                                                        >
-                                                                                    }
-                                                                                  </div>
-                                                                                  <div class="p-4 bg-green-50/30">
-                                                                                    <div class="flex items-center gap-3 mb-2">
-                                                                                      <span
-                                                                                        class="text-xs font-medium text-muted-foreground uppercase"
-                                                                                        >Function (CSV)</span
-                                                                                        >
-                                                                                        @if (hasFieldConflict(comparison, 'function')) {
-                                                                                          <span
-                                                                                            class="text-xs text-green-600"
-                                                                                            >+ added</span
-                                                                                            >
-                                                                                          }
-                                                                                        </div>
-                                                                                        <p
-                                                                                          class="font-mono text-sm"
-                                                                                          [class.font-semibold]="hasFieldConflict(comparison, 'function')"
-                [class.text-green-700]="
-                  hasFieldConflict(comparison, 'function')
-                "
-                                                                                          >
-                                                                                          {{ comparison.csvUser?.function || "N/A" }}
-                                                                                        </p>
-                                                                                      </div>
-                                                                                    </div>
-                                                                                  }
+                                        @if (comparison.dbUser || comparison.csvUser) {
+                                          <div class="grid grid-cols-[1fr,auto,1fr]">
+                                            <div class="p-4 bg-red-50/30">
+                                              <div class="flex items-center gap-3 mb-2">
+                                                <span
+                                                  class="text-xs font-medium text-muted-foreground uppercase"
+                                                  >Function (Database)</span
+                                                  >
+                                                @if (hasFieldConflict(comparison, 'function')) {
+                                                  <span class="text-xs text-red-600">- removed</span>
+                                                }
+                                                @if (fieldHasPendingRequest(comparison, 'function')) {
+                                                  <span
+                                                    class="text-xs text-amber-600"
+                                                    title="A pending data change request wants this field to become a different value"
+                                                    >⚠ pending request: {{ getPendingRequestValue(comparison, 'function') }}</span
+                                                    >
+                                                }
+                                              </div>
+                                              <p
+                                                class="font-mono text-sm"
+                                                [class.line-through]="hasFieldConflict(comparison, 'function')"
+                                                [class.text-muted-foreground]="hasFieldConflict(comparison, 'function')"
+                                                >
+                                                {{ comparison.dbUser?.function || "N/A" }}
+                                              </p>
+                                            </div>
+                                            <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
+                                              @if (hasPendingRequestChoice(comparison, 'function')) {
+                                                <div class="absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-start gap-1.5 whitespace-nowrap text-xs">
+                                                  @for (option of getPendingOptions(comparison, 'function'); track option.value) {
+                                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                                      <input
+                                                        type="radio"
+                                                        [name]="'function-resolution-' + comparison.id"
+                                                        [checked]="isPendingOptionSelected(comparison, 'function', option.value)"
+                                                        (change)="resolvePendingConflict(comparison.id, 'function', option.value)"
+                                                        class="w-3.5 h-3.5"
+                                                        />
+                                                        <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                                    </label>
+                                                  }
+                                                  <label class="flex items-center gap-1.5 cursor-pointer">
+                                                    <input
+                                                      type="radio"
+                                                      [name]="'function-resolution-' + comparison.id"
+                                                      [checked]="isCsvValueSelected(comparison, 'function')"
+                                                      (change)="resolveConflict(comparison.id, 'function', 'csv')"
+                                                      class="w-3.5 h-3.5"
+                                                      />
+                                                      <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'function') }}</span>
+                                                  </label>
+                                                </div>
+                                              }
+                                              @if (hasFieldConflict(comparison, 'function') && !hasPendingRequestChoice(comparison, 'function')) {
+                                                <div class="flex flex-col items-center gap-2">
+                                                  <input
+                                                    type="checkbox"
+                                                    [checked]="isFieldSelected(comparison, 'function')"
+                                                    (change)="toggleFieldSelection(comparison.id, 'function')"
+                                                    class="w-4 h-4 rounded border-border"
+                                                    title="Select to sync this field"
+                                                    />
+                                                    <svg
+                                                      class="w-4 h-4 text-muted-foreground"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      viewBox="0 0 24 24"
+                                                      >
+                                                      <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M9 5l7 7-7 7"
+                                                      ></path>
+                                                    </svg>
+                                                </div>
+                                              }
+                                              @if (!hasFieldConflict(comparison, 'function') && !hasPendingRequestChoice(comparison, 'function')) {
+                                                <span class="text-muted-foreground">=</span>
+                                              }
+                                            </div>
+                                            <div class="p-4 bg-green-50/30">
+                                              <div class="flex items-center gap-3 mb-2">
+                                                <span
+                                                  class="text-xs font-medium text-muted-foreground uppercase"
+                                                  >Function (CSV)</span
+                                                  >
+                                                @if (hasFieldConflict(comparison, 'function')) {
+                                                  <span class="text-xs text-green-600">+ added</span>
+                                                }
+                                              </div>
+                                              <p
+                                                class="font-mono text-sm"
+                                                [class.font-semibold]="hasFieldConflict(comparison, 'function')"
+                                                [class.text-green-700]="hasFieldConflict(comparison, 'function')"
+                                                >
+                                                {{ comparison.csvUser?.function || "N/A" }}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        }
                                   <!--- Work Site --->
                                   @if (comparison.dbUser || comparison.csvUser) {
                                     <div class="grid grid-cols-[1fr,auto,1fr]">

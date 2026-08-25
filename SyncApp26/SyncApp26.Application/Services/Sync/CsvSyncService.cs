@@ -29,18 +29,31 @@ public class CsvSyncService : ICsvSyncService
         { "firstname", nameof(User.FirstName) },
         { "lastname", nameof(User.LastName) },
         { "email", nameof(User.Email) },
-        { "worksite", nameof(User.WorkSite) }
+        { "worksite", nameof(User.WorkSite) },
+        { "departmentname", nameof(User.Department) },
+        { "function", nameof(User.Function) }
+    };
+
+    // Department/Function/WorkSite names are all resolved case-insensitively when actually applied
+    // (see ResolveExistingFunctionAsync, ResolveExistingWorkSiteAsync, and the Name.Equals(...,
+    // OrdinalIgnoreCase) lookup in ApplyDepartmentResolutionAsync), so conflict detection and
+    // pending-request matching have to agree - otherwise "brasov" vs "Brasov" would surface as a
+    // change that isn't one. Names and emails stay exact comparisons.
+    private static readonly HashSet<string> CaseInsensitiveCsvFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "worksite", "departmentname", "function"
+    };
+
+    private static readonly HashSet<string> CaseInsensitiveProperties = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(User.WorkSite), nameof(User.Department), nameof(User.Function)
     };
 
     private static StringComparison ComparisonForCsvField(string csvFieldKey) =>
-        string.Equals(csvFieldKey, "worksite", StringComparison.OrdinalIgnoreCase)
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
+        CaseInsensitiveCsvFields.Contains(csvFieldKey) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
     private static StringComparison ComparisonForProperty(string propertyName) =>
-        string.Equals(propertyName, nameof(User.WorkSite), StringComparison.OrdinalIgnoreCase)
-            ? StringComparison.OrdinalIgnoreCase
-            : StringComparison.Ordinal;
+        CaseInsensitiveProperties.Contains(propertyName) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
     public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, IWorkSiteRepository workSiteRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository)
     {
@@ -208,13 +221,13 @@ public class CsvSyncService : ICsvSyncService
         AddTextFieldConflict(conflicts, "lastName", "lastname", dbUser.LastName, csvUser.LastName, pendingValuesByCsvField);
         AddTextFieldConflict(conflicts, "email", "email", dbUser.Email, csvUser.Email, pendingValuesByCsvField);
 
-        var dbDepartmentName = dbUser.Department?.Name;
-        AddFieldConflictIfDifferent(conflicts, "departmentName", dbDepartmentName ?? string.Empty, csvUser.DepartmentName, dbDepartmentName != csvUser.DepartmentName);
+        AddTextFieldConflict(conflicts, "departmentName", "departmentname",
+            dbUser.Department?.Name?.Trim() ?? string.Empty, csvUser.DepartmentName?.Trim() ?? string.Empty,
+            pendingValuesByCsvField);
 
-        var dbFunctionName = dbUser.Function?.Name?.Trim();
-        var csvFunctionName = csvUser.Function?.Trim();
-        AddFieldConflictIfDifferent(conflicts, "function", dbFunctionName ?? string.Empty, csvFunctionName,
-            !string.Equals(dbFunctionName, csvFunctionName, StringComparison.OrdinalIgnoreCase));
+        AddTextFieldConflict(conflicts, "function", "function",
+            dbUser.Function?.Name?.Trim() ?? string.Empty, csvUser.Function?.Trim() ?? string.Empty,
+            pendingValuesByCsvField);
 
         AddTextFieldConflict(conflicts, "workSite", "worksite",
             dbUser.WorkSite?.Name?.Trim() ?? string.Empty, csvUser.WorkSite?.Trim() ?? string.Empty,
@@ -857,13 +870,13 @@ public class CsvSyncService : ICsvSyncService
                     hasChanges |= await ApplyEmailResolutionAsync(csvData, existingUser, importHistory, chosenPendingValue);
                     break;
                 case "departmentname":
-                    hasChanges |= await ApplyDepartmentResolutionAsync(csvData, existingUser, departments, importHistory, result);
+                    hasChanges |= await ApplyDepartmentResolutionAsync(csvData, existingUser, departments, importHistory, result, chosenPendingValue);
                     break;
                 case "assignedtoname":
                     hasChanges |= await ApplyManagerResolutionAsync(csvData, existingUser, dbUsers, importHistory);
                     break;
                 case "function":
-                    hasChanges |= await ApplyFunctionResolutionAsync(csvData, existingUser, functionCache, importHistory);
+                    hasChanges |= await ApplyFunctionResolutionAsync(csvData, existingUser, functionCache, importHistory, chosenPendingValue);
                     break;
                 case "worksite":
                     hasChanges |= await ApplyWorkSiteResolutionAsync(csvData, existingUser, workSiteCache, importHistory, chosenPendingValue);
@@ -899,6 +912,8 @@ public class CsvSyncService : ICsvSyncService
         "firstname" => csvData.FirstName,
         "lastname" => csvData.LastName,
         "worksite" => csvData.WorkSite?.Trim() ?? string.Empty,
+        "departmentname" => csvData.DepartmentName?.Trim() ?? string.Empty,
+        "function" => csvData.Function?.Trim() ?? string.Empty,
         _ => csvData.Email
     };
 
@@ -907,14 +922,25 @@ public class CsvSyncService : ICsvSyncService
         "firstname" => user.FirstName,
         "lastname" => user.LastName,
         "worksite" => user.WorkSite?.Name?.Trim() ?? string.Empty,
+        "departmentname" => user.Department?.Name?.Trim() ?? string.Empty,
+        "function" => user.Function?.Name?.Trim() ?? string.Empty,
         _ => user.Email
     };
 
     // The property-name counterpart of GetUserTextValue, for the request-driven paths that key off
-    // User property names rather than CSV field keys. WorkSite needs the override because reflecting
-    // its value yields the entity, whose ToString() is the type name rather than the site name.
+    // User property names rather than CSV field keys. Department/Function/WorkSite need the override
+    // because reflecting a navigation property yields the entity, whose ToString() is the type name
+    // rather than its display name.
     private static string GetUserPropertyTextValue(string propertyName, User user)
     {
+        if (string.Equals(propertyName, nameof(User.Department), StringComparison.OrdinalIgnoreCase))
+        {
+            return user.Department?.Name?.Trim() ?? string.Empty;
+        }
+        if (string.Equals(propertyName, nameof(User.Function), StringComparison.OrdinalIgnoreCase))
+        {
+            return user.Function?.Name?.Trim() ?? string.Empty;
+        }
         if (string.Equals(propertyName, nameof(User.WorkSite), StringComparison.OrdinalIgnoreCase))
         {
             return user.WorkSite?.Name?.Trim() ?? string.Empty;
@@ -1076,13 +1102,16 @@ public class CsvSyncService : ICsvSyncService
         return true;
     }
 
-    private async Task<bool> ApplyDepartmentResolutionAsync(CsvUserDTO csvData, User existingUser, List<Department> departments, ImportHistory importHistory, SyncResultDTO result)
+    // chosenPendingValue is the department name an admin picked from a pending DataChangeRequest in
+    // preference to the CSV's value; null means the CSV value won.
+    private async Task<bool> ApplyDepartmentResolutionAsync(CsvUserDTO csvData, User existingUser, List<Department> departments, ImportHistory importHistory, SyncResultDTO result, string? chosenPendingValue = null)
     {
-        var department = departments.FirstOrDefault(d => d.Name.Equals(csvData.DepartmentName, StringComparison.OrdinalIgnoreCase));
+        var selectedName = chosenPendingValue ?? csvData.DepartmentName;
+        var department = departments.FirstOrDefault(d => d.Name.Equals(selectedName, StringComparison.OrdinalIgnoreCase));
         if (department == null)
         {
             // Department does not exist or is inactive - skip this field update
-            result.Errors.Add($"User {csvData.Email}: Cannot update department to '{csvData.DepartmentName}' - department does not exist or is inactive.");
+            result.Errors.Add($"User {csvData.Email}: Cannot update department to '{selectedName}' - department does not exist or is inactive.");
             return false;
         }
 
@@ -1103,6 +1132,7 @@ public class CsvSyncService : ICsvSyncService
         };
 
         existingUser.DepartmentId = department.Id;
+        existingUser.Department = department;
         await _userChangeHistoryRepository.AddAsync(userChangeHistory);
         return true;
     }
@@ -1133,10 +1163,13 @@ public class CsvSyncService : ICsvSyncService
         return true;
     }
 
-    private async Task<bool> ApplyFunctionResolutionAsync(CsvUserDTO csvData, User existingUser, Dictionary<string, Function?> functionCache, ImportHistory importHistory)
+    // chosenPendingValue is the function name an admin picked from a pending DataChangeRequest in
+    // preference to the CSV's value; null means the CSV value won.
+    private async Task<bool> ApplyFunctionResolutionAsync(CsvUserDTO csvData, User existingUser, Dictionary<string, Function?> functionCache, ImportHistory importHistory, string? chosenPendingValue = null)
     {
-        var selectedCsvFunction = await ResolveExistingFunctionAsync(csvData.Function, functionCache);
-        var selectedCsvFunctionName = csvData.Function?.Trim();
+        var selectedName = chosenPendingValue ?? csvData.Function;
+        var selectedCsvFunction = await ResolveExistingFunctionAsync(selectedName, functionCache);
+        var selectedCsvFunctionName = selectedName?.Trim();
 
         if (existingUser.FunctionId == selectedCsvFunction?.Id)
         {
@@ -1232,6 +1265,7 @@ public class CsvSyncService : ICsvSyncService
         if (existingUser.DepartmentId != department.Id)
         {
             existingUser.DepartmentId = department.Id;
+            existingUser.Department = department;
             hasChanges = true;
         }
 

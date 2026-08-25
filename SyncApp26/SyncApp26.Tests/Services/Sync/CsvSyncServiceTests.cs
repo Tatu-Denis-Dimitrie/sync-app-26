@@ -372,6 +372,221 @@ namespace SyncApp26.Tests.Services.Sync
             Assert.Equal("Cluj-Napoca", conflict.CsvValue);
         }
 
+        // ───────────────────────── Department / Function pending-request handling (mirrors WorkSite) ─────────────────────────
+
+        [Fact]
+        public async Task CompareWithDatabase_DepartmentHasPendingRequest_OffersPendingVsCsvChoice()
+        {
+            var engineering = SeedDepartment("Engineering");
+            SeedDepartment("Marketing");
+            var user = SeedUser("P1", engineering.Id);
+            SeedPendingRequest(user.Id, "{\"Department\":\"Marketing\"}", "{\"Department\":\"Engineering\"}");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Sales") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("departmentName", conflict.Field);
+            Assert.True(conflict.HasPendingRequest);
+            Assert.Equal("Marketing", Assert.Single(conflict.PendingOptions).Value);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_DepartmentDiffersOnlyByCase_NotAConflict()
+        {
+            // Departments are resolved case-insensitively when applied, so "engineering" and
+            // "Engineering" name the same department and must not be reported as a change.
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "engineering") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            Assert.Empty(Assert.Single(result).Conflicts);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_DepartmentWithNoPendingRequest_StillReportsPlainConflict()
+        {
+            var department = SeedDepartment("Engineering");
+            SeedDepartment("Marketing");
+            var user = SeedUser("P1", department.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", departmentName: "Marketing") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("departmentName", conflict.Field);
+            Assert.Equal("Engineering", conflict.DbValue);
+            Assert.Equal("Marketing", conflict.CsvValue);
+            Assert.False(conflict.HasPendingRequest);
+            Assert.Empty(conflict.PendingOptions);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_FunctionHasPendingRequest_OffersPendingVsCsvChoice()
+        {
+            var department = SeedDepartment("Engineering");
+            var user = SeedUser("P1", department.Id, functionId: SeedFunction("Software Engineer").Id);
+            SeedPendingRequest(user.Id, "{\"Function\":\"QA Engineer\"}", "{\"Function\":\"Software Engineer\"}");
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", function: "DevOps Engineer") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("function", conflict.Field);
+            Assert.True(conflict.HasPendingRequest);
+            Assert.Equal("QA Engineer", Assert.Single(conflict.PendingOptions).Value);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_FunctionDiffersOnlyByCase_NotAConflict()
+        {
+            var department = SeedDepartment("Engineering");
+            var function = SeedFunction("QA Engineer");
+            var user = SeedUser("P1", department.Id, functionId: function.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", function: "qa engineer") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            Assert.Empty(Assert.Single(result).Conflicts);
+        }
+
+        [Fact]
+        public async Task CompareWithDatabase_FunctionWithNoPendingRequest_StillReportsPlainConflict()
+        {
+            var department = SeedDepartment("Engineering");
+            var function = SeedFunction("Software Engineer");
+            var user = SeedUser("P1", department.Id, functionId: function.Id);
+            var service = CreateService();
+            var csvUsers = new[] { MakeCsvUser("P1", function: "QA Engineer") };
+
+            var result = await service.CompareWithDatabase(csvUsers, totalRows: 1);
+
+            var conflict = Assert.Single(Assert.Single(result).Conflicts);
+            Assert.Equal("function", conflict.Field);
+            Assert.Equal("Software Engineer", conflict.DbValue);
+            Assert.Equal("QA Engineer", conflict.CsvValue);
+            Assert.False(conflict.HasPendingRequest);
+            Assert.Empty(conflict.PendingOptions);
+        }
+
+        [Fact]
+        public async Task SyncUsers_DepartmentConflictResolvedAsPending_AppliesRequestedDepartmentAndApprovesRequest()
+        {
+            var engineering = SeedDepartment("Engineering");
+            var marketing = SeedDepartment("Marketing");
+            SeedDepartment("Sales");
+            var user = SeedUser("P1", engineering.Id);
+            var request = SeedPendingRequest(user.Id, "{\"Department\":\"Marketing\"}", "{\"Department\":\"Engineering\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "departmentName", DbValue = "Engineering", CsvValue = "Sales", Selected = true,
+                SelectedValue = "pending", HasPendingRequest = true, PendingRequestValue = "Marketing"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", departmentName: "Sales"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(marketing.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").DepartmentId);
+            var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Approved", persistedRequest.Status);
+            Assert.Null(persistedRequest.ResolvedByAdminId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_DepartmentConflictResolvedAsCsv_AppliesCsvDepartmentAndRejectsRequest()
+        {
+            var engineering = SeedDepartment("Engineering");
+            SeedDepartment("Marketing");
+            var sales = SeedDepartment("Sales");
+            var user = SeedUser("P1", engineering.Id);
+            var request = SeedPendingRequest(user.Id, "{\"Department\":\"Marketing\"}", "{\"Department\":\"Engineering\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "departmentName", DbValue = "Engineering", CsvValue = "Sales", Selected = true,
+                SelectedValue = "csv", HasPendingRequest = true, PendingRequestValue = "Marketing"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", departmentName: "Sales"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(sales.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").DepartmentId);
+            Assert.Equal("Rejected", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
+        [Fact]
+        public async Task SyncUsers_ImportAppliesSameDepartmentAsPendingRequest_AutoApprovesRequest()
+        {
+            var engineering = SeedDepartment("Engineering");
+            var marketing = SeedDepartment("Marketing");
+            var user = SeedUser("P1", engineering.Id);
+            var request = SeedPendingRequest(user.Id, "{\"Department\":\"Marketing\"}", "{\"Department\":\"Engineering\"}");
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", departmentName: "Marketing"));
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item }, FileName = "depts.csv" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(marketing.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").DepartmentId);
+            var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Approved", persistedRequest.Status);
+            Assert.NotNull(persistedRequest.AutoResolvedByImportHistoryId);
+        }
+
+        [Fact]
+        public async Task SyncUsers_FunctionConflictResolvedAsPending_AppliesRequestedFunctionAndApprovesRequest()
+        {
+            var department = SeedDepartment("Engineering");
+            var swe = SeedFunction("Software Engineer");
+            var qa = SeedFunction("QA Engineer");
+            SeedFunction("DevOps Engineer");
+            var user = SeedUser("P1", department.Id, functionId: swe.Id);
+            var request = SeedPendingRequest(user.Id, "{\"Function\":\"QA Engineer\"}", "{\"Function\":\"Software Engineer\"}");
+            var service = CreateService();
+            var conflict = new FieldConflictDTO
+            {
+                Field = "function", DbValue = "Software Engineer", CsvValue = "DevOps Engineer", Selected = true,
+                SelectedValue = "pending", HasPendingRequest = true, PendingRequestValue = "QA Engineer"
+            };
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", function: "DevOps Engineer"), new List<FieldConflictDTO> { conflict });
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(qa.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").FunctionId);
+            var persistedRequest = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id);
+            Assert.Equal("Approved", persistedRequest.Status);
+        }
+
+        [Fact]
+        public async Task SyncUsers_ImportAppliesDifferentFunctionThanPendingRequest_RequestStaysPending()
+        {
+            var department = SeedDepartment("Engineering");
+            var swe = SeedFunction("Software Engineer");
+            SeedFunction("QA Engineer");
+            var devops = SeedFunction("DevOps Engineer");
+            var user = SeedUser("P1", department.Id, functionId: swe.Id);
+            var request = SeedPendingRequest(user.Id, "{\"Function\":\"QA Engineer\"}", "{\"Function\":\"Software Engineer\"}");
+            var service = CreateService();
+            var item = MakeModifiedItem(user.Id, MakeCsvUser("P1", function: "DevOps Engineer"));
+
+            await service.SyncUsers(new SyncRequestDTO { Items = { item } });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Equal(devops.Id, _dbFixture.Context.Users.Single(u => u.PersonalId == "P1").FunctionId);
+            Assert.Equal("Pending", _dbFixture.Context.DataChangeRequests.Single(r => r.Id == request.Id).Status);
+        }
+
         [Fact]
         public async Task CompareWithDatabase_GenuineConflictWithOnePendingRequest_OffersPendingVsCsvChoice()
         {
