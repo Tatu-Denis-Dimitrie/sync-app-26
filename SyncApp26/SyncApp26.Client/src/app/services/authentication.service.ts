@@ -30,9 +30,8 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
-// Mirrors the backend SyncApp26.Domain.Enums.Roles constants exactly. A user can hold any
-// combination of these (and custom roles an admin created) at once - roles are no longer a single
-// value, so there's no enum to switch on.
+// Mirrors the backend SyncApp26.Domain.Enums.Roles constants. A user can hold any combination
+// of these at once, so there's no single-value enum to switch on.
 export const Roles = {
   Admin: 'Admin',
   LineManager: 'LineManager',
@@ -99,20 +98,12 @@ interface Session {
 export class AuthenticationService {
   private apiUrl = environment.apiUrl + '/authentication';
 
-  // In-memory only - there is nothing left to read from localStorage. Populated by hydrate() and
-  // by a successful login/social login; cleared by logout() and a failed hydrate().
+  // In-memory only - nothing is read from localStorage anymore.
   private sessionSubject = new BehaviorSubject<Session | null>(null);
 
   constructor(private http: HttpClient, @Inject(DOCUMENT) private document: Document) {}
 
-  /**
-   * Populates session state from the server. Called once by the app initializer (app.config.ts),
-   * before the router's first navigation, so every guard below can stay synchronous - by the time
-   * any guard runs, this has already resolved. Must never throw or reject: an app-initializer
-   * factory that rejects aborts bootstrap entirely (blank page), and this is the first network call
-   * the app ever makes, so an unreachable API must not brick the UI - it just leaves the session
-   * empty, same as a genuinely logged-out visitor.
-   */
+  /** Populates session state from the server. Must never throw/reject, or bootstrap aborts with a blank page. */
   hydrate(): Observable<void> {
     return this.http.get<MeResponse>(`${this.apiUrl}/me`).pipe(
       tap(response => this.applyMeResponse(response)),
@@ -172,8 +163,7 @@ export class AuthenticationService {
       catchError(() => of(void 0)),
       finalize(() => {
         this.sessionSubject.next(null);
-        // Full reload, not router navigation: root services cache the session's data and nothing
-        // resets them, so the next account would see the previous one's.
+        // Full reload, not router nav: cached session data in root services wouldn't reset otherwise.
         this.document.location.href = '/login';
       })
     ).subscribe();
@@ -212,10 +202,7 @@ export class AuthenticationService {
     return this.isSsmOfficer() || this.isSuOfficer();
   }
 
-  // The two below back ImpersonationService, which has no session state of its own anymore - /me
-  // is the only place that knows the impersonator's identity (the token itself only carries their
-  // id), so ImpersonationService reads it from here instead of duplicating the lookup.
-
+  // Back ImpersonationService, which has no session state of its own anymore.
   isImpersonating(): boolean {
     return this.sessionSubject.value?.impersonating ?? false;
   }

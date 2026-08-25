@@ -3,9 +3,8 @@ import { inject } from '@angular/core';
 import { Observable, catchError, finalize, shareReplay, switchMap, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-// Never attempt a refresh for these: the auth endpoints establish or end a session (no access
-// token to refresh yet, or deliberately none anymore), and /refresh and /me are the refresh
-// mechanism's own plumbing - refreshing on their 401 would recurse or be meaningless.
+// These establish/end a session or are the refresh mechanism's own plumbing - refreshing on their
+// 401 would recurse or be meaningless.
 const REFRESH_EXEMPT_PATHS = [
   '/authentication/login',
   '/authentication/register',
@@ -17,9 +16,7 @@ const REFRESH_EXEMPT_PATHS = [
   '/authentication/me'
 ];
 
-// Module-level, not per-call: a functional interceptor has no instance to hold this on, and it
-// must be shared across every concurrent request hitting a 401 at once, or two tabs/requests
-// racing on an expired token would each fire their own POST /refresh.
+// Module-level so concurrent 401s share one in-flight refresh instead of each firing their own.
 let refreshInFlight: Observable<unknown> | null = null;
 
 function refreshSession(http: HttpClient): Observable<unknown> {
@@ -47,9 +44,7 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
 
       return refreshSession(http).pipe(
         switchMap(() => next(req)),
-        // The refresh itself failed (no valid refresh token, e.g. an impersonation session, or it
-        // was revoked) - surface the ORIGINAL 401, not the refresh call's own error, so
-        // errorInterceptor's usual handling (impersonation-stop / logout) reacts to it normally.
+        // Refresh itself failed - surface the ORIGINAL 401 so errorInterceptor reacts to it normally.
         catchError(() => throwError(() => err))
       );
     })

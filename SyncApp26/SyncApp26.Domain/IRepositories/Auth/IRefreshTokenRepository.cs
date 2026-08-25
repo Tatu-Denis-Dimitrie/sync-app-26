@@ -6,12 +6,10 @@ namespace SyncApp26.Domain.IRepositories
     {
         Task<RefreshToken?> GetByTokenHashAsync(string tokenHash);
 
-        // "Active" = not yet consumed (rotated forward) and not yet revoked. Used for the
-        // reuse-detection response, which revokes every session tip a user currently has.
+        // "Active" = not yet consumed and not yet revoked.
         Task<List<RefreshToken>> GetActiveForUserAsync(Guid userId);
 
-        // Tracks the new token but does not save - callers that mutate an existing tracked token in
-        // the same logical operation (e.g. rotation) need both changes flushed in one SaveChangesAsync.
+        // Tracks but doesn't save - lets callers batch it with another change (e.g. rotation) in one SaveChangesAsync.
         Task AddAsync(RefreshToken token);
 
         Task SaveChangesAsync();

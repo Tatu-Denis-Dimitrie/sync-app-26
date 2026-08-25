@@ -6,11 +6,7 @@ import { AuthenticationService } from '../services/authentication.service';
 
 const IMPERSONATION_READ_ONLY_CODE = 'IMPERSONATION_READ_ONLY';
 
-// 401 from these must never trigger the reactive branches below: login/google-login/microsoft-login
-// return 401 as a normal "wrong credentials" business response, not a rejected session; me/logout/
-// refresh are the session-management endpoints' own plumbing (refreshInterceptor already handles
-// /refresh's failure by re-throwing the ORIGINAL request's 401, which reaches this interceptor
-// separately - reacting here too would just be a redundant duplicate of that).
+// 401 from these is a normal business response or session-plumbing, not a rejected session.
 const SESSION_EXEMPT_PATHS = [
   '/authentication/login',
   '/authentication/google-login',
@@ -31,18 +27,14 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         impersonation.reportBlockedAction(
           err.error.message || 'This action is disabled while viewing as another user.');
       } else if (!isSessionExempt && err.status === 401 && impersonation.isImpersonating()) {
-        // The impersonation access token expired (impersonation sessions have no refresh token) and
-        // refreshInterceptor's attempt to recover already failed: drop back to the admin's own
-        // session instead of stranding them on a dead token.
+        // Impersonation has no refresh token, so an expired access token can't recover - drop back to the admin.
         impersonation.stop();
       } else if (!isSessionExempt && err.status === 401) {
-        // Both the access token AND the refresh attempt are dead - the session truly cannot
-        // continue. Send the user back to log in rather than stranding them on a UI that looks
-        // logged in but can't call anything.
+        // Refresh already failed too - the session is dead, send the user back to log in.
         authentication.logout();
       }
 
-      // Always rethrow: component-level error handlers (toasts, form errors, etc.) still need to run.
+      // Rethrow: component-level error handlers still need to run.
       return throwError(() => err);
     })
   );

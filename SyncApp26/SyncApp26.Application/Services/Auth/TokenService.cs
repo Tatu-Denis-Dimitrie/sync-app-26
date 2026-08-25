@@ -12,9 +12,7 @@ namespace SyncApp26.Application.Services
     {
         private readonly IConfiguration _configuration;
 
-        // Short-lived on purpose: the refresh token (SyncApp26.Application/Services/Auth/
-        // RefreshTokenService.cs) is what actually keeps a session alive for its full 8h, minted
-        // separately by whoever calls this. A stolen access token is only useful for this long.
+        // Short-lived on purpose: RefreshTokenService is what keeps a session alive for its full 8h.
         private const int AccessTokenMinutes = 15;
         private const int ImpersonationTokenMinutes = 30;
 
@@ -37,9 +35,7 @@ namespace SyncApp26.Application.Services
             return Task.FromResult(BuildToken(claims, TimeSpan.FromMinutes(ImpersonationTokenMinutes)));
         }
 
-        // One role claim per held role — ASP.NET's ClaimsPrincipal.IsInRole/[Authorize(Roles=...)]
-        // both already treat multiple ClaimTypes.Role claims as "any of these", so a user holding
-        // several roles at once (e.g. LineManager + SsmOfficer) needs no special-casing here.
+        // One role claim per held role - ASP.NET already treats multiple ClaimTypes.Role claims as "any of these".
         private static List<Claim> BaseClaims(Guid userId, string email, IEnumerable<string> roleNames)
         {
             if (string.IsNullOrWhiteSpace(email))

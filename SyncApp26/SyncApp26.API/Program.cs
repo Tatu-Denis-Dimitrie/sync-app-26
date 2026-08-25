@@ -180,18 +180,14 @@ try
         options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
     });
 
-    // Auth cookie fallback for the bearer token. Secure is fixed once at startup rather than derived
-    // from Request.IsHttps, which is unreliable behind a TLS-terminating proxy without UseForwardedHeaders.
+    // Secure is fixed at startup, not derived from Request.IsHttps (unreliable behind a proxy).
     var authCookieOptions = new AuthCookieOptions
     {
         Secure = builder.Configuration.GetValue<bool?>("Auth:Cookie:Secure") ?? !builder.Environment.IsDevelopment()
     };
     builder.Services.AddSingleton(authCookieOptions);
 
-    // CSRF: cookie/header names Angular's built-in HttpXsrfInterceptor already knows, so no client
-    // code is needed for this once requests are same-origin (see proxy.conf.json). The antiforgery
-    // cookie itself stays httpOnly; XsrfCookieExtensions.IssueXsrfCookie sets the separate,
-    // non-httpOnly XSRF-TOKEN cookie Angular actually reads.
+    // Names Angular's HttpXsrfInterceptor already knows, so no client code is needed.
     builder.Services.AddAntiforgery(options =>
     {
         options.HeaderName = "X-XSRF-TOKEN";
@@ -234,9 +230,7 @@ try
                 {
                     context.Token = accessToken;
                 }
-                // Fallback only - never overrides a real Authorization header, so bearer-based callers
-                // (curl, Swagger) are unaffected. An httpOnly cookie can't be read by XSS, so it never
-                // competes with a header an attacker could have forged.
+                // Fallback only - never overrides a real Authorization header.
                 else if (string.IsNullOrEmpty(context.Request.Headers.Authorization) &&
                          context.Request.Cookies.TryGetValue(authCookieOptions.Name, out var cookieToken))
                 {
@@ -338,8 +332,7 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // CSRF check for cookie-authenticated, state-changing requests. Runs after UseAuthentication so
-    // HttpContext.User reflects the caller (antiforgery binds tokens to the authenticated identity).
+    // CSRF check for cookie-authenticated requests. After UseAuthentication so User is resolved.
     app.Use(async (context, next) =>
     {
         var hasAuthorizationHeader = !string.IsNullOrEmpty(context.Request.Headers.Authorization);

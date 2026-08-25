@@ -7,10 +7,8 @@ namespace SyncApp26.API.Extensions
     {
         public const string XsrfCookieName = "XSRF-TOKEN";
 
-        // Non-httpOnly on purpose: Angular's built-in HttpXsrfInterceptor reads this cookie and
-        // echoes its value back as the X-XSRF-TOKEN header on unsafe requests, with zero client code
-        // needed - but only if JS is allowed to read it. That's safe: the value alone authenticates
-        // nothing without the paired, httpOnly antiforgery cookie IAntiforgery sets alongside it.
+        // Non-httpOnly on purpose: Angular's HttpXsrfInterceptor reads it and echoes it back as a
+        // header. Safe - the value alone authenticates nothing without the paired antiforgery cookie.
         public static void IssueXsrfCookie(this HttpContext context, IAntiforgery antiforgery, AuthCookieOptions authCookieOptions)
         {
             var tokens = antiforgery.GetAndStoreTokens(context);

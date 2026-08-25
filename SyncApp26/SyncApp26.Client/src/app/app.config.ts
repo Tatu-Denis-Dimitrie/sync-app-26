@@ -13,15 +13,11 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    // Angular interceptors nest like middleware: request order is left-to-right, but a
-    // response/error unwinds RIGHT-to-left - the last interceptor is closest to the backend and
-    // sees it first. refreshInterceptor must be last so it gets first crack at a 401 (silent
-    // refresh + retry) before errorInterceptor's logout/impersonation-stop fallback ever sees it.
+    // Response/error unwinds right-to-left, so refreshInterceptor (last) sees a 401 before
+    // errorInterceptor's logout/impersonation-stop fallback does.
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor, refreshInterceptor])),
     provideAnimations(),
-    // Runs before the router's first navigation, so every guard (all synchronous) can rely on the
-    // session already being resolved by the time it runs. hydrate() itself never throws/errors -
-    // an app initializer that rejects aborts bootstrap entirely (blank page).
+    // Runs before the router's first navigation, so guards can rely on the session being resolved.
     provideAppInitializer(() => inject(AuthenticationService).hydrate())
   ]
 };

@@ -33,10 +33,7 @@ export class ImpersonationService {
     return this.isImpersonating() ? this.authService.getCurrentUser() : null;
   }
 
-  /**
-   * The admin's own identity - null unless impersonating. Lets the UI keep showing who you really
-   * are while the live session belongs to someone else.
-   */
+  /** The admin's own identity - null unless impersonating. */
   originalUser(): User | null {
     return this.authService.impersonator();
   }
@@ -44,11 +41,7 @@ export class ImpersonationService {
   start(userId: string): Observable<ImpersonateResponse> {
     return this.http.post<ImpersonateResponse>(`${this.apiUrl}/impersonate/${userId}`, {})
       .pipe(tap(response => {
-        // Hard reload, not router navigation: root singleton services (pending-count polling,
-        // SignalR) cache session-scoped state and nothing resets them on a soft navigation. The
-        // reload re-runs the app initializer, which re-fetches /me and picks up the impersonation
-        // cookie this response already set - including the impersonator block, which this response
-        // alone doesn't carry (only /me does that lookup).
+        // Hard reload re-runs the app initializer to re-fetch /me with the impersonator block.
         this.document.location.href = this.landingRouteFor(response.user.roles);
       }));
   }
@@ -68,8 +61,7 @@ export class ImpersonationService {
   }
 
   private landingRouteFor(roles: string[]): string {
-    // Mirrors loading-screen.component.ts. The Admin branch there is unreachable here: the server
-    // refuses to issue an impersonation token for an Admin target.
+    // Mirrors loading-screen.component.ts (Admin branch unreachable: server refuses that target).
     if (roles.includes(Roles.LineManager)) return '/line-manager';
     return '/basic-user';
   }

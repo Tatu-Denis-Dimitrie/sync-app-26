@@ -51,11 +51,8 @@ namespace SyncApp26.API.Controllers
             };
         }
 
-        // The cookie is additive for now - the body still carries the token so the existing
-        // localStorage-based client keeps working untouched. Impersonation sessions don't get a
-        // refresh token (design decision), so the admin's own refresh capability is revoked and its
-        // cookie cleared here - otherwise it would silently outlive the 30-minute access token and
-        // let the admin's browser resume a real session without re-authenticating.
+        // Impersonation sessions don't get a refresh token, so the admin's own is revoked here -
+        // otherwise it would silently outlive the 30-minute access token.
         private async Task<IActionResult> ImpersonationSuccess(ImpersonationResult result, Guid adminId)
         {
             Response.AppendAuthCookie(_authCookieOptions, result.Token!, ImpersonationCookieLifetime);

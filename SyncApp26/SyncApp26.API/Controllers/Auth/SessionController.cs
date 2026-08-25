@@ -9,19 +9,16 @@ using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.API.Controllers
 {
-    // Shares the api/authentication route prefix with AuthenticationController and
-    // ImpersonationController on purpose (same reasoning as ImpersonationController's own comment):
-    // no class-level [Authorize] here either, since every action below has its own posture.
+    // Shares the api/authentication prefix with AuthenticationController/ImpersonationController -
+    // no class-level [Authorize] here either, since every action states its own posture.
     [ApiController]
     [Route("api/Authentication")]
     public class SessionController : ControllerBase
     {
-        // The cookie's own Expires is just a hint to the browser for when to stop sending it - the
-        // JWT's signed exp claim (TokenService.AccessTokenMinutes) is what's actually enforced.
+        // Just a hint to the browser - the JWT's own exp claim is what's actually enforced.
         private static readonly TimeSpan AccessTokenCookieLifetime = TimeSpan.FromMinutes(15);
 
-        // The session's absolute cap: RefreshTokenService.RotateAsync never extends ExpiresAt past
-        // what IssueAsync is given here, so this number is the real "how long can a session last".
+        // The session's absolute cap - rotation never extends past what IssueAsync was given.
         private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromHours(8);
 
         private readonly IUserService _userService;
@@ -47,15 +44,13 @@ namespace SyncApp26.API.Controllers
             _authCookieOptions = authCookieOptions;
         }
 
-        // Always 200, even when there's no session - a 401 here would send the client's error
-        // interceptor into logout(), which redirects to /login, which calls /me again: an infinite
-        // reload loop on the login page itself.
+        // Always 200, even with no session - a 401 here would loop the client's error interceptor
+        // into logout() -> /login -> /me -> 401 again.
         [HttpGet("me")]
         [AllowAnonymous]
         public async Task<IActionResult> Me()
         {
-            // Issued unconditionally, even for an anonymous caller - a first-time visitor needs a
-            // valid CSRF pairing in place before they ever submit a form (login, register, ...).
+            // Issued even for anonymous callers, who need a valid CSRF pairing before their first form submit.
             HttpContext.IssueXsrfCookie(_antiforgery, _authCookieOptions);
 
             if (User.GetUserId() is not { } userId)
@@ -69,9 +64,7 @@ namespace SyncApp26.API.Controllers
                 return Ok(new { authenticated = false });
             }
 
-            // Roles come from the signed token, not the DB: a stale or tampered claim can't survive
-            // signature verification, so the UI's view of roles can never diverge from what the API
-            // will actually authorize.
+            // Roles come from the signed token, not the DB, so the UI can't diverge from what the API authorizes.
             var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
 
             object? impersonator = null;
@@ -124,9 +117,7 @@ namespace SyncApp26.API.Controllers
             return Ok(new { message = "Logged out." });
         }
 
-        // Rotates the refresh token and mints a fresh access token from it - the client calls this
-        // when the 15-minute access token expires, so the user never has to re-enter credentials
-        // until the refresh token itself hits its 8h absolute cap (or gets revoked).
+        // Rotates the refresh token and mints a fresh access token from it.
         [HttpPost("refresh")]
         [AllowAnonymous]
         [AllowDuringImpersonation]
@@ -184,8 +175,7 @@ namespace SyncApp26.API.Controllers
             };
         }
 
-        // Resuming the admin's own identity is a real session again, so - unlike the impersonation
-        // token it replaces - it gets a refresh token too.
+        // Resuming the admin's own identity is a real session, so it gets a refresh token too.
         private async Task<IActionResult> StopImpersonationSuccess(ImpersonationResult result)
         {
             Response.AppendAuthCookie(_authCookieOptions, result.Token!, AccessTokenCookieLifetime);

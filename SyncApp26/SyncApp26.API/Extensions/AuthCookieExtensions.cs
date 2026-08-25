@@ -2,8 +2,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace SyncApp26.API.Extensions
 {
-    // Secure is computed once at startup from the hosting environment (not from Request.IsHttps,
-    // which is unreliable behind a TLS-terminating reverse proxy without UseForwardedHeaders).
+    // Secure is computed once at startup, not from Request.IsHttps (unreliable behind a proxy).
     public class AuthCookieOptions
     {
         public string Name { get; init; } = "syncapp26_session";
@@ -13,11 +12,8 @@ namespace SyncApp26.API.Extensions
 
     public static class AuthCookieExtensions
     {
-        // Scoped to the authentication controller group, not just /refresh: logout also needs to
-        // read this cookie to revoke it server-side, and a cookie's Path only matches request paths
-        // that start with it - Path=/api/authentication/refresh would never be sent on a request to
-        // the sibling /api/authentication/logout. Still far narrower than "/", so it never rides
-        // along on unrelated API calls.
+        // Scoped to the auth controller group, not just /refresh - logout also needs to read this
+        // cookie, and a cookie's Path only matches requests whose path starts with it.
         public const string RefreshCookieName = "syncapp26_refresh";
         public const string RefreshCookiePath = "/api/authentication";
 
@@ -28,11 +24,7 @@ namespace SyncApp26.API.Extensions
 
         public static void AppendRefreshCookie(this HttpResponse response, AuthCookieOptions options, string token, DateTime expiresAtUtc)
         {
-            // EF Core + SQLite doesn't round-trip DateTimeKind - a value read back from the
-            // RefreshTokens table (e.g. after RotateAsync) lands as Kind=Unspecified even though it's
-            // always UTC in practice, and DateTimeOffset's constructor treats Unspecified as local
-            // time. Without this, a rotated refresh cookie's expiry silently shifts by the server's
-            // local UTC offset.
+            // SQLite round-trips DateTimeKind as Unspecified; force UTC or the expiry shifts by the server's offset.
             var utcExpires = DateTime.SpecifyKind(expiresAtUtc, DateTimeKind.Utc);
             response.Cookies.Append(RefreshCookieName, token, BuildCookieOptions(options, RefreshCookiePath, new DateTimeOffset(utcExpires)));
         }

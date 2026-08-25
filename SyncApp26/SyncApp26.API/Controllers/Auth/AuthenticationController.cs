@@ -11,12 +11,10 @@ namespace SyncApp26.API.Controllers
     [Route("api/[controller]")]
     public class AuthenticationController : ControllerBase
     {
-        // The cookie's own Expires is just a hint to the browser for when to stop sending it - the
-        // JWT's signed exp claim (TokenService.AccessTokenMinutes) is what's actually enforced.
+        // Just a hint to the browser - the JWT's own exp claim is what's actually enforced.
         private static readonly TimeSpan AccessTokenCookieLifetime = TimeSpan.FromMinutes(15);
 
-        // The session's absolute cap: RefreshTokenService.RotateAsync never extends ExpiresAt past
-        // what IssueAsync is given here, so this number is the real "how long can a session last".
+        // The session's absolute cap - rotation never extends past what IssueAsync was given.
         private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromHours(8);
 
         private readonly IAccountService _accountService;
@@ -237,16 +235,9 @@ namespace SyncApp26.API.Controllers
             return Ok(new { message = "Password reset successfully." });
         }
 
-        // Shared by login/google-login/microsoft-login. The access-token cookie is additive for now -
-        // the body still carries the token so the existing localStorage-based client keeps working
-        // untouched. The refresh token is never put in the body - it only ever lives in its own
-        // httpOnly cookie.
-        //
-        // Deliberately does NOT issue the XSRF-TOKEN cookie here: HttpContext.User for this request
-        // was already resolved (as anonymous) before this action ran, so a token minted now would be
-        // bound to that anonymous identity and rejected on every later request made as this newly
-        // logged-in user. SessionController.Me() is what mints it correctly, on the client's next
-        // (separate) request, once the auth cookie set below is actually being sent back.
+        // Shared by login/google-login/microsoft-login. No XSRF-TOKEN cookie here - User is still
+        // anonymous at this point in the request, so a token minted now would bind to the wrong
+        // identity. SessionController.Me() issues it correctly on the client's next request.
         private async Task<IActionResult> LoginSuccess(LoginResult result)
         {
             Response.AppendAuthCookie(_authCookieOptions, result.Token!, AccessTokenCookieLifetime);
