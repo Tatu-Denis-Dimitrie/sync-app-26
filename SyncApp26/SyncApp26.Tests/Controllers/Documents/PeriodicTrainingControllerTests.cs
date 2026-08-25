@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.Application.IServices;
@@ -16,7 +17,7 @@ namespace SyncApp26.Tests.Controllers.Documents
 
         private PeriodicTrainingController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
-            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object, _userServiceMock.Object);
+            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object, _userServiceMock.Object, NullLogger<PeriodicTrainingController>.Instance);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }

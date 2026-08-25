@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
@@ -33,7 +34,8 @@ namespace SyncApp26.Tests.Services.Sync
                 _notificationMock.Object,
                 new ImportHistoryRepository(_dbFixture.Context),
                 new UserChangeHistoryRepository(_dbFixture.Context),
-                new DataChangeRequestRepository(_dbFixture.Context));
+                new DataChangeRequestRepository(_dbFixture.Context),
+                NullLogger<CsvSyncService>.Instance);
         }
 
         private Department SeedDepartment(string name = "Engineering", bool isActive = true)
@@ -1301,7 +1303,8 @@ namespace SyncApp26.Tests.Services.Sync
                 _notificationMock.Object,
                 new ImportHistoryRepository(_dbFixture.Context),
                 new UserChangeHistoryRepository(_dbFixture.Context),
-                new DataChangeRequestRepository(_dbFixture.Context));
+                new DataChangeRequestRepository(_dbFixture.Context),
+                NullLogger<CsvSyncService>.Instance);
 
             SeedDepartment("Engineering");
             var request = new SyncRequestDTO { Items = { MakeNewItem(MakeCsvUser("P1", departmentName: "Engineering")) } };

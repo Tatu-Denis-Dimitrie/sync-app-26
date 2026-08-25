@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.API.Services;
@@ -22,7 +23,8 @@ namespace SyncApp26.Tests.Controllers.Requests
             var controller = new DataChangeRequestController(
                 _serviceMock.Object,
                 _emailServiceMock.Object,
-                _repositoryMock.Object);
+                _repositoryMock.Object,
+                NullLogger<DataChangeRequestController>.Instance);
 
             controller.SetUser(callerId ?? Guid.NewGuid(), role: Roles.Admin);
             return controller;

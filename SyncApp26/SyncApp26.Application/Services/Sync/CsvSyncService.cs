@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Domain.Enums;
@@ -22,6 +23,7 @@ public class CsvSyncService : ICsvSyncService
     private readonly IImportHistoryRepository _importHistoryRepository;
     private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
     private readonly IDataChangeRequestRepository _dataChangeRequestRepository;
+    private readonly ILogger<CsvSyncService> _logger;
 
 
     private static readonly Dictionary<string, string> CsvFieldToUserProperty = new(StringComparer.OrdinalIgnoreCase)
@@ -55,7 +57,7 @@ public class CsvSyncService : ICsvSyncService
     private static StringComparison ComparisonForProperty(string propertyName) =>
         CaseInsensitiveProperties.Contains(propertyName) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, IWorkSiteRepository workSiteRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, IWorkSiteRepository workSiteRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository, ILogger<CsvSyncService> logger)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
@@ -65,6 +67,7 @@ public class CsvSyncService : ICsvSyncService
         _importHistoryRepository = importHistoryRepository;
         _userChangeHistoryRepository = userChangeHistoryRepositoryRepository;
         _dataChangeRequestRepository = dataChangeRequestRepository;
+        _logger = logger;
     }
 
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
@@ -536,6 +539,13 @@ public class CsvSyncService : ICsvSyncService
             }
         }
 
+        if (result.RecordsFailed > 0)
+        {
+            _logger.LogWarning(
+                "CSV user sync: {Failed} record(s) failed out of {Total}. First error: {Error}",
+                result.RecordsFailed, syncRequest.Items.Count, result.Errors.FirstOrDefault());
+        }
+
         // Await final progress task if any
         if (progressTask != null)
         {
@@ -599,6 +609,7 @@ public class CsvSyncService : ICsvSyncService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "CSV user sync: batch database operations failed.");
             result.Success = false;
             result.Errors.Add($"Failed to execute batch operations: {ex.Message}");
         }
@@ -1426,6 +1437,13 @@ public class CsvSyncService : ICsvSyncService
                 result.RecordsFailed++;
                 result.Errors.Add($"Failed to process department {item.CsvDepartment?.Name ?? item.DbDepartment?.Name ?? "Unknown"}: {ex.Message}");
             }
+        }
+
+        if (result.RecordsFailed > 0)
+        {
+            _logger.LogWarning(
+                "CSV department sync: {Failed} record(s) failed out of {Total}. First error: {Error}",
+                result.RecordsFailed, departmentSyncList.Count, result.Errors.FirstOrDefault());
         }
 
         result.Success = result.RecordsFailed == 0;

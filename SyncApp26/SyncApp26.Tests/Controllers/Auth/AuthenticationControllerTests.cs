@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.API.Extensions;
@@ -24,7 +25,8 @@ namespace SyncApp26.Tests.Controllers.Auth
                 _accountServiceMock.Object,
                 _emailServiceMock.Object,
                 _configurationMock.Object,
-                _authCookieOptions);
+                _authCookieOptions,
+                NullLogger<AuthenticationController>.Instance);
 
             controller.SetAnonymousUser();
             return controller;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Infrastructure.Context;
@@ -14,10 +15,12 @@ namespace SyncApp26.Infrastructure.Services
     public class PeriodicTrainingService : IPeriodicTrainingService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<PeriodicTrainingService> _logger;
 
-        public PeriodicTrainingService(ApplicationDbContext context)
+        public PeriodicTrainingService(ApplicationDbContext context, ILogger<PeriodicTrainingService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<PeriodicTrainingResponseDTO> CreateAsync(CreatePeriodicTrainingDTO dto)
@@ -311,10 +314,18 @@ namespace SyncApp26.Infrastructure.Services
                     }
                 }
 
+                if (result.FailedCount > 0)
+                {
+                    _logger.LogWarning(
+                        "Bulk periodic training: {Success} succeeded, {Failed} failed out of {Total}.",
+                        result.SuccessCount, result.FailedCount, users.Count);
+                }
+
                 await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Bulk periodic training creation failed.");
                 result.Errors.Add($"Bulk operation failed: {ex.Message}");
             }
 

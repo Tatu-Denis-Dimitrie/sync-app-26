@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Infrastructure.Services;
 using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
@@ -11,7 +12,7 @@ namespace SyncApp26.Tests.Services.Documents
 
         public void Dispose() => _dbFixture.Dispose();
 
-        private PeriodicTrainingService CreateService() => new(_dbFixture.Context);
+        private PeriodicTrainingService CreateService() => new(_dbFixture.Context, NullLogger<PeriodicTrainingService>.Instance);
 
         private User SeedUser(string firstName, string lastName)
         {

@@ -8,268 +8,333 @@ using SyncApp26.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using System.IO;
 using SyncApp26.API.Services;
+using SyncApp26.API.Services.Logging;
 using SyncApp26.API.Filters;
+using SyncApp26.API.Middleware;
+using SyncApp26.API.Extensions;
 using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
-using SyncApp26.API.Extensions;
+using Serilog;
+using Serilog.Events;
 
-var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddSignalR();
-builder.Services.AddControllers(options =>
-    {
-        // Global, fail-closed: any non-GET request on an impersonation token is refused unless the
-        // action is explicitly marked [AllowDuringImpersonation]. See ImpersonationReadOnlyFilter.
-        options.Filters.Add<ImpersonationReadOnlyFilter>();
-    })
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-        options.JsonSerializerOptions.MaxDepth = 64;
-    });
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-// Configure CORS for Angular frontend
-builder.Services.AddCors(options =>
+try
 {
-    options.AddDefaultPolicy(policy =>
-    {
-        policy.WithOrigins("http://localhost:4200", "http://localhost:5022")  // Angular dev server and API
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
-    });
-});
+    var builder = WebApplication.CreateBuilder(args);
 
-// Per-IP fixed-window partition shared by all rate-limit policies below.
-static RateLimitPartition<string> IpFixedWindow(HttpContext httpContext, int permitLimit, TimeSpan window) =>
-    RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        factory: _ => new FixedWindowRateLimiterOptions
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services));
+
+    // Add services to the container.
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
+    builder.Services.AddSignalR();
+    builder.Services.AddControllers(options =>
         {
-            PermitLimit = permitLimit,
-            Window = window,
-            QueueLimit = 0
+            // Global, fail-closed: any non-GET request on an impersonation token is refused unless the
+            // action is explicitly marked [AllowDuringImpersonation]. See ImpersonationReadOnlyFilter.
+            options.Filters.Add<ImpersonationReadOnlyFilter>();
+        })
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+            options.JsonSerializerOptions.MaxDepth = 64;
         });
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
 
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.OnRejected = (context, cancellationToken) =>
+    // Configure CORS for Angular frontend
+    builder.Services.AddCors(options =>
     {
-        context.HttpContext.Response.ContentType = "application/json";
-        return new ValueTask(context.HttpContext.Response.WriteAsync(
-            "{\"message\":\"Too many requests. Try again later.\"}", cancellationToken));
-    };
-
-    // Blanket ceiling, layered under any endpoint-specific policy below.
-    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
-        httpContext => IpFixedWindow(httpContext, 300, TimeSpan.FromMinutes(1)));
-
-    options.AddPolicy("login", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
-    options.AddPolicy("auth-sensitive", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
-    options.AddPolicy("signing-token", httpContext => IpFixedWindow(httpContext, 10, TimeSpan.FromMinutes(1)));
-});
-
-// Configure EF Core context and resolve relative SQLite path against ContentRoot.
-var configuredConnection = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-var sqliteBuilder = new SqliteConnectionStringBuilder(configuredConnection);
-if (!Path.IsPathRooted(sqliteBuilder.DataSource))
-{
-    var basePath = builder.Environment.ContentRootPath;
-    sqliteBuilder.DataSource = Path.GetFullPath(Path.Combine(basePath, sqliteBuilder.DataSource));
-}
-sqliteBuilder.Mode = SqliteOpenMode.ReadWriteCreate;
-sqliteBuilder.Cache = SqliteCacheMode.Shared;
-sqliteBuilder.Pooling = true;
-sqliteBuilder.DefaultTimeout = 60;
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60)));
-
-// Repositories
-builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
-builder.Services.AddScoped<IWorkSiteRepository, WorkSiteRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IUserChangeHistoryRepository, UserChangeHistoryRepository>();
-builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
-builder.Services.AddScoped<IFunctionRepository, FunctionRepository>();
-builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepository>();
-builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
-builder.Services.AddScoped<IDataChangeRequestRepository, DataChangeRequestRepository>();
-builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
-builder.Services.AddScoped<IImpersonationLogRepository, ImpersonationLogRepository>();
-builder.Services.AddScoped<ISignatureAnomalyAlertRepository, SignatureAnomalyAlertRepository>();
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-
-
-// Services
-builder.Services.AddScoped<IDepartmentService, DepartmentService>();
-builder.Services.AddScoped<IWorkSiteService, WorkSiteService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
-builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
-builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
-builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
-builder.Services.AddScoped<IUserChangeHistoryService, UserChangeHistoryService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-builder.Services.AddScoped<IEmailService, SmtpEmailService>();
-builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>();
-builder.Services.AddScoped<IFunctionService, FunctionService>();
-builder.Services.AddScoped<IDepartmentFunctionService, DepartmentFunctionService>();
-builder.Services.AddScoped<IDocumentService, DocumentService>();
-builder.Services.AddScoped<ISignatureVerificationService, SignatureVerificationService>();
-builder.Services.AddScoped<IPeriodicTrainingService, PeriodicTrainingService>();
-builder.Services.AddScoped<IUserSignatureService, UserSignatureService>();
-builder.Services.AddScoped<IDataChangeRequestService, DataChangeRequestService>();
-builder.Services.AddScoped<IUserInitialTrainingService, UserInitialTrainingService>();
-builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddScoped<IUserProfileService, UserProfileService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
-builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
-builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
-builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
-builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();
-builder.Services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
-builder.Services.AddSingleton<IMicrosoftTokenValidator, MicrosoftTokenValidator>();
-
-// Background Services
-builder.Services.AddHostedService<DepartmentCleanupService>();
-builder.Services.AddScoped<SignatureVerificationSweeper>();
-builder.Services.AddHostedService<SignatureVerificationSweepService>();
-
-// Since .NET 6, an unhandled exception from a hosted service's ExecuteAsync stops the entire host
-// by default. A background job (e.g. an SMTP failure while emailing an anomaly alert) must never be
-// able to take down the whole API — each service already catches what it knows about internally,
-// this is the outer safety net for anything that slips through.
-builder.Services.Configure<HostOptions>(options =>
-{
-    options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
-});
-
-// Auth cookie fallback for the bearer token. Secure is fixed once at startup rather than derived
-// from Request.IsHttps, which is unreliable behind a TLS-terminating proxy without UseForwardedHeaders.
-var authCookieOptions = new AuthCookieOptions
-{
-    Secure = builder.Configuration.GetValue<bool?>("Auth:Cookie:Secure") ?? !builder.Environment.IsDevelopment()
-};
-builder.Services.AddSingleton(authCookieOptions);
-
-// JWT Authentication
-var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
-    ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
-var key = Encoding.ASCII.GetBytes(jwtSecretKey);
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ClockSkew = TimeSpan.Zero
-    };
-    // SignalR's browser transport can't set an Authorization header, so the client sends the
-    // token as ?access_token= instead — only honored for the hub path.
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
+        options.AddDefaultPolicy(policy =>
         {
-            var accessToken = context.Request.Query["access_token"];
-            if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+            policy.WithOrigins("http://localhost:4200", "http://localhost:5022")  // Angular dev server and API
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+    });
+
+    // Per-IP fixed-window partition shared by all rate-limit policies below.
+    static RateLimitPartition<string> IpFixedWindow(HttpContext httpContext, int permitLimit, TimeSpan window) =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
             {
-                context.Token = accessToken;
-            }
-            // Fallback only - never overrides a real Authorization header, so bearer-based callers
-            // (curl, Swagger) are unaffected. An httpOnly cookie can't be read by XSS, so it never
-            // competes with a header an attacker could have forged.
-            else if (string.IsNullOrEmpty(context.Request.Headers.Authorization) &&
-                     context.Request.Cookies.TryGetValue(authCookieOptions.Name, out var cookieToken))
-            {
-                context.Token = cookieToken;
-            }
-            return Task.CompletedTask;
-        }
-    };
-});
+                PermitLimit = permitLimit,
+                Window = window,
+                QueueLimit = 0
+            });
 
-builder.Services.AddAuthorization();
-
-var app = builder.Build();
-
-// Seed the database
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
+    builder.Services.AddRateLimiter(options =>
     {
-        var context = services.GetRequiredService<ApplicationDbContext>();
-        await context.Database.MigrateAsync();
-
-        // Only seed a genuinely empty database - avoids re-inserting default data on every run.
-        if (!await context.Departments.AnyAsync() && !await context.Users.AnyAsync())
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.OnRejected = (context, cancellationToken) =>
         {
-            await DatabaseSeeder.SeedAsync(context);
-        }
+            var rejectionLogger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            rejectionLogger.LogWarning(
+                "Rate limit exceeded for {IP} on {Path}.",
+                context.HttpContext.Connection.RemoteIpAddress, context.HttpContext.Request.Path);
+
+            context.HttpContext.Response.ContentType = "application/json";
+            return new ValueTask(context.HttpContext.Response.WriteAsync(
+                "{\"message\":\"Too many requests. Try again later.\"}", cancellationToken));
+        };
+
+        // Blanket ceiling, layered under any endpoint-specific policy below.
+        options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
+            httpContext => IpFixedWindow(httpContext, 300, TimeSpan.FromMinutes(1)));
+
+        options.AddPolicy("login", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
+        options.AddPolicy("auth-sensitive", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
+        options.AddPolicy("signing-token", httpContext => IpFixedWindow(httpContext, 10, TimeSpan.FromMinutes(1)));
+    });
+
+    // Configure EF Core context and resolve relative SQLite path against ContentRoot.
+    var configuredConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    var sqliteBuilder = new SqliteConnectionStringBuilder(configuredConnection);
+    if (!Path.IsPathRooted(sqliteBuilder.DataSource))
+    {
+        var basePath = builder.Environment.ContentRootPath;
+        sqliteBuilder.DataSource = Path.GetFullPath(Path.Combine(basePath, sqliteBuilder.DataSource));
     }
-    catch (Exception ex)
+    sqliteBuilder.Mode = SqliteOpenMode.ReadWriteCreate;
+    sqliteBuilder.Cache = SqliteCacheMode.Shared;
+    sqliteBuilder.Pooling = true;
+    sqliteBuilder.DefaultTimeout = 60;
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60)));
+
+    // Repositories
+    builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+    builder.Services.AddScoped<IWorkSiteRepository, WorkSiteRepository>();
+    builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IUserChangeHistoryRepository, UserChangeHistoryRepository>();
+    builder.Services.AddScoped<IImportHistoryRepository, ImportHistoryRepository>();
+    builder.Services.AddScoped<IFunctionRepository, FunctionRepository>();
+    builder.Services.AddScoped<IDepartmentFunctionRepository, DepartmentFunctionRepository>();
+    builder.Services.AddScoped<IUserSignatureRepository, UserSignatureRepository>();
+    builder.Services.AddScoped<IDataChangeRequestRepository, DataChangeRequestRepository>();
+    builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
+    builder.Services.AddScoped<IImpersonationLogRepository, ImpersonationLogRepository>();
+    builder.Services.AddScoped<ISignatureAnomalyAlertRepository, SignatureAnomalyAlertRepository>();
+    builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
+
+    // Services
+    builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+    builder.Services.AddScoped<IWorkSiteService, WorkSiteService>();
+    builder.Services.AddScoped<IUserService, UserService>();
+    builder.Services.AddScoped<ICsvSyncService, CsvSyncService>();
+    builder.Services.AddScoped<ICsvValidationService, CsvValidationService>();
+    builder.Services.AddScoped<ISyncNotificationService, SyncNotificationService>();
+    builder.Services.AddScoped<IImportHistoryService, ImportHistoryService>();
+    builder.Services.AddScoped<IUserChangeHistoryService, UserChangeHistoryService>();
+    builder.Services.AddScoped<ITokenService, TokenService>();
+    builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+    builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+    builder.Services.AddScoped<IDocumentSignatureService, DocumentSignatureService>();
+    builder.Services.AddScoped<IFunctionService, FunctionService>();
+    builder.Services.AddScoped<IDepartmentFunctionService, DepartmentFunctionService>();
+    builder.Services.AddScoped<IDocumentService, DocumentService>();
+    builder.Services.AddScoped<ISignatureVerificationService, SignatureVerificationService>();
+    builder.Services.AddScoped<IPeriodicTrainingService, PeriodicTrainingService>();
+    builder.Services.AddScoped<IUserSignatureService, UserSignatureService>();
+    builder.Services.AddScoped<IDataChangeRequestService, DataChangeRequestService>();
+    builder.Services.AddScoped<IUserInitialTrainingService, UserInitialTrainingService>();
+    builder.Services.AddScoped<IAccountService, AccountService>();
+    builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+    builder.Services.AddScoped<IRoleService, RoleService>();
+    builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
+    builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+    builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
+    builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
+    builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
+    builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();
+    builder.Services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
+    builder.Services.AddSingleton<IMicrosoftTokenValidator, MicrosoftTokenValidator>();
+
+    // Background Services
+    builder.Services.AddHostedService<DepartmentCleanupService>();
+    builder.Services.AddScoped<SignatureVerificationSweeper>();
+    builder.Services.AddHostedService<SignatureVerificationSweepService>();
+    builder.Services.AddHostedService<LogFileRetentionService>();
+
+    // Since .NET 6, an unhandled exception from a hosted service's ExecuteAsync stops the entire host
+    // by default. A background job (e.g. an SMTP failure while emailing an anomaly alert) must never be
+    // able to take down the whole API — each service already catches what it knows about internally,
+    // this is the outer safety net for anything that slips through.
+    builder.Services.Configure<HostOptions>(options =>
     {
+        options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+    });
+
+    // Auth cookie fallback for the bearer token. Secure is fixed once at startup rather than derived
+    // from Request.IsHttps, which is unreliable behind a TLS-terminating proxy without UseForwardedHeaders.
+    var authCookieOptions = new AuthCookieOptions
+    {
+        Secure = builder.Configuration.GetValue<bool?>("Auth:Cookie:Secure") ?? !builder.Environment.IsDevelopment()
+    };
+    builder.Services.AddSingleton(authCookieOptions);
+
+    // JWT Authentication
+    var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
+        ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
+    var key = Encoding.ASCII.GetBytes(jwtSecretKey);
+
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ClockSkew = TimeSpan.Zero
+        };
+        // SignalR's browser transport can't set an Authorization header, so the client sends the
+        // token as ?access_token= instead — only honored for the hub path.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                // Fallback only - never overrides a real Authorization header, so bearer-based callers
+                // (curl, Swagger) are unaffected. An httpOnly cookie can't be read by XSS, so it never
+                // competes with a header an attacker could have forged.
+                else if (string.IsNullOrEmpty(context.Request.Headers.Authorization) &&
+                         context.Request.Cookies.TryGetValue(authCookieOptions.Name, out var cookieToken))
+                {
+                    context.Token = cookieToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+    builder.Services.AddAuthorization();
+
+    var app = builder.Build();
+
+    // Seed the database
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
+        try
+        {
+            var context = services.GetRequiredService<ApplicationDbContext>();
+            await context.Database.MigrateAsync();
+
+            // Only seed a genuinely empty database - avoids re-inserting default data on every run.
+            if (!await context.Departments.AnyAsync() && !await context.Users.AnyAsync())
+            {
+                await DatabaseSeeder.SeedAsync(context);
+                logger.LogInformation("Database seeded with default data.");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while seeding the database.");
+        }
     }
-}
 
-// Configure the HTTP request pipeline.
+    // Configure the HTTP request pipeline.
 
-// Registered first - some downstream middleware short-circuits without calling next(), which
-// would otherwise skip a header middleware placed later.
-app.Use(async (context, next) =>
-{
-    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
-    context.Response.Headers.Append("X-Frame-Options", "DENY");
-    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-    if (!context.Request.Path.StartsWithSegments("/swagger"))
+    app.UseExceptionHandler();
+
+    // Registered first - some downstream middleware short-circuits without calling next(), which
+    // would otherwise skip a header middleware placed later.
+    app.Use(async (context, next) =>
     {
-        context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+        context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Append("X-Frame-Options", "DENY");
+        context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+        if (!context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+        }
+        await next();
+    });
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
     }
-    await next();
-});
+    else
+    {
+        // Breaks local HTTP testing, so only enabled outside dev.
+        app.UseHsts();
+    }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSerilogRequestLogging(options =>
+    {
+        const int slowRequestMs = 3000;
+
+        options.MessageTemplate =
+            "{RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+
+        options.GetLevel = (httpContext, elapsed, exception) =>
+        {
+            if (exception is not null || httpContext.Response.StatusCode >= 500)
+            {
+                return LogEventLevel.Error;
+            }
+
+            var path = httpContext.Request.Path;
+            if (path.StartsWithSegments("/swagger") || path.StartsWithSegments("/hubs"))
+            {
+                return LogEventLevel.Verbose;
+            }
+
+            if (httpContext.Response.StatusCode >= 400)
+            {
+                return LogEventLevel.Warning;
+            }
+
+            return elapsed > slowRequestMs ? LogEventLevel.Warning : LogEventLevel.Debug;
+        };
+    });
+
+    app.UseHttpsRedirection();
+    app.UseCors();
+    app.UseRateLimiter();
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapControllers();
+    app.MapHub<SyncApp26.API.Hubs.SyncHub>("/hubs/sync");
+
+    app.Run();
 }
-else
+catch (Exception ex)
 {
-    // Breaks local HTTP testing, so only enabled outside dev.
-    app.UseHsts();
+    Log.Fatal(ex, "SyncApp26 API terminated unexpectedly during startup.");
+    throw;
 }
-
-app.UseHttpsRedirection();
-app.UseCors();
-app.UseRateLimiter();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-app.MapHub<SyncApp26.API.Hubs.SyncHub>("/hubs/sync");
-
-app.Run();
+finally
+{
+    Log.CloseAndFlush();
+}

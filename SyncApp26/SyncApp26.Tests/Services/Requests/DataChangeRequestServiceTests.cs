@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -23,7 +24,8 @@ namespace SyncApp26.Tests.Services.Requests
                 new DocumentSignatureService(_dbFixture.Context),
                 new WorkSiteRepository(_dbFixture.Context),
                 new DepartmentRepository(_dbFixture.Context),
-                new FunctionRepository(_dbFixture.Context));
+                new FunctionRepository(_dbFixture.Context),
+                NullLogger<DataChangeRequestService>.Instance);
 
         private WorkSite SeedWorkSite(string name, bool isActive = true)
         {

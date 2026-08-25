@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Infrastructure.Context;
 
@@ -20,7 +21,7 @@ namespace SyncApp26.Tests.TestHelpers
                 .UseSqlite(_connection)
                 .Options;
 
-            Context = new ApplicationDbContext(options);
+            Context = new ApplicationDbContext(options, NullLogger<ApplicationDbContext>.Instance);
             // EnsureCreated builds schema from the current model only - it never runs migration
             // .Sql() seed statements, so the Roles table starts empty here unlike a real database.
             Context.Database.EnsureCreated();

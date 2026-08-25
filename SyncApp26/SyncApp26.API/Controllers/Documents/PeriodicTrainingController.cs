@@ -16,11 +16,16 @@ namespace SyncApp26.API.Controllers
     {
         private readonly IPeriodicTrainingService _periodicTrainingService;
         private readonly IUserService _userService;
+        private readonly ILogger<PeriodicTrainingController> _logger;
 
-        public PeriodicTrainingController(IPeriodicTrainingService periodicTrainingService, IUserService userService)
+        public PeriodicTrainingController(
+            IPeriodicTrainingService periodicTrainingService,
+            IUserService userService,
+            ILogger<PeriodicTrainingController> logger)
         {
             _periodicTrainingService = periodicTrainingService;
             _userService = userService;
+            _logger = logger;
         }
 
         // Same officer-or-line-manager reach BulkCreate already enforces per document type, collapsed
@@ -57,6 +62,7 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to create periodic training for user {UserId}.", dto.UserId);
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -114,6 +120,7 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to update periodic training {TrainingId}.", id);
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -160,6 +167,7 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to set print exclusion for periodic training {TrainingId}.", id);
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -240,6 +248,7 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Bulk periodic training creation failed.");
                 return BadRequest(new { message = ex.Message });
             }
         }

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
@@ -117,7 +118,7 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task ManagerReSignAfterTrainingRevision_KeepsFirstSignatureFrozenInAuditRecord()
         {
             var service = CreateService();
-            var trainingService = new PeriodicTrainingService(_dbFixture.Context);
+            var trainingService = new PeriodicTrainingService(_dbFixture.Context, NullLogger<PeriodicTrainingService>.Instance);
 
             var function = SeedFunction("Operator");
             var managerFunction = SeedFunction("Sef Echipa");

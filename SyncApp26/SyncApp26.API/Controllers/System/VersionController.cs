@@ -7,10 +7,12 @@ namespace SyncApp26.API.Controllers;
 public class VersionController : ControllerBase
 {
     private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<VersionController> _logger;
 
-    public VersionController(IWebHostEnvironment environment)
+    public VersionController(IWebHostEnvironment environment, ILogger<VersionController> logger)
     {
         _environment = environment;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -28,7 +30,8 @@ public class VersionController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { error = "Failed to read version", message = ex.Message });
+            _logger.LogError(ex, "Failed to read version file.");
+            return StatusCode(500, new { error = "Failed to read version" });
         }
     }
 }

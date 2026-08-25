@@ -50,7 +50,7 @@ namespace SyncApp26.API.Services
 
             if (departmentsToDelete.Any())
             {
-                _logger.LogInformation($"Found {departmentsToDelete.Count} old, empty departments to permanently delete.");
+                _logger.LogInformation("Found {DepartmentCount} old, empty departments to permanently delete.", departmentsToDelete.Count);
                 context.Departments.RemoveRange(departmentsToDelete);
                 await context.SaveChangesAsync(stoppingToken);
                 _logger.LogInformation("Permanent deletion complete.");

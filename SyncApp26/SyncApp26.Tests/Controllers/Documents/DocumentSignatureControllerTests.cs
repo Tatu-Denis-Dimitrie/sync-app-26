@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.API.Controllers;
 using SyncApp26.API.Hubs;
@@ -44,7 +45,8 @@ namespace SyncApp26.Tests.Controllers.Documents
                 _documentServiceMock.Object,
                 _configurationMock.Object,
                 _scopeFactoryMock.Object,
-                _hubContextMock.Object);
+                _hubContextMock.Object,
+                NullLogger<DocumentSignatureController>.Instance);
 
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;

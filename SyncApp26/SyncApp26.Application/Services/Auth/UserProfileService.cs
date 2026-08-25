@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -14,19 +15,22 @@ namespace SyncApp26.Application.Services
         private readonly IFunctionService _functionService;
         private readonly IUserChangeHistoryService _userChangeHistoryService;
         private readonly IUserInitialTrainingService _userInitialTrainingService;
+        private readonly ILogger<UserProfileService> _logger;
 
         public UserProfileService(
             IUserService userService,
             IDepartmentService departmentService,
             IFunctionService functionService,
             IUserChangeHistoryService userChangeHistoryService,
-            IUserInitialTrainingService userInitialTrainingService)
+            IUserInitialTrainingService userInitialTrainingService,
+            ILogger<UserProfileService> logger)
         {
             _userService = userService;
             _departmentService = departmentService;
             _functionService = functionService;
             _userChangeHistoryService = userChangeHistoryService;
             _userInitialTrainingService = userInitialTrainingService;
+            _logger = logger;
         }
 
         private async Task<Guid?> ResolveFunctionIdAsync(string? requestedFunction)
@@ -465,6 +469,13 @@ namespace SyncApp26.Application.Services
                     result.FailedCount++;
                     result.Errors.Add($"Failed for user {user.Email}: {ex.Message}");
                 }
+            }
+
+            if (result.FailedCount > 0)
+            {
+                _logger.LogWarning(
+                    "Bulk initial training: {Success} succeeded, {Skipped} skipped, {Failed} failed out of {Total}.",
+                    result.SuccessCount, result.SkippedCount, result.FailedCount, usersToUpdate.Count);
             }
 
             return result;

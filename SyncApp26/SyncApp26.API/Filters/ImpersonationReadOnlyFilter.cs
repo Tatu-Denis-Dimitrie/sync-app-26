@@ -32,6 +32,13 @@ namespace SyncApp26.API.Filters
         private static readonly HashSet<string> ReadOnlyMethods =
             new(StringComparer.OrdinalIgnoreCase) { "GET", "HEAD", "OPTIONS" };
 
+        private readonly ILogger<ImpersonationReadOnlyFilter> _logger;
+
+        public ImpersonationReadOnlyFilter(ILogger<ImpersonationReadOnlyFilter> logger)
+        {
+            _logger = logger;
+        }
+
         public void OnAuthorization(AuthorizationFilterContext context)
         {
             // Presence of the claim is the signal — never its parseability. A malformed value must
@@ -50,6 +57,10 @@ namespace SyncApp26.API.Filters
             {
                 return;
             }
+
+            _logger.LogWarning(
+                "Blocked write attempt during impersonation: {Method} {Path}.",
+                context.HttpContext.Request.Method, context.HttpContext.Request.Path);
 
             // ObjectResult with an explicit StatusCode, not Forbid(): Forbid() delegates to the JWT
             // bearer handler's forbid path, which writes a bodyless 403 — the client needs a body

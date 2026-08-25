@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.IRepositories;
@@ -44,6 +45,7 @@ namespace SyncApp26.Application.Services
         private readonly IWorkSiteRepository _workSiteRepository;
         private readonly IDepartmentRepository _departmentRepository;
         private readonly IFunctionRepository _functionRepository;
+        private readonly ILogger<DataChangeRequestService> _logger;
 
         public DataChangeRequestService(
             IDataChangeRequestRepository repository,
@@ -52,7 +54,8 @@ namespace SyncApp26.Application.Services
             IDocumentSignatureService documentSignatureService,
             IWorkSiteRepository workSiteRepository,
             IDepartmentRepository departmentRepository,
-            IFunctionRepository functionRepository)
+            IFunctionRepository functionRepository,
+            ILogger<DataChangeRequestService> logger)
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
@@ -61,6 +64,7 @@ namespace SyncApp26.Application.Services
             _workSiteRepository = workSiteRepository;
             _departmentRepository = departmentRepository;
             _functionRepository = functionRepository;
+            _logger = logger;
         }
 
         private static string GetNavigationFieldCurrentName(string fieldKey, User user)
@@ -527,7 +531,7 @@ namespace SyncApp26.Application.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing changes: {ex.Message}");
+                _logger.LogError(ex, "Error applying resolved changes for data change request {RequestId}.", req.Id);
                 throw new Exception("Error processing data change request.");
             }
 
