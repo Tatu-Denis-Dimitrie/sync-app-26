@@ -1,10 +1,10 @@
 # Client Application
 
 ## Overview
-The SyncApp26 client is an Angular 21 SPA that provides role-based access to HR synchronization, document signing, and training workflows. It uses a global auth interceptor to attach JWTs to API calls and SignalR for real-time updates.
+The SyncApp26 client is an Angular 21 SPA that provides role-based access to HR synchronization, document signing, and training workflows. Session auth rides on an httpOnly cookie (no token in JS); SignalR is used for real-time updates.
 
 ## Runtime settings
-- API base URL: src/environments/environment.ts
+- API base URL: src/environments/environment.ts (relative `/api`, routed through the dev proxy — see proxy.conf.json)
 - Default dev server: http://localhost:4200
 
 ## Project layout
@@ -25,7 +25,7 @@ Pages:
 - test-signature
 
 Services:
-- authentication.service.ts: login, logout, token storage
+- authentication.service.ts: login, logout, session hydration from GET /me
 - user-sync.service.ts: CSV user sync and local state
 - departments-sync.service.ts: department sync
 - user-sync.signalr.service.ts: SignalR connection and events
@@ -36,15 +36,18 @@ Services:
 - version.service.ts: API version display
 
 Guards and interceptors:
-- auth.interceptor adds Authorization: Bearer <token>
+- auth.interceptor sets withCredentials so the session cookie is sent
+- refresh.interceptor retries a 401 after a single-flight POST /refresh
+- error.interceptor logs out (or drops impersonation) on a 401 that survives refresh
 - AuthGuard requires login
 - AdminGuard restricts admin routes
 - LineManagerGuard allows Line Manager or Admin
 
 ## Authentication and session
-- Login stores authToken and currentUser in localStorage.
-- Logout clears localStorage and redirects to /login.
-- currentUser.role is used by guards to gate routes.
+- No token is ever held in JS. An app initializer calls GET /me before the router's first
+  navigation, populating an in-memory session (BehaviorSubject in authentication.service.ts).
+- Logout POSTs /logout, then hard-redirects to /login so all in-memory state resets.
+- The session's roles array is used by guards to gate routes.
 
 ## Route map by role
 ```mermaid

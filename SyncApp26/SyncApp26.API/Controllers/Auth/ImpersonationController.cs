@@ -63,7 +63,6 @@ namespace SyncApp26.API.Controllers
             return Ok(new
             {
                 message = "Impersonation session started.",
-                token = result.Token,
                 user = new
                 {
                     id = result.UserId,

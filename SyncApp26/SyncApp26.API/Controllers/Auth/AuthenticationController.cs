@@ -248,7 +248,6 @@ namespace SyncApp26.API.Controllers
             return Ok(new
             {
                 message = "Login successful.",
-                token = result.Token,
                 user = new
                 {
                     id = result.UserId,

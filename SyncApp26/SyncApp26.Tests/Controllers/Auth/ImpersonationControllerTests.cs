@@ -35,7 +35,7 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
-        public async Task Impersonate_Success_ReturnsOkWithTokenAndUser()
+        public async Task Impersonate_Success_ReturnsOkWithUser()
         {
             var adminId = Guid.NewGuid();
             var targetId = Guid.NewGuid();
@@ -55,7 +55,6 @@ namespace SyncApp26.Tests.Controllers.Auth
             var result = await controller.Impersonate(targetId);
 
             var ok = Assert.IsType<OkObjectResult>(result);
-            Assert.Equal("fake-token", GetProp<string?>(ok.Value!, "token"));
             var user = GetProp<object>(ok.Value!, "user");
             Assert.Equal(targetId, GetProp<Guid>(user, "id"));
         }

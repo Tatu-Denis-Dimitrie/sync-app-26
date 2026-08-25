@@ -3,8 +3,8 @@
 Base path: /api
 
 ## Conventions
-- Authentication uses JWT Bearer tokens on protected endpoints.
-- Use Authorization: Bearer <token> for authenticated calls.
+- Authentication uses a JWT access token in an httpOnly session cookie, set by the login/refresh endpoints. There is no client-visible token; the browser sends the cookie automatically.
+- Unsafe methods (POST/PUT/PATCH/DELETE) require the CSRF header `X-XSRF-TOKEN`, echoed from the `XSRF-TOKEN` cookie (Angular's built-in XSRF interceptor does this automatically). Exempt: safe methods, requests carrying an `Authorization: Bearer` header, and the pre-session endpoints below.
 - Most endpoints return JSON objects or arrays.
 - Partial success for sync operations may return HTTP 207.
 - Timestamps are UTC and identifiers are GUIDs.
@@ -54,8 +54,8 @@ Request body (LoginUserRequestDTO):
 - password (string, required)
 
 Response:
-- 200: { message, token, user }
-	- user: { id, email, firstName, lastName, role }
+- 200: { message, user } — also sets the session and refresh cookies
+	- user: { id, email, firstName, lastName, roles }
 
 ### POST /authentication/google-login
 Signs in with a Google ID token. Link-only: succeeds only if the token's email already belongs to
@@ -65,8 +65,8 @@ Request body (GoogleLoginRequestDTO):
 - idToken (string, required) — the ID token returned by Google Identity Services
 
 Response:
-- 200: { message, token, user } — identical shape to /authentication/login
-	- user: { id, email, firstName, lastName, role }
+- 200: { message, user } — identical shape to /authentication/login
+	- user: { id, email, firstName, lastName, roles }
 - 400: { message } — idToken missing
 - 401: { message } — invalid/expired token, Google email not verified, or no account exists for that email
 
@@ -81,8 +81,8 @@ Request body (MicrosoftLoginRequestDTO):
 - idToken (string, required) — the ID token returned by the Microsoft identity platform (MSAL)
 
 Response:
-- 200: { message, token, user } — identical shape to /authentication/login
-	- user: { id, email, firstName, lastName, role }
+- 200: { message, user } — identical shape to /authentication/login
+	- user: { id, email, firstName, lastName, roles }
 - 400: { message } — idToken missing
 - 401: { message } — invalid/expired token, or no account exists for that email
 
@@ -101,6 +101,44 @@ Request body (ResetPasswordWithTokenRequestDTO):
 
 Response:
 - 200: { message }
+
+## Session (public)
+
+### GET /authentication/me
+Always 200. Returns the caller's session state derived from the request cookies; also (re)issues the
+`XSRF-TOKEN` cookie. Called once by the client's app initializer, before the first route navigation.
+
+Response:
+- 200: `{ authenticated: false }`, or
+- 200: `{ authenticated: true, user, impersonating, impersonator }` — `impersonator` is the admin's
+  full profile (not just an id) when `impersonating` is true, otherwise `null`.
+
+### POST /authentication/logout
+Revokes the refresh token (if any) and clears both auth cookies. Always 200.
+
+### POST /authentication/refresh
+Rotates the refresh token and mints a new access token from the refresh cookie.
+
+Response:
+- 200: { message } — new cookies set
+- 401: { message } — refresh cookie missing, invalid, expired, or reused outside its grace window (revokes the user's whole refresh chain)
+
+### POST /authentication/impersonate/{userId}
+Admin-only. Starts a view-only session on the target user's identity (30 min access token, no refresh
+token; the admin's own refresh tokens are revoked for the duration).
+
+Response:
+- 200: { message, user, impersonating: true }
+- 400/403/404: target is self, an Admin, or not found
+
+### POST /authentication/stop-impersonation
+Ends impersonation and issues a fresh access+refresh pair for the original admin (re-verified to
+still exist and still hold the Admin role).
+
+Response:
+- 200: { message, user }
+- 400: not currently impersonating
+- 401: the original admin no longer exists or no longer holds the Admin role
 
 ## CSV sync
 

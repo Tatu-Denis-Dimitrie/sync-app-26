@@ -29,6 +29,7 @@ erDiagram
 	USER ||--o{ SIGNATURE_RECORD : signs
 
 	IMPORT_HISTORY ||--o{ USER_CHANGE_HISTORY : audit
+	USER ||--o{ REFRESH_TOKEN : issued
 ```
 
 ### User
@@ -154,6 +155,13 @@ Audit entries for user changes.
 - FieldName, OldValue, NewValue, Status
 - CreatedAt
 
+### RefreshToken
+One row per issued refresh token; only the SHA-256 hash is stored, never the raw value.
+- Id, UserId
+- TokenHash, ExpiresAt, CreatedAt
+- ConsumedAt, RevokedAt (nullable)
+- ReplacedByTokenHash (nullable) — links a token to its rotation successor, so reuse of an already-consumed token can be detected and the whole chain revoked
+
 ### DataChangeRequest
 User-initiated change request requiring admin approval.
 - Id, UserId
@@ -172,6 +180,7 @@ User-initiated change request requiring admin approval.
 - User -> PeriodicTraining and UserInitialTraining (one-to-many)
 - UserDocument -> SignatureRecord (one-to-many, one row per signing event)
 - PeriodicTraining -> SignatureRecord (optional, one-to-many)
+- User -> RefreshToken (one-to-many, active + historical rotation chain)
 
 ## Indexes and constraints
 - Users: unique Email and PersonalId; indexes on DepartmentId and DeletedAt
@@ -180,3 +189,4 @@ User-initiated change request requiring admin approval.
 - UserInitialTraining: unique (UserId, DocumentType)
 - UserSignature: index on UserId (one active record per user)
 - SignatureRecord: index on (PeriodicTrainingId, SignerRole) and on (UserDocumentId, SignerRole) for signing-slot lookups (signature history, most-recent-signature checks); index on (SignerUserId, SignedAt) for HMAC chain lookups
+- RefreshToken: unique index on TokenHash; index on UserId
