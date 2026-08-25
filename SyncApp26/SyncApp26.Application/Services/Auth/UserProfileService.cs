@@ -115,6 +115,24 @@ namespace SyncApp26.Application.Services
             return new UserResponseDTO { Success = true, Message = "User created successfully" };
         }
 
+        private async Task<bool> ReportsToAsync(User candidateManager, Guid userId)
+        {
+            var visited = new HashSet<Guid>();
+            User? ancestor = candidateManager;
+
+            while (ancestor?.AssignedToId is { } nextManagerId && visited.Add(ancestor.Id))
+            {
+                if (nextManagerId == userId)
+                {
+                    return true;
+                }
+
+                ancestor = await _userService.GetUserByIdAsync(nextManagerId);
+            }
+
+            return false;
+        }
+
         public async Task<UserResponseDTO> UpdateUserAsync(User existingUser, UserRequestDTO request)
         {
             if (string.IsNullOrEmpty(request.FirstName) ||
@@ -165,7 +183,7 @@ namespace SyncApp26.Application.Services
 
                 assignedToUser = assignedTo;
 
-                if (assignedTo.AssignedToId == existingUser.Id)
+                if (await ReportsToAsync(assignedTo, existingUser.Id))
                 {
                     return new UserResponseDTO { Success = false, Message = "Circular assignment detected: Cannot assign a user to someone who reports to them" };
                 }
