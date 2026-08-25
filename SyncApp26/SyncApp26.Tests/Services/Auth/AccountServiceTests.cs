@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
@@ -16,7 +17,7 @@ namespace SyncApp26.Tests.Services.Auth
         private readonly Mock<IMicrosoftTokenValidator> _microsoftTokenValidatorMock = new();
 
         private AccountService CreateService() =>
-            new(_userServiceMock.Object, _authenticationServiceMock.Object, _tokenServiceMock.Object, _googleTokenValidatorMock.Object, _microsoftTokenValidatorMock.Object);
+            new(_userServiceMock.Object, _authenticationServiceMock.Object, _tokenServiceMock.Object, _googleTokenValidatorMock.Object, _microsoftTokenValidatorMock.Object, NullLogger<AccountService>.Instance);
 
         private static RegisterUserRequestDTO ValidRegisterRequest() => new()
         {

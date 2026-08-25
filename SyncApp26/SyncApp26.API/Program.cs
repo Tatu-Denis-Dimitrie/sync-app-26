@@ -78,6 +78,11 @@ try
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         options.OnRejected = (context, cancellationToken) =>
         {
+            var rejectionLogger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            rejectionLogger.LogWarning(
+                "Rate limit exceeded for {IP} on {Path}.",
+                context.HttpContext.Connection.RemoteIpAddress, context.HttpContext.Request.Path);
+
             context.HttpContext.Response.ContentType = "application/json";
             return new ValueTask(context.HttpContext.Response.WriteAsync(
                 "{\"message\":\"Too many requests. Try again later.\"}", cancellationToken));

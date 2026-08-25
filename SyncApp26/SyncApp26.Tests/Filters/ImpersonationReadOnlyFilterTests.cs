@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Controllers;
@@ -38,7 +39,7 @@ namespace SyncApp26.Tests.Filters
         [Fact]
         public void OnAuthorization_ImpersonatingPost_BlocksWithObjectResultNotForbidResult()
         {
-            var filter = new ImpersonationReadOnlyFilter();
+            var filter = new ImpersonationReadOnlyFilter(NullLogger<ImpersonationReadOnlyFilter>.Instance);
             var context = CreateContext("POST", ImpersonatingPrincipal());
 
             filter.OnAuthorization(context);
@@ -57,7 +58,7 @@ namespace SyncApp26.Tests.Filters
         [InlineData("DELETE")]
         public void OnAuthorization_ImpersonatingNonGetVerbs_AllBlocked(string method)
         {
-            var filter = new ImpersonationReadOnlyFilter();
+            var filter = new ImpersonationReadOnlyFilter(NullLogger<ImpersonationReadOnlyFilter>.Instance);
             var context = CreateContext(method, ImpersonatingPrincipal());
 
             filter.OnAuthorization(context);
@@ -71,7 +72,7 @@ namespace SyncApp26.Tests.Filters
         [InlineData("OPTIONS")]
         public void OnAuthorization_ImpersonatingReadVerbs_NotBlocked(string method)
         {
-            var filter = new ImpersonationReadOnlyFilter();
+            var filter = new ImpersonationReadOnlyFilter(NullLogger<ImpersonationReadOnlyFilter>.Instance);
             var context = CreateContext(method, ImpersonatingPrincipal());
 
             filter.OnAuthorization(context);
@@ -82,7 +83,7 @@ namespace SyncApp26.Tests.Filters
         [Fact]
         public void OnAuthorization_NormalUserNonGet_NotBlocked()
         {
-            var filter = new ImpersonationReadOnlyFilter();
+            var filter = new ImpersonationReadOnlyFilter(NullLogger<ImpersonationReadOnlyFilter>.Instance);
             var context = CreateContext("POST", NormalPrincipal());
 
             filter.OnAuthorization(context);
@@ -93,7 +94,7 @@ namespace SyncApp26.Tests.Filters
         [Fact]
         public void OnAuthorization_ImpersonatingWithAllowDuringImpersonationMarker_NotBlocked()
         {
-            var filter = new ImpersonationReadOnlyFilter();
+            var filter = new ImpersonationReadOnlyFilter(NullLogger<ImpersonationReadOnlyFilter>.Instance);
             var context = CreateContext("POST", ImpersonatingPrincipal(),
                 new List<object> { new AllowDuringImpersonationAttribute() });
 
@@ -107,7 +108,7 @@ namespace SyncApp26.Tests.Filters
         [InlineData("")]
         public void OnAuthorization_MalformedImpersonatorIdClaim_StillBlocked(string malformedValue)
         {
-            var filter = new ImpersonationReadOnlyFilter();
+            var filter = new ImpersonationReadOnlyFilter(NullLogger<ImpersonationReadOnlyFilter>.Instance);
             var context = CreateContext("POST", ImpersonatingPrincipal(malformedValue));
 
             filter.OnAuthorization(context);
@@ -118,7 +119,7 @@ namespace SyncApp26.Tests.Filters
         [Fact]
         public void OnAuthorization_Unauthenticated_NotBlocked()
         {
-            var filter = new ImpersonationReadOnlyFilter();
+            var filter = new ImpersonationReadOnlyFilter(NullLogger<ImpersonationReadOnlyFilter>.Instance);
             var context = CreateContext("POST", UnauthenticatedPrincipal());
 
             filter.OnAuthorization(context);

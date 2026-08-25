@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -16,14 +17,16 @@ namespace SyncApp26.Application.Services
         private readonly ITokenService _tokenService;
         private readonly IGoogleTokenValidator _googleTokenValidator;
         private readonly IMicrosoftTokenValidator _microsoftTokenValidator;
+        private readonly ILogger<AccountService> _logger;
 
-        public AccountService(IUserService userService, IAuthenticationService authenticationService, ITokenService tokenService, IGoogleTokenValidator googleTokenValidator, IMicrosoftTokenValidator microsoftTokenValidator)
+        public AccountService(IUserService userService, IAuthenticationService authenticationService, ITokenService tokenService, IGoogleTokenValidator googleTokenValidator, IMicrosoftTokenValidator microsoftTokenValidator, ILogger<AccountService> logger)
         {
             _userService = userService;
             _authenticationService = authenticationService;
             _tokenService = tokenService;
             _googleTokenValidator = googleTokenValidator;
             _microsoftTokenValidator = microsoftTokenValidator;
+            _logger = logger;
         }
 
         private static string? ValidatePasswordFormat(string password)
@@ -162,11 +165,13 @@ namespace SyncApp26.Application.Services
             var user = await _userService.GetUserByEmailAsync(normalizedEmail);
             if (user == null || user.PasswordHash == null || !await _authenticationService.VerifyPasswordAsync(password, user.PasswordHash))
             {
+                _logger.LogWarning("Login failed for {Email}: invalid credentials.", normalizedEmail);
                 return new LoginResult { Status = LoginStatus.InvalidCredentials };
             }
 
             if (user.IsEmailVerified != true)
             {
+                _logger.LogWarning("Login failed for {Email}: email not verified.", normalizedEmail);
                 return new LoginResult { Status = LoginStatus.EmailNotVerified };
             }
 
@@ -190,11 +195,13 @@ namespace SyncApp26.Application.Services
             var payload = await _googleTokenValidator.ValidateAsync(idToken);
             if (payload == null || string.IsNullOrWhiteSpace(payload.Email))
             {
+                _logger.LogWarning("Google login failed: invalid or expired ID token.");
                 return new LoginResult { Status = LoginStatus.InvalidCredentials };
             }
 
             if (!payload.EmailVerified)
             {
+                _logger.LogWarning("Google login failed for {Email}: Google email not verified.", payload.Email);
                 return new LoginResult { Status = LoginStatus.GoogleEmailNotVerified };
             }
 
@@ -206,6 +213,7 @@ namespace SyncApp26.Application.Services
             // EmailVerified claim above covers it.
             if (user == null)
             {
+                _logger.LogWarning("Google login failed: no account for {Email}.", normalizedEmail);
                 return new LoginResult { Status = LoginStatus.NoAccountForEmail };
             }
 
@@ -229,6 +237,7 @@ namespace SyncApp26.Application.Services
             var payload = await _microsoftTokenValidator.ValidateAsync(idToken);
             if (payload == null || string.IsNullOrWhiteSpace(payload.Email))
             {
+                _logger.LogWarning("Microsoft login failed: invalid or expired ID token.");
                 return new LoginResult { Status = LoginStatus.InvalidCredentials };
             }
 
@@ -239,6 +248,7 @@ namespace SyncApp26.Application.Services
 
             if (user == null)
             {
+                _logger.LogWarning("Microsoft login failed: no account for {Email}.", normalizedEmail);
                 return new LoginResult { Status = LoginStatus.NoAccountForEmail };
             }
 
@@ -264,6 +274,7 @@ namespace SyncApp26.Application.Services
 
             if (user == null)
             {
+                _logger.LogWarning("Password reset requested for unknown email {Email}.", normalizedEmail);
                 return AccountActionResult<PasswordResetRequestedDTO>.Fail("This email doesn't have an account.");
             }
 
@@ -295,6 +306,9 @@ namespace SyncApp26.Application.Services
             var user = await _userService.GetUserByEmailAsync(normalizedEmail);
             if (user == null)
             {
+                // Server log keeps the real reason distinct from the deliberately generic client
+                // message above, which never reveals whether the email has an account.
+                _logger.LogWarning("Password reset failed: unknown email {Email}.", normalizedEmail);
                 return AccountActionResult<bool>.Fail("Invalid or expired token.");
             }
 
@@ -310,6 +324,7 @@ namespace SyncApp26.Application.Services
                 user.PasswordResetTokenExpiresAt < DateTime.UtcNow ||
                 !string.Equals(user.PasswordResetToken, providedToken, StringComparison.Ordinal))
             {
+                _logger.LogWarning("Password reset failed for {Email}: invalid or expired token.", normalizedEmail);
                 return AccountActionResult<bool>.Fail("Invalid or expired token.");
             }
 

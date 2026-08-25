@@ -135,6 +135,13 @@ public class CsvValidationService : ICsvValidationService
                 result.Errors.Add($"...and {remainingErrors} more errors");
             }
 
+            if (result.InvalidRows > 0)
+            {
+                _logger.LogWarning(
+                    "CSV validation of {FileName}: {Invalid} of {Total} row(s) rejected.",
+                    fileName, result.InvalidRows, result.TotalRows);
+            }
+
             return result;
         }
         catch (Exception ex)
