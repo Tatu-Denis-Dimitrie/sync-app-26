@@ -264,9 +264,7 @@ export class UserSyncService {
         console.error('Error loading departments:', error);
         return of([]);
       }),
-      // Cold otherwise: multiple concurrent subscribers to the same call's result (e.g. more than
-      // one template usage) would each re-trigger the HTTP call. A fresh call to getDepartments()
-      // still fetches fresh data.
+      // Shares one fetch across concurrent subscribers of this call's result.
       shareReplay({ bufferSize: 1, refCount: true })
     );
   }
@@ -369,8 +367,7 @@ export class UserSyncService {
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
-    // Reuses getDepartments()'s shared/cached fetch instead of issuing its own - this used to
-    // re-fetch departments from scratch on every users$ emission via switchMap.
+    // Reuses getDepartments()'s shared fetch instead of issuing its own.
     return combineLatest([this.users$, this.getDepartments()]).pipe(
       map(([users, departments]) => ({
         total: users.length,

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, merge, of, BehaviorSubject, combineLatest, Subject } from 'rxjs';
-import { switchMap, map, startWith, take } from 'rxjs/operators';
+import { switchMap, map, startWith, take, shareReplay } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DepartmentsSyncService } from '../../services/departments-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
@@ -72,8 +72,10 @@ export class DepartmentsComponent implements OnInit {
       this.departmentsSyncService.departmentsSynced$ // Auto-refresh after department sync
     );
 
+    // Shared - has several internal subscribers below, each of which would otherwise re-fetch.
     this.departments$ = refresh$.pipe(
-      switchMap(() => this.userSyncService.getDepartments())
+      switchMap(() => this.userSyncService.getDepartments()),
+      shareReplay({ bufferSize: 1, refCount: true })
     );
 
     this.deletedDepartments$ = refresh$.pipe(

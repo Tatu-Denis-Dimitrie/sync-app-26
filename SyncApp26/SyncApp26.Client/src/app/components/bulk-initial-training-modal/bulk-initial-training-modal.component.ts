@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -44,7 +44,7 @@ interface BulkInitialTrainingData {
   templateUrl: './bulk-initial-training-modal.component.html',
   styleUrls: ['./bulk-initial-training-modal.component.css']
 })
-export class BulkInitialTrainingModalComponent implements OnInit {
+export class BulkInitialTrainingModalComponent {
   @Output() close = new EventEmitter<void>();
   @Output() success = new EventEmitter<void>();
 
@@ -84,11 +84,6 @@ export class BulkInitialTrainingModalComponent implements OnInit {
   };
 
   constructor(private http: HttpClient) {}
-
-  ngOnInit(): void {
-    this.loadDepartments();
-    this.loadUsers();
-  }
 
   private loadDepartments(): void {
     this.isLoadingDepartments = true;

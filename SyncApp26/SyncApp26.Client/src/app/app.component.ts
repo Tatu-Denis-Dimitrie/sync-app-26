@@ -50,8 +50,7 @@ export class AppComponent implements OnInit, OnDestroy {
     window.removeEventListener('pageshow', this.handlePageShow);
   }
 
-  // Back/forward can restore a frozen snapshot of the page from before logout (bfcache) instead of
-  // re-running the app - reload so the app initializer re-checks the session and guards redirect.
+  // Bfcache can restore a stale pre-logout page without re-running the app - force a reload.
   private handlePageShow = (event: PageTransitionEvent): void => {
     if (event.persisted) {
       window.location.reload();
