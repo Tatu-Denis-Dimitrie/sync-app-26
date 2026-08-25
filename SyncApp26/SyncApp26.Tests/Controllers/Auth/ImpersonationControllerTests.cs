@@ -11,11 +11,12 @@ namespace SyncApp26.Tests.Controllers.Auth
     public class ImpersonationControllerTests
     {
         private readonly Mock<IImpersonationService> _impersonationServiceMock = new();
+        private readonly Mock<IRefreshTokenService> _refreshTokenServiceMock = new();
         private readonly AuthCookieOptions _authCookieOptions = new();
 
         private ImpersonationController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
-            var controller = new ImpersonationController(_impersonationServiceMock.Object, _authCookieOptions);
+            var controller = new ImpersonationController(_impersonationServiceMock.Object, _refreshTokenServiceMock.Object, _authCookieOptions);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }
@@ -57,6 +58,46 @@ namespace SyncApp26.Tests.Controllers.Auth
             Assert.Equal("fake-token", GetProp<string?>(ok.Value!, "token"));
             var user = GetProp<object>(ok.Value!, "user");
             Assert.Equal(targetId, GetProp<Guid>(user, "id"));
+        }
+
+        [Fact]
+        public async Task Impersonate_Success_RevokesAdminRefreshTokensAndClearsCookie()
+        {
+            // Impersonation sessions don't get a refresh token - the admin's own must not silently
+            // outlive the 30-minute impersonation access token.
+            var adminId = Guid.NewGuid();
+            var targetId = Guid.NewGuid();
+            var controller = CreateController(adminId);
+            _impersonationServiceMock.Setup(s => s.StartAsync(adminId, targetId, It.IsAny<string?>()))
+                .ReturnsAsync(new ImpersonationResult
+                {
+                    Status = ImpersonationStatus.Success,
+                    Token = "fake-token",
+                    UserId = targetId,
+                    Email = "target@test.com",
+                    Roles = new[] { Roles.BasicUser }
+                });
+
+            await controller.Impersonate(targetId);
+
+            _refreshTokenServiceMock.Verify(s => s.RevokeAllForUserAsync(adminId), Times.Once);
+            var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+            Assert.Contains(AuthCookieExtensions.RefreshCookieName, setCookie);
+            Assert.Contains("1970", setCookie);
+        }
+
+        [Fact]
+        public async Task Impersonate_TargetNotFound_DoesNotTouchRefreshTokens()
+        {
+            var adminId = Guid.NewGuid();
+            var targetId = Guid.NewGuid();
+            var controller = CreateController(adminId);
+            _impersonationServiceMock.Setup(s => s.StartAsync(adminId, targetId, It.IsAny<string?>()))
+                .ReturnsAsync(new ImpersonationResult { Status = ImpersonationStatus.TargetNotFound });
+
+            await controller.Impersonate(targetId);
+
+            _refreshTokenServiceMock.Verify(s => s.RevokeAllForUserAsync(It.IsAny<Guid>()), Times.Never);
         }
 
         [Fact]

@@ -15,16 +15,31 @@ namespace SyncApp26.API.Controllers
     [Route("api/Authentication")]
     public class SessionController : ControllerBase
     {
-        private static readonly TimeSpan SessionCookieLifetime = TimeSpan.FromHours(8);
+        // The cookie's own Expires is just a hint to the browser for when to stop sending it - the
+        // JWT's signed exp claim (TokenService.AccessTokenMinutes) is what's actually enforced.
+        private static readonly TimeSpan AccessTokenCookieLifetime = TimeSpan.FromMinutes(15);
+
+        // The session's absolute cap: RefreshTokenService.RotateAsync never extends ExpiresAt past
+        // what IssueAsync is given here, so this number is the real "how long can a session last".
+        private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromHours(8);
 
         private readonly IUserService _userService;
         private readonly IImpersonationService _impersonationService;
+        private readonly ITokenService _tokenService;
+        private readonly IRefreshTokenService _refreshTokenService;
         private readonly AuthCookieOptions _authCookieOptions;
 
-        public SessionController(IUserService userService, IImpersonationService impersonationService, AuthCookieOptions authCookieOptions)
+        public SessionController(
+            IUserService userService,
+            IImpersonationService impersonationService,
+            ITokenService tokenService,
+            IRefreshTokenService refreshTokenService,
+            AuthCookieOptions authCookieOptions)
         {
             _userService = userService;
             _impersonationService = impersonationService;
+            _tokenService = tokenService;
+            _refreshTokenService = refreshTokenService;
             _authCookieOptions = authCookieOptions;
         }
 
@@ -88,10 +103,55 @@ namespace SyncApp26.API.Controllers
         [HttpPost("logout")]
         [AllowAnonymous]
         [AllowDuringImpersonation]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
+            if (Request.Cookies.TryGetValue(AuthCookieExtensions.RefreshCookieName, out var refreshToken) &&
+                !string.IsNullOrEmpty(refreshToken))
+            {
+                await _refreshTokenService.RevokeAsync(refreshToken);
+            }
+
             Response.DeleteAuthCookie(_authCookieOptions);
+            Response.DeleteRefreshCookie(_authCookieOptions);
             return Ok(new { message = "Logged out." });
+        }
+
+        // Rotates the refresh token and mints a fresh access token from it - the client calls this
+        // when the 15-minute access token expires, so the user never has to re-enter credentials
+        // until the refresh token itself hits its 8h absolute cap (or gets revoked).
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        [AllowDuringImpersonation]
+        public async Task<IActionResult> Refresh()
+        {
+            if (!Request.Cookies.TryGetValue(AuthCookieExtensions.RefreshCookieName, out var rawToken) ||
+                string.IsNullOrEmpty(rawToken))
+            {
+                return Unauthorized(new { message = "No refresh token present." });
+            }
+
+            var result = await _refreshTokenService.RotateAsync(rawToken);
+            if (result.Outcome != RefreshOutcome.Success || result.UserId is not { } userId || result.Token is not { } newRefreshToken)
+            {
+                // Whatever the caller presented is no longer valid - the cookie must go with it.
+                Response.DeleteRefreshCookie(_authCookieOptions);
+                return Unauthorized(new { message = "Refresh token is invalid or expired." });
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                Response.DeleteRefreshCookie(_authCookieOptions);
+                return Unauthorized(new { message = "Refresh token is invalid or expired." });
+            }
+
+            var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
+            var newAccessToken = await _tokenService.GenerateTokenAsync(userId, user.Email, roleNames);
+
+            Response.AppendAuthCookie(_authCookieOptions, newAccessToken, AccessTokenCookieLifetime);
+            Response.AppendRefreshCookie(_authCookieOptions, newRefreshToken.RawToken, newRefreshToken.ExpiresAt);
+
+            return Ok(new { message = "Session refreshed." });
         }
 
         [HttpPost("stop-impersonation")]
@@ -111,14 +171,19 @@ namespace SyncApp26.API.Controllers
             {
                 ImpersonationStatus.ImpersonatorNotFound => Unauthorized(new { message = "Your original session no longer exists. Please log in again." }),
                 ImpersonationStatus.ImpersonatorNotAdmin => Unauthorized(new { message = "Your original session no longer has admin access. Please log in again." }),
-                ImpersonationStatus.Success => StopImpersonationSuccess(result),
+                ImpersonationStatus.Success => await StopImpersonationSuccess(result),
                 _ => StatusCode(500, new { message = "An error occurred while processing your request." })
             };
         }
 
-        private IActionResult StopImpersonationSuccess(ImpersonationResult result)
+        // Resuming the admin's own identity is a real session again, so - unlike the impersonation
+        // token it replaces - it gets a refresh token too.
+        private async Task<IActionResult> StopImpersonationSuccess(ImpersonationResult result)
         {
-            Response.AppendAuthCookie(_authCookieOptions, result.Token!, SessionCookieLifetime);
+            Response.AppendAuthCookie(_authCookieOptions, result.Token!, AccessTokenCookieLifetime);
+
+            var refreshToken = await _refreshTokenService.IssueAsync(result.UserId, DateTime.UtcNow.Add(RefreshTokenLifetime));
+            Response.AppendRefreshCookie(_authCookieOptions, refreshToken.RawToken, refreshToken.ExpiresAt);
 
             return Ok(new
             {

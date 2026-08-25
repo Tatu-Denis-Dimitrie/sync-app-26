@@ -12,6 +12,10 @@ namespace SyncApp26.Application.Services
     {
         private readonly IConfiguration _configuration;
 
+        // Short-lived on purpose: the refresh token (SyncApp26.Application/Services/Auth/
+        // RefreshTokenService.cs) is what actually keeps a session alive for its full 8h, minted
+        // separately by whoever calls this. A stolen access token is only useful for this long.
+        private const int AccessTokenMinutes = 15;
         private const int ImpersonationTokenMinutes = 30;
 
         public TokenService(IConfiguration configuration)
@@ -22,7 +26,7 @@ namespace SyncApp26.Application.Services
         public Task<string> GenerateTokenAsync(Guid userId, string email, IEnumerable<string> roleNames)
         {
             var claims = BaseClaims(userId, email, roleNames);
-            return Task.FromResult(BuildToken(claims, TimeSpan.FromHours(8)));
+            return Task.FromResult(BuildToken(claims, TimeSpan.FromMinutes(AccessTokenMinutes)));
         }
 
         public Task<string> GenerateImpersonationTokenAsync(

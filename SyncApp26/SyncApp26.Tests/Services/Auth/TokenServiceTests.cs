@@ -42,7 +42,7 @@ namespace SyncApp26.Tests.Services.Auth
             Assert.DoesNotContain(jwt.Claims, c => c.Type == CustomClaimTypes.ImpersonatorId);
 
             var lifetime = jwt.ValidTo - jwt.ValidFrom;
-            Assert.True(Math.Abs((lifetime - TimeSpan.FromHours(8)).TotalMinutes) < 1);
+            Assert.True(Math.Abs((lifetime - TimeSpan.FromMinutes(15)).TotalSeconds) < 60);
         }
 
         [Fact]

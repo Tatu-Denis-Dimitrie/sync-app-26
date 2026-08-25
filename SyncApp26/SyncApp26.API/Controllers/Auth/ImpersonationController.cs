@@ -19,11 +19,14 @@ namespace SyncApp26.API.Controllers
         private static readonly TimeSpan ImpersonationCookieLifetime = TimeSpan.FromMinutes(30);
 
         private readonly IImpersonationService _impersonationService;
+        private readonly IRefreshTokenService _refreshTokenService;
         private readonly AuthCookieOptions _authCookieOptions;
 
-        public ImpersonationController(IImpersonationService impersonationService, AuthCookieOptions authCookieOptions)
+        public ImpersonationController(
+            IImpersonationService impersonationService, IRefreshTokenService refreshTokenService, AuthCookieOptions authCookieOptions)
         {
             _impersonationService = impersonationService;
+            _refreshTokenService = refreshTokenService;
             _authCookieOptions = authCookieOptions;
         }
 
@@ -43,16 +46,22 @@ namespace SyncApp26.API.Controllers
                 ImpersonationStatus.TargetNotFound => NotFound(new { message = "User not found." }),
                 ImpersonationStatus.TargetIsAdmin => StatusCode(403, new { message = "You cannot view as another administrator." }),
                 ImpersonationStatus.SelfImpersonation => BadRequest(new { message = "You cannot view as yourself." }),
-                ImpersonationStatus.Success => ImpersonationSuccess(result),
+                ImpersonationStatus.Success => await ImpersonationSuccess(result, adminId),
                 _ => StatusCode(500, new { message = "An error occurred while processing your request." })
             };
         }
 
         // The cookie is additive for now - the body still carries the token so the existing
-        // localStorage-based client keeps working untouched.
-        private IActionResult ImpersonationSuccess(ImpersonationResult result)
+        // localStorage-based client keeps working untouched. Impersonation sessions don't get a
+        // refresh token (design decision), so the admin's own refresh capability is revoked and its
+        // cookie cleared here - otherwise it would silently outlive the 30-minute access token and
+        // let the admin's browser resume a real session without re-authenticating.
+        private async Task<IActionResult> ImpersonationSuccess(ImpersonationResult result, Guid adminId)
         {
             Response.AppendAuthCookie(_authCookieOptions, result.Token!, ImpersonationCookieLifetime);
+
+            await _refreshTokenService.RevokeAllForUserAsync(adminId);
+            Response.DeleteRefreshCookie(_authCookieOptions);
 
             return Ok(new
             {
