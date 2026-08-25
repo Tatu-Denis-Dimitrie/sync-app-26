@@ -11,6 +11,7 @@ using SyncApp26.API.Services;
 using SyncApp26.API.Services.Logging;
 using SyncApp26.API.Filters;
 using SyncApp26.API.Middleware;
+using SyncApp26.API.Extensions;
 using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -127,6 +128,7 @@ try
     builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
     builder.Services.AddScoped<IImpersonationLogRepository, ImpersonationLogRepository>();
     builder.Services.AddScoped<ISignatureAnomalyAlertRepository, SignatureAnomalyAlertRepository>();
+    builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 
     // Services
@@ -154,6 +156,7 @@ try
     builder.Services.AddScoped<IUserProfileService, UserProfileService>();
     builder.Services.AddScoped<IRoleService, RoleService>();
     builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
+    builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
     builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
     builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
     builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
@@ -175,6 +178,14 @@ try
     {
         options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
     });
+
+    // Auth cookie fallback for the bearer token. Secure is fixed once at startup rather than derived
+    // from Request.IsHttps, which is unreliable behind a TLS-terminating proxy without UseForwardedHeaders.
+    var authCookieOptions = new AuthCookieOptions
+    {
+        Secure = builder.Configuration.GetValue<bool?>("Auth:Cookie:Secure") ?? !builder.Environment.IsDevelopment()
+    };
+    builder.Services.AddSingleton(authCookieOptions);
 
     // JWT Authentication
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
@@ -208,6 +219,14 @@ try
                 if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
                 {
                     context.Token = accessToken;
+                }
+                // Fallback only - never overrides a real Authorization header, so bearer-based callers
+                // (curl, Swagger) are unaffected. An httpOnly cookie can't be read by XSS, so it never
+                // competes with a header an attacker could have forged.
+                else if (string.IsNullOrEmpty(context.Request.Headers.Authorization) &&
+                         context.Request.Cookies.TryGetValue(authCookieOptions.Name, out var cookieToken))
+                {
+                    context.Token = cookieToken;
                 }
                 return Task.CompletedTask;
             }

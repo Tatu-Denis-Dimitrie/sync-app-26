@@ -320,6 +320,48 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("PeriodicTrainings");
                 });
 
+            modelBuilder.Entity("SyncApp26.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReplacedByTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RefreshTokens_TokenHash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_RefreshTokens_UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("SyncApp26.Domain.Entities.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1102,6 +1144,17 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Navigation("Document");
 
                     b.Navigation("Instructor");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SyncApp26.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("SyncApp26.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
