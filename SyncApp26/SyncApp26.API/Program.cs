@@ -8,6 +8,7 @@ using SyncApp26.Infrastructure.Data;
 using Microsoft.Data.Sqlite;
 using System.IO;
 using SyncApp26.API.Services;
+using SyncApp26.API.Services.Logging;
 using SyncApp26.API.Filters;
 using SyncApp26.API.Middleware;
 using SyncApp26.Infrastructure.Services;
@@ -164,6 +165,7 @@ try
     builder.Services.AddHostedService<DepartmentCleanupService>();
     builder.Services.AddScoped<SignatureVerificationSweeper>();
     builder.Services.AddHostedService<SignatureVerificationSweepService>();
+    builder.Services.AddHostedService<LogFileRetentionService>();
 
     // Since .NET 6, an unhandled exception from a hosted service's ExecuteAsync stops the entire host
     // by default. A background job (e.g. an SMTP failure while emailing an anomaly alert) must never be
