@@ -284,3 +284,6 @@ SyncApp26/SyncApp26.API/appsetting.Development.json
 SyncApp26/SyncApp26.API/appsetting.json
 
 SyncApp26/SyncApp26.API/GeneratedDocuments
+
+# Serilog local log output
+SyncApp26/SyncApp26.API/logs/
