@@ -998,26 +998,29 @@
                                                           <option [value]="UserRole.LineManager">Line Manager</option>
                                                         </select>
                                                       </div>
-                                                      @if (editForm.role === UserRole.BasicUser) {
-                                                        <div class="space-y-2">
-                                                          <label class="text-sm font-medium text-foreground"
-                                                            >Line Manager <span class="text-destructive">*</span></label
-                                                            >
-                                                            <select
-                                                              [(ngModel)]="editForm.assignedToId"
-                                                              name="assignedToId"
-                                                              [required]="editForm.role === UserRole.BasicUser"
-                                                              class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
-                                                              >
-                                                              <option value="">Select Line Manager</option>
-                                                              @for (m of getAvailableLineManagers(); track m) {
-                                                                <option [value]="m.id">
-                                                                  {{ m.firstName }} {{ m.lastName }}
-                                                                </option>
-                                                              }
-                                                            </select>
-                                                          </div>
-                                                        }
+                                                      <div class="space-y-2">
+                                                        <label class="text-sm font-medium text-foreground">
+                                                          Line Manager
+                                                          @if (editForm.role === UserRole.BasicUser) {
+                                                            <span class="text-destructive">*</span>
+                                                          }
+                                                        </label>
+                                                        <select
+                                                          [(ngModel)]="editForm.assignedToId"
+                                                          name="assignedToId"
+                                                          [required]="editForm.role === UserRole.BasicUser"
+                                                          class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                          >
+                                                          <option value="">
+                                                            {{ editForm.role === UserRole.LineManager ? "No line manager (top level)" : "Select Line Manager" }}
+                                                          </option>
+                                                          @for (m of getAvailableLineManagers(); track m) {
+                                                            <option [value]="m.id">
+                                                              {{ m.firstName }} {{ m.lastName }}
+                                                            </option>
+                                                          }
+                                                        </select>
+                                                      </div>
                                                         <div class="flex justify-end gap-3 mt-6">
                                                           <button
                                                             type="button"

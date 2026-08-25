@@ -511,13 +511,33 @@ export class UsersListComponent implements OnInit {
   }
 
   getAvailableLineManagers(): User[] {
-    // Exclude the current user from being their own line manager
-    // Only include line managers from the selected department in the edit form
+    const ineligible = this.collectReportingSubtreeIds(this.selectedUser?.id);
     return this.allUsers.filter(u =>
       u.role === UserRole.LineManager &&
       u.departmentId === this.editForm.departmentId &&
-      (!this.selectedUser || u.id !== this.selectedUser.id)
+      !ineligible.has(u.id)
     );
+  }
+
+  private collectReportingSubtreeIds(rootId: string | undefined): Set<string> {
+    const ids = new Set<string>();
+    if (!rootId) return ids;
+
+    ids.add(rootId);
+    let frontier = new Set<string>([rootId]);
+
+    while (frontier.size > 0) {
+      const next = new Set<string>();
+      for (const u of this.allUsers) {
+        if (u.assignedToId && frontier.has(u.assignedToId) && !ids.has(u.id)) {
+          ids.add(u.id);
+          next.add(u.id);
+        }
+      }
+      frontier = next;
+    }
+
+    return ids;
   }
 
   saveUser(): void {
@@ -535,7 +555,7 @@ export class UsersListComponent implements OnInit {
       departmentId: this.editForm.departmentId,
       function: this.editForm.function || null,
       workSiteId: this.editForm.workSiteId || null,
-      assignedToId: this.editForm.role === UserRole.LineManager ? null : (this.editForm.assignedToId || null)
+      assignedToId: this.editForm.assignedToId || null
     };
 
     if (this.editForm.role === UserRole.BasicUser && !payload.assignedToId) {

@@ -257,6 +257,48 @@ namespace SyncApp26.Tests.Services.Auth
         }
 
         [Fact]
+        public async Task UpdateUserAsync_IndirectCircularReference_ReturnsFailure()
+        {
+            var service = CreateService();
+            var existing = MakeUser();
+            var departmentId = Guid.NewGuid();
+            var middleManager = MakeUser(assignedToId: existing.Id, roleName: Roles.LineManager);
+            var proposedManager = MakeUser(assignedToId: middleManager.Id, roleName: Roles.LineManager);
+
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(proposedManager.Id)).ReturnsAsync(proposedManager);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(middleManager.Id)).ReturnsAsync(middleManager);
+
+            var request = ValidUserRequest(departmentId);
+            request.AssignedToId = proposedManager.Id;
+
+            var result = await service.UpdateUserAsync(existing, request);
+
+            Assert.False(result.Success);
+            Assert.Contains("Circular assignment detected", result.Message);
+        }
+
+        [Fact]
+        public async Task UpdateUserAsync_LineManagerAssignedToAnotherLineManager_Succeeds()
+        {
+            var service = CreateService();
+            var existing = MakeUser(roleName: Roles.LineManager);
+            var departmentId = Guid.NewGuid();
+            var seniorManager = MakeUser(roleName: Roles.LineManager);
+
+            _departmentServiceMock.Setup(s => s.GetDepartmentByIdAsync(departmentId)).ReturnsAsync(new Department { Id = departmentId, Name = "Dept", CreatedAt = DateTime.UtcNow });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(seniorManager.Id)).ReturnsAsync(seniorManager);
+
+            var request = ValidUserRequest(departmentId);
+            request.AssignedToId = seniorManager.Id;
+
+            var result = await service.UpdateUserAsync(existing, request);
+
+            Assert.True(result.Success);
+            Assert.Equal(seniorManager.Id, existing.AssignedToId);
+        }
+
+        [Fact]
         public async Task UpdateUserAsync_NameChanged_RecordsChangeHistory()
         {
             var service = CreateService();
