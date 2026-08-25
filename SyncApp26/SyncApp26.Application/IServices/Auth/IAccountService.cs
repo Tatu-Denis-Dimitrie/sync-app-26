@@ -49,6 +49,7 @@ namespace SyncApp26.Application.IServices
         public string Email { get; init; } = string.Empty;
         public string FirstName { get; init; } = string.Empty;
         public string EmailVerificationToken { get; init; } = string.Empty;
+        public bool AlreadyRegistered { get; init; }
     }
 
     public class PasswordResetRequestedDTO

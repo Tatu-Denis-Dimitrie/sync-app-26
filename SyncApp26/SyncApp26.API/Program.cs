@@ -64,7 +64,7 @@ builder.Services.AddRateLimiter(options =>
     {
         context.HttpContext.Response.ContentType = "application/json";
         return new ValueTask(context.HttpContext.Response.WriteAsync(
-            "{\"message\":\"Too many requests. Please wait a moment and try again.\"}", cancellationToken));
+            "{\"message\":\"Too many requests. Try again later.\"}", cancellationToken));
     };
 
     // Blanket ceiling, layered under any endpoint-specific policy below.

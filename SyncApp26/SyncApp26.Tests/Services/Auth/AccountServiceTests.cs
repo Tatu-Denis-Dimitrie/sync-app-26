@@ -80,7 +80,7 @@ namespace SyncApp26.Tests.Services.Auth
         }
 
         [Fact]
-        public async Task RegisterAsync_EmailAlreadyRegistered_Fails()
+        public async Task RegisterAsync_EmailAlreadyRegistered_ReturnsSuccessWithoutCreatingAccount()
         {
             var service = CreateService();
             _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>()))
@@ -88,8 +88,9 @@ namespace SyncApp26.Tests.Services.Auth
 
             var result = await service.RegisterAsync(ValidRegisterRequest());
 
-            Assert.False(result.Success);
-            Assert.Contains("already registered", result.ErrorMessage);
+            Assert.True(result.Success);
+            Assert.True(result.Data!.AlreadyRegistered);
+            _userServiceMock.Verify(s => s.AddUserAsync(It.IsAny<User>()), Times.Never);
         }
 
         [Fact]
