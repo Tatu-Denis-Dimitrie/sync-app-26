@@ -12,7 +12,7 @@ namespace SyncApp26.API.Controllers
     // copies an action into that file. Stating "Admin-only" once at the class level here is the
     // fail-closed idiom already used by RolesController.
     [ApiController]
-    [Route("api/authentication")]
+    [Route("api/Authentication")]
     [Authorize(Roles = Roles.Admin)]
     public class ImpersonationController : ControllerBase
     {

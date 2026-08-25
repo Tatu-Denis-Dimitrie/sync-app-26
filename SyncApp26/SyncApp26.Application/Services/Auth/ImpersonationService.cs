@@ -65,5 +65,33 @@ namespace SyncApp26.Application.Services
                 Roles = roleNames
             };
         }
+
+        public async Task<ImpersonationResult> StopAsync(Guid impersonatorUserId)
+        {
+            var admin = await _userService.GetUserByIdAsync(impersonatorUserId);
+            if (admin == null)
+            {
+                return new ImpersonationResult { Status = ImpersonationStatus.ImpersonatorNotFound };
+            }
+
+            var roleNames = admin.RoleAssignments.Select(a => a.Role.Name).ToList();
+            if (!roleNames.Contains(Roles.Admin))
+            {
+                return new ImpersonationResult { Status = ImpersonationStatus.ImpersonatorNotAdmin };
+            }
+
+            var token = await _tokenService.GenerateTokenAsync(admin.Id, admin.Email, roleNames);
+
+            return new ImpersonationResult
+            {
+                Status = ImpersonationStatus.Success,
+                Token = token,
+                UserId = admin.Id,
+                Email = admin.Email,
+                FirstName = admin.FirstName,
+                LastName = admin.LastName,
+                Roles = roleNames
+            };
+        }
     }
 }

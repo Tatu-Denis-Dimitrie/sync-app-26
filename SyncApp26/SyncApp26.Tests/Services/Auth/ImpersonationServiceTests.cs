@@ -142,5 +142,57 @@ namespace SyncApp26.Tests.Services.Auth
 
             Assert.Equal(ImpersonationStatus.Success, result.Status);
         }
+
+        [Fact]
+        public async Task StopAsync_HappyPath_ReturnsSuccessWithAdminIdentity()
+        {
+            var service = CreateService();
+            var adminId = Guid.NewGuid();
+            var admin = MakeUser(adminId, "admin@test.com", Roles.Admin);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(adminId)).ReturnsAsync(admin);
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(adminId, "admin@test.com",
+                    It.Is<IEnumerable<string>>(r => r.Single() == Roles.Admin)))
+                .ReturnsAsync("fresh-admin-token");
+
+            var result = await service.StopAsync(adminId);
+
+            Assert.Equal(ImpersonationStatus.Success, result.Status);
+            Assert.Equal("fresh-admin-token", result.Token);
+            Assert.Equal(adminId, result.UserId);
+            Assert.Equal("admin@test.com", result.Email);
+            Assert.Equal(new[] { Roles.Admin }, result.Roles);
+        }
+
+        [Fact]
+        public async Task StopAsync_AdminNoLongerExists_ReturnsImpersonatorNotFoundWithoutToken()
+        {
+            var service = CreateService();
+            var adminId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(adminId)).ReturnsAsync((User?)null);
+
+            var result = await service.StopAsync(adminId);
+
+            Assert.Equal(ImpersonationStatus.ImpersonatorNotFound, result.Status);
+            Assert.Null(result.Token);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task StopAsync_AdminRoleWasRevokedSinceImpersonationStarted_ReturnsImpersonatorNotAdminWithoutToken()
+        {
+            // The admin's own role can change mid-impersonation (another admin revokes it) - stopping
+            // mints a brand new token, so it must not hand back Admin access that no longer applies.
+            var service = CreateService();
+            var adminId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(adminId)).ReturnsAsync(MakeUser(adminId, roleNames: new[] { Roles.BasicUser }));
+
+            var result = await service.StopAsync(adminId);
+
+            Assert.Equal(ImpersonationStatus.ImpersonatorNotAdmin, result.Status);
+            Assert.Null(result.Token);
+            _tokenServiceMock.Verify(s => s.GenerateTokenAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<IEnumerable<string>>()), Times.Never);
+        }
     }
 }
