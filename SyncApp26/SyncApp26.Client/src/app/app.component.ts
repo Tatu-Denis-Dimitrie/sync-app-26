@@ -39,13 +39,24 @@ export class AppComponent implements OnInit, OnDestroy {
     
     // Simulate app initialization
     this.loadingService.finishLoading();
+
+    window.addEventListener('pageshow', this.handlePageShow);
   }
 
   ngOnDestroy(): void {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
+    window.removeEventListener('pageshow', this.handlePageShow);
   }
+
+  // Back/forward can restore a frozen snapshot of the page from before logout (bfcache) instead of
+  // re-running the app - reload so the app initializer re-checks the session and guards redirect.
+  private handlePageShow = (event: PageTransitionEvent): void => {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  };
 
   private updateHeaderVisibility(url: string): void {
     const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/reset-password/', '/sign/'];

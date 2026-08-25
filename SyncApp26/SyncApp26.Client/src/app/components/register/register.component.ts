@@ -28,6 +28,10 @@ export class RegisterComponent {
   ) {}
 
   onRegister(): void {
+    if (this.isLoading) {
+      return;
+    }
+
     this.errorMessage = '';
     this.successMessage = '';
 
@@ -71,11 +75,4 @@ export class RegisterComponent {
       }
     });
   }
-
-  onKeyPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.onRegister();
-    }
-  }
-
 }

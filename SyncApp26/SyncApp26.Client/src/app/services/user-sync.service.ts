@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject, of, forkJoin } from 'rxjs';
-import { map, delay, tap, catchError, switchMap, finalize } from 'rxjs/operators';
+import { map, delay, tap, catchError, switchMap, finalize, shareReplay } from 'rxjs/operators';
 import { User, UserRole, BloodType, UserComparison, FieldConflict, CsvImport, SyncResult, SyncProgress, SyncProgressUpdate, SyncStatus, Department, UserChangeHistory, ImportHistoryItem } from '../models/csv-sync.model';
 import { Roles } from './authentication.service';
 import { environment } from '../../environments/environment';
@@ -263,7 +263,11 @@ export class UserSyncService {
       catchError(error => {
         console.error('Error loading departments:', error);
         return of([]);
-      })
+      }),
+      // Cold otherwise: multiple concurrent subscribers to the same call's result (e.g. more than
+      // one template usage) would each re-trigger the HTTP call. A fresh call to getDepartments()
+      // still fetches fresh data.
+      shareReplay({ bufferSize: 1, refCount: true })
     );
   }
 
@@ -365,26 +369,15 @@ export class UserSyncService {
    * Get sync statistics
    */
   getUserStats(): Observable<any> {
-    return this.users$.pipe(
-      switchMap(users =>
-        this.http.get<any[]>(`${this.departmentUrl}`).pipe(
-          map(departments => ({
-            total: users.length,
-            lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-            employees: users.filter(u => u.role === UserRole.BasicUser).length,
-            departments: departments.length
-          })),
-          catchError(error => {
-            console.error('Error fetching departments for stats:', error);
-            return of({
-              total: users.length,
-              lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
-              employees: users.filter(u => u.role === UserRole.BasicUser).length,
-              departments: new Set(users.map(u => u.departmentName)).size
-            });
-          })
-        )
-      )
+    // Reuses getDepartments()'s shared/cached fetch instead of issuing its own - this used to
+    // re-fetch departments from scratch on every users$ emission via switchMap.
+    return combineLatest([this.users$, this.getDepartments()]).pipe(
+      map(([users, departments]) => ({
+        total: users.length,
+        lineManagers: users.filter(u => u.role === UserRole.LineManager).length,
+        employees: users.filter(u => u.role === UserRole.BasicUser).length,
+        departments: departments.length
+      }))
     );
   }
 
