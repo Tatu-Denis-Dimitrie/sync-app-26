@@ -5,7 +5,9 @@ namespace SyncApp26.Application.IServices
         Success,
         TargetNotFound,
         TargetIsAdmin,
-        SelfImpersonation
+        SelfImpersonation,
+        ImpersonatorNotFound,
+        ImpersonatorNotAdmin
     }
 
     public class ImpersonationResult
@@ -26,5 +28,14 @@ namespace SyncApp26.Application.IServices
         /// issuing the token — if the audit write fails, no token is produced.
         /// </summary>
         Task<ImpersonationResult> StartAsync(Guid impersonatorUserId, Guid targetUserId, string? ipAddress);
+
+        /// <summary>
+        /// Ends an impersonation session by minting a fresh token for the original admin. This mints a
+        /// brand new token rather than restoring a cached one, so it re-verifies the admin still exists
+        /// and still holds the Admin role — a check StartAsync already does for the target, but that
+        /// the old client-side localStorage restore never needed since it replayed a token, not issued
+        /// one.
+        /// </summary>
+        Task<ImpersonationResult> StopAsync(Guid impersonatorUserId);
     }
 }

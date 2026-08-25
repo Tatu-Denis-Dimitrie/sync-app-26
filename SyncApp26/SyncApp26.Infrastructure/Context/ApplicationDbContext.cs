@@ -52,6 +52,7 @@ namespace SyncApp26.Infrastructure.Context
         public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
         public DbSet<ImpersonationLog> ImpersonationLogs { get; set; }
         public DbSet<SignatureAnomalyAlert> SignatureAnomalyAlerts { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -492,6 +493,35 @@ namespace SyncApp26.Infrastructure.Context
 
                 entity.HasIndex(e => e.IsRead)
                     .HasDatabaseName("IX_SignatureAnomalyAlerts_IsRead");
+            });
+
+            // Configure RefreshToken entity
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.TokenHash)
+                    .IsRequired()
+                    .HasMaxLength(64);
+
+                entity.Property(e => e.ReplacedByTokenHash)
+                    .HasMaxLength(64);
+
+                // Restrict, not Cascade: a soft-deleted user's tokens should still be revocable/
+                // inspectable, and there is no hard-delete path for User that would ever trigger this.
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Lookup path for rotation/revocation - every refresh request hits this.
+                entity.HasIndex(e => e.TokenHash)
+                    .IsUnique()
+                    .HasDatabaseName("IX_RefreshTokens_TokenHash");
+
+                // Reuse-detection's "revoke every active session" walks all of a user's tokens.
+                entity.HasIndex(e => e.UserId)
+                    .HasDatabaseName("IX_RefreshTokens_UserId");
             });
         }
 

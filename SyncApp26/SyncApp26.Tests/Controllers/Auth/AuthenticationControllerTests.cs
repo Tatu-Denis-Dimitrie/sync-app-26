@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using SyncApp26.API.Controllers;
+using SyncApp26.API.Extensions;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
@@ -15,13 +16,15 @@ namespace SyncApp26.Tests.Controllers.Auth
         private readonly Mock<IAccountService> _accountServiceMock = new();
         private readonly Mock<IEmailService> _emailServiceMock = new();
         private readonly Mock<IConfiguration> _configurationMock = new();
+        private readonly AuthCookieOptions _authCookieOptions = new();
 
         private AuthenticationController CreateController()
         {
             var controller = new AuthenticationController(
                 _accountServiceMock.Object,
                 _emailServiceMock.Object,
-                _configurationMock.Object);
+                _configurationMock.Object,
+                _authCookieOptions);
 
             controller.SetAnonymousUser();
             return controller;

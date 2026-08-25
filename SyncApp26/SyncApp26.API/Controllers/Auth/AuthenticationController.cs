@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.API.Services;
+using SyncApp26.API.Extensions;
 
 namespace SyncApp26.API.Controllers
 {
@@ -10,18 +11,23 @@ namespace SyncApp26.API.Controllers
     [Route("api/[controller]")]
     public class AuthenticationController : ControllerBase
     {
+        private static readonly TimeSpan SessionCookieLifetime = TimeSpan.FromHours(8);
+
         private readonly IAccountService _accountService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly AuthCookieOptions _authCookieOptions;
 
         public AuthenticationController(
             IAccountService accountService,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            AuthCookieOptions authCookieOptions)
         {
             _accountService = accountService;
             _emailService = emailService;
             _configuration = configuration;
+            _authCookieOptions = authCookieOptions;
         }
 
         [HttpPost("register")]
@@ -102,19 +108,7 @@ namespace SyncApp26.API.Controllers
                 {
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid email or password." }),
                     LoginStatus.EmailNotVerified => Unauthorized(new { message = "Email is not verified. Please check your email for verification instructions." }),
-                    _ => Ok(new
-                    {
-                        message = "Login successful.",
-                        token = result.Token,
-                        user = new
-                        {
-                            id = result.UserId,
-                            email = result.Email,
-                            firstName = result.FirstName,
-                            lastName = result.LastName,
-                            roles = result.Roles
-                        }
-                    })
+                    _ => LoginSuccess(result)
                 };
             }
             catch (Exception ex)
@@ -141,19 +135,7 @@ namespace SyncApp26.API.Controllers
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Google sign-in. Please try again." }),
                     LoginStatus.GoogleEmailNotVerified => Unauthorized(new { message = "Your Google account email is not verified. Verify it with Google and try again." }),
                     LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Google email. Contact an administrator." }),
-                    LoginStatus.Success => Ok(new
-                    {
-                        message = "Login successful.",
-                        token = result.Token,
-                        user = new
-                        {
-                            id = result.UserId,
-                            email = result.Email,
-                            firstName = result.FirstName,
-                            lastName = result.LastName,
-                            roles = result.Roles
-                        }
-                    }),
+                    LoginStatus.Success => LoginSuccess(result),
                     // Explicit Success so a new status can't fall through as a 200 with no token.
                     _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
@@ -181,19 +163,7 @@ namespace SyncApp26.API.Controllers
                 {
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Microsoft sign-in. Please try again." }),
                     LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Microsoft email. Contact an administrator." }),
-                    LoginStatus.Success => Ok(new
-                    {
-                        message = "Login successful.",
-                        token = result.Token,
-                        user = new
-                        {
-                            id = result.UserId,
-                            email = result.Email,
-                            firstName = result.FirstName,
-                            lastName = result.LastName,
-                            roles = result.Roles
-                        }
-                    }),
+                    LoginStatus.Success => LoginSuccess(result),
                     // Explicit Success so a new status can't fall through as a 200 with no token.
                     _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
@@ -249,6 +219,27 @@ namespace SyncApp26.API.Controllers
             }
 
             return Ok(new { message = "Password reset successfully." });
+        }
+
+        // Shared by login/google-login/microsoft-login. The cookie is additive for now - the body
+        // still carries the token so the existing localStorage-based client keeps working untouched.
+        private IActionResult LoginSuccess(LoginResult result)
+        {
+            Response.AppendAuthCookie(_authCookieOptions, result.Token!, SessionCookieLifetime);
+
+            return Ok(new
+            {
+                message = "Login successful.",
+                token = result.Token,
+                user = new
+                {
+                    id = result.UserId,
+                    email = result.Email,
+                    firstName = result.FirstName,
+                    lastName = result.LastName,
+                    roles = result.Roles
+                }
+            });
         }
 
         private string GetLoginRedirectUrl()
