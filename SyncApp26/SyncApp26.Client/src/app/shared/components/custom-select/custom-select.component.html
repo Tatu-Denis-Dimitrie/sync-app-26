@@ -1,0 +1,28 @@
+<div class="relative">
+  <button type="button" (click)="toggle()" (keydown)="onKeydown($event)" aria-haspopup="listbox"
+    [attr.aria-expanded]="isOpen" [attr.aria-label]="ariaLabel || null"
+    class="w-full flex items-center justify-between gap-2 rounded border border-border bg-background px-3 py-2 text-sm text-left focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+    <span class="truncate" [class.text-muted-foreground]="!hasSelection">{{ selectedLabel }}</span>
+    <svg class="w-4 h-4 shrink-0 text-muted-foreground transition-transform" [class.rotate-180]="isOpen" fill="none"
+      viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+    </svg>
+  </button>
+  @if (isOpen) {
+    <ul #panel role="listbox" [attr.aria-label]="ariaLabel || null"
+      class="absolute z-30 mt-1 w-full max-h-40 overflow-y-auto rounded border border-border bg-card shadow-lg py-1">
+      <li role="option" data-index="-1" [attr.aria-selected]="!hasSelection" (click)="select('')"
+        [class.bg-muted]="activeIndex === -1"
+        class="px-3 py-1.5 text-sm text-muted-foreground cursor-pointer hover:bg-muted">
+        {{ placeholder }}
+      </li>
+      @for (opt of options; track opt.value; let i = $index) {
+        <li role="option" [attr.data-index]="i" [attr.aria-selected]="opt.value === value" (click)="select(opt.value)"
+          [class.bg-muted]="activeIndex === i" [class.font-medium]="opt.value === value"
+          class="px-3 py-1.5 text-sm text-foreground cursor-pointer hover:bg-muted">
+          {{ opt.label }}
+        </li>
+      }
+    </ul>
+  }
+</div>

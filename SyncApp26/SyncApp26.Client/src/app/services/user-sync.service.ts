@@ -342,6 +342,16 @@ export class UserSyncService {
     );
   }
 
+  getAllFunctionNames(): Observable<string[]> {
+    return this.http.get<string[]>(`${environment.apiUrl}/Function`).pipe(
+      map(functions => (functions || []).filter(f => !!f?.trim())),
+      catchError(error => {
+        console.error('Error loading functions:', error);
+        return of([]);
+      })
+    );
+  }
+
   /**
    * Delete a user
    */

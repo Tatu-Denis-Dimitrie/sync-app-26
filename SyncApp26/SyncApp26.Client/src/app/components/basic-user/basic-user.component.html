@@ -579,26 +579,11 @@
                 <div class="flex flex-col">
                   <span class="text-xs text-muted-foreground mb-1">{{ field.label }}</span>
                   @if (field.type === 'select') {
-                    <select [(ngModel)]="requestedChanges[field.key]"
-                      class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500">
-                      <option value="">(No change)</option>
-                      @if (field.key === 'Department') {
-                        @for (opt of availableDepartments; track opt) {
-                          <option [value]="opt">{{ opt }}</option>
-                        }
-                      } @else if (field.key === 'WorkSite') {
-                        @for (opt of availableWorkSites; track opt) {
-                          <option [value]="opt">{{ opt }}</option>
-                        }
-                      } @else {
-                        @for (opt of field.options ?? []; track opt.value) {
-                          <option [value]="opt.value">{{ opt.label }}</option>
-                        }
-                      }
-                    </select>
+                    <app-custom-select [options]="optionsFor(field)" [(value)]="requestedChanges[field.key]"
+                      [ariaLabel]="field.label" />
                   } @else {
                     <input [type]="field.type" [(ngModel)]="requestedChanges[field.key]"
-                      [attr.maxlength]="field.key === 'FirstName' || field.key === 'LastName' || field.key === 'Function' || field.key === 'Address' || field.key === 'PlaceOfBirth' ? 100 : (field.key === 'BadgeNumber' ? 32 : null)"
+                      [attr.maxlength]="field.key === 'FirstName' || field.key === 'LastName' || field.key === 'Address' || field.key === 'PlaceOfBirth' ? 100 : (field.key === 'BadgeNumber' ? 32 : null)"
                       placeholder="Current value is okay (leave empty)"
                       class="rounded border border-border bg-background px-3 py-2 text-sm focus:ring-teal-500 focus:border-teal-500" />
                   }
