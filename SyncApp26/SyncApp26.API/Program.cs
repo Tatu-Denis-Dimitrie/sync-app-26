@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
 using Serilog;
+using Serilog.Events;
 
 
 Log.Logger = new LoggerConfiguration()
@@ -255,6 +256,35 @@ try
         // Breaks local HTTP testing, so only enabled outside dev.
         app.UseHsts();
     }
+
+    app.UseSerilogRequestLogging(options =>
+    {
+        const int slowRequestMs = 3000;
+
+        options.MessageTemplate =
+            "{RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+
+        options.GetLevel = (httpContext, elapsed, exception) =>
+        {
+            if (exception is not null || httpContext.Response.StatusCode >= 500)
+            {
+                return LogEventLevel.Error;
+            }
+
+            var path = httpContext.Request.Path;
+            if (path.StartsWithSegments("/swagger") || path.StartsWithSegments("/hubs"))
+            {
+                return LogEventLevel.Verbose;
+            }
+
+            if (httpContext.Response.StatusCode >= 400)
+            {
+                return LogEventLevel.Warning;
+            }
+
+            return elapsed > slowRequestMs ? LogEventLevel.Warning : LogEventLevel.Debug;
+        };
+    });
 
     app.UseHttpsRedirection();
     app.UseCors();
