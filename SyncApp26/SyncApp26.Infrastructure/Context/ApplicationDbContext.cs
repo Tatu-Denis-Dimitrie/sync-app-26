@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using SyncApp26.Domain.Entities;
 
 namespace SyncApp26.Infrastructure.Context
@@ -8,9 +9,12 @@ namespace SyncApp26.Infrastructure.Context
     {
         private const int MaxSaveRetries = 5;
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        private readonly ILogger<ApplicationDbContext> _logger;
+
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ILogger<ApplicationDbContext> logger)
             : base(options)
         {
+            _logger = logger;
         }
 
         public override int SaveChanges()
@@ -511,7 +515,7 @@ namespace SyncApp26.Infrastructure.Context
             return TimeSpan.FromMilliseconds(delayMs);
         }
 
-        private static int ExecuteWithSqliteRetry(Func<int> action)
+        private int ExecuteWithSqliteRetry(Func<int> action)
         {
             for (var attempt = 1; attempt <= MaxSaveRetries; attempt++)
             {
@@ -521,6 +525,7 @@ namespace SyncApp26.Infrastructure.Context
                 }
                 catch (Exception ex) when (attempt < MaxSaveRetries && IsSqliteLockException(ex))
                 {
+                    _logger.LogWarning(ex, "SQLite database locked, retrying (attempt {Attempt}/{MaxAttempts}).", attempt, MaxSaveRetries);
                     Thread.Sleep(GetRetryDelay(attempt));
                 }
             }
@@ -528,7 +533,7 @@ namespace SyncApp26.Infrastructure.Context
             return action();
         }
 
-        private static async Task<int> ExecuteWithSqliteRetryAsync(Func<Task<int>> action)
+        private async Task<int> ExecuteWithSqliteRetryAsync(Func<Task<int>> action)
         {
             for (var attempt = 1; attempt <= MaxSaveRetries; attempt++)
             {
@@ -538,6 +543,7 @@ namespace SyncApp26.Infrastructure.Context
                 }
                 catch (Exception ex) when (attempt < MaxSaveRetries && IsSqliteLockException(ex))
                 {
+                    _logger.LogWarning(ex, "SQLite database locked, retrying (attempt {Attempt}/{MaxAttempts}).", attempt, MaxSaveRetries);
                     await Task.Delay(GetRetryDelay(attempt));
                 }
             }

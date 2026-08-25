@@ -26,6 +26,7 @@ namespace SyncApp26.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHubContext<SyncHub> _hubContext;
+        private readonly ILogger<DocumentSignatureController> _logger;
 
         private static readonly ConcurrentDictionary<string, BulkSignProgress> BulkSignJobs = new();
 
@@ -37,7 +38,8 @@ namespace SyncApp26.API.Controllers
             IDocumentService documentService,
             IConfiguration configuration,
             IServiceScopeFactory scopeFactory,
-            IHubContext<SyncHub> hubContext)
+            IHubContext<SyncHub> hubContext,
+            ILogger<DocumentSignatureController> logger)
         {
             _documentSignatureService = documentSignatureService;
             _documentSigningService = documentSigningService;
@@ -47,6 +49,7 @@ namespace SyncApp26.API.Controllers
             _configuration = configuration;
             _scopeFactory = scopeFactory;
             _hubContext = hubContext;
+            _logger = logger;
         }
 
         public class RequestSignatureDto
@@ -185,8 +188,9 @@ namespace SyncApp26.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // Log but don't fail the signing operation
-                    Console.WriteLine($"Warning: Failed to send email to {notification.Email}: {ex.Message}");
+                    // Don't fail the signing operation over a delivery failure -- the document is
+                    // already signed, only the notification email is missing.
+                    _logger.LogWarning(ex, "Failed to send signature notification email to {Email}.", notification.Email);
                 }
             }
 
@@ -282,6 +286,7 @@ namespace SyncApp26.API.Controllers
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Bulk sign job {JobId} failed after signing {Signed} of {Total}.", jobId, progress.Signed, progress.Total);
                     progress.Error = ex.Message;
                     progress.Completed = true;
                 }

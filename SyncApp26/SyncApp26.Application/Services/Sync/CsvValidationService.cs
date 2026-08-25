@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using SyncApp26.Shared.DTOs;
 using SyncApp26.Application.IServices;
 
@@ -10,6 +11,13 @@ public class CsvValidationService : ICsvValidationService
     private static readonly string[] RequiredHeaders = { "PersonalId", "FirstName", "LastName", "Email", "DepartmentName" };
     private static readonly string[] OptionalHeaders = { "AssignedToPersonalId", "Function", "WorkSite" };
     private static readonly Regex EmailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
+
+    private readonly ILogger<CsvValidationService> _logger;
+
+    public CsvValidationService(ILogger<CsvValidationService> logger)
+    {
+        _logger = logger;
+    }
 
     public async Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName, HashSet<string>? existingDepartments = null)
     {
@@ -131,6 +139,7 @@ public class CsvValidationService : ICsvValidationService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to read CSV file {FileName}.", fileName);
             result.IsValid = false;
             result.Errors.Add($"Error reading CSV file: {ex.Message}");
             return result;

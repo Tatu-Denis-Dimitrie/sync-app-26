@@ -55,6 +55,7 @@ namespace SyncApp26.API.Controllers
                 catch (Exception emailEx)
                 {
                     // User is saved; just warn that email delivery failed.
+                    _logger.LogWarning(emailEx, "Registration succeeded for {Email} but the verification email failed to send.", registered.Email);
                     return StatusCode(202, new { message = "Account created, but we could not send the verification email. Please contact an administrator.", error = emailEx.Message });
                 }
 

@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.Logging.Abstractions;
 using SyncApp26.Application.Services;
 using SyncApp26.Shared.DTOs;
 
@@ -9,7 +10,7 @@ namespace SyncApp26.Tests.Services.Sync
         private const string ValidHeader = "PersonalId,FirstName,LastName,Email,DepartmentName";
         private const string ValidRow = "P1,John,Doe,john.doe@example.com,Engineering";
 
-        private static CsvValidationService CreateService() => new();
+        private static CsvValidationService CreateService() => new(NullLogger<CsvValidationService>.Instance);
 
         private static Stream MakeStream(string content, bool withBom = false)
         {

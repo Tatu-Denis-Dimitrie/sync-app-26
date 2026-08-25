@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
@@ -25,7 +26,8 @@ namespace SyncApp26.Tests.Services.Auth
                 _departmentServiceMock.Object,
                 _functionServiceMock.Object,
                 _userChangeHistoryServiceMock.Object,
-                new UserInitialTrainingService(new UserInitialTrainingRepository(_dbFixture.Context)));
+                new UserInitialTrainingService(new UserInitialTrainingRepository(_dbFixture.Context)),
+                NullLogger<UserProfileService>.Instance);
 
         private static User MakeUser(Guid? id = null, Guid? departmentId = null, Guid? assignedToId = null, string roleName = Roles.BasicUser)
         {

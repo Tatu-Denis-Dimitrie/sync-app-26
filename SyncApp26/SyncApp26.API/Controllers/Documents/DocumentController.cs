@@ -24,6 +24,7 @@ namespace SyncApp26.API.Controllers
         private readonly ISignatureVerificationService _signatureVerificationService;
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<DocumentController> _logger;
 
         // Same in-memory job board as DocumentSignatureController's bulk-sign jobs: a bulk generation
         // outlives its HTTP request, so its progress lives here and is polled by jobId.
@@ -37,7 +38,8 @@ namespace SyncApp26.API.Controllers
             IUserService userService,
             ISignatureVerificationService signatureVerificationService,
             IConfiguration configuration,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            ILogger<DocumentController> logger)
         {
             _documentService = documentService;
             _emailService = emailService;
@@ -47,6 +49,7 @@ namespace SyncApp26.API.Controllers
             _signatureVerificationService = signatureVerificationService;
             _configuration = configuration;
             _scopeFactory = scopeFactory;
+            _logger = logger;
         }
 
         // Flat DTO — avoids serializing deep User navigation property chains
@@ -211,6 +214,7 @@ namespace SyncApp26.API.Controllers
                 }
                 catch (Exception ex)
                 {
+                    logger?.LogError(ex, "Bulk generate job {JobId} failed.", jobId);
                     progress.Error = ex.Message;
                     generatedIdsByType.Clear();
                 }
@@ -423,6 +427,7 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Document generation failed for user {UserId}, type {DocumentType}.", request.UserId, request.DocumentType);
                 return BadRequest(new { message = ex.Message });
             }
         }

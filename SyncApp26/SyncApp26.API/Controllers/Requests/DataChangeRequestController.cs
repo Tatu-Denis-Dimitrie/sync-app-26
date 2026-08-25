@@ -21,15 +21,18 @@ namespace SyncApp26.API.Controllers
         private readonly IDataChangeRequestService _service;
         private readonly IEmailService _emailService;
         private readonly IDataChangeRequestRepository _repository;
+        private readonly ILogger<DataChangeRequestController> _logger;
 
         public DataChangeRequestController(
             IDataChangeRequestService service,
             IEmailService emailService,
-            IDataChangeRequestRepository repository)
+            IDataChangeRequestRepository repository,
+            ILogger<DataChangeRequestController> logger)
         {
             _service = service;
             _emailService = emailService;
             _repository = repository;
+            _logger = logger;
         }
 
         private Guid GetUserId()
@@ -141,6 +144,7 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to resolve data change request {RequestId}.", id);
                 return BadRequest(new { message = ex.Message });
             }
 
@@ -158,6 +162,7 @@ namespace SyncApp26.API.Controllers
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogWarning(ex, "Data change request {RequestId} approved but the notification email failed.", id);
                     emailError = ex.Message;
                 }
             }
