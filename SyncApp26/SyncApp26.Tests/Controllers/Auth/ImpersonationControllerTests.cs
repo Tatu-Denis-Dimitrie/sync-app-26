@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using SyncApp26.API.Controllers;
+using SyncApp26.API.Extensions;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Tests.TestHelpers;
@@ -10,10 +11,11 @@ namespace SyncApp26.Tests.Controllers.Auth
     public class ImpersonationControllerTests
     {
         private readonly Mock<IImpersonationService> _impersonationServiceMock = new();
+        private readonly AuthCookieOptions _authCookieOptions = new();
 
         private ImpersonationController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
-            var controller = new ImpersonationController(_impersonationServiceMock.Object);
+            var controller = new ImpersonationController(_impersonationServiceMock.Object, _authCookieOptions);
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }

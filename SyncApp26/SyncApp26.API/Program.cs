@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
+using SyncApp26.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -153,6 +154,14 @@ builder.Services.Configure<HostOptions>(options =>
     options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
 });
 
+// Auth cookie fallback for the bearer token. Secure is fixed once at startup rather than derived
+// from Request.IsHttps, which is unreliable behind a TLS-terminating proxy without UseForwardedHeaders.
+var authCookieOptions = new AuthCookieOptions
+{
+    Secure = builder.Configuration.GetValue<bool?>("Auth:Cookie:Secure") ?? !builder.Environment.IsDevelopment()
+};
+builder.Services.AddSingleton(authCookieOptions);
+
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
     ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
@@ -185,6 +194,14 @@ builder.Services.AddAuthentication(options =>
             if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
             {
                 context.Token = accessToken;
+            }
+            // Fallback only - never overrides a real Authorization header, so bearer-based callers
+            // (curl, Swagger) are unaffected. An httpOnly cookie can't be read by XSS, so it never
+            // competes with a header an attacker could have forged.
+            else if (string.IsNullOrEmpty(context.Request.Headers.Authorization) &&
+                     context.Request.Cookies.TryGetValue(authCookieOptions.Name, out var cookieToken))
+            {
+                context.Token = cookieToken;
             }
             return Task.CompletedTask;
         }

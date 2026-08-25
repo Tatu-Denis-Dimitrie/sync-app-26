@@ -16,11 +16,15 @@ namespace SyncApp26.API.Controllers
     [Authorize(Roles = Roles.Admin)]
     public class ImpersonationController : ControllerBase
     {
-        private readonly IImpersonationService _impersonationService;
+        private static readonly TimeSpan ImpersonationCookieLifetime = TimeSpan.FromMinutes(30);
 
-        public ImpersonationController(IImpersonationService impersonationService)
+        private readonly IImpersonationService _impersonationService;
+        private readonly AuthCookieOptions _authCookieOptions;
+
+        public ImpersonationController(IImpersonationService impersonationService, AuthCookieOptions authCookieOptions)
         {
             _impersonationService = impersonationService;
+            _authCookieOptions = authCookieOptions;
         }
 
         [HttpPost("impersonate/{userId:guid}")]
@@ -39,22 +43,31 @@ namespace SyncApp26.API.Controllers
                 ImpersonationStatus.TargetNotFound => NotFound(new { message = "User not found." }),
                 ImpersonationStatus.TargetIsAdmin => StatusCode(403, new { message = "You cannot view as another administrator." }),
                 ImpersonationStatus.SelfImpersonation => BadRequest(new { message = "You cannot view as yourself." }),
-                ImpersonationStatus.Success => Ok(new
-                {
-                    message = "Impersonation session started.",
-                    token = result.Token,
-                    user = new
-                    {
-                        id = result.UserId,
-                        email = result.Email,
-                        firstName = result.FirstName,
-                        lastName = result.LastName,
-                        roles = result.Roles
-                    },
-                    impersonating = true
-                }),
+                ImpersonationStatus.Success => ImpersonationSuccess(result),
                 _ => StatusCode(500, new { message = "An error occurred while processing your request." })
             };
+        }
+
+        // The cookie is additive for now - the body still carries the token so the existing
+        // localStorage-based client keeps working untouched.
+        private IActionResult ImpersonationSuccess(ImpersonationResult result)
+        {
+            Response.AppendAuthCookie(_authCookieOptions, result.Token!, ImpersonationCookieLifetime);
+
+            return Ok(new
+            {
+                message = "Impersonation session started.",
+                token = result.Token,
+                user = new
+                {
+                    id = result.UserId,
+                    email = result.Email,
+                    firstName = result.FirstName,
+                    lastName = result.LastName,
+                    roles = result.Roles
+                },
+                impersonating = true
+            });
         }
     }
 }
