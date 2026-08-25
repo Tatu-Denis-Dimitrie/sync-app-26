@@ -178,6 +178,8 @@ namespace SyncApp26.Application.Services
             var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
             var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleNames);
 
+            _logger.LogInformation("Login succeeded for {Email}.", user.Email);
+
             return new LoginResult
             {
                 Status = LoginStatus.Success,
@@ -220,6 +222,8 @@ namespace SyncApp26.Application.Services
             var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
             var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleNames);
 
+            _logger.LogInformation("Login succeeded for {Email} via Google.", user.Email);
+
             return new LoginResult
             {
                 Status = LoginStatus.Success,
@@ -254,6 +258,8 @@ namespace SyncApp26.Application.Services
 
             var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
             var token = await _tokenService.GenerateTokenAsync(user.Id, user.Email, roleNames);
+
+            _logger.LogInformation("Login succeeded for {Email} via Microsoft.", user.Email);
 
             return new LoginResult
             {

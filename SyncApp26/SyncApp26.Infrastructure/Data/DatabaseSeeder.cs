@@ -542,9 +542,6 @@ namespace SyncApp26.Infrastructure.Data
 
             await context.Users.AddRangeAsync(users);
             await context.SaveChangesAsync();
-
-            Console.WriteLine("Database seeded successfully!");
-            Console.WriteLine($"Created {departments.Count} departments, {workSites.Count} work sites, and {users.Count} users.");
         }
     }
 }

@@ -183,7 +183,9 @@ public class CsvSyncController : ControllerBase
             comparisonTimeMs = comparisonStopwatch.ElapsedMilliseconds;
             stopwatch.Stop();
 
-            _logger.LogInformation($"Compared CSV with {totalRows} rows, found {comparisons.Count} comparisons in {stopwatch.ElapsedMilliseconds}ms");
+            _logger.LogInformation(
+                "Compared CSV with {TotalRows} rows, found {ComparisonCount} comparisons in {ElapsedMs}ms.",
+                totalRows, comparisons.Count, stopwatch.ElapsedMilliseconds);
 
             var response = new ComparisonResponseDTO
             {
@@ -223,7 +225,17 @@ public class CsvSyncController : ControllerBase
         try
         {
             var result = await _csvSyncService.SyncUsers(syncRequest, connectionId);
-            _logger.LogInformation($"Sync completed: {result.RecordsProcessed} processed, {result.RecordsFailed} failed");
+
+            if (result.RecordsFailed > 0)
+            {
+                _logger.LogWarning(
+                    "User sync completed: {Processed} processed, {Failed} failed.",
+                    result.RecordsProcessed, result.RecordsFailed);
+            }
+            else
+            {
+                _logger.LogInformation("User sync completed: {Processed} processed.", result.RecordsProcessed);
+            }
 
             if (!result.Success)
             {
@@ -297,7 +309,9 @@ public class CsvSyncController : ControllerBase
             }
 
             var comparisons = await _csvSyncService.CompareDepartmentsWithDatabase(csvDepartments);
-            _logger.LogInformation($"Compared CSV with {csvDepartments.Count} departments, found {comparisons.Count} comparisons");
+            _logger.LogInformation(
+                "Compared CSV with {DepartmentCount} departments, found {ComparisonCount} comparisons.",
+                csvDepartments.Count, comparisons.Count);
 
             return Ok(comparisons);
         }
@@ -318,7 +332,17 @@ public class CsvSyncController : ControllerBase
         try
         {
             var result = await _csvSyncService.SyncDepartments(syncRequest.Items);
-            _logger.LogInformation($"Department sync completed: {result.RecordsProcessed} processed, {result.RecordsFailed} failed");
+
+            if (result.RecordsFailed > 0)
+            {
+                _logger.LogWarning(
+                    "Department sync completed: {Processed} processed, {Failed} failed.",
+                    result.RecordsProcessed, result.RecordsFailed);
+            }
+            else
+            {
+                _logger.LogInformation("Department sync completed: {Processed} processed.", result.RecordsProcessed);
+            }
 
             if (!result.Success)
             {

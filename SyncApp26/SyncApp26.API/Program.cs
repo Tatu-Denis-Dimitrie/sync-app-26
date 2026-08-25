@@ -220,6 +220,7 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
         try
         {
             var context = services.GetRequiredService<ApplicationDbContext>();
@@ -229,11 +230,11 @@ try
             if (!await context.Departments.AnyAsync() && !await context.Users.AnyAsync())
             {
                 await DatabaseSeeder.SeedAsync(context);
+                logger.LogInformation("Database seeded with default data.");
             }
         }
         catch (Exception ex)
         {
-            var logger = services.GetRequiredService<ILogger<Program>>();
             logger.LogError(ex, "An error occurred while seeding the database.");
         }
     }

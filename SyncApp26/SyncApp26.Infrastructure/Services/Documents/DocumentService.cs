@@ -74,8 +74,6 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<UserDocument> GenerateDocumentAsync(Guid userId, string documentType, string generatedByEmail)
         {
-            Console.WriteLine($"[GENERATE] Starting document generation for UserId: {userId}, DocumentType: {documentType}, GeneratedBy: {generatedByEmail}");
-
             await EnsureUserCanHaveDocumentGeneratedAsync(userId);
 
             var doc = await CreateUserDocumentAsync(userId, documentType);

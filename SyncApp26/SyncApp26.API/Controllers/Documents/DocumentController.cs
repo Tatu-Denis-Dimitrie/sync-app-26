@@ -423,6 +423,7 @@ namespace SyncApp26.API.Controllers
                     await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{document.DocumentType} Document", secureLink);
                 }
 
+                _logger.LogInformation("Document {DocumentId} ({DocumentType}) generated for user {UserId}.", document.Id, document.DocumentType, request.UserId);
                 return Ok(new { message = "Document generated successfully and signature requested.", documentId = document.Id });
             }
             catch (Exception ex)
