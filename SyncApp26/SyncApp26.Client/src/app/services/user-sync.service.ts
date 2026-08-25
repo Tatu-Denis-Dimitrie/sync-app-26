@@ -342,6 +342,16 @@ export class UserSyncService {
     );
   }
 
+  getAllFunctionNames(): Observable<string[]> {
+    return this.http.get<string[]>(`${environment.apiUrl}/Function`).pipe(
+      map(functions => (functions || []).filter(f => !!f?.trim())),
+      catchError(error => {
+        console.error('Error loading functions:', error);
+        return of([]);
+      })
+    );
+  }
+
   /**
    * Delete a user
    */
@@ -471,7 +481,8 @@ export class UserSyncService {
           email: c.csvUser.email,
           departmentName: c.csvUser.departmentName,
           assignedToPersonalId: c.csvUser.assignedToPersonalId || null,
-          function: c.csvUser.function || null
+          function: c.csvUser.function || null,
+          workSite: c.csvUser.workSite || null
         } : null,
         conflicts: c.conflicts.map(conflict => ({
           field: conflict.field,

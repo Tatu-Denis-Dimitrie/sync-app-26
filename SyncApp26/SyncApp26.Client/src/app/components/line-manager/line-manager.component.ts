@@ -6,8 +6,10 @@ import { map, take } from 'rxjs/operators';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserSyncService } from '../../services/user-sync.service';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
+import { WorkSiteService } from '../../services/work-site.service';
 import { User, UserRole, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
+import { CustomSelectComponent, SelectOption } from '../../shared/components/custom-select/custom-select.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
@@ -22,7 +24,7 @@ import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } f
 @Component({
   selector: 'app-line-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent],
   templateUrl: './line-manager.component.html',
   styleUrls: ['./line-manager.component.css']
 })
@@ -117,6 +119,8 @@ export class LineManagerComponent implements OnInit {
   dataChangeSuccess = '';
 
   availableDepartments: string[] = [];
+  availableWorkSites: string[] = [];
+  registeredFunctions: string[] = [];
 
   availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
     { key: 'LastName', label: 'Last Name', type: 'text' },
@@ -124,7 +128,8 @@ export class LineManagerComponent implements OnInit {
     { key: 'DateOfBirth', label: 'Date of Birth', type: 'date' },
     { key: 'PlaceOfBirth', label: 'Place of Birth', type: 'text' },
     { key: 'Department', label: 'Department (Name)', type: 'select' },
-    { key: 'Function', label: 'Function (Name)', type: 'text' },
+    { key: 'Function', label: 'Function (Name)', type: 'select' },
+    { key: 'WorkSite', label: 'Work Site (Name)', type: 'select' },
     { key: 'Address', label: 'Address', type: 'text' },
     { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
     { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS },
@@ -145,6 +150,7 @@ export class LineManagerComponent implements OnInit {
     private authService: AuthenticationService,
     private userSyncService: UserSyncService,
     private dataChangeRequestService: DataChangeRequestService,
+    private workSiteService: WorkSiteService,
     private http: HttpClient,
     private router: Router,
     private userSignatureService: UserSignatureService,
@@ -181,6 +187,8 @@ export class LineManagerComponent implements OnInit {
     this.loadPendingSignatures();
     this.loadSavedSignature();
     this.loadDepartments();
+    this.loadWorkSites();
+    this.loadFunctions();
   }
 
   loadDepartments(): void {
@@ -191,8 +199,49 @@ export class LineManagerComponent implements OnInit {
           .filter(d => d.isActive && d.name !== currentDept)
           .map(d => d.name)
           .sort((a, b) => a.localeCompare(b));
+        this.setDynamicOptions('Department', this.availableDepartments);
       },
       error: (err) => console.error('Failed to load departments', err)
+    });
+  }
+
+  loadWorkSites(): void {
+    this.workSiteService.getAll().subscribe({
+      next: (sites) => {
+        const currentWorkSite = this.user?.workSite;
+        this.availableWorkSites = sites
+          .filter(s => s.isActive && s.name !== currentWorkSite)
+          .map(s => s.name)
+          .sort((a, b) => a.localeCompare(b));
+        this.setDynamicOptions('WorkSite', this.availableWorkSites);
+      },
+      error: (err) => console.error('Failed to load work sites', err)
+    });
+  }
+
+  // Option lists for the selects whose values come from a backend registry, kept as
+  // stable arrays so the dropdown does not see a new [options] reference every cycle.
+  private dynamicOptions: { [key: string]: SelectOption[] } = {};
+
+  private setDynamicOptions(key: string, names: string[]): void {
+    this.dynamicOptions[key] = names.map(name => ({ value: name, label: name }));
+  }
+
+  optionsFor(field: { key: string, options?: { value: string, label: string }[] }): SelectOption[] {
+    return this.dynamicOptions[field.key] ?? field.options ?? [];
+  }
+
+  loadFunctions(): void {
+    this.userSyncService.getAllFunctionNames().subscribe({
+      next: (functions) => {
+        const currentFunction = this.user?.function?.trim();
+        this.registeredFunctions = functions
+          .map(f => f.trim())
+          .filter(f => f !== currentFunction)
+          .sort((a, b) => a.localeCompare(b));
+        this.setDynamicOptions('Function', this.registeredFunctions);
+      },
+      error: (err) => console.error('Failed to load functions', err)
     });
   }
 

@@ -235,8 +235,18 @@ public class CsvValidationService : ICsvValidationService
             }
         }
 
+        var blankHeaderPositions = normalizedHeaders
+            .Select((h, index) => (h, index))
+            .Where(x => string.IsNullOrEmpty(x.h))
+            .Select(x => x.index + 1)
+            .ToList();
+        if (blankHeaderPositions.Any())
+        {
+            errors.Add($"Blank column name(s) at position(s): {string.Join(", ", blankHeaderPositions)}. Every column must have a header name (a trailing comma on the header row is a common cause).");
+        }
+
         // Check for duplicate headers
-        var duplicates = normalizedHeaders.GroupBy(h => h).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        var duplicates = normalizedHeaders.GroupBy(h => h).Where(g => g.Count() > 1 && !string.IsNullOrEmpty(g.Key)).Select(g => g.Key).ToList();
         if (duplicates.Any())
         {
             errors.Add($"Duplicate columns found: {string.Join(", ", duplicates)}");

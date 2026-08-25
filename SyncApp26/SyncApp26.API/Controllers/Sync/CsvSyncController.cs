@@ -52,11 +52,19 @@ public class CsvSyncController : ControllerBase
         return null;
     }
 
+    private static string NormalizeCsvHeader(string header) =>
+        header.Trim()
+            .Replace(" ", string.Empty)
+            .Replace("_", string.Empty)
+            .Replace("-", string.Empty)
+            .ToLowerInvariant();
+
     private static CsvConfiguration CreateCsvConfiguration() => new(CultureInfo.InvariantCulture)
     {
         HeaderValidated = null,
         MissingFieldFound = null,
-        BadDataFound = null
+        BadDataFound = null,
+        PrepareHeaderForMatch = args => NormalizeCsvHeader(args.Header)
     };
 
     private ObjectResult HandleCsvException(Exception ex, string logMessage, string errorPrefix)

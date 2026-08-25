@@ -297,6 +297,7 @@ export class ComparisonViewComponent implements OnChanges {
         const csvEmail = csvUser?.email?.toLowerCase() || '';
         const csvDepartment = csvUser?.departmentName?.toLowerCase() || '';
         const csvAssignedTo = csvUser?.assignedToName?.toLowerCase() || '';
+        const csvWorkSite = csvUser?.workSite?.toLowerCase() || '';
         const csvFullName = `${csvFirstName} ${csvLastName}`;
         
         const dbFirstName = dbUser?.firstName?.toLowerCase() || '';
@@ -304,6 +305,7 @@ export class ComparisonViewComponent implements OnChanges {
         const dbEmail = dbUser?.email?.toLowerCase() || '';
         const dbDepartment = dbUser?.departmentName?.toLowerCase() || '';
         const dbAssignedTo = dbUser?.assignedToName?.toLowerCase() || '';
+        const dbWorkSite = dbUser?.workSite?.toLowerCase() || '';
         const dbFullName = `${dbFirstName} ${dbLastName}`;
         
         // Check if query matches any field from CSV or DB
@@ -313,8 +315,10 @@ export class ComparisonViewComponent implements OnChanges {
                dbEmail.includes(query) ||
                csvDepartment.includes(query) || 
                dbDepartment.includes(query) ||
-               csvAssignedTo.includes(query) || 
-               dbAssignedTo.includes(query);
+               csvAssignedTo.includes(query) ||
+               dbAssignedTo.includes(query) ||
+               csvWorkSite.includes(query) ||
+               dbWorkSite.includes(query);
         
         if (!matchesSearch) return false;
       }
