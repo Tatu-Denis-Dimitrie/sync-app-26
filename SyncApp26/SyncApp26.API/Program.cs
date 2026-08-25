@@ -19,6 +19,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Serilog;
 using Serilog.Events;
+using Microsoft.AspNetCore.Antiforgery;
 
 
 Log.Logger = new LoggerConfiguration()
@@ -187,6 +188,19 @@ try
     };
     builder.Services.AddSingleton(authCookieOptions);
 
+    // CSRF: cookie/header names Angular's built-in HttpXsrfInterceptor already knows, so no client
+    // code is needed for this once requests are same-origin (see proxy.conf.json). The antiforgery
+    // cookie itself stays httpOnly; XsrfCookieExtensions.IssueXsrfCookie sets the separate,
+    // non-httpOnly XSRF-TOKEN cookie Angular actually reads.
+    builder.Services.AddAntiforgery(options =>
+    {
+        options.HeaderName = "X-XSRF-TOKEN";
+        options.Cookie.Name = "syncapp26_antiforgery";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = authCookieOptions.SameSite;
+        options.Cookie.SecurePolicy = authCookieOptions.Secure ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
+    });
+
     // JWT Authentication
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
         ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
@@ -323,6 +337,30 @@ try
     app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
+
+    // CSRF check for cookie-authenticated, state-changing requests. Runs after UseAuthentication so
+    // HttpContext.User reflects the caller (antiforgery binds tokens to the authenticated identity).
+    app.Use(async (context, next) =>
+    {
+        var hasAuthorizationHeader = !string.IsNullOrEmpty(context.Request.Headers.Authorization);
+        if (!CsrfExemption.IsExempt(context.Request.Method, context.Request.Path.Value, hasAuthorizationHeader))
+        {
+            var antiforgery = context.RequestServices.GetRequiredService<IAntiforgery>();
+            try
+            {
+                await antiforgery.ValidateRequestAsync(context);
+            }
+            catch (AntiforgeryValidationException)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"message\":\"CSRF validation failed.\"}");
+                return;
+            }
+        }
+
+        await next();
+    });
 
     app.MapControllers();
     app.MapHub<SyncApp26.API.Hubs.SyncHub>("/hubs/sync");

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -17,18 +18,22 @@ namespace SyncApp26.Tests.Controllers.Auth
         private readonly Mock<IImpersonationService> _impersonationServiceMock = new();
         private readonly Mock<ITokenService> _tokenServiceMock = new();
         private readonly Mock<IRefreshTokenService> _refreshTokenServiceMock = new();
+        private readonly Mock<IAntiforgery> _antiforgeryMock = new();
         private readonly AuthCookieOptions _authCookieOptions = new();
 
         private SessionController CreateController()
         {
             _refreshTokenServiceMock.Setup(s => s.IssueAsync(It.IsAny<Guid>(), It.IsAny<DateTime>()))
                 .ReturnsAsync(new IssuedRefreshToken { RawToken = "test-refresh-token", ExpiresAt = DateTime.UtcNow.AddHours(8) });
+            _antiforgeryMock.Setup(a => a.GetAndStoreTokens(It.IsAny<HttpContext>()))
+                .Returns(new AntiforgeryTokenSet("test-xsrf-token", null, "__RequestVerificationToken", "X-XSRF-TOKEN"));
 
             return new SessionController(
                 _userServiceMock.Object,
                 _impersonationServiceMock.Object,
                 _tokenServiceMock.Object,
                 _refreshTokenServiceMock.Object,
+                _antiforgeryMock.Object,
                 _authCookieOptions);
         }
 
@@ -83,6 +88,19 @@ namespace SyncApp26.Tests.Controllers.Auth
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.False((bool)ok.Value!.GetType().GetProperty("authenticated")!.GetValue(ok.Value)!);
+        }
+
+        [Fact]
+        public async Task Me_Anonymous_StillIssuesXsrfCookie()
+        {
+            // A first-time visitor needs a valid CSRF pairing before they ever submit a form.
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+
+            await controller.Me();
+
+            var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+            Assert.Contains(XsrfCookieExtensions.XsrfCookieName, setCookie);
         }
 
         [Fact]

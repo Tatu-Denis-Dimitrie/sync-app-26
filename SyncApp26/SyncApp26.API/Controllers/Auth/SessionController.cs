@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SyncApp26.API.Extensions;
@@ -27,6 +28,7 @@ namespace SyncApp26.API.Controllers
         private readonly IImpersonationService _impersonationService;
         private readonly ITokenService _tokenService;
         private readonly IRefreshTokenService _refreshTokenService;
+        private readonly IAntiforgery _antiforgery;
         private readonly AuthCookieOptions _authCookieOptions;
 
         public SessionController(
@@ -34,12 +36,14 @@ namespace SyncApp26.API.Controllers
             IImpersonationService impersonationService,
             ITokenService tokenService,
             IRefreshTokenService refreshTokenService,
+            IAntiforgery antiforgery,
             AuthCookieOptions authCookieOptions)
         {
             _userService = userService;
             _impersonationService = impersonationService;
             _tokenService = tokenService;
             _refreshTokenService = refreshTokenService;
+            _antiforgery = antiforgery;
             _authCookieOptions = authCookieOptions;
         }
 
@@ -50,6 +54,10 @@ namespace SyncApp26.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Me()
         {
+            // Issued unconditionally, even for an anonymous caller - a first-time visitor needs a
+            // valid CSRF pairing in place before they ever submit a form (login, register, ...).
+            HttpContext.IssueXsrfCookie(_antiforgery, _authCookieOptions);
+
             if (User.GetUserId() is not { } userId)
             {
                 return Ok(new { authenticated = false });

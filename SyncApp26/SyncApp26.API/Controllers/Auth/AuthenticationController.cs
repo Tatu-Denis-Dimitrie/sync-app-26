@@ -241,6 +241,12 @@ namespace SyncApp26.API.Controllers
         // the body still carries the token so the existing localStorage-based client keeps working
         // untouched. The refresh token is never put in the body - it only ever lives in its own
         // httpOnly cookie.
+        //
+        // Deliberately does NOT issue the XSRF-TOKEN cookie here: HttpContext.User for this request
+        // was already resolved (as anonymous) before this action ran, so a token minted now would be
+        // bound to that anonymous identity and rejected on every later request made as this newly
+        // logged-in user. SessionController.Me() is what mints it correctly, on the client's next
+        // (separate) request, once the auth cookie set below is actually being sent back.
         private async Task<IActionResult> LoginSuccess(LoginResult result)
         {
             Response.AppendAuthCookie(_authCookieOptions, result.Token!, AccessTokenCookieLifetime);
