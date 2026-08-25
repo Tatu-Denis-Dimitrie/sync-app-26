@@ -106,6 +106,7 @@ builder.Services.AddScoped<IDataChangeRequestRepository, DataChangeRequestReposi
 builder.Services.AddScoped<IUserInitialTrainingRepository, UserInitialTrainingRepository>();
 builder.Services.AddScoped<IImpersonationLogRepository, ImpersonationLogRepository>();
 builder.Services.AddScoped<ISignatureAnomalyAlertRepository, SignatureAnomalyAlertRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 
 // Services
@@ -133,6 +134,7 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
 builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
 builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();

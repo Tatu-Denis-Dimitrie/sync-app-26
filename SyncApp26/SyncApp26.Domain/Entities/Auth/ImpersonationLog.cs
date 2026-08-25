@@ -5,8 +5,9 @@ namespace SyncApp26.Domain.Entities
 {
     /// <summary>
     /// Immutable audit row: one per issued impersonation token. Never updated or deleted.
-    /// No EndedAt — leaving impersonation is a pure client-side session swap (see
-    /// ImpersonationService/plan), so there is no server event to record an end for.
+    /// No EndedAt — SessionController.StopImpersonation mints a fresh token rather than updating
+    /// this row, and impersonation can also simply expire (30 min) without an explicit stop, so
+    /// there's no single server event that would reliably mark an end.
     /// </summary>
     public class ImpersonationLog
     {
