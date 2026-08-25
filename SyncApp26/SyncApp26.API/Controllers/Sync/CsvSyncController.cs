@@ -70,7 +70,7 @@ public class CsvSyncController : ControllerBase
     private ObjectResult HandleCsvException(Exception ex, string logMessage, string errorPrefix)
     {
         _logger.LogError(ex, logMessage);
-        return StatusCode(500, new { error = $"{errorPrefix}: {ex.Message}" });
+        return StatusCode(500, new { error = errorPrefix });
     }
 
     /// <summary>

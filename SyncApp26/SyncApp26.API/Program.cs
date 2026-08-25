@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 using System.IO;
 using SyncApp26.API.Services;
 using SyncApp26.API.Filters;
+using SyncApp26.API.Middleware;
 using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -31,6 +32,8 @@ try
         .ReadFrom.Services(services));
 
     // Add services to the container.
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
     builder.Services.AddSignalR();
     builder.Services.AddControllers(options =>
         {
@@ -231,6 +234,8 @@ try
     }
 
     // Configure the HTTP request pipeline.
+
+    app.UseExceptionHandler();
 
     // Registered first - some downstream middleware short-circuits without calling next(), which
     // would otherwise skip a header middleware placed later.

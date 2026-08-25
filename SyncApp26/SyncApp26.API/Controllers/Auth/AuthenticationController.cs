@@ -13,15 +13,18 @@ namespace SyncApp26.API.Controllers
         private readonly IAccountService _accountService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthenticationController> _logger;
 
         public AuthenticationController(
             IAccountService accountService,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<AuthenticationController> logger)
         {
             _accountService = accountService;
             _emailService = emailService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("register")]
@@ -59,8 +62,8 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception here if you have a logger
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Registration failed for {Email}.", request?.Email);
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -119,7 +122,8 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Login failed for {Email}.", request?.Email);
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -160,7 +164,8 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Google login failed.");
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
@@ -200,7 +205,8 @@ namespace SyncApp26.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while processing your request.", error = ex.Message });
+                _logger.LogError(ex, "Microsoft login failed.");
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
             }
         }
 
