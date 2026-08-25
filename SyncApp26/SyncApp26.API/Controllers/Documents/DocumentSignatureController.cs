@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using SyncApp26.API.Hubs;
 using SyncApp26.API.Services;
@@ -57,6 +58,7 @@ namespace SyncApp26.API.Controllers
 
         [HttpPost("request-signature")]
         [AllowAnonymous]
+        [EnableRateLimiting("signing-token")]
         public async Task<IActionResult> RequestSignature([FromBody] RequestSignatureDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Email))
@@ -113,6 +115,7 @@ namespace SyncApp26.API.Controllers
 
         [HttpGet("validate-token/{token}")]
         [AllowAnonymous]
+        [EnableRateLimiting("signing-token")]
         public async Task<IActionResult> ValidateToken(string token)
         {
             var result = await _documentSigningService.GetSigningContextAsync(token);
@@ -149,6 +152,7 @@ namespace SyncApp26.API.Controllers
 
         [HttpPost("consume-token")]
         [AllowAnonymous]
+        [EnableRateLimiting("signing-token")]
         public async Task<IActionResult> ConsumeToken([FromBody] ConsumeTokenDto request)
         {
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";

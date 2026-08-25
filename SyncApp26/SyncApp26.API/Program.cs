@@ -13,6 +13,7 @@ using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,45 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials();
     });
+});
+
+// Throttles anonymous/security-sensitive endpoints per client IP - there's no account-lockout
+// mechanism otherwise, so this is the only thing standing between them and scripted abuse
+// (credential stuffing on login, token guessing on password reset / document signing, etc.).
+static RateLimitPartition<string> IpFixedWindow(HttpContext httpContext, int permitLimit, TimeSpan window) =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = window,
+            QueueLimit = 0
+        });
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        return new ValueTask(context.HttpContext.Response.WriteAsync(
+            "{\"message\":\"Too many requests. Please wait a moment and try again.\"}", cancellationToken));
+    };
+
+    // Generous per-IP ceiling applied to every request, on top of any endpoint-specific policy
+    // below - a backstop against scripted abuse/DoS rather than something normal usage should hit.
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(
+        httpContext => IpFixedWindow(httpContext, 300, TimeSpan.FromMinutes(1)));
+
+    options.AddPolicy("login", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
+
+    // Register / verify-email / forgot-password / reset-password / social login - account
+    // creation, token guessing and enumeration all live here.
+    options.AddPolicy("auth-sensitive", httpContext => IpFixedWindow(httpContext, 5, TimeSpan.FromMinutes(1)));
+
+    // Anonymous document-signature token endpoints - request-signature / validate-token /
+    // consume-token - the two latter are guessable-token targets.
+    options.AddPolicy("signing-token", httpContext => IpFixedWindow(httpContext, 10, TimeSpan.FromMinutes(1)));
 });
 
 // Configure EF Core context and resolve relative SQLite path against ContentRoot.
@@ -195,6 +235,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

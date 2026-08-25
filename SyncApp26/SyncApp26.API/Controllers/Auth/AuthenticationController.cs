@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.API.Services;
@@ -24,6 +25,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("register")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> Register([FromBody] RegisterUserRequestDTO request)
         {
             try
@@ -58,6 +60,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpGet("verify-email")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string token)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
@@ -76,6 +79,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("login")]
         public async Task<IActionResult> Login([FromBody] LoginUserRequestDTO request)
         {
             try
@@ -115,6 +119,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("google-login")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDTO request)
         {
             try
@@ -155,6 +160,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("microsoft-login")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> MicrosoftLogin([FromBody] MicrosoftLoginRequestDTO request)
         {
             try
@@ -194,6 +200,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Email))
@@ -220,6 +227,7 @@ namespace SyncApp26.API.Controllers
         }
 
         [HttpPost("reset-password")]
+        [EnableRateLimiting("auth-sensitive")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordWithTokenRequestDTO request)
         {
             if (request == null ||
