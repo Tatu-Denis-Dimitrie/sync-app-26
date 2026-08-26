@@ -64,6 +64,7 @@ export interface User {
     firstName: string;
     lastName: string;
     roles: string[];
+    preferredLanguage: string | null;
 }
 
 export interface LoginResponse {

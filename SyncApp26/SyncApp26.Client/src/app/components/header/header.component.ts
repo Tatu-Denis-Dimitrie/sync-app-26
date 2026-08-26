@@ -7,12 +7,13 @@ import { DataChangeRequestService } from '../../services/data-change-request.ser
 import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/user-sync.signalr.service';
 import { SignatureAnomalyAlertService } from '../../services/signature-anomaly-alert.service';
 import { ImpersonationService } from '../../services/impersonation.service';
+import { LanguageSwitcherComponent } from '../language-switcher/language-switcher.component';
 import { filter, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, LanguageSwitcherComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.css'
 })
