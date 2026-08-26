@@ -15,13 +15,6 @@ namespace SyncApp26.Application.Services
 {
     public class DataChangeRequestService : IDataChangeRequestService
     {
-        // Fields that must never be applied through this generic reflection-based flow, even if a
-        // client crafts a request bypassing the UI's available-fields list. Email isn't listed here:
-        // the generic Create action (below) already strips it from any submitted request before it's
-        // ever saved, so the only way an "Email" key can reach ResolveRequestAsync is via
-        // RequestEmailChangeAsync's dedicated, domain-checked endpoint - it's safe to apply.
-        private static readonly HashSet<string> BlockedFields = new(StringComparer.OrdinalIgnoreCase) { "Role" };
-
         // "Department", "Function" and "WorkSite" all travel as the related entity's *name*, not its
         // id - the client picks a name from a dropdown/free-text field (see availableFields on the
         // basic-user/line-manager components), and that's what reads naturally everywhere the value is
@@ -37,6 +30,36 @@ namespace SyncApp26.Application.Services
         {
             DepartmentField, FunctionField, WorkSiteField
         };
+
+        // Every field the self-service UI actually offers (see availableFields on the
+        // basic-user/line-manager components). An allowlist, not a denylist: a new User property -
+        // PasswordHash, tokens, DeletedAt, an FK column, anything - is safe by default and must be
+        // added here explicitly before this flow can ever touch it. Email is deliberately absent;
+        // it has its own domain-checked path below and must never be settable through this one.
+        private static readonly HashSet<string> AllowedFieldNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            nameof(User.FirstName),
+            nameof(User.LastName),
+            nameof(User.DateOfBirth),
+            nameof(User.PlaceOfBirth),
+            DepartmentField,
+            FunctionField,
+            WorkSiteField,
+            nameof(User.Address),
+            nameof(User.BadgeNumber),
+            nameof(User.BloodType),
+            nameof(User.CommuteRoute),
+            nameof(User.CommuteDurationMinutes)
+        };
+
+        // AllowedFieldNames plus Email: RequestEmailChangeAsync builds its own {"Email": ...}
+        // payload through a separate, pre-validated path and reuses this same create/resolve
+        // pipeline, so Email has to be writable here even though a client can never request it
+        // directly (CreateRequestAsync strips anything outside this set before saving anything).
+        private static readonly HashSet<string> WritableFieldNames =
+            new(AllowedFieldNames, StringComparer.OrdinalIgnoreCase) { nameof(User.Email) };
+
+        public IReadOnlyCollection<string> AllowedFields => AllowedFieldNames;
 
         private readonly IDataChangeRequestRepository _repository;
         private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
@@ -191,11 +214,16 @@ namespace SyncApp26.Application.Services
         {
             var user = await _repository.GetUserByIdAsync(userId);
 
+            // The real security boundary: whatever the caller sent, only WritableFieldNames survives
+            // into what actually gets persisted - the controller's own allowlist check (for the
+            // client-facing Create endpoint) is just a friendlier, earlier version of this same check.
+            var filteredChangesJson = FilterToWritableFields(dto.RequestedChangesJson);
+
             var req = new DataChangeRequest
             {
                 UserId = userId,
-                RequestedChangesJson = dto.RequestedChangesJson,
-                OriginalValuesJson = BuildOriginalValuesJson(user, dto.RequestedChangesJson),
+                RequestedChangesJson = filteredChangesJson,
+                OriginalValuesJson = BuildOriginalValuesJson(user, filteredChangesJson),
                 Reason = dto.Reason,
                 Status = initialStatus
             };
@@ -203,6 +231,26 @@ namespace SyncApp26.Application.Services
             await _repository.AddAsync(req);
             req.User = user;
             return MapToDTO(req);
+        }
+
+        private static string FilterToWritableFields(string? requestedChangesJson)
+        {
+            if (string.IsNullOrWhiteSpace(requestedChangesJson)) return requestedChangesJson ?? string.Empty;
+
+            try
+            {
+                var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
+                if (changes == null) return requestedChangesJson;
+
+                var filtered = changes.Where(kv => WritableFieldNames.Contains(kv.Key))
+                                       .ToDictionary(kv => kv.Key, kv => kv.Value);
+                return JsonSerializer.Serialize(filtered);
+            }
+            catch
+            {
+                // Malformed JSON can't be filtered; resolve-time handling already treats it safely.
+                return requestedChangesJson;
+            }
         }
 
         // Email can't go through CreateRequestAsync/Create like other fields (see BlockedFields
@@ -430,6 +478,12 @@ namespace SyncApp26.Application.Services
                     // Capture old values and build history entries
                     foreach (var kv in changes)
                     {
+                        // Belt-and-suspenders: CreateRequestAsync already strips anything outside
+                        // WritableFieldNames before persisting, but a request stored before that
+                        // filter existed could still carry a stale, now-disallowed key - keep it out
+                        // of history too, not just out of the apply step below.
+                        if (!WritableFieldNames.Contains(kv.Key)) continue;
+
                         if (NavigationNameFields.Contains(kv.Key))
                         {
                             var oldName = (originalValues != null && originalValues.TryGetValue(kv.Key, out var navigationSnapshot))
@@ -485,7 +539,7 @@ namespace SyncApp26.Application.Services
                     {
                         foreach (var kv in changes)
                         {
-                            if (BlockedFields.Contains(kv.Key)) continue; // Explicitly block Role changes
+                            if (!WritableFieldNames.Contains(kv.Key)) continue; // Same stale-row guard as above
                             if (NavigationNameFields.Contains(kv.Key))
                             {
                                 var target = resolvedNavigationTargets.TryGetValue(kv.Key, out var resolved)

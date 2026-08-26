@@ -10,6 +10,7 @@ using SyncApp26.Domain.IRepositories;
 using SyncApp26.Domain.Enums;
 using System.Text.Json;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SyncApp26.API.Controllers
 {
@@ -70,23 +71,26 @@ namespace SyncApp26.API.Controllers
             var userId = GetUserId();
             var status = "Pending";
 
-            try 
+            try
             {
                 var changes = JsonSerializer.Deserialize<Dictionary<string, string>>(dto.RequestedChangesJson);
                 if (changes != null)
                 {
-                    // Block email/role changes from being requested via this flow
-                    var removedBlockedField = changes.Remove("Email") | changes.Remove("Role");
-                    if (removedBlockedField)
+                    // Friendlier, earlier version of the allowlist check DataChangeRequestService
+                    // itself enforces before persisting anything - this just gives a clear 400
+                    // instead of the request silently ending up empty.
+                    var disallowed = changes.Keys.Where(k => !_service.AllowedFields.Contains(k)).ToList();
+                    if (disallowed.Count > 0)
                     {
+                        foreach (var key in disallowed) changes.Remove(key);
                         dto.RequestedChangesJson = JsonSerializer.Serialize(changes);
                         if (changes.Count == 0)
                         {
-                            return BadRequest(new { message = "Email and Role changes are not allowed via this flow. Please provide other fields to change." });
+                            return BadRequest(new { message = $"These fields cannot be requested via this flow: {string.Join(", ", disallowed)}." });
                         }
                     }
                 }
-            } 
+            }
             catch { }
 
             var result = await _service.CreateRequestAsync(userId, dto, status);

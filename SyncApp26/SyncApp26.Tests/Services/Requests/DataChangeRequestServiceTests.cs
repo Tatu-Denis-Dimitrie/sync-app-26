@@ -254,18 +254,12 @@ namespace SyncApp26.Tests.Services.Requests
 
         [Theory]
         [InlineData("FirstName", "New")]
-        [InlineData("DepartmentId", "11111111-1111-1111-1111-111111111111")]
         [InlineData("CommuteDurationMinutes", "45")]
         [InlineData("Address", "123 Main St")]
         [InlineData("BadgeNumber", "BADGE-001")]
         public async Task ResolveRequestAsync_Approved_AppliesSupportedPropertyType(string fieldName, string newValue)
         {
             var user = SeedUser();
-            if (fieldName == "DepartmentId")
-            {
-                _dbFixture.Context.Departments.Add(new Department { Id = Guid.Parse(newValue), Name = "Target Dept", CreatedAt = DateTime.UtcNow });
-                _dbFixture.Context.SaveChanges();
-            }
             var request = SeedRequest(user.Id, $"{{\"{fieldName}\":\"{newValue}\"}}");
             var service = CreateService();
             var admin = SeedAdmin();
@@ -277,13 +271,76 @@ namespace SyncApp26.Tests.Services.Requests
             var actual = fieldName switch
             {
                 "FirstName" => updatedUser.FirstName,
-                "DepartmentId" => updatedUser.DepartmentId?.ToString(),
                 "CommuteDurationMinutes" => updatedUser.CommuteDurationMinutes?.ToString(),
                 "Address" => updatedUser.Address,
                 "BadgeNumber" => updatedUser.BadgeNumber,
                 _ => null
             };
             Assert.Equal(newValue, actual);
+        }
+
+        // ───────────────────────── Security: fields outside the self-service allowlist ─────────────────────────
+        // Regression coverage for the mass-assignment fix: AllowedFieldNames/WritableFieldNames replaced a
+        // denylist that only ever blocked "Role", leaving PasswordHash, tokens, DeletedAt, and every raw FK
+        // column (DepartmentId, FunctionId, WorkSiteId, AssignedToId) settable through this generic flow.
+
+        [Theory]
+        [InlineData("DepartmentId")]
+        [InlineData("FunctionId")]
+        [InlineData("WorkSiteId")]
+        [InlineData("AssignedToId")]
+        [InlineData("PasswordHash")]
+        [InlineData("Role")]
+        [InlineData("DeletedAt")]
+        // Email is deliberately not covered here - CreateRequestAsync itself must let it through
+        // (RequestEmailChangeAsync depends on that); blocking it for THIS generic flow is the
+        // controller's job (DataChangeRequestController.Create), tested at that layer instead.
+        public async Task CreateRequestAsync_DisallowedField_IsStrippedBeforePersisting(string fieldName)
+        {
+            var user = SeedUser();
+            var service = CreateService();
+            var dto = new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = $"{{\"{fieldName}\":\"11111111-1111-1111-1111-111111111111\"}}",
+                Reason = "Attempted"
+            };
+
+            var result = await service.CreateRequestAsync(user.Id, dto);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Id);
+            Assert.Equal("{}", persisted.RequestedChangesJson);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_Approved_NeverAppliesPasswordHashEvenFromARequestStoredBeforeTheFix()
+        {
+            var user = SeedUser();
+            // Bypasses CreateRequestAsync's filter on purpose - simulates a row already sitting in the
+            // database from before the allowlist existed, which the filter can never retroactively clean.
+            var request = SeedRequest(user.Id, "{\"PasswordHash\":\"attacker-controlled-hash\"}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).PasswordHash);
+        }
+
+        [Fact]
+        public async Task ResolveRequestAsync_Approved_NeverAppliesRawForeignKeyEvenFromARequestStoredBeforeTheFix()
+        {
+            var user = SeedUser();
+            var otherDepartment = SeedDepartment("Someone Else's Department");
+            var request = SeedRequest(user.Id, $"{{\"DepartmentId\":\"{otherDepartment.Id}\"}}");
+            var service = CreateService();
+            var admin = SeedAdmin();
+
+            await service.ResolveRequestAsync(request.Id, admin, new ResolveDataChangeRequestDTO { Status = "Approved" });
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            Assert.Null(_dbFixture.Context.Users.Single(u => u.Id == user.Id).DepartmentId);
         }
 
         // DateOfBirth is the one self-service field with a DateTime? type. Before date support

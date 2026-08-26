@@ -7,6 +7,9 @@ namespace SyncApp26.Application.IServices
 {
     public interface IDataChangeRequestService
     {
+        /// <summary>Fields the self-service "request a change" flow may ever touch (matches the UI's own field list). Excludes Email, which has its own dedicated endpoint.</summary>
+        IReadOnlyCollection<string> AllowedFields { get; }
+
         Task<IEnumerable<DataChangeRequestDTO>> GetAllRequestsAsync();
         Task<int> GetPendingCountAsync();
         Task<IEnumerable<DataChangeRequestDTO>> GetRequestsByUserAsync(Guid userId);
