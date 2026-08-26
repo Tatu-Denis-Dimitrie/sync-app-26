@@ -67,12 +67,10 @@ namespace SyncApp26.Infrastructure.Context
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(e => e.Id);
-
-                // Defense-in-depth: reject any BloodType value outside its enum range (e.g. from a
-                // direct/manual DB write), instead of silently materializing it.
                 entity.ToTable(t =>
                 {
                     t.HasCheckConstraint("CK_Users_BloodType", "\"BloodType\" IS NULL OR \"BloodType\" IN (0, 1, 2, 3, 4, 5, 6, 7)");
+                    t.HasCheckConstraint("CK_Users_PreferredLanguage", "\"PreferredLanguage\" IS NULL OR \"PreferredLanguage\" IN (0)");
                 });
 
                 entity.Property(e => e.FirstName)

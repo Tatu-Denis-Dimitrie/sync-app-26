@@ -11,6 +11,7 @@ export const environment = {
     users: '/user',
     departments: '/department',
     version: '/version',
-    documentSignature: '/documentsignature'
+    documentSignature: '/documentsignature',
+    localization: '/localization'
   }
 };

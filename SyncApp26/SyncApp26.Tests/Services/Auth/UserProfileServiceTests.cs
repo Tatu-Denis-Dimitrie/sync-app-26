@@ -725,5 +725,47 @@ namespace SyncApp26.Tests.Services.Auth
             Assert.True(result.Success);
             Assert.Single(user.RoleAssignments);
         }
+
+        [Fact]
+        public async Task UpdatePreferredLanguageAsync_ExistingUser_PersistsChoiceAndUpdatesTimestamp()
+        {
+            var service = CreateService();
+            var user = MakeUser();
+            user.PreferredLanguage = null;
+            var beforeCall = DateTime.UtcNow;
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await service.UpdatePreferredLanguageAsync(user.Id, Language.En);
+
+            Assert.True(result.Success);
+            Assert.Equal(Language.En, user.PreferredLanguage);
+            Assert.NotNull(user.UpdatedAt);
+            Assert.True(user.UpdatedAt >= beforeCall);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(user), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdatePreferredLanguageAsync_UserNotFound_FailsWithoutPersisting()
+        {
+            var service = CreateService();
+            var userId = Guid.NewGuid();
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync((User?)null);
+
+            var result = await service.UpdatePreferredLanguageAsync(userId, Language.En);
+
+            Assert.False(result.Success);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(It.IsAny<User>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdatePreferredLanguageAsync_UndefinedEnumValue_FailsWithoutLookingUpUser()
+        {
+            var service = CreateService();
+
+            var result = await service.UpdatePreferredLanguageAsync(Guid.NewGuid(), (Language)999);
+
+            Assert.False(result.Success);
+            _userServiceMock.Verify(s => s.GetUserByIdAsync(It.IsAny<Guid>()), Times.Never);
+        }
     }
 }

@@ -111,6 +111,53 @@ namespace SyncApp26.Tests.Services.Auth
             _userServiceMock.Verify(s => s.AddUserAsync(It.Is<User>(u => u.Email == "john.doe@example.com" && u.IsEmailVerified == false)), Times.Once);
         }
 
+        [Fact]
+        public async Task RegisterAsync_PreferredLanguageProvided_CarriesItOntoTheNewUser()
+        {
+            var service = CreateService();
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+            _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("hashed");
+
+            var request = ValidRegisterRequest();
+            request.PreferredLanguage = Language.En;
+
+            await service.RegisterAsync(request);
+
+            _userServiceMock.Verify(s => s.AddUserAsync(It.Is<User>(u => u.PreferredLanguage == Language.En)), Times.Once);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_PreferredLanguageOmitted_LeavesItNull()
+        {
+            // Null, not the enum's default member - the client falls back to the browser locale for
+            // this session; it hasn't necessarily resolved one worth persisting.
+            var service = CreateService();
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+            _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("hashed");
+
+            await service.RegisterAsync(ValidRegisterRequest());
+
+            _userServiceMock.Verify(s => s.AddUserAsync(It.Is<User>(u => u.PreferredLanguage == null)), Times.Once);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_PreferredLanguageUndefinedEnumValue_LeavesItNullRatherThanFailingRegistration()
+        {
+            // Best-effort enrichment, not a required field - guards against a value that bypassed
+            // JsonStringEnumConverter, same reasoning as UpdatePreferredLanguageAsync's guard.
+            var service = CreateService();
+            _userServiceMock.Setup(s => s.GetUserByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+            _authenticationServiceMock.Setup(s => s.HashPasswordAsync(It.IsAny<string>())).ReturnsAsync("hashed");
+
+            var request = ValidRegisterRequest();
+            request.PreferredLanguage = (Language)999;
+
+            var result = await service.RegisterAsync(request);
+
+            Assert.True(result.Success);
+            _userServiceMock.Verify(s => s.AddUserAsync(It.Is<User>(u => u.PreferredLanguage == null)), Times.Once);
+        }
+
         // ───────────────────────── VerifyEmailAsync ─────────────────────────
 
         [Fact]

@@ -6,6 +6,7 @@ export const environment = {
   endpoints: {
     users: '/user',
     departments: '/department',
-    version: '/version'
+    version: '/version',
+    localization: '/localization'
   }
 };

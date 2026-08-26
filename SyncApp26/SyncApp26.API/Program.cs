@@ -38,6 +38,7 @@ try
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
     builder.Services.AddSignalR();
+    builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
     builder.Services.AddControllers(options =>
         {
             // Global, fail-closed: any non-GET request on an impersonation token is refused unless the
@@ -159,6 +160,7 @@ try
     builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
     builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
     builder.Services.AddScoped<IDocumentSigningService, DocumentSigningService>();
+    builder.Services.AddScoped<ILocalizationService, LocalizationService>();
     builder.Services.AddSingleton<ICryptographyService, CryptographyService>();
     builder.Services.AddSingleton<ISignatureKeyProvider, ConfigSignatureKeyProvider>();
     builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();

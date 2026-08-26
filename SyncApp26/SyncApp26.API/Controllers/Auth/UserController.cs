@@ -236,6 +236,18 @@ namespace SyncApp26.API.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
+        [HttpPatch("language")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateLanguagePreference([FromBody] UpdateLanguagePreferenceRequestDTO request)
+        {
+            if (User.GetUserId() is not { } userId)
+            {
+                return Unauthorized();
+            }
+
+            var result = await _userProfileService.UpdatePreferredLanguageAsync(userId, request.Language);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
         [HttpPut("{id}")]
         [Authorize(Roles = Roles.Admin + "," + Roles.LineManager)]
         public async Task<ActionResult<UserResponseDTO>> UpdateUser(Guid id, [FromBody] UserRequestDTO userRequestDTO)
