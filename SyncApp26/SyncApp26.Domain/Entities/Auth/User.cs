@@ -24,6 +24,13 @@ namespace SyncApp26.Domain.Entities
         public DateTime? DeletedAt { get; set; }
 
         /// <summary>
+        /// Null means the user never explicitly chose a language - the client falls back to the
+        /// browser's locale (and ultimately Localization:DefaultLanguage) instead of assuming this
+        /// user wants whatever value happens to be the enum default.
+        /// </summary>
+        public Language? PreferredLanguage { get; set; }
+
+        /// <summary>
         /// True only for accounts whose roster membership is owned by the CSV import pipeline.
         /// Absence from an imported CSV is evidence of departure ONLY for these; accounts created
         /// any other way (seeded, self-registered) are simply outside the CSV's scope and must never

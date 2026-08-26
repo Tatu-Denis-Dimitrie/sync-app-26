@@ -624,6 +624,9 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<string>("PlaceOfBirth")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("PreferredLanguage")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Qualifications")
                         .HasColumnType("TEXT");
 
@@ -659,6 +662,8 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.ToTable("Users", t =>
                         {
                             t.HasCheckConstraint("CK_Users_BloodType", "\"BloodType\" IS NULL OR \"BloodType\" IN (0, 1, 2, 3, 4, 5, 6, 7)");
+
+                            t.HasCheckConstraint("CK_Users_PreferredLanguage", "\"PreferredLanguage\" IS NULL OR \"PreferredLanguage\" IN (0)");
                         });
                 });
 
