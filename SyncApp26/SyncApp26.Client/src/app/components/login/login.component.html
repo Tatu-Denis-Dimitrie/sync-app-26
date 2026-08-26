@@ -1,25 +1,25 @@
 <div class="login-container">
   <div class="login-card">
     <div class="login-header">
-      <h1 class="login-title">SyncApp26</h1>
-      <p class="login-subtitle">Sign in to your account</p>
+      <h1 class="login-title">{{ 'appName' | translate:'Common' }}</h1>
+      <p class="login-subtitle">{{ 'login.title' | translate:'Auth' }}</p>
     </div>
 
     <form class="login-form" (ngSubmit)="onLogin()">
       <div class="form-group">
-        <label for="email" class="form-label">Email</label>
+        <label for="email" class="form-label">{{ 'login.email' | translate:'Auth' }}</label>
         <input
           type="email"
           id="email"
           name="email"
           [(ngModel)]="email"          class="form-input"
-          placeholder="Enter your email"
+          [placeholder]="'login.emailPlaceholder' | translate:'Auth'"
           autocomplete="email"
           />
         </div>
 
         <div class="form-group">
-          <label for="password" class="form-label">Password</label>
+          <label for="password" class="form-label">{{ 'login.password' | translate:'Auth' }}</label>
           <div class="password-field">
             <input
               [type]="showPassword ? 'text' : 'password'"
@@ -27,14 +27,14 @@
               name="password"
               [(ngModel)]="password"
               class="form-input"
-              placeholder="Enter your password"
+              [placeholder]="'login.passwordPlaceholder' | translate:'Auth'"
               autocomplete="current-password"
               />
             <button
               type="button"
               class="password-toggle"
               (click)="togglePassword()"
-              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+              [attr.aria-label]="(showPassword ? 'login.hidePassword' : 'login.showPassword') | translate:'Auth'">
               @if (!showPassword) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
@@ -56,21 +56,21 @@
           }
 
           <div class="forgot-password-link">
-            <a routerLink="/forgot-password" class="link">Forgot Password?</a>
+            <a routerLink="/forgot-password" class="link">{{ 'login.forgotPassword' | translate:'Auth' }}</a>
           </div>
 
           <button type="submit" class="login-button" [disabled]="isLoading">
             @if (!isLoading) {
-              <span>Sign In</span>
+              <span>{{ 'login.submit' | translate:'Auth' }}</span>
             }
             @if (isLoading) {
-              <span>Signing in...</span>
+              <span>{{ 'login.submitting' | translate:'Auth' }}</span>
             }
           </button>
         </form>
 
         <div class="login-divider">
-          <span>or</span>
+          <span>{{ 'login.or' | translate:'Auth' }}</span>
         </div>
 
         <div #googleButton class="google-button-host"></div>
@@ -83,14 +83,14 @@
               <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
               <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
             </svg>
-            <span>Sign in with Microsoft</span>
+            <span>{{ 'login.signInWithMicrosoft' | translate:'Auth' }}</span>
           </button>
         }
 
         <div class="login-footer">
-          <p class="footer-text">SyncApp26 - User Management System</p>
+          <p class="footer-text">{{ 'login.footerText' | translate:'Auth' }}</p>
           <p class="footer-link">
-            Don't have an account? <a routerLink="/register" class="link">Register here</a>
+            {{ 'login.noAccount' | translate:'Auth' }} <a routerLink="/register" class="link">{{ 'login.registerPrompt' | translate:'Auth' }}</a>
           </p>
         </div>
       </div>

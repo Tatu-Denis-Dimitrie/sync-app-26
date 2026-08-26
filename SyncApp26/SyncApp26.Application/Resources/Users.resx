@@ -134,4 +134,31 @@
   <data name="messages.cannotAssignSelf" xml:space="preserve">
     <value>User cannot be assigned to themselves</value>
   </data>
+  <data name="messages.assignedToNotFound" xml:space="preserve">
+    <value>Assigned to user not found</value>
+  </data>
+  <data name="messages.circularAssignment" xml:space="preserve">
+    <value>Circular assignment detected: Cannot assign a user to someone who reports to them</value>
+  </data>
+  <data name="messages.userCreated" xml:space="preserve">
+    <value>User created successfully</value>
+  </data>
+  <data name="messages.userUpdated" xml:space="preserve">
+    <value>User updated successfully</value>
+  </data>
+  <data name="messages.roleDoesNotExist" xml:space="preserve">
+    <value>Role '{0}' does not exist.</value>
+  </data>
+  <data name="messages.cannotRemoveLastAdmin" xml:space="preserve">
+    <value>Cannot remove the Admin role from the last remaining administrator.</value>
+  </data>
+  <data name="messages.rolesUpdated" xml:space="preserve">
+    <value>Roles updated successfully</value>
+  </data>
+  <data name="messages.unsupportedLanguage" xml:space="preserve">
+    <value>Unsupported language.</value>
+  </data>
+  <data name="messages.languagePreferenceUpdated" xml:space="preserve">
+    <value>Language preference updated successfully</value>
+  </data>
 </root>

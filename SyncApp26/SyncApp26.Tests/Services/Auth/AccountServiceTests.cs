@@ -5,6 +5,7 @@ using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
+using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Services.Auth
 {
@@ -15,9 +16,22 @@ namespace SyncApp26.Tests.Services.Auth
         private readonly Mock<ITokenService> _tokenServiceMock = new();
         private readonly Mock<IGoogleTokenValidator> _googleTokenValidatorMock = new();
         private readonly Mock<IMicrosoftTokenValidator> _microsoftTokenValidatorMock = new();
+        private readonly Mock<ILocalizationService> _localizationServiceMock = new();
 
-        private AccountService CreateService() =>
-            new(_userServiceMock.Object, _authenticationServiceMock.Object, _tokenServiceMock.Object, _googleTokenValidatorMock.Object, _microsoftTokenValidatorMock.Object, NullLogger<AccountService>.Instance);
+        private AccountService CreateService()
+        {
+            _localizationServiceMock.Setup(s => s.GetScopedLocalizer(LocalizationScopes.Auth))
+                .Returns(RealLocalizerFactory.ForScope(LocalizationScopes.Auth));
+
+            return new(
+                _userServiceMock.Object,
+                _authenticationServiceMock.Object,
+                _tokenServiceMock.Object,
+                _googleTokenValidatorMock.Object,
+                _microsoftTokenValidatorMock.Object,
+                NullLogger<AccountService>.Instance,
+                _localizationServiceMock.Object);
+        }
 
         private static RegisterUserRequestDTO ValidRegisterRequest() => new()
         {
