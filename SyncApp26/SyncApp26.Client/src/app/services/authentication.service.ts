@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, finalize, map, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, finalize, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface RegisterRequest {
@@ -132,22 +132,34 @@ export class AuthenticationService {
   }
 
   login(request: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request)
-      .pipe(tap(response => this.applySessionFromLoginResponse(response)));
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request).pipe(
+      tap(response => this.applySessionFromLoginResponse(response)),
+      switchMap(response => this.reissueXsrfCookie(response))
+    );
   }
 
   googleLogin(idToken: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/google-login`, { idToken })
-      .pipe(tap(response => this.applySessionFromLoginResponse(response)));
+    return this.http.post<LoginResponse>(`${this.apiUrl}/google-login`, { idToken }).pipe(
+      tap(response => this.applySessionFromLoginResponse(response)),
+      switchMap(response => this.reissueXsrfCookie(response))
+    );
   }
 
   microsoftLogin(idToken: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/microsoft-login`, { idToken })
-      .pipe(tap(response => this.applySessionFromLoginResponse(response)));
+    return this.http.post<LoginResponse>(`${this.apiUrl}/microsoft-login`, { idToken }).pipe(
+      tap(response => this.applySessionFromLoginResponse(response)),
+      switchMap(response => this.reissueXsrfCookie(response))
+    );
   }
 
   private applySessionFromLoginResponse(response: LoginResponse): void {
     this.sessionSubject.next({ user: response.user, impersonating: false, impersonator: null });
+  }
+
+  // Login can't issue XSRF-TOKEN itself (still anonymous mid-request, see LoginSuccess), so without
+  // this every CSRF-protected request afterward fails: the cookie stays bound to the pre-login identity.
+  private reissueXsrfCookie<T>(passthrough: T): Observable<T> {
+    return this.http.get(`${this.apiUrl}/me`).pipe(map(() => passthrough));
   }
 
   forgotPassword(request: ForgotPasswordRequest): Observable<MessageResponse> {

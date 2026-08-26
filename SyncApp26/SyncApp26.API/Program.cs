@@ -276,6 +276,12 @@ try
         {
             context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
         }
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            // Shared caches may not store responses to Authorization-header requests, but no such
+            // rule exists for cookies - since auth moved to cookies, this has to be explicit.
+            context.Response.Headers.CacheControl = "no-store";
+        }
         await next();
     });
 

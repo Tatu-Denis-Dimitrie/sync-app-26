@@ -90,6 +90,9 @@ describe('AuthenticationService', () => {
         message: 'Login successful.',
         user: { id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: [Roles.LineManager] }
       });
+      // login can't issue XSRF-TOKEN itself (still anonymous mid-request), so it always follows
+      // up with a /me call to reissue it against the now-authenticated identity.
+      httpMock.expectOne(r => r.url.endsWith('/authentication/me')).flush({ authenticated: true });
 
       expect(service.isLoggedIn()).toBeTrue();
       expect(service.isLineManager()).toBeTrue();
@@ -103,6 +106,7 @@ describe('AuthenticationService', () => {
         message: 'ok',
         user: { id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: [Roles.Admin] }
       });
+      httpMock.expectOne(r => r.url.endsWith('/authentication/me')).flush({ authenticated: true });
 
       service.logout();
       httpMock.expectOne(r => r.url.endsWith('/authentication/logout')).flush({});
@@ -126,6 +130,7 @@ describe('AuthenticationService', () => {
       message: 'ok',
       user: { id: '1', email: 'a@b.com', firstName: 'A', lastName: 'B', roles: [Roles.Admin] }
     });
+    httpMock.expectOne(r => r.url.endsWith('/authentication/me')).flush({ authenticated: true });
 
     expect(localStorage.getItem('authToken')).toBeNull();
     expect(localStorage.getItem('currentUser')).toBeNull();
