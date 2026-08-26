@@ -1,4 +1,5 @@
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Shared.DTOs.Response.User;
 
@@ -11,5 +12,6 @@ namespace SyncApp26.Application.IServices
         Task UpdateSsmSuFormAsync(User user, UpdateUserSSMSUFormDTO dto);
         Task<BulkInitialTrainingResultDTO> ApplyBulkInitialTrainingAsync(BulkInitialTrainingDTO dto, Guid? restrictToAssignedToId);
         Task<UserResponseDTO> SetUserRolesAsync(Guid userId, List<string> roleNames, Guid actingAdminId);
+        Task<UserResponseDTO> UpdatePreferredLanguageAsync(Guid userId, Language language);
     }
 }

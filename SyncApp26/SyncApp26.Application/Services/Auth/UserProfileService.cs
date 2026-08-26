@@ -544,5 +544,26 @@ namespace SyncApp26.Application.Services
 
             return new UserResponseDTO { Success = true, Message = "Roles updated successfully" };
         }
+
+        public async Task<UserResponseDTO> UpdatePreferredLanguageAsync(Guid userId, Language language)
+        {
+            if (!Enum.IsDefined(language))
+            {
+                return new UserResponseDTO { Success = false, Message = "Unsupported language." };
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return new UserResponseDTO { Success = false, Message = "User not found" };
+            }
+
+            user.PreferredLanguage = language;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            return new UserResponseDTO { Success = true, Message = "Language preference updated successfully" };
+        }
     }
 }
