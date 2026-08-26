@@ -94,7 +94,8 @@ namespace SyncApp26.API.Controllers
                     email = user.Email,
                     firstName = user.FirstName,
                     lastName = user.LastName,
-                    roles
+                    roles,
+                    preferredLanguage = user.PreferredLanguage
                 },
                 impersonating = impersonator != null,
                 impersonator

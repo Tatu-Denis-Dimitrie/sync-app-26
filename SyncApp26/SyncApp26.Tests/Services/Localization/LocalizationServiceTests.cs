@@ -1,4 +1,5 @@
 using System.Resources;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
 using Moq;
 using SyncApp26.Application.Services;
@@ -10,7 +11,24 @@ namespace SyncApp26.Tests.Services.Localization
     {
         private readonly Mock<IStringLocalizerFactory> _factoryMock = new();
 
-        private LocalizationService CreateService() => new(_factoryMock.Object);
+        private static IConfiguration BuildConfiguration(string[]? supportedLanguages = null, string defaultLanguage = "En")
+        {
+            var data = new Dictionary<string, string?>
+            {
+                ["Localization:DefaultLanguage"] = defaultLanguage
+            };
+
+            var languages = supportedLanguages ?? new[] { "En" };
+            for (var i = 0; i < languages.Length; i++)
+            {
+                data[$"Localization:SupportedLanguages:{i}"] = languages[i];
+            }
+
+            return new ConfigurationBuilder().AddInMemoryCollection(data).Build();
+        }
+
+        private LocalizationService CreateService(IConfiguration? configuration = null) =>
+            new(_factoryMock.Object, configuration ?? BuildConfiguration());
 
         [Fact]
         public void GetTranslations_NoResxAuthoredYet_ReturnsEveryScopeEmptyInsteadOfThrowing()
@@ -57,6 +75,35 @@ namespace SyncApp26.Tests.Services.Localization
 
             Assert.Equal("Hello", result[LocalizationScopes.Common]["greeting"]);
             Assert.Equal("Goodbye", result[LocalizationScopes.Common]["farewell"]);
+        }
+
+        [Fact]
+        public void ResolveLanguage_SupportedCode_ReturnsParsedLanguageCaseInsensitively()
+        {
+            var service = CreateService(BuildConfiguration(new[] { "En" }, "En"));
+
+            Assert.Equal(Language.En, service.ResolveLanguage("en"));
+            Assert.Equal(Language.En, service.ResolveLanguage("EN"));
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("not-a-real-code")]
+        [InlineData("ro")] // not defined on Language yet, so it can never be "supported" either
+        public void ResolveLanguage_UnrecognizedOrUnsupportedCode_FallsBackToConfiguredDefault(string? requestedCode)
+        {
+            var service = CreateService(BuildConfiguration(new[] { "En" }, "En"));
+
+            Assert.Equal(Language.En, service.ResolveLanguage(requestedCode));
+        }
+
+        [Fact]
+        public void ResolveLanguage_CodeDefinedButNotInSupportedList_FallsBackToDefault()
+        {
+            var service = CreateService(BuildConfiguration(Array.Empty<string>(), "En"));
+
+            Assert.Equal(Language.En, service.ResolveLanguage("en"));
         }
     }
 }

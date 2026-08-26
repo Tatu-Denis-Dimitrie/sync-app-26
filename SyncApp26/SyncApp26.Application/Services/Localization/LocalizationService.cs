@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Resources;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
@@ -11,10 +12,30 @@ namespace SyncApp26.Application.Services
         private static readonly string ResourceAssemblyName = typeof(LocalizationService).Assembly.GetName().Name!;
 
         private readonly IStringLocalizerFactory _localizerFactory;
+        private readonly IConfiguration _configuration;
 
-        public LocalizationService(IStringLocalizerFactory localizerFactory)
+        public LocalizationService(IStringLocalizerFactory localizerFactory, IConfiguration configuration)
         {
             _localizerFactory = localizerFactory;
+            _configuration = configuration;
+        }
+
+        public Language ResolveLanguage(string? requestedCode)
+        {
+            var supportedLanguages = _configuration.GetSection("Localization:SupportedLanguages").Get<string[]>()
+                ?? Array.Empty<string>();
+
+            if (requestedCode != null &&
+                Enum.TryParse<Language>(requestedCode, ignoreCase: true, out var requestedLanguage) &&
+                supportedLanguages.Contains(requestedLanguage.ToString(), StringComparer.OrdinalIgnoreCase))
+            {
+                return requestedLanguage;
+            }
+
+            var defaultLanguageCode = _configuration["Localization:DefaultLanguage"];
+            return Enum.TryParse<Language>(defaultLanguageCode, ignoreCase: true, out var defaultLanguage)
+                ? defaultLanguage
+                : Language.En;
         }
 
         public IStringLocalizer GetScopedLocalizer(string scope) =>

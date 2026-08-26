@@ -107,7 +107,10 @@ namespace SyncApp26.Application.Services
                 IsEmailVerified = false,
                 EmailVerificationToken = Guid.NewGuid().ToString("N"),
                 EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PreferredLanguage = request.PreferredLanguage.HasValue && Enum.IsDefined(request.PreferredLanguage.Value)
+                    ? request.PreferredLanguage
+                    : null
             };
 
             var basicUserRole = await _userService.GetRoleByNameAsync(Roles.BasicUser);

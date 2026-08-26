@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.Validation;
 
 namespace SyncApp26.Shared.DTOs.Request.User
@@ -15,5 +16,6 @@ namespace SyncApp26.Shared.DTOs.Request.User
 
         public required string Email { get; set; }
         public required string Password { get; set; }
+        public Language? PreferredLanguage { get; set; }
     }
 }

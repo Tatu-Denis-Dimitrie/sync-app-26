@@ -123,6 +123,39 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
+        public async Task Me_UserHasPreferredLanguage_IncludesItInResponse()
+        {
+            var controller = CreateController();
+            var userId = Guid.NewGuid();
+            var dbUser = MakeUser(userId, "u@test.com", Roles.BasicUser);
+            dbUser.PreferredLanguage = Language.En;
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(dbUser);
+            SetPrincipal(controller, MakePrincipal(userId, role: Roles.BasicUser));
+
+            var result = await controller.Me();
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var user = ok.Value!.GetType().GetProperty("user")!.GetValue(ok.Value)!;
+            Assert.Equal(Language.En, user.GetType().GetProperty("preferredLanguage")!.GetValue(user));
+        }
+
+        [Fact]
+        public async Task Me_UserHasNoPreferredLanguage_ReturnsNullRatherThanADefault()
+        {
+            var controller = CreateController();
+            var userId = Guid.NewGuid();
+            var dbUser = MakeUser(userId, "u@test.com", Roles.BasicUser);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(dbUser);
+            SetPrincipal(controller, MakePrincipal(userId, role: Roles.BasicUser));
+
+            var result = await controller.Me();
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var user = ok.Value!.GetType().GetProperty("user")!.GetValue(ok.Value)!;
+            Assert.Null(user.GetType().GetProperty("preferredLanguage")!.GetValue(user));
+        }
+
+        [Fact]
         public async Task Me_UserNoLongerExists_ReturnsAuthenticatedFalse()
         {
             var controller = CreateController();

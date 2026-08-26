@@ -24,5 +24,14 @@ namespace SyncApp26.Application.IServices
         /// than the whole catalogue.
         /// </summary>
         IStringLocalizer GetScopedLocalizer(string scope);
+
+        /// <summary>
+        /// Turns a raw language code (from a URL segment, a stored preference, etc.) into a language
+        /// this deployment actually serves - Localization:SupportedLanguages - falling back to
+        /// Localization:DefaultLanguage for anything unrecognized, unsupported, or absent. Never
+        /// throws: a typo'd or not-yet-shipped code degrades to the default instead of failing the
+        /// caller.
+        /// </summary>
+        Language ResolveLanguage(string? requestedCode);
     }
 }

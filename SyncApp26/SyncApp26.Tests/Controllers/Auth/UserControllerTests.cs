@@ -695,5 +695,47 @@ namespace SyncApp26.Tests.Controllers.Auth
 
             Assert.IsType<ForbidResult>(result.Result);
         }
+
+        // ───────────────────────── UpdateLanguagePreference ─────────────────────────
+
+        [Fact]
+        public async Task UpdateLanguagePreference_Authenticated_DelegatesToServiceWithCallerId()
+        {
+            var controller = CreateController();
+            var callerId = Guid.NewGuid();
+            controller.SetUser(callerId, role: Roles.BasicUser);
+            _userProfileServiceMock.Setup(s => s.UpdatePreferredLanguageAsync(callerId, Language.En))
+                .ReturnsAsync(new UserResponseDTO { Success = true, Message = "Language preference updated successfully" });
+
+            var result = await controller.UpdateLanguagePreference(new UpdateLanguagePreferenceRequestDTO { Language = Language.En });
+
+            var ok = Assert.IsType<OkObjectResult>(result.Result);
+            Assert.True(((UserResponseDTO)ok.Value!).Success);
+            _userProfileServiceMock.Verify(s => s.UpdatePreferredLanguageAsync(callerId, Language.En), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateLanguagePreference_ServiceRejectsIt_ReturnsBadRequest()
+        {
+            var controller = CreateController();
+            _userProfileServiceMock.Setup(s => s.UpdatePreferredLanguageAsync(It.IsAny<Guid>(), It.IsAny<Language>()))
+                .ReturnsAsync(new UserResponseDTO { Success = false, Message = "Unsupported language." });
+
+            var result = await controller.UpdateLanguagePreference(new UpdateLanguagePreferenceRequestDTO { Language = Language.En });
+
+            Assert.IsType<BadRequestObjectResult>(result.Result);
+        }
+
+        [Fact]
+        public async Task UpdateLanguagePreference_Anonymous_ReturnsUnauthorizedWithoutCallingService()
+        {
+            var controller = CreateController();
+            controller.SetAnonymousUser();
+
+            var result = await controller.UpdateLanguagePreference(new UpdateLanguagePreferenceRequestDTO { Language = Language.En });
+
+            Assert.IsType<UnauthorizedResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdatePreferredLanguageAsync(It.IsAny<Guid>(), It.IsAny<Language>()), Times.Never);
+        }
     }
 }
