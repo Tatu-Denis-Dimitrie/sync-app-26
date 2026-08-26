@@ -8,10 +8,8 @@ namespace SyncApp26.Application.Services
 {
     public class RefreshTokenService : IRefreshTokenService
     {
-        // Two tabs refreshing at (almost) the same moment both read the same pre-rotation cookie;
-        // the second request to arrive would otherwise look identical to a stolen, already-used
-        // token. This window is how long a just-consumed token is still treated as a benign race
-        // rather than theft.
+        // How long a just-consumed token is still treated as a benign concurrent-request race
+        // rather than theft (two tabs refreshing at once both present the same old token).
         private static readonly TimeSpan GraceWindow = TimeSpan.FromSeconds(30);
 
         private readonly IRefreshTokenRepository _repository;
@@ -65,8 +63,8 @@ namespace SyncApp26.Application.Services
                     await RevokeAllForUserAsync(existing.UserId);
                     return new RefreshResult { Outcome = RefreshOutcome.Reused, UserId = existing.UserId };
                 }
-                // Within the grace window: fall through and mint another successor without
-                // re-touching ConsumedAt/ReplacedByTokenHash, which already point at the first one.
+                // Within the grace window: mint another successor without re-touching
+                // ConsumedAt/ReplacedByTokenHash, which already point at the first one.
             }
             else
             {

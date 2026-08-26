@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -76,7 +76,7 @@ interface BulkTrainingData {
   templateUrl: './bulk-training-modal.component.html',
   styleUrls: ['./bulk-training-modal.component.css']
 })
-export class BulkTrainingModalComponent implements OnInit {
+export class BulkTrainingModalComponent {
   @Output() close = new EventEmitter<void>();
   @Output() success = new EventEmitter<void>();
   @ViewChild('modalContent') modalContentRef!: ElementRef<HTMLElement>;
@@ -132,11 +132,6 @@ export class BulkTrainingModalComponent implements OnInit {
   private currentUserFullName(): string {
     const user = this.authService.getCurrentUser();
     return user ? `${user.firstName} ${user.lastName}`.trim() : '';
-  }
-
-  ngOnInit(): void {
-    this.loadDepartments();
-    this.loadUsers();
   }
 
   private loadDepartments(): void {

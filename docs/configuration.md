@@ -14,7 +14,9 @@ Key settings:
   - SQLite path. Relative paths are resolved against the API content root.
   - Example: Data Source=../SyncApp26.Infrastructure/SyncApp26.db;Mode=ReadWrite
 - JwtSettings:SecretKey, Issuer, Audience, ExpirationMinutes
-  - JWT signing and validation settings.
+  - JWT signing and validation settings. The token itself now travels in an httpOnly cookie, not the response body.
+- Auth:Cookie:Secure (bool, optional)
+  - Overrides the auto-detected `Secure` flag on auth cookies (defaults to `!IsDevelopment()`). Set explicitly behind a reverse proxy, since `Request.IsHttps` is unreliable there.
 - Frontend:LoginUrl, Frontend:BaseUrl, Frontend:ResetPasswordUrl
   - Used in email links and redirects.
 - Smtp:Host, Port, Username, Password, FromEmail, FromName, EnableSsl
@@ -40,7 +42,7 @@ Environment files under SyncApp26/SyncApp26.Client/src/environments/:
 - environment.prod.ts
 
 Key settings:
-- apiUrl: API base URL (for example http://localhost:5022/api)
+- apiUrl: API base URL. Relative (`/api`) in dev, routed to the API through proxy.conf.json (see angular.json's serve target) so the SPA and API are same-origin — required for the session cookie to work. Never point this at an absolute URL.
 - endpoints: relative paths used by services
 - googleClientId: OAuth client ID for Google Sign-In. Must match Authentication:Google:ClientId in the API config.
 - microsoftClientId: Application (client) ID for Microsoft Sign-In. Must match Authentication:Microsoft:ClientId in the API config.

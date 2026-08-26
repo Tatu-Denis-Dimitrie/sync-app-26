@@ -6,32 +6,35 @@ import { AuthenticationService } from '../services/authentication.service';
 
 const IMPERSONATION_READ_ONLY_CODE = 'IMPERSONATION_READ_ONLY';
 
-// 401 from these is a normal "wrong credentials" business response from an anonymous endpoint, not
-// a rejected session - they must never trigger the auto-logout below.
-const CREDENTIAL_CHECK_PATHS = ['/authentication/login', '/authentication/google-login', '/authentication/microsoft-login'];
+// 401 from these is a normal business response or session-plumbing, not a rejected session.
+const SESSION_EXEMPT_PATHS = [
+  '/authentication/login',
+  '/authentication/google-login',
+  '/authentication/microsoft-login',
+  '/authentication/me',
+  '/authentication/logout',
+  '/authentication/refresh'
+];
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const impersonation = inject(ImpersonationService);
   const authentication = inject(AuthenticationService);
+  const isSessionExempt = SESSION_EXEMPT_PATHS.some(path => req.url.includes(path));
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 403 && err.error?.code === IMPERSONATION_READ_ONLY_CODE) {
         impersonation.reportBlockedAction(
           err.error.message || 'This action is disabled while viewing as another user.');
-      } else if (err.status === 401 && impersonation.isImpersonating()) {
-        // The 30-minute impersonation token expired mid-session: drop back to the admin's own
-        // session instead of stranding them on a dead token. NOT a blanket "401 -> logout" - that
-        // would break the login page itself, which returns 401 for invalid credentials.
+      } else if (!isSessionExempt && err.status === 401 && impersonation.isImpersonating()) {
+        // Impersonation has no refresh token, so an expired access token can't recover - drop back to the admin.
         impersonation.stop();
-      } else if (err.status === 401 && !CREDENTIAL_CHECK_PATHS.some(path => req.url.includes(path))) {
-        // The server just rejected a tampered, expired, or otherwise invalid session token still
-        // sitting in localStorage - clear it and send the user back to log in properly rather than
-        // stranding them on a UI that looks logged in but can't call anything.
+      } else if (!isSessionExempt && err.status === 401) {
+        // Refresh already failed too - the session is dead, send the user back to log in.
         authentication.logout();
       }
 
-      // Always rethrow: component-level error handlers (toasts, form errors, etc.) still need to run.
+      // Rethrow: component-level error handlers still need to run.
       return throwError(() => err);
     })
   );

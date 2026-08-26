@@ -19,6 +19,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Serilog;
 using Serilog.Events;
+using Microsoft.AspNetCore.Antiforgery;
 
 
 Log.Logger = new LoggerConfiguration()
@@ -179,13 +180,22 @@ try
         options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
     });
 
-    // Auth cookie fallback for the bearer token. Secure is fixed once at startup rather than derived
-    // from Request.IsHttps, which is unreliable behind a TLS-terminating proxy without UseForwardedHeaders.
+    // Secure is fixed at startup, not derived from Request.IsHttps (unreliable behind a proxy).
     var authCookieOptions = new AuthCookieOptions
     {
         Secure = builder.Configuration.GetValue<bool?>("Auth:Cookie:Secure") ?? !builder.Environment.IsDevelopment()
     };
     builder.Services.AddSingleton(authCookieOptions);
+
+    // Names Angular's HttpXsrfInterceptor already knows, so no client code is needed.
+    builder.Services.AddAntiforgery(options =>
+    {
+        options.HeaderName = "X-XSRF-TOKEN";
+        options.Cookie.Name = "syncapp26_antiforgery";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = authCookieOptions.SameSite;
+        options.Cookie.SecurePolicy = authCookieOptions.Secure ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
+    });
 
     // JWT Authentication
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
@@ -209,22 +219,13 @@ try
             ValidateAudience = false,
             ClockSkew = TimeSpan.Zero
         };
-        // SignalR's browser transport can't set an Authorization header, so the client sends the
-        // token as ?access_token= instead — only honored for the hub path.
         options.Events = new JwtBearerEvents
         {
+            // Fallback only - never overrides a real Authorization header.
             OnMessageReceived = context =>
             {
-                var accessToken = context.Request.Query["access_token"];
-                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
-                {
-                    context.Token = accessToken;
-                }
-                // Fallback only - never overrides a real Authorization header, so bearer-based callers
-                // (curl, Swagger) are unaffected. An httpOnly cookie can't be read by XSS, so it never
-                // competes with a header an attacker could have forged.
-                else if (string.IsNullOrEmpty(context.Request.Headers.Authorization) &&
-                         context.Request.Cookies.TryGetValue(authCookieOptions.Name, out var cookieToken))
+                if (string.IsNullOrEmpty(context.Request.Headers.Authorization) &&
+                    context.Request.Cookies.TryGetValue(authCookieOptions.Name, out var cookieToken))
                 {
                     context.Token = cookieToken;
                 }
@@ -275,6 +276,12 @@ try
         {
             context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
         }
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            // Shared caches may not store responses to Authorization-header requests, but no such
+            // rule exists for cookies - since auth moved to cookies, this has to be explicit.
+            context.Response.Headers.CacheControl = "no-store";
+        }
         await next();
     });
 
@@ -323,6 +330,29 @@ try
     app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
+
+    // CSRF check for cookie-authenticated requests. After UseAuthentication so User is resolved.
+    app.Use(async (context, next) =>
+    {
+        var hasAuthorizationHeader = !string.IsNullOrEmpty(context.Request.Headers.Authorization);
+        if (!CsrfExemption.IsExempt(context.Request.Method, context.Request.Path.Value, hasAuthorizationHeader))
+        {
+            var antiforgery = context.RequestServices.GetRequiredService<IAntiforgery>();
+            try
+            {
+                await antiforgery.ValidateRequestAsync(context);
+            }
+            catch (AntiforgeryValidationException)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"message\":\"CSRF validation failed.\"}");
+                return;
+            }
+        }
+
+        await next();
+    });
 
     app.MapControllers();
     app.MapHub<SyncApp26.API.Hubs.SyncHub>("/hubs/sync");

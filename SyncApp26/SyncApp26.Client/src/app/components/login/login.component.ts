@@ -152,6 +152,10 @@ export class LoginComponent implements AfterViewInit {
   }
 
   onLogin(): void {
+    if (this.isLoading) {
+      return;
+    }
+
     this.errorMessage = '';
 
     if (!this.email || !this.password) {
@@ -180,11 +184,5 @@ export class LoginComponent implements AfterViewInit {
 
   togglePassword(): void {
     this.showPassword = !this.showPassword;
-  }
-
-  onKeyPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.onLogin();
-    }
   }
 }

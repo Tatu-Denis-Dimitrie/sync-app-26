@@ -29,7 +29,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   users$!: Observable<User[]>;
   paginatedUsers$!: Observable<User[]>;
   stats$!: Observable<any>;
-  departments$!: Observable<Department[]>;
+  departments: Department[] = [];
   currentComparison$!: Observable<UserComparison[] | null>;
 
   private currentPage$ = new BehaviorSubject<number>(1);
@@ -108,7 +108,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.users$ = this.userSyncService.users$;
     this.stats$ = this.userSyncService.getUserStats();
-    this.departments$ = this.userSyncService.getDepartments();
+    this.userSyncService.getDepartments()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(departments => { this.departments = departments; });
     this.currentComparison$ = this.userSyncService.currentComparison$;
 
     // Ensure SignalR is connected for real-time updates
@@ -559,20 +561,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.selectedFunction = 'all';
-    this.departments$.pipe(take(1)).subscribe(departments => {
-      const selectedDept = departments.find(d => d.name === this.selectedDepartment);
+    const selectedDept = this.departments.find(d => d.name === this.selectedDepartment);
 
-      if (!selectedDept) {
-        this.availableDepartmentFunctions = [];
-        return;
-      }
+    if (!selectedDept) {
+      this.availableDepartmentFunctions = [];
+      return;
+    }
 
-      this.userSyncService.getFunctionsByDepartmentId(selectedDept.id)
-        .pipe(take(1))
-        .subscribe(functions => {
-          this.availableDepartmentFunctions = functions;
-        });
-    });
+    this.userSyncService.getFunctionsByDepartmentId(selectedDept.id)
+      .pipe(take(1))
+      .subscribe(functions => {
+        this.availableDepartmentFunctions = functions;
+      });
   }
 
   onFunctionFilterChange(): void {

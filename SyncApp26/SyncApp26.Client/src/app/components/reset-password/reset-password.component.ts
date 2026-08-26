@@ -34,6 +34,10 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.isLoading) {
+      return;
+    }
+
     this.errorMessage = '';
 
     if (!this.email) {
@@ -77,11 +81,5 @@ export class ResetPasswordComponent implements OnInit {
         this.errorMessage = error.error?.message || 'Password reset failed. Please try again.';
       }
     });
-  }
-
-  onKeyPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.onSubmit();
-    }
   }
 }

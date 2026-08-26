@@ -41,11 +41,10 @@ export class UserSyncSignalrService {
             return;
         }
 
+        // The httpOnly session cookie rides along automatically - no accessTokenFactory needed.
         const baseUrl = environment.apiUrl.replace(/\/api\/?$/, '');
         this.hubConnection = new signalR.HubConnectionBuilder()
-            .withUrl(baseUrl + '/hubs/sync', {
-                accessTokenFactory: () => localStorage.getItem('authToken') ?? ''
-            })
+            .withUrl(baseUrl + '/hubs/sync')
             .withAutomaticReconnect()
             .build();
 

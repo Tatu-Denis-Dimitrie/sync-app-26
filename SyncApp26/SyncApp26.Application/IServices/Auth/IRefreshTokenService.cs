@@ -27,11 +27,9 @@ namespace SyncApp26.Application.IServices
         Task<IssuedRefreshToken> IssueAsync(Guid userId, DateTime expiresAt);
 
         /// <summary>
-        /// Consumes a refresh token and mints its successor, which inherits the same absolute
-        /// ExpiresAt - rotation never extends a session. Presenting an already-consumed token again
-        /// within a short grace window is treated as a benign concurrent-request race (two tabs
-        /// refreshing at once) and mints another sibling successor; outside that window it's treated
-        /// as token theft and revokes every active session the user has.
+        /// Consumes a token and mints its successor. Reuse of an already-consumed token within a
+        /// short grace window is treated as a benign race and mints a sibling; outside it, as theft,
+        /// revoking every session the user has.
         /// </summary>
         Task<RefreshResult> RotateAsync(string rawToken);
 

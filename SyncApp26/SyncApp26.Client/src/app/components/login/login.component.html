@@ -12,9 +12,7 @@
           type="email"
           id="email"
           name="email"
-          [(ngModel)]="email"
-          (keypress)="onKeyPress($event)"
-          class="form-input"
+          [(ngModel)]="email"          class="form-input"
           placeholder="Enter your email"
           autocomplete="email"
           />
@@ -28,7 +26,6 @@
               id="password"
               name="password"
               [(ngModel)]="password"
-              (keypress)="onKeyPress($event)"
               class="form-input"
               placeholder="Enter your password"
               autocomplete="current-password"

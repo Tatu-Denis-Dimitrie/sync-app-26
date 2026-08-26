@@ -39,13 +39,23 @@ export class AppComponent implements OnInit, OnDestroy {
     
     // Simulate app initialization
     this.loadingService.finishLoading();
+
+    window.addEventListener('pageshow', this.handlePageShow);
   }
 
   ngOnDestroy(): void {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
+    window.removeEventListener('pageshow', this.handlePageShow);
   }
+
+  // Bfcache can restore a stale pre-logout page without re-running the app - force a reload.
+  private handlePageShow = (event: PageTransitionEvent): void => {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  };
 
   private updateHeaderVisibility(url: string): void {
     const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/reset-password/', '/sign/'];

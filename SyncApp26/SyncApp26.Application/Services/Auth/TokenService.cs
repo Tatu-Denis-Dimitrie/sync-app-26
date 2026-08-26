@@ -12,6 +12,8 @@ namespace SyncApp26.Application.Services
     {
         private readonly IConfiguration _configuration;
 
+        // Short-lived on purpose: RefreshTokenService is what keeps a session alive for its full 8h.
+        private const int AccessTokenMinutes = 15;
         private const int ImpersonationTokenMinutes = 30;
 
         public TokenService(IConfiguration configuration)
@@ -22,7 +24,7 @@ namespace SyncApp26.Application.Services
         public Task<string> GenerateTokenAsync(Guid userId, string email, IEnumerable<string> roleNames)
         {
             var claims = BaseClaims(userId, email, roleNames);
-            return Task.FromResult(BuildToken(claims, TimeSpan.FromHours(8)));
+            return Task.FromResult(BuildToken(claims, TimeSpan.FromMinutes(AccessTokenMinutes)));
         }
 
         public Task<string> GenerateImpersonationTokenAsync(
@@ -33,9 +35,7 @@ namespace SyncApp26.Application.Services
             return Task.FromResult(BuildToken(claims, TimeSpan.FromMinutes(ImpersonationTokenMinutes)));
         }
 
-        // One role claim per held role — ASP.NET's ClaimsPrincipal.IsInRole/[Authorize(Roles=...)]
-        // both already treat multiple ClaimTypes.Role claims as "any of these", so a user holding
-        // several roles at once (e.g. LineManager + SsmOfficer) needs no special-casing here.
+        // One role claim per held role - ASP.NET already treats multiple ClaimTypes.Role claims as "any of these".
         private static List<Claim> BaseClaims(Guid userId, string email, IEnumerable<string> roleNames)
         {
             if (string.IsNullOrWhiteSpace(email))

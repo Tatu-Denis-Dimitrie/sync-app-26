@@ -45,7 +45,7 @@ The SPA runs at http://localhost:4200 and uses the API base URL from src/environ
 ## Authentication flow (local)
 1. Register a user using the SPA or POST /api/authentication/register.
 2. Verify the email address using the link sent by SMTP (required for login).
-3. Log in and confirm the token is stored in localStorage as authToken.
+3. Log in and confirm the session/refresh cookies are set (DevTools > Application > Cookies) — no token is stored client-side.
 
 If SMTP is not configured, registration still creates the user but email delivery fails. You will receive a warning response and will not be able to verify the account without configuring SMTP.
 
@@ -58,5 +58,5 @@ Sample files are available under sample-csvs/. CSV validation rules for user syn
 ## Common issues
 - CORS errors: update allowed origins in SyncApp26/SyncApp26.API/Program.cs.
 - DB path errors: verify ConnectionStrings:DefaultConnection in appsettings.json.
-- Auth issues: ensure authToken and currentUser exist in localStorage.
+- Auth issues: confirm the `syncapp26_session`/`syncapp26_refresh` cookies are present and GET /api/authentication/me returns `authenticated: true`.
 - Port conflicts: ensure 5022 (API) and 4200 (SPA) are free.

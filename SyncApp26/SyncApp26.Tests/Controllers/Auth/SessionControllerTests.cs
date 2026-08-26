@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -15,10 +16,31 @@ namespace SyncApp26.Tests.Controllers.Auth
     {
         private readonly Mock<IUserService> _userServiceMock = new();
         private readonly Mock<IImpersonationService> _impersonationServiceMock = new();
+        private readonly Mock<ITokenService> _tokenServiceMock = new();
+        private readonly Mock<IRefreshTokenService> _refreshTokenServiceMock = new();
+        private readonly Mock<IAntiforgery> _antiforgeryMock = new();
         private readonly AuthCookieOptions _authCookieOptions = new();
 
-        private SessionController CreateController() =>
-            new(_userServiceMock.Object, _impersonationServiceMock.Object, _authCookieOptions);
+        private SessionController CreateController()
+        {
+            _refreshTokenServiceMock.Setup(s => s.IssueAsync(It.IsAny<Guid>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new IssuedRefreshToken { RawToken = "test-refresh-token", ExpiresAt = DateTime.UtcNow.AddHours(8) });
+            _antiforgeryMock.Setup(a => a.GetAndStoreTokens(It.IsAny<HttpContext>()))
+                .Returns(new AntiforgeryTokenSet("test-xsrf-token", null, "__RequestVerificationToken", "X-XSRF-TOKEN"));
+
+            return new SessionController(
+                _userServiceMock.Object,
+                _impersonationServiceMock.Object,
+                _tokenServiceMock.Object,
+                _refreshTokenServiceMock.Object,
+                _antiforgeryMock.Object,
+                _authCookieOptions);
+        }
+
+        private static void SetRefreshCookie(SessionController controller, string rawToken)
+        {
+            controller.HttpContext.Request.Headers.Append("Cookie", $"{AuthCookieExtensions.RefreshCookieName}={rawToken}");
+        }
 
         private static User MakeUser(Guid id, string email, params string[] roleNames)
         {
@@ -66,6 +88,19 @@ namespace SyncApp26.Tests.Controllers.Auth
 
             var ok = Assert.IsType<OkObjectResult>(result);
             Assert.False((bool)ok.Value!.GetType().GetProperty("authenticated")!.GetValue(ok.Value)!);
+        }
+
+        [Fact]
+        public async Task Me_Anonymous_StillIssuesXsrfCookie()
+        {
+            // A first-time visitor needs a valid CSRF pairing before they ever submit a form.
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+
+            await controller.Me();
+
+            var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+            Assert.Contains(XsrfCookieExtensions.XsrfCookieName, setCookie);
         }
 
         [Fact]
@@ -141,17 +176,41 @@ namespace SyncApp26.Tests.Controllers.Auth
         // ───────────────────────── Logout ─────────────────────────
 
         [Fact]
-        public void Logout_DeletesSessionCookie()
+        public async Task Logout_DeletesSessionAndRefreshCookies()
         {
             var controller = CreateController();
             SetPrincipal(controller, AnonymousPrincipal());
 
-            var result = controller.Logout();
+            var result = await controller.Logout();
 
             Assert.IsType<OkObjectResult>(result);
             var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
             Assert.Contains(_authCookieOptions.Name, setCookie);
+            Assert.Contains(AuthCookieExtensions.RefreshCookieName, setCookie);
             Assert.Contains("1970", setCookie);
+        }
+
+        [Fact]
+        public async Task Logout_WithRefreshCookiePresent_RevokesIt()
+        {
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+            SetRefreshCookie(controller, "raw-refresh-token");
+
+            await controller.Logout();
+
+            _refreshTokenServiceMock.Verify(s => s.RevokeAsync("raw-refresh-token"), Times.Once);
+        }
+
+        [Fact]
+        public async Task Logout_NoRefreshCookiePresent_DoesNotCallRevoke()
+        {
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+
+            await controller.Logout();
+
+            _refreshTokenServiceMock.Verify(s => s.RevokeAsync(It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -203,6 +262,10 @@ namespace SyncApp26.Tests.Controllers.Auth
             var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
             Assert.Contains(_authCookieOptions.Name, setCookie);
             Assert.Contains("fresh-token", setCookie);
+            // Resuming the admin's own session is a real session again, so it gets a refresh token -
+            // unlike the impersonation session it replaces.
+            Assert.Contains(AuthCookieExtensions.RefreshCookieName, setCookie);
+            _refreshTokenServiceMock.Verify(s => s.IssueAsync(adminId, It.IsAny<DateTime>()), Times.Once);
         }
 
         [Fact]
@@ -237,6 +300,97 @@ namespace SyncApp26.Tests.Controllers.Auth
         public void StopImpersonation_CarriesAllowDuringImpersonationAttribute()
         {
             var method = typeof(SessionController).GetMethod(nameof(SessionController.StopImpersonation))!;
+
+            Assert.NotEmpty(method.GetCustomAttributes(typeof(AllowDuringImpersonationAttribute), inherit: false));
+        }
+
+        // ───────────────────────── Refresh ─────────────────────────
+
+        [Fact]
+        public async Task Refresh_NoCookiePresent_ReturnsUnauthorized()
+        {
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+
+            var result = await controller.Refresh();
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+            _refreshTokenServiceMock.Verify(s => s.RotateAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Refresh_HappyPath_RotatesAndSetsBothCookies()
+        {
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+            SetRefreshCookie(controller, "raw-refresh-token");
+            var userId = Guid.NewGuid();
+            _refreshTokenServiceMock.Setup(s => s.RotateAsync("raw-refresh-token")).ReturnsAsync(new RefreshResult
+            {
+                Outcome = RefreshOutcome.Success,
+                UserId = userId,
+                Token = new IssuedRefreshToken { RawToken = "new-refresh-token", ExpiresAt = DateTime.UtcNow.AddHours(8) }
+            });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync(MakeUser(userId, "u@test.com", Roles.BasicUser));
+            _tokenServiceMock.Setup(s => s.GenerateTokenAsync(userId, "u@test.com",
+                    It.Is<IEnumerable<string>>(r => r.Single() == Roles.BasicUser)))
+                .ReturnsAsync("new-access-token");
+
+            var result = await controller.Refresh();
+
+            Assert.IsType<OkObjectResult>(result);
+            var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+            Assert.Contains("new-access-token", setCookie);
+            Assert.Contains("new-refresh-token", setCookie);
+        }
+
+        [Theory]
+        [InlineData(RefreshOutcome.NotFound)]
+        [InlineData(RefreshOutcome.Expired)]
+        [InlineData(RefreshOutcome.Revoked)]
+        [InlineData(RefreshOutcome.Reused)]
+        public async Task Refresh_NonSuccessOutcome_ReturnsUnauthorizedAndDeletesCookie(RefreshOutcome outcome)
+        {
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+            SetRefreshCookie(controller, "raw-refresh-token");
+            _refreshTokenServiceMock.Setup(s => s.RotateAsync("raw-refresh-token"))
+                .ReturnsAsync(new RefreshResult { Outcome = outcome });
+
+            var result = await controller.Refresh();
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+            var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+            Assert.Contains(AuthCookieExtensions.RefreshCookieName, setCookie);
+            Assert.Contains("1970", setCookie);
+        }
+
+        [Fact]
+        public async Task Refresh_UserNoLongerExists_ReturnsUnauthorizedAndDeletesCookie()
+        {
+            var controller = CreateController();
+            SetPrincipal(controller, AnonymousPrincipal());
+            SetRefreshCookie(controller, "raw-refresh-token");
+            var userId = Guid.NewGuid();
+            _refreshTokenServiceMock.Setup(s => s.RotateAsync("raw-refresh-token")).ReturnsAsync(new RefreshResult
+            {
+                Outcome = RefreshOutcome.Success,
+                UserId = userId,
+                Token = new IssuedRefreshToken { RawToken = "new-refresh-token", ExpiresAt = DateTime.UtcNow.AddHours(8) }
+            });
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(userId)).ReturnsAsync((User?)null);
+
+            var result = await controller.Refresh();
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+            var setCookie = controller.HttpContext.Response.Headers["Set-Cookie"].ToString();
+            Assert.Contains("1970", setCookie);
+        }
+
+        [Fact]
+        public void Refresh_CarriesAllowDuringImpersonationAttribute()
+        {
+            var method = typeof(SessionController).GetMethod(nameof(SessionController.Refresh))!;
 
             Assert.NotEmpty(method.GetCustomAttributes(typeof(AllowDuringImpersonationAttribute), inherit: false));
         }

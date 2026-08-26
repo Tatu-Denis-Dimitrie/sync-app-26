@@ -18,14 +18,19 @@ namespace SyncApp26.Tests.Controllers.Auth
         private readonly Mock<IEmailService> _emailServiceMock = new();
         private readonly Mock<IConfiguration> _configurationMock = new();
         private readonly AuthCookieOptions _authCookieOptions = new();
+        private readonly Mock<IRefreshTokenService> _refreshTokenServiceMock = new();
 
         private AuthenticationController CreateController()
         {
+            _refreshTokenServiceMock.Setup(s => s.IssueAsync(It.IsAny<Guid>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new IssuedRefreshToken { RawToken = "test-refresh-token", ExpiresAt = DateTime.UtcNow.AddHours(8) });
+
             var controller = new AuthenticationController(
                 _accountServiceMock.Object,
                 _emailServiceMock.Object,
                 _configurationMock.Object,
                 _authCookieOptions,
+                _refreshTokenServiceMock.Object,
                 NullLogger<AuthenticationController>.Instance);
 
             controller.SetAnonymousUser();

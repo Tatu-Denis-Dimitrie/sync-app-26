@@ -11,12 +11,17 @@ namespace SyncApp26.API.Controllers
     [Route("api/[controller]")]
     public class AuthenticationController : ControllerBase
     {
-        private static readonly TimeSpan SessionCookieLifetime = TimeSpan.FromHours(8);
+        // Just a hint to the browser - the JWT's own exp claim is what's actually enforced.
+        private static readonly TimeSpan AccessTokenCookieLifetime = TimeSpan.FromMinutes(15);
+
+        // The session's absolute cap - rotation never extends past what IssueAsync was given.
+        private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromHours(8);
 
         private readonly IAccountService _accountService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly AuthCookieOptions _authCookieOptions;
+        private readonly IRefreshTokenService _refreshTokenService;
         private readonly ILogger<AuthenticationController> _logger;
 
         public AuthenticationController(
@@ -24,12 +29,14 @@ namespace SyncApp26.API.Controllers
             IEmailService emailService,
             IConfiguration configuration,
             AuthCookieOptions authCookieOptions,
+            IRefreshTokenService refreshTokenService,
             ILogger<AuthenticationController> logger)
         {
             _accountService = accountService;
             _emailService = emailService;
             _configuration = configuration;
             _authCookieOptions = authCookieOptions;
+            _refreshTokenService = refreshTokenService;
             _logger = logger;
         }
 
@@ -112,7 +119,7 @@ namespace SyncApp26.API.Controllers
                 {
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid email or password." }),
                     LoginStatus.EmailNotVerified => Unauthorized(new { message = "Email is not verified. Please check your email for verification instructions." }),
-                    _ => LoginSuccess(result)
+                    _ => await LoginSuccess(result)
                 };
             }
             catch (Exception ex)
@@ -140,7 +147,7 @@ namespace SyncApp26.API.Controllers
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Google sign-in. Please try again." }),
                     LoginStatus.GoogleEmailNotVerified => Unauthorized(new { message = "Your Google account email is not verified. Verify it with Google and try again." }),
                     LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Google email. Contact an administrator." }),
-                    LoginStatus.Success => LoginSuccess(result),
+                    LoginStatus.Success => await LoginSuccess(result),
                     // Explicit Success so a new status can't fall through as a 200 with no token.
                     _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
@@ -169,7 +176,7 @@ namespace SyncApp26.API.Controllers
                 {
                     LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Microsoft sign-in. Please try again." }),
                     LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Microsoft email. Contact an administrator." }),
-                    LoginStatus.Success => LoginSuccess(result),
+                    LoginStatus.Success => await LoginSuccess(result),
                     // Explicit Success so a new status can't fall through as a 200 with no token.
                     _ => StatusCode(500, new { message = "An error occurred while processing your request." })
                 };
@@ -228,16 +235,19 @@ namespace SyncApp26.API.Controllers
             return Ok(new { message = "Password reset successfully." });
         }
 
-        // Shared by login/google-login/microsoft-login. The cookie is additive for now - the body
-        // still carries the token so the existing localStorage-based client keeps working untouched.
-        private IActionResult LoginSuccess(LoginResult result)
+        // Shared by login/google-login/microsoft-login. No XSRF-TOKEN cookie here - User is still
+        // anonymous at this point in the request, so a token minted now would bind to the wrong
+        // identity. SessionController.Me() issues it correctly on the client's next request.
+        private async Task<IActionResult> LoginSuccess(LoginResult result)
         {
-            Response.AppendAuthCookie(_authCookieOptions, result.Token!, SessionCookieLifetime);
+            Response.AppendAuthCookie(_authCookieOptions, result.Token!, AccessTokenCookieLifetime);
+
+            var refreshToken = await _refreshTokenService.IssueAsync(result.UserId, DateTime.UtcNow.Add(RefreshTokenLifetime));
+            Response.AppendRefreshCookie(_authCookieOptions, refreshToken.RawToken, refreshToken.ExpiresAt);
 
             return Ok(new
             {
                 message = "Login successful.",
-                token = result.Token,
                 user = new
                 {
                     id = result.UserId,

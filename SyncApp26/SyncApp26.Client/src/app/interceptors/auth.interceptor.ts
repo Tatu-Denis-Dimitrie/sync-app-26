@@ -1,11 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 
+// Session lives in an httpOnly cookie the browser attaches on its own; withCredentials just
+// tells XHR/fetch to send/accept cookies at all.
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    req = req.clone({
-      setHeaders: { Authorization: `Bearer ${token}` }
-    });
-  }
-  return next(req);
+  return next(req.clone({ withCredentials: true }));
 };

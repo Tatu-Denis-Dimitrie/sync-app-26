@@ -23,6 +23,10 @@ export class ForgotPasswordComponent {
   ) {}
 
   onSubmit(): void {
+    if (this.isLoading) {
+      return;
+    }
+
     if (!this.email) {
       this.errorMessage = 'Please enter your email address';
       return;
@@ -49,11 +53,5 @@ export class ForgotPasswordComponent {
         this.errorMessage = error.error?.message || 'Could not send password reset link. Please try again.';
       }
     });
-  }
-
-  onKeyPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.onSubmit();
-    }
   }
 }
