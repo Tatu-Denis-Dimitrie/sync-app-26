@@ -53,6 +53,66 @@ namespace SyncApp26.Tests.Controllers.Requests
             ResolvedAt = DateTime.UtcNow
         };
 
+        // ───────────────────────── Create: allowlist enforcement ─────────────────────────
+        // Generalizes the endpoint's old Email/Role-only stripping into a real allowlist check
+        // against the service's own AllowedFields, matching the mass-assignment fix there.
+
+        private static readonly string[] TestAllowedFields = { "FirstName", "Address" };
+
+        [Fact]
+        public async Task Create_DisallowedFieldOnly_ReturnsBadRequestNamingIt()
+        {
+            var controller = CreateController();
+            _serviceMock.SetupGet(s => s.AllowedFields).Returns(TestAllowedFields);
+            var dto = new CreateDataChangeRequestDTO { RequestedChangesJson = "{\"PasswordHash\":\"x\"}", Reason = "Attempted" };
+
+            var result = await controller.Create(dto);
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Contains("PasswordHash", GetProp<string>(badRequest.Value!, "message"));
+            _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Create_MixOfAllowedAndDisallowedFields_StripsDisallowedAndStillSucceeds()
+        {
+            var controller = CreateController();
+            _serviceMock.SetupGet(s => s.AllowedFields).Returns(TestAllowedFields);
+            CreateDataChangeRequestDTO? forwarded = null;
+            _serviceMock.Setup(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()))
+                .Callback<Guid, CreateDataChangeRequestDTO, string>((_, d, _) => forwarded = d)
+                .ReturnsAsync(new DataChangeRequestDTO { Id = Guid.NewGuid(), Status = "Pending" });
+            var dto = new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"FirstName\":\"New\",\"Role\":\"Admin\"}",
+                Reason = "Name changed legally"
+            };
+
+            var result = await controller.Create(dto);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(forwarded);
+            Assert.DoesNotContain("Role", forwarded!.RequestedChangesJson);
+            Assert.Contains("FirstName", forwarded.RequestedChangesJson);
+        }
+
+        [Fact]
+        public async Task Create_AllowedFieldsOnly_PassesThroughUnchanged()
+        {
+            var controller = CreateController();
+            _serviceMock.SetupGet(s => s.AllowedFields).Returns(TestAllowedFields);
+            _serviceMock.Setup(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()))
+                .ReturnsAsync(new DataChangeRequestDTO { Id = Guid.NewGuid(), Status = "Pending" });
+            var dto = new CreateDataChangeRequestDTO { RequestedChangesJson = "{\"FirstName\":\"New\"}", Reason = "Name changed legally" };
+
+            var result = await controller.Create(dto);
+
+            Assert.IsType<OkObjectResult>(result);
+            _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(),
+                It.Is<CreateDataChangeRequestDTO>(d => d.RequestedChangesJson.Contains("FirstName")),
+                It.IsAny<string>()), Times.Once);
+        }
+
         [Fact]
         public async Task Resolve_ApprovedAndEmailSucceeds_ReturnsOkWithNullEmailError()
         {
