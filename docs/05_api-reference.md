@@ -18,7 +18,20 @@ Base path: /api
 - 401: unauthenticated
 - 403: unauthorized
 - 404: not found
+- 429: rate limit exceeded
 - 500: server error
+
+## Rate limiting
+Two layers, both keyed by client IP:
+- **Global limiter**: 300 requests/minute/IP, applied to every request as a blanket ceiling.
+- **Named policies** (layered under the global limit, on top of it):
+	| Policy | Limit | Applied to |
+	|---|---|---|
+	| `login` | 5/min/IP | `POST /authentication/login` |
+	| `auth-sensitive` | 5/min/IP | `POST /authentication/register`, `GET /authentication/verify-email`, `POST /authentication/google-login`, `POST /authentication/microsoft-login`, `POST /authentication/forgot-password`, `POST /authentication/reset-password` |
+	| `signing-token` | 10/min/IP | `POST /documentsignature/request-signature`, `GET /documentsignature/validate-token/{token}`, `POST /documentsignature/consume-token` |
+
+A rejected request returns 429 with `{ "message": "Too many requests. Try again later." }`.
 
 ## Authentication (public)
 
@@ -208,6 +221,13 @@ Notes:
 - Admins see all users.
 - Non-admins see themselves and direct reports.
 
+### GET /user/lookup
+Query: search (optional), page (default 1), pageSize (default 20, max 100)
+Response (UserLookupPageDTO): { items: UserLookupResponseDTO[], totalCount }
+Notes:
+- Admins and SSM/SU officers search across all users.
+- Non-admins are scoped to the users they can otherwise access.
+
 ### GET /user/department/{departmentId}
 Response: UserGETResponseDTO[]
 
@@ -215,12 +235,23 @@ Response: UserGETResponseDTO[]
 Response: UserGETResponseDTO[]
 
 ### POST /user
+Role: Admin
 Request body (UserRequestDTO):
 - firstName, lastName, email (required)
 - departmentId (required)
 - function (optional)
 - assignedToId (optional)
 - roleName (optional)
+
+Response (UserResponseDTO):
+- success, message
+
+### PUT /user/{id}/roles
+Role: Admin
+Sets the user's full set of role assignments (replaces, not merges).
+
+Request body (SetUserRolesRequestDTO):
+- roleNames: string[] (required)
 
 Response (UserResponseDTO):
 - success, message
@@ -382,18 +413,31 @@ Response: 204 No Content
 Role: Admin
 Response: DataChangeRequestDTO[]
 
+### GET /datachangerequest/pending-count
+Role: Admin
+Response: { count }
+
 ### GET /datachangerequest/my-requests
 Response: DataChangeRequestDTO[]
 
 ### POST /datachangerequest
 Request body (CreateDataChangeRequestDTO):
-- requestedChangesJson (string, required)
+- requestedChangesJson (string, required) — keys are filtered against an allowlist (matching the UI's own field list); anything outside it returns 400 naming the disallowed field(s), or is silently stripped if at least one allowed field remains.
 - reason (string, required)
 
 Response: DataChangeRequestDTO
 
+### POST /datachangerequest/request-email-change
+Role: Basic User or Line Manager
+Dedicated flow for the one field the generic request above always excludes. Requires the new address to share the same domain as the user's current one; resolved by an admin like any other request.
+
+Request body (RequestEmailChangeDTO):
+- newEmail (string, required)
+
+Response: DataChangeRequestDTO, or 400 with an error message (e.g. domain mismatch)
+
 ### GET /datachangerequest/confirm-email
-Public, used when requests require email verification.
+Public. Dead scaffold from an earlier, abandoned design — not reachable from the current UI flow (email changes go through request-email-change + admin approval instead).
 Query:
 - reqId, token
 
@@ -412,7 +456,19 @@ Request body:
 - selectedUserIds[] (optional)
 
 Response:
-- message, generated, skipped
+- message, generated, skipped, generatedByType, emailsSent, emailsFailed, emailError
+
+### POST /document/bulk-generate-async
+Background variant of bulk-generate. Same request body.
+
+Response:
+- jobId, total
+
+### GET /document/bulk-generate-status/{jobId}
+Polls a job started by bulk-generate-async. 403 if the caller doesn't own the job.
+
+Response:
+- total, generated, skipped, processed, phase (generating | emailing | done), generatedByType, emailsSent, emailsFailed, emailError, emailsAborted, completed, message, error
 
 ### POST /document/generate
 Request body:
@@ -423,36 +479,52 @@ Response:
 - message, documentId
 
 ### GET /document/user/{userId}
-Response: DocumentView[]
+Query: page (default 1), pageSize (default 10, max 100)
+Response (DocumentListPageDTO): { items: DocumentView[], totalCount }
+Access: self, admin, SSM/SU officer, or the target user's line manager.
 
 ### GET /document/all
 Response: DocumentView[]
 Notes:
-- Admins see all.
-- Non-admins see own documents and direct reports.
+- Admins and SSM/SU officers see every document.
+- Everyone else sees own documents and direct reports.
 
 ### GET /document/my-pending-signatures
-Response: DocumentView[]
+Query: page, pageSize (as above)
+Response (DocumentListPageDTO)
 
 ### GET /document/manager-pending-signatures
-Response: DocumentView[]
+Query: page, pageSize (as above)
+Response (DocumentListPageDTO)
 
 ### GET /document/my-signed-documents
-Response: DocumentView[]
+Query: page, pageSize (as above)
+Response (DocumentListPageDTO)
 
 ### GET /document/manager-signed-documents
-Response: DocumentView[]
+Query: page, pageSize (as above)
+Response (DocumentListPageDTO)
+
+### GET /document/instructor-pending-signatures
+Query: page, pageSize (as above)
+Response (DocumentListPageDTO): documents awaiting the caller's SSM/SU officer signature.
+
+### GET /document/instructor-signed-documents
+Query: page, pageSize (as above)
+Response (DocumentListPageDTO)
 
 ### GET /document/admin-pending-signatures
 Role: Admin
 Response: DocumentView[]
+Legacy-only: returns rows still stuck in the `PendingAdmin` status from before the Instructor rename. No new document reaches this status.
 
 ### GET /document/admin-signed-documents
 Role: Admin
 Response: DocumentView[]
+Same legacy scope as above.
 
 ### POST /document/regenerate-documents
-Role: Admin
+Role: Admin or Line Manager
 Response: { message, regenerated }
 
 ### POST /document/backfill-signature-versions
@@ -474,7 +546,9 @@ DocumentView fields:
 - generatedAt, pdfFilePath, documentHash
 - userSignatureMethod, userSignatureData, userSignatureIpAddress, userSignedAt
 - managerSignatureMethod, managerSignatureData, managerSignatureIpAddress, managerSignedAt
-- adminSignatureMethod, adminSignatureData, adminSignatureIpAddress, adminSignedAt
+- instructorSignatureMethod, instructorSignatureData, instructorSignatureIpAddress, instructorSignedAt
+- adminSignatureMethod, adminSignatureData, adminSignatureIpAddress, adminSignedAt (legacy rows only)
+- userSignatureId, managerSignatureId, instructorSignatureId, adminSignatureId — ids of the current `SignatureRecord` behind each signature, for use with the verification endpoints below
 
 ## Document signatures
 
@@ -493,7 +567,8 @@ Response:
 - email
 - documentType
 - isManagerSigning
-- isAdminSigning
+- isInstructorSigning
+- isAdminSigning (legacy rows only)
 - periodicTrainingId
 
 ### POST /documentsignature/consume-token
@@ -509,7 +584,7 @@ Response:
 - count
 
 ### POST /documentsignature/bulk-sign
-Role: Admin or Line Manager
+Any authenticated user. Signs every document currently pending the caller's signature, in whatever role(s) apply to them (user/manager/instructor).
 Request body:
 - signatureMethod
 - signatureData
@@ -518,31 +593,23 @@ Response:
 - message, count
 
 ### POST /documentsignature/bulk-sign-async
-Role: Admin or Line Manager
+Role: SSM Officer, SU Officer, or Line Manager. Background variant scoped to the officer queue only (`PendingInstructor` documents of the given type) — it does not touch `PendingManager` documents. The caller must be the officer for the requested type.
 Request body:
 - signatureMethod
 - signatureData
+- documentType (SSM | SU, default SSM)
 
 Response:
 - jobId, total
 
 ### GET /documentsignature/bulk-sign-status/{jobId}
-Role: Admin or Line Manager
+Role: SSM Officer, SU Officer, or Line Manager. 403 if the caller doesn't own the job.
 Response:
 - total, signed, completed, error
 
-### POST /documentsignature/admin-sign-and-send-generated-documents
-Role: Admin
-Request body:
-- documentType (SSM | SU | Both)
-- signatureMethod
-- signatureData
-
-Response:
-- message, documentsSigned, emailsSent
-
 ### GET /documentsignature/pending-ssm-admin-count
-Role: Admin
+Role: SSM Officer, SU Officer, or Line Manager
+Query: documentType (SSM | SU, default SSM)
 Response:
 - count
 
@@ -565,6 +632,70 @@ Role: Admin
 Request body (NotificationRequestDTO)
 
 Response: { message }
+
+## Signature anomaly alerts (protected)
+Surfaces unexpected signature-verification failures (e.g. a document whose HMAC chain broke) for admin follow-up.
+
+### GET /signatureanomalyalert/unread
+Response: SignatureAnomalyAlert[]
+
+### POST /signatureanomalyalert/dismiss-all
+Marks every unread alert as dismissed for the caller.
+
+Response: { message }
+
+## Roles (protected)
+
+### GET /roles
+Role: Admin
+Response: Role[]
+
+### POST /roles
+Role: Admin
+Request body (CreateRoleRequestDTO):
+- name (required)
+
+Response: Role, or 400 if the name already exists
+
+### DELETE /roles/{id}
+Role: Admin
+Response: { message }, or 400 (e.g. attempting to delete a system role)
+
+## Work sites (protected)
+
+### GET /worksite/{id}
+Response: WorkSiteGETResponseDTO
+
+### GET /worksite
+Response: WorkSiteGETResponseDTO[]
+
+### GET /worksite/scheduled-for-deletion
+Role: Admin
+Response: WorkSiteGETResponseDTO[]
+
+### POST /worksite/{id}/restore
+Role: Admin
+Response: WorkSiteResponseDTO
+
+### POST /worksite
+Role: Admin
+Request body (WorkSiteRequestDTO):
+- name (required)
+- isActive (optional)
+
+Response: WorkSiteResponseDTO
+
+### PUT /worksite/{id}
+Role: Admin
+Request body (WorkSiteRequestDTO)
+
+Response: WorkSiteResponseDTO
+
+### DELETE /worksite/{id}
+Role: Admin
+Soft delete. Users assigned to the work site are unassigned (WorkSiteId set to null), not transferred — unlike Department, having no work site is a valid state.
+
+Response: WorkSiteResponseDTO
 
 ## Periodic training (protected)
 
@@ -682,7 +813,8 @@ Response:
 	- UploadProgress { message, percent }
 	- ComparisonResult (UserComparisonDTO)
 	- SyncProgress { processed, failed, skipped }
-	- SignatureUpdated (no payload)
+	- SignatureUpdated (no payload) — broadcast to all clients after any signature is recorded, so open dashboards can refresh.
+	- SignatureAnomalyAlert (payload describing the failed verification) — broadcast by the background `SignatureVerificationSweepService` when it finds a signature whose HMAC/chain no longer verifies.
 
 ## DTO location
 Shared request and response contracts are defined under SyncApp26/SyncApp26.Shared/DTOs.
@@ -705,16 +837,16 @@ Response:
 ```json
 {
 	"message": "Login successful.",
-	"token": "<jwt>",
 	"user": {
 		"id": "2d6511d7-27c4-4bcb-8c5f-9c01e86aa7c0",
 		"email": "alex.admin@example.com",
 		"firstName": "Alex",
 		"lastName": "Admin",
-		"role": "Admin"
+		"roles": ["Admin"]
 	}
 }
 ```
+The session is carried entirely by the `syncapp26_session`/`syncapp26_refresh` httpOnly cookies set on this response — there is no token in the body for the client to store.
 
 ### CSV upload and compare
 Request:
@@ -821,7 +953,6 @@ Request:
 ```http
 POST /api/document/generate
 Content-Type: application/json
-Authorization: Bearer <jwt>
 
 {
 	"userId": "4ed4e3a4-8c86-4c92-9b33-6a0f1c0798c1",

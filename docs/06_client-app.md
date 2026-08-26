@@ -11,10 +11,13 @@ The SyncApp26 client is an Angular 21 SPA that provides role-based access to HR 
 Key directories under SyncApp26.Client/src/app:
 
 Components (selected):
-- dashboard, departments, users-list, employees-detail
+- dashboard, departments, work-sites, users-list, employees-detail
 - ssm-su-form, import-history, comparison-view
 - login, register, forgot-password, reset-password
 - header, footer, loading-screen, pagination
+- access-restricted, basic-user, line-manager
+- bulk-initial-training-modal, bulk-training-modal
+- signature-status-badge
 
 Pages:
 - admin-signature
@@ -28,11 +31,17 @@ Services:
 - authentication.service.ts: login, logout, session hydration from GET /me
 - user-sync.service.ts: CSV user sync and local state
 - departments-sync.service.ts: department sync
+- work-site.service.ts: work site CRUD
 - user-sync.signalr.service.ts: SignalR connection and events
 - document-signature.service.ts: signing workflows
 - user-signature.service.ts: user signature CRUD
+- signature-verification.service.ts: signature verification-status lookups
+- signature-anomaly-alert.service.ts: unread anomaly alerts
 - data-change-request.service.ts: requests and approval
 - notification.service.ts: email notifications
+- role.service.ts: role CRUD and assignment
+- impersonation.service.ts: start/stop "view as" and impersonation banner state
+- loading.service.ts: shared loading-screen state
 - version.service.ts: API version display
 
 Guards and interceptors:
@@ -42,6 +51,7 @@ Guards and interceptors:
 - AuthGuard requires login
 - AdminGuard restricts admin routes
 - LineManagerGuard allows Line Manager or Admin
+- OfficerGuard allows SSM Officer or SU Officer
 
 ## Authentication and session
 - No token is ever held in JS. An app initializer calls GET /me before the router's first
@@ -64,10 +74,14 @@ flowchart LR
 	subgraph Admin
 		Dashboard[/dashboard/]
 		Departments[/departments/]
+		WorkSites[/work-sites/]
 		Users[/users/]
 		ImportHistory[/import-history/]
-		AdminSignature[/admin-signature/]
 		DataRequests[/data-requests/]
+	end
+
+	subgraph Officer
+		AdminSignature[/admin-signature/]
 	end
 
 	subgraph LineManager
@@ -91,6 +105,7 @@ Public routes:
 - /sign/:token
 
 Authenticated routes:
+- /loading (transitional screen shown while the session hydrates)
 - /basic-user
 - /line-manager
 - /access-restricted
@@ -98,11 +113,14 @@ Authenticated routes:
 Admin routes:
 - /dashboard
 - /departments
+- /work-sites
 - /users
 - /import-history
 - /test-signature
-- /admin-signature
 - /data-requests
+
+SSM/SU Officer routes:
+- /admin-signature (guarded by OfficerGuard, despite the name — a naming holdover from the pre-officer-role design)
 
 Line Manager routes:
 - /employees
@@ -117,6 +135,7 @@ Line Manager routes:
 	- ComparisonResult (UserComparison)
 	- SyncProgress { processed, failed, skipped }
 	- SignatureUpdated (no payload)
+	- SignatureAnomalyAlert (raised by the background verification sweep on a failed check)
 
 ## Error handling model
 - Services return Observables; components handle errors and display messages.

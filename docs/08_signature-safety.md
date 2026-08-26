@@ -29,17 +29,18 @@ Behavior:
 - Each save or revoke action writes an immutable history entry.
 
 ### Document signatures (UserDocument)
-Document signatures are captured per generated SSM/SU document and include the employee, line manager, and (for SSM) admin verification signatures.
+Document signatures are captured per generated SSM/SU document and include the employee, line manager, and instructor (the document type's SSM/SU officer) signatures. Both document types follow the same chain — there is no SSM/SU divergence in the status flow.
 
 Data stored per document:
 - UserSignatureMethod, UserSignatureData, UserSignatureIpAddress, UserSignedAt
 - ManagerSignatureMethod, ManagerSignatureData, ManagerSignatureIpAddress, ManagerSignedAt
-- AdminSignatureMethod, AdminSignatureData, AdminSignatureIpAddress, AdminSignedAt
-- UserCryptographicSignature, ManagerCryptographicSignature, AdminCryptographicSignature
+- InstructorSignatureMethod, InstructorSignatureData, InstructorSignatureIpAddress, InstructorSignedAt
+- AdminSignatureMethod, AdminSignatureData, AdminSignatureIpAddress, AdminSignedAt — legacy fields, populated only on rows created before the Instructor rename
+- UserCryptographicSignature, ManagerCryptographicSignature, InstructorCryptographicSignature, AdminCryptographicSignature (legacy)
 
 Each signature event updates the document status:
-- PendingUser -> PendingManager -> PendingAdmin -> Completed
-- For SU, PendingAdmin is skipped and the document completes after manager signature.
+- PendingUser -> PendingManager -> PendingInstructor -> Completed, identically for SSM and SU
+- PendingAdmin is a legacy-only status: no document reaches it under the current flow, but historical rows created before this design may still carry it
 
 ## Token-based signing safety
 SyncApp26 supports token-based signing for users without accounts or when direct sign links are required.
@@ -129,10 +130,10 @@ For document signatures, UserDocument and PeriodicTraining rows capture signatur
 Safety relies on role-aware access control and sequential signing rules:
 - Only the document owner can apply the employee signature.
 - Only the assigned line manager can countersign after the employee signature.
-- Admin verification is allowed only for SSM documents and only after employee and manager signatures.
-- Non-admin users are blocked from signing documents outside their reporting chain.
+- The instructor signature is allowed only after employee and manager signatures, and only for a caller holding the document type's officer role (SsmOfficer for SSM, SuOfficer for SU) — any employee's document, not limited to a reporting line. Admin has no signing role in this chain at all.
+- The trainee can never sign their own manager or instructor steps, even if they hold that role themselves for other employees' documents — someone else must fill those slots.
 
-These rules are enforced in the API controller before calling UpdateDocumentSignatureAsync.
+These rules are enforced in `DocumentSigningService` before a signature is recorded.
 
 ## Signature data storage
 Signature data is stored as base64 strings in:
@@ -171,7 +172,7 @@ If higher legal or compliance guarantees are required, consider:
 ## Verification checklist (QA)
 - Verify that user signatures create a history entry on every save and revoke.
 - Verify token expiry and single-use behavior.
-- Confirm signing order enforcement (user -> manager -> admin for SSM).
+- Confirm signing order enforcement (user -> manager -> instructor, identically for SSM and SU).
 - Confirm DocumentHash changes after signature and PDF regeneration.
 - Confirm signature metadata is captured on UserDocument and PeriodicTraining.
 - Confirm an older, superseded signature in a slot still verifies as Valid after the slot is re-signed and the training content is edited again (it must check against its own frozen snapshot, not live content).

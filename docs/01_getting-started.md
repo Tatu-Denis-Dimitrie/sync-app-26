@@ -52,7 +52,7 @@ If SMTP is not configured, registration still creates the user but email deliver
 ## CSV test data
 Sample files are available under sample-csvs/. CSV validation rules for user sync:
 - Required headers: PersonalId, FirstName, LastName, Email, DepartmentName
-- Optional headers: AssignedToPersonalId, Function
+- Optional headers: AssignedToPersonalId, Function, WorkSite
 - Files must be UTF-8 encoded
 
 ## Common issues

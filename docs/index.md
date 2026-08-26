@@ -1,7 +1,7 @@
 # SyncApp26 Documentation
 
-Version: 1.2.0
-Last updated: 2026-05-11
+Version: 1.31.0
+Last updated: 2026-08-26
 
 ## Scope
 This documentation covers architecture, configuration, data model, workflows, API reference, client behavior, and performance characteristics for SyncApp26. It is intended to support implementation, QA validation, and operational readiness.
@@ -21,18 +21,22 @@ SyncApp26 is an enterprise HR data synchronization and compliance document platf
 
 ## Key capabilities
 - CSV user and department synchronization with conflict resolution
-- Role-based access control (Admin, Line Manager, Basic User)
+- Role-based access control (Admin, Line Manager, Basic User, plus independently-grantable SSM/SU Officer roles)
 - SSM/SU document generation and multi-stage signatures
 - Initial and periodic training data management
 - Data change requests with admin review
+- Admin "view as" impersonation with audit logging
 - Real-time progress updates via SignalR
 
 ## Roles and access model
-- Admin: full system access, generates documents, signs SSM documents as final step, and manages approvals.
-- Line Manager: access to direct reports, can generate and countersign documents for assigned users.
+Five roles exist. A user's Admin/Line Manager/Basic User role and their SSM/SU Officer standing are granted independently — a person can hold any combination.
+- Admin: full system access, generates documents, resolves data-change requests, and manages roles.
+- Line Manager: access to direct reports; generates documents for assigned users and countersigns as the manager stage.
 - Basic User: access to own data and signature actions.
+- SSM Officer: signs the final ("Instructor") stage of SSM documents, for any employee's document, regardless of reporting line.
+- SU Officer: signs the final ("Instructor") stage of SU documents, for any employee's document, regardless of reporting line.
 
-Access is enforced via JWT role claims and server-side authorization checks.
+Admin has no signing role in the document chain itself — the final signature is always the type-specific officer's. Access is enforced via JWT role claims and server-side authorization checks.
 
 ## Document map
 - [01 Getting started](01_getting-started.md)

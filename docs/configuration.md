@@ -29,11 +29,27 @@ Key settings:
   - OAuth client ID used to validate Google Sign-In ID tokens server-side. Required only if Google sign-in is used; must match the googleClientId configured in the Angular client (see below).
 - Authentication:Microsoft:ClientId
   - Application (client) ID used to validate Microsoft Sign-In ID tokens server-side. Required only if Microsoft sign-in is used; must match the microsoftClientId configured in the Angular client (see below).
+- SignatureHmac:DevKey
+  - Dev-only HMAC key used to chain-sign `SignatureRecord` rows (see docs/08_signature-safety.md). Must be a long random value; do not reuse the example placeholder outside local dev.
+- Serilog
+  - Standard Serilog configuration section (MinimumLevel, Enrich, WriteTo). Ships with Console plus two rolling file sinks (`logs/syncapp-.log` for all levels, `logs/errors/error-.log` for Error and above), each capped at 10 MB/file with day-based rolling.
+- LogRetention:SweepIntervalMinutes, LogRetention:RetentionDays, LogRetention:Directories
+  - Drives the `LogFileRetentionService` background sweep that prunes old log files beyond what Serilog's own rolling limits remove. `Directories` lists each log folder with a `MaxFilesPerDay` cap.
+- AllowedHosts
+  - Standard ASP.NET Core host-header allowlist (`*` by default in the example template).
+
+Note: `Frontend:BaseUrl` and `Frontend:ResetPasswordUrl` are read by the code and documented above, but `appsettings.example.json` currently only ships `Frontend:LoginUrl` — add the other two yourself if you need signature-link or password-reset emails to point somewhere other than the code's hardcoded `localhost:4200` fallback.
 
 Operational guidance:
 - Do not commit real SMTP credentials or production JWT secrets.
 - Prefer environment variables or a secret store for production.
-- Update CORS origins in SyncApp26/SyncApp26.API/Program.cs to match deployed SPA URLs.
+- Update CORS origins in SyncApp26/SyncApp26.API/Program.cs to match deployed SPA URLs. `AllowCredentials()` is set alongside them, which is required for the session cookie to be sent cross-origin but also means origins cannot be wildcarded (`AllowAnyOrigin` is incompatible with `AllowCredentials`).
+
+## Rate limiting
+Configured in Program.cs via `AddRateLimiter`, all partitioned per client IP:
+- A global fixed-window limiter caps every request at 300/minute/IP.
+- Named policies layer tighter limits on top for specific endpoints: `login` (5/min), `auth-sensitive` (5/min), `signing-token` (10/min). See docs/05_api-reference.md for exactly which endpoints use each.
+- A rejected request gets HTTP 429 with a fixed JSON body, and the rejection is logged with the client IP and path.
 
 ## Client configuration (Angular)
 Environment files under SyncApp26/SyncApp26.Client/src/environments/:
