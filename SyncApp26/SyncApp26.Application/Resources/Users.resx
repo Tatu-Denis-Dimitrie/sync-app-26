@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="profile.firstName" xml:space="preserve">
+    <value>First Name</value>
+  </data>
+  <data name="profile.lastName" xml:space="preserve">
+    <value>Last Name</value>
+  </data>
+  <data name="profile.email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="profile.department" xml:space="preserve">
+    <value>Department</value>
+  </data>
+  <data name="profile.function" xml:space="preserve">
+    <value>Function</value>
+  </data>
+  <data name="profile.workSite" xml:space="preserve">
+    <value>Work Site</value>
+  </data>
+  <data name="profile.badgeNumber" xml:space="preserve">
+    <value>Badge Number</value>
+  </data>
+  <data name="profile.address" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="profile.dateOfBirth" xml:space="preserve">
+    <value>Date of Birth</value>
+  </data>
+  <data name="profile.bloodType" xml:space="preserve">
+    <value>Blood Type</value>
+  </data>
+  <data name="roles.admin" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="roles.lineManager" xml:space="preserve">
+    <value>Line Manager</value>
+  </data>
+  <data name="roles.basicUser" xml:space="preserve">
+    <value>Basic User</value>
+  </data>
+  <data name="roles.ssmOfficer" xml:space="preserve">
+    <value>SSM Officer</value>
+  </data>
+  <data name="roles.suOfficer" xml:space="preserve">
+    <value>SU Officer</value>
+  </data>
+  <data name="actions.editUser" xml:space="preserve">
+    <value>Edit User</value>
+  </data>
+  <data name="actions.deleteUser" xml:space="preserve">
+    <value>Delete User</value>
+  </data>
+  <data name="actions.createCustomRole" xml:space="preserve">
+    <value>Create a custom role</value>
+  </data>
+  <data name="filters.allDepartments" xml:space="preserve">
+    <value>All Departments</value>
+  </data>
+  <data name="filters.allRoles" xml:space="preserve">
+    <value>All Roles</value>
+  </data>
+  <data name="messages.userNotFound" xml:space="preserve">
+    <value>User not found</value>
+  </data>
+  <data name="messages.departmentNotFound" xml:space="preserve">
+    <value>Department not found</value>
+  </data>
+  <data name="messages.firstLastEmailRequired" xml:space="preserve">
+    <value>FirstName, LastName, and Email are required</value>
+  </data>
+  <data name="messages.invalidEmailFormat" xml:space="preserve">
+    <value>Invalid email format</value>
+  </data>
+  <data name="messages.cannotAssignSelf" xml:space="preserve">
+    <value>User cannot be assigned to themselves</value>
+  </data>
+</root>

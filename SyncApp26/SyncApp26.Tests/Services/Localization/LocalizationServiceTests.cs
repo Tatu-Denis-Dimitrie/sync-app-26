@@ -1,6 +1,8 @@
 using System.Resources;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Enums;
@@ -104,6 +106,21 @@ namespace SyncApp26.Tests.Services.Localization
             var service = CreateService(BuildConfiguration(Array.Empty<string>(), "En"));
 
             Assert.Equal(Language.En, service.ResolveLanguage("en"));
+        }
+
+        [Fact]
+        public void GetTranslations_RealResxFilesOnDisk_LoadEnglishContent()
+        {
+            var factory = new ResourceManagerStringLocalizerFactory(
+                Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
+                NullLoggerFactory.Instance);
+            var service = new LocalizationService(factory, BuildConfiguration());
+
+            var result = service.GetTranslations(Language.En);
+
+            Assert.Equal("Sign In", result[LocalizationScopes.Auth]["login.submit"]);
+            Assert.Equal("Save", result[LocalizationScopes.Common]["buttons.save"]);
+            Assert.Equal("User not found", result[LocalizationScopes.Users]["messages.userNotFound"]);
         }
     }
 }
