@@ -548,4 +548,73 @@
   <data name="api.signatureRevokedAuditPreserved" xml:space="preserve">
     <value>Signature revoked. The audit trail has been preserved.</value>
   </data>
+  <data name="actions.generateDocument" xml:space="preserve">
+    <value>Generate Document</value>
+  </data>
+  <data name="messages.generatingEllipsis" xml:space="preserve">
+    <value>Generating...</value>
+  </data>
+  <data name="history.title" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="history.loading" xml:space="preserve">
+    <value>Loading signature history...</value>
+  </data>
+  <data name="history.loadError" xml:space="preserve">
+    <value>Failed to load signature history for this session.</value>
+  </data>
+  <data name="history.noneRecorded" xml:space="preserve">
+    <value>No signatures recorded for this session.</value>
+  </data>
+  <data name="history.table.role" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="history.table.signer" xml:space="preserve">
+    <value>Signer</value>
+  </data>
+  <data name="history.table.signedAt" xml:space="preserve">
+    <value>Signed At</value>
+  </data>
+  <data name="history.table.schema" xml:space="preserve">
+    <value>Schema</value>
+  </data>
+  <data name="history.mostRecent" xml:space="preserve">
+    <value>most recent</value>
+  </data>
+  <data name="messages.noPeriodicTrainingsRecorded" xml:space="preserve">
+    <value>No periodic trainings recorded.</value>
+  </data>
+  <data name="printExclusion.excludedTag" xml:space="preserve">
+    <value>Excluded from print</value>
+  </data>
+  <data name="printExclusion.exclude" xml:space="preserve">
+    <value>Exclude from print</value>
+  </data>
+  <data name="printExclusion.include" xml:space="preserve">
+    <value>Include in print</value>
+  </data>
+  <data name="printExclusion.confirmExclude" xml:space="preserve">
+    <value>Exclude this training row from every printed document? It will stay in the system but disappear from PDFs and printouts.</value>
+  </data>
+  <data name="printExclusion.confirmInclude" xml:space="preserve">
+    <value>Include this training row in printed documents again?</value>
+  </data>
+  <data name="printExclusion.updateFailed" xml:space="preserve">
+    <value>Failed to update print exclusion.</value>
+  </data>
+  <data name="form.savedSuccessfully" xml:space="preserve">
+    <value>Form saved successfully!</value>
+  </data>
+  <data name="form.saveError" xml:space="preserve">
+    <value>Error saving form. Please try again.</value>
+  </data>
+  <data name="form.generateConfirm" xml:space="preserve">
+    <value>Are you sure you want to generate the {0} document and request signatures? Make sure all data is saved first.</value>
+  </data>
+  <data name="form.generateSuccess" xml:space="preserve">
+    <value>{0} Document generated successfully! An email signature request has been sent to the user.</value>
+  </data>
+  <data name="form.generateError" xml:space="preserve">
+    <value>Error generating document. Please try again.</value>
+  </data>
 </root>

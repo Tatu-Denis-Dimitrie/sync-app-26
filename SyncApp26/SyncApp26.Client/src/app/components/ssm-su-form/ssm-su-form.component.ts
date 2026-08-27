@@ -10,6 +10,8 @@ import { SignatureVerificationService, SignatureVersionSummary, PeriodicTraining
 import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
 import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 import { BloodType, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface InitialTrainingEntry {
   documentType: string;
@@ -62,7 +64,7 @@ interface UserSSMSUForm {
 @Component({
   selector: 'app-ssm-su-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, SignatureStatusBadgeComponent],
+  imports: [CommonModule, FormsModule, SignatureStatusBadgeComponent, TranslatePipe],
   templateUrl: './ssm-su-form.component.html',
   styleUrl: './ssm-su-form.component.css'
 })
@@ -133,8 +135,26 @@ export class SsmSuFormComponent implements OnInit {
     private http: HttpClient,
     private sanitizer: DomSanitizer,
     private authService: AuthenticationService,
-    private signatureVerificationService: SignatureVerificationService
+    private signatureVerificationService: SignatureVerificationService,
+    private translationService: TranslationService
   ) {}
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
+
+
+  tTemplate(key: string): string {
+    return this.translationService.translate('DocumentTemplate', key);
+  }
+
+  documentTypeFileLabel(type: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeFile', type);
+  }
+
+  commuteMinutesLabel(minutes: number | null): string {
+    return minutes ? this.translationService.translate('DocumentTemplate', 'general.commuteMinutes', minutes) : '';
+  }
 
   ngOnInit() {
     this.userId = this.route.snapshot.paramMap.get('id') || '';
@@ -228,7 +248,7 @@ export class SsmSuFormComponent implements OnInit {
         this.historyLoadingId = null;
       },
       error: () => {
-        this.historyErrorByTrainingId.set(t.id, 'Failed to load signature history for this session.');
+        this.historyErrorByTrainingId.set(t.id, this.tDocuments('history.loadError'));
         this.historyLoadingId = null;
       }
     });
@@ -272,14 +292,14 @@ export class SsmSuFormComponent implements OnInit {
   togglePrintExclusion(t: any): void {
     const excluding = !this.isExcludedFromPrint(t);
     const confirmMessage = excluding
-      ? 'Exclude this training row from every printed document? It will stay in the system but disappear from PDFs and printouts.'
-      : 'Include this training row in printed documents again?';
+      ? this.tDocuments('printExclusion.confirmExclude')
+      : this.tDocuments('printExclusion.confirmInclude');
     if (!confirm(confirmMessage)) return;
 
     this.http.patch<any>(`${environment.apiUrl}/PeriodicTraining/${t.id}/print-exclusion`, { excluded: excluding })
       .subscribe({
         next: (updated) => { t.excludedFromPrintAt = updated.excludedFromPrintAt; },
-        error: (err) => { alert(err.error?.message || 'Failed to update print exclusion.'); }
+        error: (err) => { alert(err.error?.message || this.tDocuments('printExclusion.updateFailed')); }
       });
   }
 
@@ -399,12 +419,12 @@ export class SsmSuFormComponent implements OnInit {
           this.saving = false;
           this.editMode = false;
           this.loadUserForm(); // Reload to get updated data
-          alert('Form saved successfully!');
+          alert(this.tDocuments('form.savedSuccessfully'));
         },
         error: (err) => {
           console.error('Error saving form:', err);
           this.saving = false;
-          alert('Error saving form. Please try again.');
+          alert(this.tDocuments('form.saveError'));
         }
       });
   }
@@ -414,7 +434,7 @@ export class SsmSuFormComponent implements OnInit {
 
     const type = this.selectedTab === 'ssm' ? 'SSM' : 'SU';
 
-    if (confirm(`Are you sure you want to generate the ${type} document and request signatures? Make sure all data is saved first.`)) {
+    if (confirm(this.translationService.translate('Documents', 'form.generateConfirm', type))) {
       this.generatingDoc = true;
       this.http.post(`${environment.apiUrl}/Document/generate`, {
         userId: this.userId,
@@ -422,12 +442,12 @@ export class SsmSuFormComponent implements OnInit {
       }).subscribe({
         next: () => {
           this.generatingDoc = false;
-          alert(`${type} Document generated successfully! An email signature request has been sent to the user.`);
+          alert(this.translationService.translate('Documents', 'form.generateSuccess', type));
         },
         error: (err) => {
           console.error('Error generating document:', err);
           this.generatingDoc = false;
-          alert('Error generating document. Please try again.');
+          alert(this.tDocuments('form.generateError'));
         }
       });
     }

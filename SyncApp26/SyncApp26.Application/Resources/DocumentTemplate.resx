@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="formTitle.ssm" xml:space="preserve">
+    <value>OCCUPATIONAL HEALTH AND SAFETY RECORD</value>
+  </data>
+  <data name="formTitle.su" xml:space="preserve">
+    <value>FIRE SAFETY BRIEFING RECORD (SU)</value>
+  </data>
+  <data name="section.generalData" xml:space="preserve">
+    <value>GENERAL DATA</value>
+  </data>
+  <data name="section.trainingAtHiring.ssm" xml:space="preserve">
+    <value>TRAINING AT HIRING</value>
+  </data>
+  <data name="section.trainingAtHiring.su" xml:space="preserve">
+    <value>BRIEFING AT HIRING</value>
+  </data>
+  <data name="section.periodicTraining.ssm" xml:space="preserve">
+    <value>3. PERIODIC TRAINING</value>
+  </data>
+  <data name="section.periodicTraining.su" xml:space="preserve">
+    <value>PERIODIC BRIEFING</value>
+  </data>
+  <data name="cover.unit" xml:space="preserve">
+    <value>Company:</value>
+  </data>
+  <data name="cover.fullName" xml:space="preserve">
+    <value>Full name:</value>
+  </data>
+  <data name="cover.address" xml:space="preserve">
+    <value>Home address:</value>
+  </data>
+  <data name="cover.bloodType" xml:space="preserve">
+    <value>Blood type:</value>
+  </data>
+  <data name="cover.badge" xml:space="preserve">
+    <value>ID card / Badge:</value>
+  </data>
+  <data name="cover.workplace" xml:space="preserve">
+    <value>Workplace:</value>
+  </data>
+  <data name="cover.badgeShort" xml:space="preserve">
+    <value>Badge:</value>
+  </data>
+  <data name="cover.generatedOn" xml:space="preserve">
+    <value>Document generated: {0}</value>
+  </data>
+  <data name="general.nameSurname" xml:space="preserve">
+    <value>Name, surname:</value>
+  </data>
+  <data name="general.birthDatePlace" xml:space="preserve">
+    <value>Date and place of birth:</value>
+  </data>
+  <data name="general.qualification" xml:space="preserve">
+    <value>Qualification:</value>
+  </data>
+  <data name="general.education" xml:space="preserve">
+    <value>Education:</value>
+  </data>
+  <data name="general.qualificationTrade" xml:space="preserve">
+    <value>Qualification (specialty, trade):</value>
+  </data>
+  <data name="general.position" xml:space="preserve">
+    <value>Position:</value>
+  </data>
+  <data name="general.workplace" xml:space="preserve">
+    <value>Workplace:</value>
+  </data>
+  <data name="general.authorizations" xml:space="preserve">
+    <value>Authorizations (ISCIR etc.):</value>
+  </data>
+  <data name="general.commute" xml:space="preserve">
+    <value>Commute route and travel time to/from work:</value>
+  </data>
+  <data name="general.commuteMinutes" xml:space="preserve">
+    <value> ({0} min)</value>
+  </data>
+  <data name="initial.item1.ssm" xml:space="preserve">
+    <value>1. General introductory training</value>
+  </data>
+  <data name="initial.item1.su" xml:space="preserve">
+    <value>1. General introductory briefing</value>
+  </data>
+  <data name="initial.item2.ssm" xml:space="preserve">
+    <value>2. Workplace training</value>
+  </data>
+  <data name="initial.item2.su" xml:space="preserve">
+    <value>2. Workplace briefing</value>
+  </data>
+  <data name="initial.admittedToWork" xml:space="preserve">
+    <value>3. Admitted to work</value>
+  </data>
+  <data name="initial.performedOn" xml:space="preserve">
+    <value>was carried out on </value>
+  </data>
+  <data name="initial.forDuration" xml:space="preserve">
+    <value> for </value>
+  </data>
+  <data name="initial.hoursBy" xml:space="preserve">
+    <value> hours by </value>
+  </data>
+  <data name="initial.hoursByComma" xml:space="preserve">
+    <value> hours, by </value>
+  </data>
+  <data name="initial.holdingPosition" xml:space="preserve">
+    <value> holding the position of </value>
+  </data>
+  <data name="initial.atWorkstation" xml:space="preserve">
+    <value> at workstation/work post </value>
+  </data>
+  <data name="initial.trainingContent" xml:space="preserve">
+    <value>Training content:</value>
+  </data>
+  <data name="initial.briefingContent" xml:space="preserve">
+    <value>Briefing content:</value>
+  </data>
+  <data name="initial.forWorkplace" xml:space="preserve">
+    <value> for the workplace </value>
+  </data>
+  <data name="initial.specialtyTrade" xml:space="preserve">
+    <value>specialty (trade) </value>
+  </data>
+  <data name="admitted.fullName" xml:space="preserve">
+    <value>Full name:</value>
+  </data>
+  <data name="admitted.function" xml:space="preserve">
+    <value>Position (section / workshop / site manager):</value>
+  </data>
+  <data name="admitted.date" xml:space="preserve">
+    <value>Date:</value>
+  </data>
+  <data name="signature.label" xml:space="preserve">
+    <value>Signature:</value>
+  </data>
+  <data name="signature.trainee.ssm" xml:space="preserve">
+    <value>Signature of the person trained:</value>
+  </data>
+  <data name="signature.trainee.su" xml:space="preserve">
+    <value>Signature of the person briefed:</value>
+  </data>
+  <data name="signature.trainer" xml:space="preserve">
+    <value>Signature of the person who conducted the training:</value>
+  </data>
+  <data name="signature.verifier" xml:space="preserve">
+    <value>Signature of the person who verified comprehension:</value>
+  </data>
+  <data name="signature.digitallySignedBy" xml:space="preserve">
+    <value>Digitally signed by {0}</value>
+  </data>
+  <data name="signature.dateLabel" xml:space="preserve">
+    <value>Date: {0}</value>
+  </data>
+  <data name="periodic.nr" xml:space="preserve">
+    <value>No.</value>
+  </data>
+  <data name="periodic.date" xml:space="preserve">
+    <value>Training date</value>
+  </data>
+  <data name="periodic.duration" xml:space="preserve">
+    <value>Duration (h)</value>
+  </data>
+  <data name="periodic.occupation" xml:space="preserve">
+    <value>Occupation</value>
+  </data>
+  <data name="periodic.specialty" xml:space="preserve">
+    <value>Specialty</value>
+  </data>
+  <data name="periodic.material" xml:space="preserve">
+    <value>Material taught</value>
+  </data>
+  <data name="periodic.sigTrainee" xml:space="preserve">
+    <value>Trainee
+signature</value>
+  </data>
+  <data name="periodic.sigTrainer" xml:space="preserve">
+    <value>Trainer
+signature</value>
+  </data>
+  <data name="periodic.sigVerifier" xml:space="preserve">
+    <value>Verifier
+signature</value>
+  </data>
+  <data name="footer.pagePrefix" xml:space="preserve">
+    <value>Page </value>
+  </data>
+  <data name="screen.signatures" xml:space="preserve">
+    <value>Signatures:</value>
+  </data>
+  <data name="screen.sigLineTrainee.ssm" xml:space="preserve">
+    <value>• of the person trained: ________________</value>
+  </data>
+  <data name="screen.sigLineTrainee.su" xml:space="preserve">
+    <value>• of the person briefed: ________________</value>
+  </data>
+  <data name="screen.sigLineTrainer" xml:space="preserve">
+    <value>• of the person who conducted the training: ________________</value>
+  </data>
+  <data name="screen.sigLineVerifier" xml:space="preserve">
+    <value>• of the person who verified comprehension: ________________</value>
+  </data>
+  <data name="screen.sigLineVerifierEmployee" xml:space="preserve">
+    <value>• of the employee who verified comprehension: ________________</value>
+  </data>
+  <data name="screen.sigLineVerifierEmployeeKnowledge" xml:space="preserve">
+    <value>• of the employee who verified knowledge comprehension: ________________</value>
+  </data>
+  <data name="screen.dateAndSignature" xml:space="preserve">
+    <value>Date and signature:</value>
+  </data>
+  <data name="screen.periodic.dateShort" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="screen.periodic.sigTraineeEmployee" xml:space="preserve">
+    <value>Trainee signature (employee)</value>
+  </data>
+  <data name="screen.periodic.sigTrainerManager" xml:space="preserve">
+    <value>Trainer signature (manager)</value>
+  </data>
+  <data name="screen.periodic.sigVerifierAdmin" xml:space="preserve">
+    <value>Verifier signature (admin)</value>
+  </data>
+  <data name="screen.defaultManagerFunction" xml:space="preserve">
+    <value>Manager</value>
+  </data>
+  <data name="screen.defaultTechnicalOfficer" xml:space="preserve">
+    <value>Technical officer</value>
+  </data>
+  <data name="placeholder.address" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="placeholder.badge" xml:space="preserve">
+    <value>Badge</value>
+  </data>
+  <data name="placeholder.birthPlace" xml:space="preserve">
+    <value>Place of birth</value>
+  </data>
+  <data name="placeholder.qualification" xml:space="preserve">
+    <value>Qualification</value>
+  </data>
+  <data name="placeholder.authorizations" xml:space="preserve">
+    <value>Authorizations</value>
+  </data>
+  <data name="placeholder.route" xml:space="preserve">
+    <value>Route</value>
+  </data>
+  <data name="placeholder.minutes" xml:space="preserve">
+    <value>Minutes</value>
+  </data>
+  <data name="placeholder.instructorName" xml:space="preserve">
+    <value>Instructor name</value>
+  </data>
+  <data name="placeholder.instructorFunction" xml:space="preserve">
+    <value>Instructor position</value>
+  </data>
+  <data name="placeholder.trainingContent" xml:space="preserve">
+    <value>Describe the training content...</value>
+  </data>
+  <data name="placeholder.briefingContent" xml:space="preserve">
+    <value>Describe the briefing content...</value>
+  </data>
+  <data name="placeholder.workplace" xml:space="preserve">
+    <value>Workplace</value>
+  </data>
+  <data name="placeholder.fullName" xml:space="preserve">
+    <value>Full name</value>
+  </data>
+  <data name="placeholder.function" xml:space="preserve">
+    <value>Position</value>
+  </data>
+  <data name="placeholder.education" xml:space="preserve">
+    <value>Education</value>
+  </data>
+  <data name="placeholder.select" xml:space="preserve">
+    <value>-- Select --</value>
+  </data>
+</root>

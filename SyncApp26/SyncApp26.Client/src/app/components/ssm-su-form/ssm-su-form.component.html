@@ -1,6 +1,6 @@
 <div class="container">
   @if (loading) {
-    <div class="loading">Loading...</div>
+    <div class="loading">{{ 'status.loading' | translate:'Common' }}</div>
   }
 
   @if (!loading && userForm) {
@@ -12,14 +12,14 @@
           (click)="selectedTab = 'ssm'"
           class="tab-button"
           >
-          SSM File
+          {{ documentTypeFileLabel('SSM') }}
         </button>
         <button
           [class.active]="selectedTab === 'su'"
           (click)="selectedTab = 'su'"
           class="tab-button"
           >
-          SU File
+          {{ documentTypeFileLabel('SU') }}
         </button>
         <div class="button-group">
           @if (!editMode && !isAdmin) {
@@ -43,7 +43,7 @@
                   ></path>
                 </svg>
               }
-              {{ generatingDoc ? "Generating..." : "Generate Document" }}
+              {{ generatingDoc ? tDocuments('messages.generatingEllipsis') : tDocuments('actions.generateDocument') }}
             </button>
           }
           @if (!editMode) {
@@ -64,7 +64,7 @@
                   d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                 ></path>
               </svg>
-              Edit
+              {{ 'buttons.edit' | translate:'Common' }}
             </button>
           }
           @if (editMode) {
@@ -86,7 +86,7 @@
                   d="M5 13l4 4L19 7"
                 ></path>
               </svg>
-              {{ saving ? "Saving..." : "Save" }}
+              {{ saving ? ('buttons.saving' | translate:'Common') : ('buttons.save' | translate:'Common') }}
             </button>
           }
           @if (!editMode) {
@@ -104,7 +104,7 @@
                   d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
                 ></path>
               </svg>
-              Print
+              {{ 'buttons.print' | translate:'Common' }}
             </button>
           }
           @if (editMode) {
@@ -126,7 +126,7 @@
                   d="M6 18L18 6M6 6l12 12"
                 ></path>
               </svg>
-              Cancel
+              {{ 'buttons.cancel' | translate:'Common' }}
             </button>
           }
           <button (click)="goBack()" class="back-button">
@@ -143,7 +143,7 @@
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               ></path>
             </svg>
-            Back
+            {{ 'buttons.back' | translate:'Common' }}
           </button>
         </div>
       </div>
@@ -152,16 +152,16 @@
         <div class="form-content">
           <!-- Coperta SSM -->
           <div class="cover-page">
-            <h1>FIȘA DE SECURITATE ȘI SĂNĂTATE ÎN MUNCĂ</h1>
+            <h1>{{ 'formTitle.ssm' | translate:'DocumentTemplate' }}</h1>
             <div class="cover-info">
               <p>
-                <strong>Unitatea:</strong> {{ userForm.workSiteName || "N/A" }}
+                <strong>{{ 'cover.unit' | translate:'DocumentTemplate' }}</strong> {{ userForm.workSiteName || ('labels.notAvailable' | translate:'Common') }}
               </p>
-              <p><strong>Numele și prenumele:</strong> {{ getFullName() }}</p>
+              <p><strong>{{ 'cover.fullName' | translate:'DocumentTemplate' }}</strong> {{ getFullName() }}</p>
               <p>
-                <strong>Domiciliul:</strong>
+                <strong>{{ 'cover.address' | translate:'DocumentTemplate' }}</strong>
                 @if (!editMode) {
-                  <span>{{ formData.address || "N/A" }}</span>
+                  <span>{{ formData.address || ('labels.notAvailable' | translate:'Common') }}</span>
                 }
                 @if (editMode) {
                   <input
@@ -169,18 +169,18 @@
                     [(ngModel)]="formData.address"
                     maxlength="100"
                     class="edit-input"
-                    placeholder="Adresa"
+                    placeholder="{{ 'placeholder.address' | translate:'DocumentTemplate' }}"
                     />
                 }
               </p>
               <p>
-                <strong>Grupa sanguină:</strong>
+                <strong>{{ 'cover.bloodType' | translate:'DocumentTemplate' }}</strong>
                 @if (!editMode) {
-                  <span>{{ formData.bloodType ? bloodTypeLabels[formData.bloodType] : "N/A" }}</span>
+                  <span>{{ formData.bloodType ? bloodTypeLabels[formData.bloodType] : ('labels.notAvailable' | translate:'Common') }}</span>
                 }
                 @if (editMode) {
                   <select [(ngModel)]="formData.bloodType" class="edit-input-small">
-                    <option value="">-- Select --</option>
+                    <option value="">{{ 'placeholder.select' | translate:'DocumentTemplate' }}</option>
                     @for (opt of bloodTypeOptions; track opt.value) {
                       <option [value]="opt.value">{{ opt.label }}</option>
                     }
@@ -188,9 +188,9 @@
                 }
               </p>
               <p>
-                <strong>Legitimația/Marca:</strong>
+                <strong>{{ 'cover.badge' | translate:'DocumentTemplate' }}</strong>
                 @if (!editMode) {
-                  <span>{{ formData.badgeNumber || "N/A" }}</span>
+                  <span>{{ formData.badgeNumber || ('labels.notAvailable' | translate:'Common') }}</span>
                 }
                 @if (editMode) {
                   <input
@@ -198,7 +198,7 @@
                     [(ngModel)]="formData.badgeNumber"
                     maxlength="32"
                     class="edit-input-small"
-                    placeholder="Marca"
+                    placeholder="{{ 'placeholder.badge' | translate:'DocumentTemplate' }}"
                     />
                 }
               </p>
@@ -206,11 +206,11 @@
           </div>
           <!-- Pagina 1 SSM -->
           <div class="page">
-            <h2>Date Generale</h2>
+            <h2>{{ 'section.generalData' | translate:'DocumentTemplate' }}</h2>
             <div class="section">
-              <p><strong>Nume, prenume:</strong> {{ getFullName() }}</p>
+              <p><strong>{{ 'general.nameSurname' | translate:'DocumentTemplate' }}</strong> {{ getFullName() }}</p>
               <p>
-                <strong>Data și locul nașterii:</strong>
+                <strong>{{ 'general.birthDatePlace' | translate:'DocumentTemplate' }}</strong>
                 @if (!editMode) {
                   <span>
                     {{ formatDate(formData.dateOfBirth)
@@ -228,35 +228,35 @@
                         type="text"
                         [(ngModel)]="formData.placeOfBirth"
                         class="edit-input"
-                        placeholder="Locul nașterii"
+                        placeholder="{{ 'placeholder.birthPlace' | translate:'DocumentTemplate' }}"
                         />
                       </span>
                     }
                   </p>
                   <p>
-                    <strong>Calificarea:</strong>
+                    <strong>{{ 'general.qualification' | translate:'DocumentTemplate' }}</strong>
                     @if (!editMode) {
-                      <span>{{ formData.education || "N/A" }}</span>
+                      <span>{{ formData.education || ('labels.notAvailable' | translate:'Common') }}</span>
                     }
                     @if (editMode) {
                       <input
                         type="text"
                         [(ngModel)]="formData.education"
                         class="edit-input"
-                        placeholder="Calificarea"
+                        placeholder="{{ 'placeholder.qualification' | translate:'DocumentTemplate' }}"
                         />
                     }
                   </p>
-                  <p><strong>Funcția:</strong> {{ userForm.functionName || "N/A" }}</p>
+                  <p><strong>{{ 'general.position' | translate:'DocumentTemplate' }}</strong> {{ userForm.functionName || ('labels.notAvailable' | translate:'Common') }}</p>
                   <p>
-                    <strong>Locul de muncă:</strong>
-                    {{ userForm.workSiteName || "N/A" }}
+                    <strong>{{ 'general.workplace' | translate:'DocumentTemplate' }}</strong>
+                    {{ userForm.workSiteName || ('labels.notAvailable' | translate:'Common') }}
                   </p>
                   <p>
-                    <strong>Autorizații:</strong>
+                    <strong>{{ 'general.authorizations' | translate:'DocumentTemplate' }}</strong>
                     @if (!editMode) {
                       <span>{{
-                        formData.qualifications || "N/A"
+                        formData.qualifications || ('labels.notAvailable' | translate:'Common')
                       }}</span>
                     }
                     @if (editMode) {
@@ -264,20 +264,16 @@
                         type="text"
                         [(ngModel)]="formData.qualifications"
                         class="edit-input"
-                        placeholder="Autorizații"
+                        placeholder="{{ 'placeholder.authorizations' | translate:'DocumentTemplate' }}"
                         />
                     }
                   </p>
                   <p>
-                    <strong>Traseul și durata de deplasare:</strong>
+                    <strong>{{ 'general.commute' | translate:'DocumentTemplate' }}</strong>
                     @if (!editMode) {
                       <span>
-                        {{ formData.commuteRoute || "N/A" }}
-                        {{
-                        formData.commuteDurationMinutes
-                        ? " (" + formData.commuteDurationMinutes + " min)"
-                        : ""
-                        }}
+                        {{ formData.commuteRoute || ('labels.notAvailable' | translate:'Common') }}
+                        {{ commuteMinutesLabel(formData.commuteDurationMinutes) }}
                       </span>
                     }
                     @if (editMode) {
@@ -286,23 +282,23 @@
                           type="text"
                           [(ngModel)]="formData.commuteRoute"
                           class="edit-input"
-                          placeholder="Traseu"
+                          placeholder="{{ 'placeholder.route' | translate:'DocumentTemplate' }}"
                           />
                           <input
                             type="number"
                             [(ngModel)]="formData.commuteDurationMinutes"
                             class="edit-input-small"
-                            placeholder="Minute"
+                            placeholder="{{ 'placeholder.minutes' | translate:'DocumentTemplate' }}"
                             />
                           </span>
                         }
                       </p>
                     </div>
-                    <h3>Instruire la angajare</h3>
+                    <h3>{{ 'section.trainingAtHiring.ssm' | translate:'DocumentTemplate' }}</h3>
                     <div class="section instruction-section">
-                      <h4>1. Instruirea introductiv generală</h4>
+                      <h4>{{ 'initial.item1.ssm' | translate:'DocumentTemplate' }}</h4>
                       <p>
-                        a fost efectuată la data
+                        {{ 'initial.performedOn' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formatDate(formData.ssmTraining.introductoryTrainingDate) ||
@@ -318,7 +314,7 @@
                         }
                       </p>
                       <p>
-                        timp de
+                        {{ 'initial.forDuration' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.ssmTraining.introductoryTrainingHours || "8"
@@ -332,7 +328,7 @@
                             style="width: 60px"
                             />
                         }
-                        ore de către
+                        {{ 'initial.hoursBy' | translate:'DocumentTemplate' }}
                       </p>
                       <p>
                         @if (!editMode) {
@@ -346,18 +342,18 @@
                             type="text"
                             [(ngModel)]="formData.ssmTraining.introductoryTrainingInstructor"
                             class="edit-input"
-                            placeholder="Numele instructorului"
+                            placeholder="{{ 'placeholder.instructorName' | translate:'DocumentTemplate' }}"
                             maxlength="100"
                             />
                         }
                       </p>
                       <p>
-                        având funcția de
+                        {{ 'initial.holdingPosition' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.ssmTraining.introductoryTrainingInstructorFunction ||
                             userForm.managerFunctionName ||
-                            "Manager"
+                            ('screen.defaultManagerFunction' | translate:'DocumentTemplate')
                           }}</span>
                         }
                         @if (editMode) {
@@ -367,12 +363,12 @@
                 formData.ssmTraining.introductoryTrainingInstructorFunction
               "
                             class="edit-input"
-                            placeholder="Funcția instructorului"
+                            placeholder="{{ 'placeholder.instructorFunction' | translate:'DocumentTemplate' }}"
                             maxlength="100"
                             />
                         }
                       </p>
-                      <p><strong>Conținutul instruirii:</strong></p>
+                      <p><strong>{{ 'initial.trainingContent' | translate:'DocumentTemplate' }}</strong></p>
                       @if (!editMode) {
                         <div class="field-box">
                           <p>
@@ -388,20 +384,20 @@
                           [(ngModel)]="formData.ssmTraining.introductoryTrainingContent"
                           class="edit-input"
                           rows="4"
-                          placeholder="Descrieți conținutul instruirii..."
+                          placeholder="{{ 'placeholder.trainingContent' | translate:'DocumentTemplate' }}"
                         ></textarea>
                       }
                       <div class="signatures">
-                        <p><strong>Semnături:</strong></p>
-                        <p>• a celui instruit: ________________</p>
-                        <p>• care a efectuat instruirea: ________________</p>
-                        <p>• care a verificat însușirea: ________________</p>
+                        <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
+                        <p>{{ 'screen.sigLineTrainee.ssm' | translate:'DocumentTemplate' }}</p>
+                        <p>{{ 'screen.sigLineTrainer' | translate:'DocumentTemplate' }}</p>
+                        <p>{{ 'screen.sigLineVerifier' | translate:'DocumentTemplate' }}</p>
                       </div>
                     </div>
                     <div class="section instruction-section">
-                      <h4>2. Instruirea la locul de muncă</h4>
+                      <h4>{{ 'initial.item2.ssm' | translate:'DocumentTemplate' }}</h4>
                       <p>
-                        a fost efectuată la data
+                        {{ 'initial.performedOn' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formatDate(formData.ssmTraining.workplaceTrainingDate) ||
@@ -417,12 +413,12 @@
                         }
                       </p>
                       <p>
-                        loc de muncă/post de lucru
+                        {{ 'initial.atWorkstation' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.ssmTraining.workplaceTrainingLocation ||
                             userForm.functionName ||
-                            "N/A"
+                            ('labels.notAvailable' | translate:'Common')
                           }}</span>
                         }
                         @if (editMode) {
@@ -430,12 +426,12 @@
                             type="text"
                             [(ngModel)]="formData.ssmTraining.workplaceTrainingLocation"
                             class="edit-input"
-                            placeholder="Locul de muncă"
+                            placeholder="{{ 'placeholder.workplace' | translate:'DocumentTemplate' }}"
                             />
                         }
                       </p>
                       <p>
-                        timp de
+                        {{ 'initial.forDuration' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.ssmTraining.workplaceTrainingHours || "2"
@@ -449,7 +445,7 @@
                             style="width: 60px"
                             />
                         }
-                        ore de către
+                        {{ 'initial.hoursBy' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.ssmTraining.workplaceTrainingInstructor ||
@@ -461,18 +457,18 @@
                             type="text"
                             [(ngModel)]="formData.ssmTraining.workplaceTrainingInstructor"
                             class="edit-input"
-                            placeholder="Numele instructorului"
+                            placeholder="{{ 'placeholder.instructorName' | translate:'DocumentTemplate' }}"
                             maxlength="100"
                             />
                         }
                       </p>
                       <p>
-                        având funcția de
+                        {{ 'initial.holdingPosition' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.ssmTraining.workplaceTrainingInstructorFunction ||
                             userForm.managerFunctionName ||
-                            "Manager"
+                            ('screen.defaultManagerFunction' | translate:'DocumentTemplate')
                           }}</span>
                         }
                         @if (editMode) {
@@ -482,12 +478,12 @@
                 formData.ssmTraining.workplaceTrainingInstructorFunction
               "
                             class="edit-input"
-                            placeholder="Funcția instructorului"
+                            placeholder="{{ 'placeholder.instructorFunction' | translate:'DocumentTemplate' }}"
                             maxlength="100"
                             />
                         }
                       </p>
-                      <p><strong>Conținutul instruirii:</strong></p>
+                      <p><strong>{{ 'initial.trainingContent' | translate:'DocumentTemplate' }}</strong></p>
                       @if (!editMode) {
                         <div class="field-box">
                           <p>
@@ -503,20 +499,20 @@
                           [(ngModel)]="formData.ssmTraining.workplaceTrainingContent"
                           class="edit-input"
                           rows="3"
-                          placeholder="Descrieți conținutul instruirii..."
+                          placeholder="{{ 'placeholder.trainingContent' | translate:'DocumentTemplate' }}"
                         ></textarea>
                       }
                       <div class="signatures">
-                        <p><strong>Semnături:</strong></p>
-                        <p>• a celui instruit: ________________</p>
-                        <p>• care a efectuat instruirea: ________________</p>
-                        <p>• care a verificat însușirea: ________________</p>
+                        <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
+                        <p>{{ 'screen.sigLineTrainee.ssm' | translate:'DocumentTemplate' }}</p>
+                        <p>{{ 'screen.sigLineTrainer' | translate:'DocumentTemplate' }}</p>
+                        <p>{{ 'screen.sigLineVerifier' | translate:'DocumentTemplate' }}</p>
                       </div>
                     </div>
                     <div class="section">
-                      <p><strong>Admis la lucru</strong></p>
+                      <p><strong>{{ 'initial.admittedToWork' | translate:'DocumentTemplate' }}</strong></p>
                       <p>
-                        Numele și prenumele:
+                        {{ 'admitted.fullName' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.admittedByName || getManagerFullName()
@@ -527,18 +523,18 @@
                             type="text"
                             [(ngModel)]="formData.admittedByName"
                             class="edit-input"
-                            placeholder="Numele și prenumele"
+                            placeholder="{{ 'placeholder.fullName' | translate:'DocumentTemplate' }}"
                             maxlength="100"
                             />
                         }
                       </p>
                       <p>
-                        Funcția:
+                        {{ 'admitted.function' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span class="field">{{
                             formData.admittedByFunction ||
                             userForm.managerFunctionName ||
-                            "Manager"
+                            ('screen.defaultManagerFunction' | translate:'DocumentTemplate')
                           }}</span>
                         }
                         @if (editMode) {
@@ -546,13 +542,13 @@
                             type="text"
                             [(ngModel)]="formData.admittedByFunction"
                             class="edit-input"
-                            placeholder="Funcția"
+                            placeholder="{{ 'placeholder.function' | translate:'DocumentTemplate' }}"
                             maxlength="100"
                             />
                         }
                       </p>
                       <p>
-                        Data și semnătura:
+                        {{ 'screen.dateAndSignature' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span>{{
                             formatDate(formData.admittedDate) || "___________________"
@@ -570,7 +566,7 @@
                   </div>
                   <!-- Pagina Instruire periodică -->
                   <div class="page">
-                    <h2>3. Instruire periodică</h2>
+                    <h2>{{ 'section.periodicTraining.ssm' | translate:'DocumentTemplate' }}</h2>
                     <table class="instruction-table">
                       <colgroup>
                         <col class="col-date" />
@@ -586,18 +582,18 @@
                       </colgroup>
                       <thead>
                         <tr>
-                          <th>Data instruirii</th>
-                          <th>Durata (h)</th>
-                          <th>Ocupația</th>
-                          <th>Materialul predat</th>
-                          <th>Semnătura instruit (angajat)</th>
-                          <th>Semnătura instructor (manager)</th>
+                          <th>{{ 'periodic.date' | translate:'DocumentTemplate' }}</th>
+                          <th>{{ 'periodic.duration' | translate:'DocumentTemplate' }}</th>
+                          <th>{{ 'periodic.occupation' | translate:'DocumentTemplate' }}</th>
+                          <th>{{ 'periodic.material' | translate:'DocumentTemplate' }}</th>
+                          <th>{{ 'screen.periodic.sigTraineeEmployee' | translate:'DocumentTemplate' }}</th>
+                          <th>{{ 'screen.periodic.sigTrainerManager' | translate:'DocumentTemplate' }}</th>
                           @if (selectedTab === 'ssm') {
                             <th>
-                              Semnătura verificator (admin)
+                              {{ 'screen.periodic.sigVerifierAdmin' | translate:'DocumentTemplate' }}
                             </th>
                           }
-                          <th class="no-print">History</th>
+                          <th class="no-print">{{ 'history.title' | translate:'Documents' }}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -671,19 +667,19 @@
                                     }
                                     <td class="no-print actions-cell">
                                       @if (isExcludedFromPrint(t)) {
-                                        <span class="excluded-tag">Excluded from print</span>
+                                        <span class="excluded-tag">{{ 'printExclusion.excludedTag' | translate:'Documents' }}</span>
                                       }
                                       <button type="button" class="history-toggle" (click)="toggleHistory(t)">
-                                        {{ isHistoryExpanded(t) ? 'Hide' : 'History' }}
+                                        {{ isHistoryExpanded(t) ? ('buttons.hide' | translate:'Common') : ('history.title' | translate:'Documents') }}
                                       </button>
                                       @if (isAdmin) {
                                         @if (isExcludedFromPrint(t)) {
                                           <button type="button" class="history-toggle" (click)="togglePrintExclusion(t)">
-                                            Include in print
+                                            {{ 'printExclusion.include' | translate:'Documents' }}
                                           </button>
                                         } @else if (hasInvalidSignature(t)) {
                                           <button type="button" class="history-toggle exclude-print-btn" (click)="togglePrintExclusion(t)">
-                                            Exclude from print
+                                            {{ 'printExclusion.exclude' | translate:'Documents' }}
                                           </button>
                                         }
                                       }
@@ -693,23 +689,23 @@
                                     <tr class="no-print history-row">
                                       <td [attr.colspan]="8">
                                         @if (isHistoryLoading(t)) {
-                                          <span class="history-status">Loading signature history...</span>
+                                          <span class="history-status">{{ 'history.loading' | translate:'Documents' }}</span>
                                         }
                                         @if (getHistoryError(t)) {
                                           <span class="history-status history-error">{{ getHistoryError(t) }}</span>
                                         }
                                         @if (!isHistoryLoading(t) && !getHistoryError(t) && getHistoryEntries(t).length === 0) {
-                                          <span class="history-status">No signatures recorded for this session.</span>
+                                          <span class="history-status">{{ 'history.noneRecorded' | translate:'Documents' }}</span>
                                         }
                                         @if (!isHistoryLoading(t) && getHistoryEntries(t).length > 0) {
                                           <table class="history-table">
                                             <thead>
                                               <tr>
-                                                <th>Role</th>
-                                                <th>Signer</th>
-                                                <th>Signed At</th>
-                                                <th>Schema</th>
-                                                <th>Status</th>
+                                                <th>{{ 'history.table.role' | translate:'Documents' }}</th>
+                                                <th>{{ 'history.table.signer' | translate:'Documents' }}</th>
+                                                <th>{{ 'history.table.signedAt' | translate:'Documents' }}</th>
+                                                <th>{{ 'history.table.schema' | translate:'Documents' }}</th>
+                                                <th>{{ 'labels.status' | translate:'Common' }}</th>
                                               </tr>
                                             </thead>
                                             <tbody>
@@ -720,7 +716,7 @@
                                                   <td>
                                                     {{ entry.signedAt | date: "dd.MM.yyyy HH:mm" }}
                                                     @if (entry.isMostRecentSignature) {
-                                                      <span class="history-latest-tag">most recent</span>
+                                                      <span class="history-latest-tag">{{ 'history.mostRecent' | translate:'Documents' }}</span>
                                                     }
                                                   </td>
                                                   <td>v{{ entry.version }}</td>
@@ -737,7 +733,7 @@
                                 @if (displayedSsmTrainings.length === 0) {
                                   <tr>
                                     <td [attr.colspan]="8">
-                                      No periodic trainings recorded.
+                                      {{ 'messages.noPeriodicTrainingsRecorded' | translate:'Documents' }}
                                     </td>
                                   </tr>
                                 }
@@ -751,20 +747,20 @@
                         <div class="form-content">
                           <!-- Coperta SU -->
                           <div class="cover-page su-cover">
-                            <h1>FIȘA DE SECURITATE ÎN UTILIZARE</h1>
+            <h1>{{ 'formTitle.su' | translate:'DocumentTemplate' }}</h1>
                             <div class="cover-info">
                               <p>
-                                <strong>Unitatea:</strong> {{ userForm.workSiteName || "N/A" }}
+                                <strong>{{ 'cover.unit' | translate:'DocumentTemplate' }}</strong> {{ userForm.workSiteName || ('labels.notAvailable' | translate:'Common') }}
                               </p>
-                              <p><strong>Numele și prenumele:</strong> {{ getFullName() }}</p>
+                              <p><strong>{{ 'cover.fullName' | translate:'DocumentTemplate' }}</strong> {{ getFullName() }}</p>
                               <p>
-                                <strong>Locul de muncă:</strong>
-                                {{ userForm.workSiteName || "N/A" }}
+                                <strong>{{ 'general.workplace' | translate:'DocumentTemplate' }}</strong>
+                                {{ userForm.workSiteName || ('labels.notAvailable' | translate:'Common') }}
                               </p>
                               <p>
-                                <strong>Marca:</strong>
+                                <strong>{{ 'cover.badgeShort' | translate:'DocumentTemplate' }}</strong>
                                 @if (!editMode) {
-                                  <span>{{ formData.badgeNumber || "N/A" }}</span>
+                                  <span>{{ formData.badgeNumber || ('labels.notAvailable' | translate:'Common') }}</span>
                                 }
                                 @if (editMode) {
                                   <input
@@ -772,14 +768,14 @@
                                     [(ngModel)]="formData.badgeNumber"
                                     maxlength="32"
                                     class="edit-input-small"
-                                    placeholder="Marca"
+                                    placeholder="{{ 'placeholder.badge' | translate:'DocumentTemplate' }}"
                                     />
                                 }
                               </p>
                               <p>
-                                <strong>Domiciliul:</strong>
+                                <strong>{{ 'cover.address' | translate:'DocumentTemplate' }}</strong>
                                 @if (!editMode) {
-                                  <span>{{ formData.address || "N/A" }}</span>
+                                  <span>{{ formData.address || ('labels.notAvailable' | translate:'Common') }}</span>
                                 }
                                 @if (editMode) {
                                   <input
@@ -787,7 +783,7 @@
                                     [(ngModel)]="formData.address"
                                     maxlength="100"
                                     class="edit-input"
-                                    placeholder="Adresa"
+                                    placeholder="{{ 'placeholder.address' | translate:'DocumentTemplate' }}"
                                     />
                                 }
                               </p>
@@ -795,10 +791,10 @@
                           </div>
                           <!-- Pagina 1 SU -->
                           <div class="page">
-                            <h2>Date Generale</h2>
+                            <h2>{{ 'section.generalData' | translate:'DocumentTemplate' }}</h2>
                             <div class="section">
                               <p>
-                                <strong>Data și locul nașterii:</strong>
+                                <strong>{{ 'general.birthDatePlace' | translate:'DocumentTemplate' }}</strong>
                                 @if (!editMode) {
                                   <span>
                                     {{ formatDate(formData.dateOfBirth)
@@ -816,40 +812,40 @@
                                         type="text"
                                         [(ngModel)]="formData.placeOfBirth"
                                         class="edit-input"
-                                        placeholder="Locul nașterii"
+                                        placeholder="{{ 'placeholder.birthPlace' | translate:'DocumentTemplate' }}"
                                         />
                                       </span>
                                     }
                                   </p>
                                   <p>
-                                    <strong>Studii:</strong>
+                                    <strong>{{ 'general.education' | translate:'DocumentTemplate' }}</strong>
                                     @if (!editMode) {
-                                      <span>{{ formData.education || "N/A" }}</span>
+                                      <span>{{ formData.education || ('labels.notAvailable' | translate:'Common') }}</span>
                                     }
                                     @if (editMode) {
                                       <input
                                         type="text"
                                         [(ngModel)]="formData.education"
                                         class="edit-input"
-                                        placeholder="Studii"
+                                        placeholder="{{ 'placeholder.education' | translate:'DocumentTemplate' }}"
                                         />
                                     }
                                   </p>
                                   <p>
-                                    <strong>Calificarea (specialitatea, meseria):</strong>
-                                    {{ userForm.functionName || "N/A" }}
+                                    <strong>{{ 'general.qualificationTrade' | translate:'DocumentTemplate' }}</strong>
+                                    {{ userForm.functionName || ('labels.notAvailable' | translate:'Common') }}
                                   </p>
                                   <p>
-                                    <strong>Locul de muncă:</strong>
-                                    {{ userForm.workSiteName || "N/A" }}
+                                    <strong>{{ 'general.workplace' | translate:'DocumentTemplate' }}</strong>
+                                    {{ userForm.workSiteName || ('labels.notAvailable' | translate:'Common') }}
                                   </p>
-                                  <p><strong>Funcția:</strong> {{ userForm.functionName || "N/A" }}</p>
+                                  <p><strong>{{ 'general.position' | translate:'DocumentTemplate' }}</strong> {{ userForm.functionName || ('labels.notAvailable' | translate:'Common') }}</p>
                                 </div>
-                                <h3>Instructajul la angajare</h3>
+                                <h3>{{ 'section.trainingAtHiring.su' | translate:'DocumentTemplate' }}</h3>
                                 <div class="section instruction-section">
-                                  <h4>1. Instructajul introductiv generală</h4>
+                                  <h4>{{ 'initial.item1.su' | translate:'DocumentTemplate' }}</h4>
                                   <p>
-                                    a fost efectuat la data de
+                                    {{ 'initial.performedOn' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formatDate(formData.suTraining.introductoryTrainingDate) ||
@@ -879,7 +875,7 @@
                                         style="width: 60px"
                                         />
                                     }
-                                    ore de către
+                                    {{ 'initial.hoursBy' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.suTraining.introductoryTrainingInstructor ||
@@ -891,17 +887,17 @@
                                         type="text"
                                         [(ngModel)]="formData.suTraining.introductoryTrainingInstructor"
                                         class="edit-input"
-                                        placeholder="Numele instructorului"
+                                        placeholder="{{ 'placeholder.instructorName' | translate:'DocumentTemplate' }}"
                                         maxlength="100"
                                         />
                                     }
                                   </p>
                                   <p>
-                                    având funcția de
+                                    {{ 'initial.holdingPosition' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.suTraining.introductoryTrainingInstructorFunction ||
-                                        "Cadru tehnic"
+                                        ('screen.defaultTechnicalOfficer' | translate:'DocumentTemplate')
                                       }}</span>
                                     }
                                     @if (editMode) {
@@ -911,12 +907,12 @@
                 formData.suTraining.introductoryTrainingInstructorFunction
               "
                                         class="edit-input"
-                                        placeholder="Funcția"
+                                        placeholder="{{ 'placeholder.function' | translate:'DocumentTemplate' }}"
                                         maxlength="100"
                                         />
                                     }
                                   </p>
-                                  <p><strong>Conținutul instructajului:</strong></p>
+                                  <p><strong>{{ 'initial.briefingContent' | translate:'DocumentTemplate' }}</strong></p>
                                   @if (!editMode) {
                                     <div class="field-box">
                                       <p>
@@ -932,19 +928,19 @@
                                       [(ngModel)]="formData.suTraining.introductoryTrainingContent"
                                       class="edit-input"
                                       rows="3"
-                                      placeholder="Descrieți conținutul instructajului..."
+                                      placeholder="{{ 'placeholder.briefingContent' | translate:'DocumentTemplate' }}"
                                     ></textarea>
                                   }
                                   <div class="signatures">
-                                    <p><strong>Semnături:</strong></p>
-                                    <p>• persoanei instruite: ________________</p>
-                                    <p>• salariatului care a verificat însușirea: ________________</p>
+                                    <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
+                                    <p>{{ 'screen.sigLineTrainee.su' | translate:'DocumentTemplate' }}</p>
+                                    <p>{{ 'screen.sigLineVerifierEmployee' | translate:'DocumentTemplate' }}</p>
                                   </div>
                                 </div>
                                 <div class="section instruction-section">
-                                  <h4>2. Instructajul la locul de muncă</h4>
+                                  <h4>{{ 'initial.item2.su' | translate:'DocumentTemplate' }}</h4>
                                   <p>
-                                    a fost efectuat la data de
+                                    {{ 'initial.performedOn' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formatDate(formData.suTraining.workplaceTrainingDate) ||
@@ -960,12 +956,12 @@
                                     }
                                   </p>
                                   <p>
-                                    pentru locul de muncă
+                                    {{ 'initial.forWorkplace' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.suTraining.workplaceTrainingLocation ||
                                         userForm.departmentName ||
-                                        "N/A"
+                                        ('labels.notAvailable' | translate:'Common')
                                       }}</span>
                                     }
                                     @if (editMode) {
@@ -973,16 +969,16 @@
                                         type="text"
                                         [(ngModel)]="formData.suTraining.workplaceTrainingLocation"
                                         class="edit-input"
-                                        placeholder="Locul de muncă"
+                                        placeholder="{{ 'placeholder.workplace' | translate:'DocumentTemplate' }}"
                                         />
                                     }
                                   </p>
                                   <p>
-                                    specialitatea (meseria)
-                                    <span class="field">{{ userForm.functionName || "N/A" }}</span>
+                                    {{ 'initial.specialtyTrade' | translate:'DocumentTemplate' }}
+                                    <span class="field">{{ userForm.functionName || ('labels.notAvailable' | translate:'Common') }}</span>
                                   </p>
                                   <p>
-                                    timp de
+                                    {{ 'initial.forDuration' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.suTraining.workplaceTrainingHours || "8"
@@ -996,7 +992,7 @@
                                         style="width: 60px"
                                         />
                                     }
-                                    ore, de către
+                                    {{ 'initial.hoursByComma' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.suTraining.workplaceTrainingInstructor ||
@@ -1008,18 +1004,18 @@
                                         type="text"
                                         [(ngModel)]="formData.suTraining.workplaceTrainingInstructor"
                                         class="edit-input"
-                                        placeholder="Numele instructorului"
+                                        placeholder="{{ 'placeholder.instructorName' | translate:'DocumentTemplate' }}"
                                         maxlength="100"
                                         />
                                     }
                                   </p>
                                   <p>
-                                    având funcția de
+                                    {{ 'initial.holdingPosition' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.suTraining.workplaceTrainingInstructorFunction ||
                                         userForm.managerFunctionName ||
-                                        "Manager"
+                                        ('screen.defaultManagerFunction' | translate:'DocumentTemplate')
                                       }}</span>
                                     }
                                     @if (editMode) {
@@ -1029,12 +1025,12 @@
                 formData.suTraining.workplaceTrainingInstructorFunction
               "
                                         class="edit-input"
-                                        placeholder="Funcția instructorului"
+                                        placeholder="{{ 'placeholder.instructorFunction' | translate:'DocumentTemplate' }}"
                                         maxlength="100"
                                         />
                                     }
                                   </p>
-                                  <p><strong>Conținutul instructajului:</strong></p>
+                                  <p><strong>{{ 'initial.briefingContent' | translate:'DocumentTemplate' }}</strong></p>
                                   @if (!editMode) {
                                     <div class="field-box">
                                       <p>
@@ -1050,22 +1046,19 @@
                                       [(ngModel)]="formData.suTraining.workplaceTrainingContent"
                                       class="edit-input"
                                       rows="3"
-                                      placeholder="Descrieți conținutul instructajului..."
+                                      placeholder="{{ 'placeholder.briefingContent' | translate:'DocumentTemplate' }}"
                                     ></textarea>
                                   }
                                   <div class="signatures">
-                                    <p><strong>Semnături:</strong></p>
-                                    <p>• persoanei instruite: ________________</p>
-                                    <p>
-                                      • salariatului care a verificat însușirea cunoștințelor:
-                                      ________________
-                                    </p>
+                                    <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
+                                    <p>{{ 'screen.sigLineTrainee.su' | translate:'DocumentTemplate' }}</p>
+                                    <p>{{ 'screen.sigLineVerifierEmployeeKnowledge' | translate:'DocumentTemplate' }}</p>
                                   </div>
                                 </div>
                                 <div class="section">
-                                  <h4>3. Admis la lucru</h4>
+                                  <h4>{{ 'initial.admittedToWork' | translate:'DocumentTemplate' }}</h4>
                                   <p>
-                                    Numele și prenumele:
+                                    {{ 'admitted.fullName' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.admittedByName || getManagerFullName()
@@ -1076,18 +1069,18 @@
                                         type="text"
                                         [(ngModel)]="formData.admittedByName"
                                         class="edit-input"
-                                        placeholder="Numele și prenumele"
+                                        placeholder="{{ 'placeholder.fullName' | translate:'DocumentTemplate' }}"
                                         maxlength="100"
                                         />
                                     }
                                   </p>
                                   <p>
-                                    Funcția:
+                                    {{ 'admitted.function' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span class="field">{{
                                         formData.admittedByFunction ||
                                         userForm.managerFunctionName ||
-                                        "Manager"
+                                        ('screen.defaultManagerFunction' | translate:'DocumentTemplate')
                                       }}</span>
                                     }
                                     @if (editMode) {
@@ -1095,13 +1088,13 @@
                                         type="text"
                                         [(ngModel)]="formData.admittedByFunction"
                                         class="edit-input"
-                                        placeholder="Funcția"
+                                        placeholder="{{ 'placeholder.function' | translate:'DocumentTemplate' }}"
                                         maxlength="100"
                                         />
                                     }
                                   </p>
                                   <p>
-                                    Data și semnătura:
+                                    {{ 'screen.dateAndSignature' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span>{{
                                         formatDate(formData.admittedDate) || "___________________"
@@ -1119,7 +1112,7 @@
                               </div>
                               <!-- Pagina Instructaj periodic SU -->
                               <div class="page">
-                                <h2>Instructajul periodic</h2>
+                                <h2>{{ 'section.periodicTraining.su' | translate:'DocumentTemplate' }}</h2>
                                 <table class="instruction-table">
                                   <colgroup>
                                     <col class="col-date" />
@@ -1132,13 +1125,13 @@
                                   </colgroup>
                                   <thead>
                                     <tr>
-                                      <th>Data</th>
-                                      <th>Specialitatea</th>
-                                      <th>Materialul predat</th>
-                                      <th>Durata (h)</th>
-                                      <th>Semnătura instruit (angajat)</th>
-                                      <th>Semnătura instructor (manager)</th>
-                                      <th class="no-print">History</th>
+                                      <th>{{ 'screen.periodic.dateShort' | translate:'DocumentTemplate' }}</th>
+                                      <th>{{ 'periodic.specialty' | translate:'DocumentTemplate' }}</th>
+                                      <th>{{ 'periodic.material' | translate:'DocumentTemplate' }}</th>
+                                      <th>{{ 'periodic.duration' | translate:'DocumentTemplate' }}</th>
+                                      <th>{{ 'screen.periodic.sigTraineeEmployee' | translate:'DocumentTemplate' }}</th>
+                                      <th>{{ 'screen.periodic.sigTrainerManager' | translate:'DocumentTemplate' }}</th>
+                                      <th class="no-print">{{ 'history.title' | translate:'Documents' }}</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -1192,19 +1185,19 @@
                                               </td>
                                               <td class="no-print actions-cell">
                                                 @if (isExcludedFromPrint(t)) {
-                                                  <span class="excluded-tag">Excluded from print</span>
+                                                  <span class="excluded-tag">{{ 'printExclusion.excludedTag' | translate:'Documents' }}</span>
                                                 }
                                                 <button type="button" class="history-toggle" (click)="toggleHistory(t)">
-                                                  {{ isHistoryExpanded(t) ? 'Hide' : 'History' }}
+                                                  {{ isHistoryExpanded(t) ? ('buttons.hide' | translate:'Common') : ('history.title' | translate:'Documents') }}
                                                 </button>
                                                 @if (isAdmin) {
                                                   @if (isExcludedFromPrint(t)) {
                                                     <button type="button" class="history-toggle" (click)="togglePrintExclusion(t)">
-                                                      Include in print
+                                                      {{ 'printExclusion.include' | translate:'Documents' }}
                                                     </button>
                                                   } @else if (hasInvalidSignature(t)) {
                                                     <button type="button" class="history-toggle exclude-print-btn" (click)="togglePrintExclusion(t)">
-                                                      Exclude from print
+                                                      {{ 'printExclusion.exclude' | translate:'Documents' }}
                                                     </button>
                                                   }
                                                 }
@@ -1214,23 +1207,23 @@
                                               <tr class="no-print history-row">
                                                 <td [attr.colspan]="7">
                                                   @if (isHistoryLoading(t)) {
-                                                    <span class="history-status">Loading signature history...</span>
+                                                    <span class="history-status">{{ 'history.loading' | translate:'Documents' }}</span>
                                                   }
                                                   @if (getHistoryError(t)) {
                                                     <span class="history-status history-error">{{ getHistoryError(t) }}</span>
                                                   }
                                                   @if (!isHistoryLoading(t) && !getHistoryError(t) && getHistoryEntries(t).length === 0) {
-                                                    <span class="history-status">No signatures recorded for this session.</span>
+                                                    <span class="history-status">{{ 'history.noneRecorded' | translate:'Documents' }}</span>
                                                   }
                                                   @if (!isHistoryLoading(t) && getHistoryEntries(t).length > 0) {
                                                     <table class="history-table">
                                                       <thead>
                                                         <tr>
-                                                          <th>Role</th>
-                                                          <th>Signer</th>
-                                                          <th>Signed At</th>
-                                                          <th>Schema</th>
-                                                          <th>Status</th>
+                                                          <th>{{ 'history.table.role' | translate:'Documents' }}</th>
+                                                          <th>{{ 'history.table.signer' | translate:'Documents' }}</th>
+                                                          <th>{{ 'history.table.signedAt' | translate:'Documents' }}</th>
+                                                          <th>{{ 'history.table.schema' | translate:'Documents' }}</th>
+                                                          <th>{{ 'labels.status' | translate:'Common' }}</th>
                                                         </tr>
                                                       </thead>
                                                       <tbody>
@@ -1241,7 +1234,7 @@
                                                             <td>
                                                               {{ entry.signedAt | date: "dd.MM.yyyy HH:mm" }}
                                                               @if (entry.isMostRecentSignature) {
-                                                                <span class="history-latest-tag">most recent</span>
+                                                                <span class="history-latest-tag">{{ 'history.mostRecent' | translate:'Documents' }}</span>
                                                               }
                                                             </td>
                                                             <td>v{{ entry.version }}</td>
@@ -1257,7 +1250,7 @@
                                           }
                                           @if (displayedSuTrainings.length === 0) {
                                             <tr>
-                                              <td colspan="7">No periodic trainings recorded.</td>
+                                              <td colspan="7">{{ 'messages.noPeriodicTrainingsRecorded' | translate:'Documents' }}</td>
                                             </tr>
                                           }
                                         </tbody>
