@@ -73,7 +73,7 @@ Status progression:
 Bulk signing (officer/manager self-service, rather than one-link-at-a-time email signing):
 - `POST /api/documentsignature/bulk-sign` — synchronous bulk sign for the caller's pending documents.
 - `POST /api/documentsignature/bulk-sign-async` — background job variant, polled via `GET /api/documentsignature/bulk-sign-status/{jobId}`.
-- `GET /api/documentsignature/pending-ssm-admin-count` — count of legacy `PendingAdmin` rows still awaiting resolution (naming predates the Instructor rename).
+- `GET /api/documentsignature/pending-ssm-admin-count` — count of documents in the caller's own officer queue (`PendingInstructor`, for the given SSM/SU type) — same data source as bulk-sign-async, badge-count use. Naming predates the Instructor rename; does not count legacy `PendingAdmin` rows (that's `GET /api/document/admin-pending-signatures`).
 
 Signing queues:
 - `GET /api/document/my-pending-signatures`, `/my-signed-documents` — the employee's own documents.
