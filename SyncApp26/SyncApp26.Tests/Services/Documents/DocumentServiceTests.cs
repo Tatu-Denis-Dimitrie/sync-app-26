@@ -118,7 +118,7 @@ namespace SyncApp26.Tests.Services.Documents
         public async Task ManagerReSignAfterTrainingRevision_KeepsFirstSignatureFrozenInAuditRecord()
         {
             var service = CreateService();
-            var trainingService = new PeriodicTrainingService(_dbFixture.Context, NullLogger<PeriodicTrainingService>.Instance);
+            var trainingService = new PeriodicTrainingService(_dbFixture.Context, NullLogger<PeriodicTrainingService>.Instance, RealLocalizerFactory.LocalizationService());
 
             var function = SeedFunction("Operator");
             var managerFunction = SeedFunction("Sef Echipa");

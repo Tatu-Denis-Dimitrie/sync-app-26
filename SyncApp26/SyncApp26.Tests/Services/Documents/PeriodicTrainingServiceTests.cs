@@ -12,7 +12,8 @@ namespace SyncApp26.Tests.Services.Documents
 
         public void Dispose() => _dbFixture.Dispose();
 
-        private PeriodicTrainingService CreateService() => new(_dbFixture.Context, NullLogger<PeriodicTrainingService>.Instance);
+        private PeriodicTrainingService CreateService() =>
+            new(_dbFixture.Context, NullLogger<PeriodicTrainingService>.Instance, RealLocalizerFactory.LocalizationService());
 
         private User SeedUser(string firstName, string lastName)
         {

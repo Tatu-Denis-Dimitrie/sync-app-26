@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Infrastructure.Context;
 using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
 using SyncApp26.Shared.DTOs.Response.PeriodicTraining;
@@ -16,11 +18,13 @@ namespace SyncApp26.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PeriodicTrainingService> _logger;
+        private readonly IStringLocalizer _localizer;
 
-        public PeriodicTrainingService(ApplicationDbContext context, ILogger<PeriodicTrainingService> logger)
+        public PeriodicTrainingService(ApplicationDbContext context, ILogger<PeriodicTrainingService> logger, ILocalizationService localizationService)
         {
             _context = context;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         public async Task<PeriodicTrainingResponseDTO> CreateAsync(CreatePeriodicTrainingDTO dto)
@@ -51,11 +55,11 @@ namespace SyncApp26.Infrastructure.Services
         private async Task<User> ResolveInstructorAsync(Guid instructorId, Guid traineeUserId)
         {
             if (instructorId == traineeUserId)
-                throw new ArgumentException("An employee cannot be their own instructor.");
+                throw new ArgumentException(_localizer["periodicTraining.selfInstructor"]);
 
             var instructor = await _context.Users.FindAsync(instructorId);
             if (instructor == null)
-                throw new ArgumentException("Instructor not found.");
+                throw new ArgumentException(_localizer["periodicTraining.instructorNotFound"]);
 
             return instructor;
         }
@@ -82,7 +86,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             var training = await _context.PeriodicTrainings.FindAsync(id);
             if (training == null)
-                throw new ArgumentException("Periodic training not found");
+                throw new ArgumentException(_localizer["periodicTraining.notFound"]);
 
             var instructor = await ResolveInstructorAsync(dto.InstructorId, training.UserId);
 
@@ -115,7 +119,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             var training = await _context.PeriodicTrainings.FindAsync(id);
             if (training == null)
-                throw new ArgumentException("Periodic training not found");
+                throw new ArgumentException(_localizer["periodicTraining.notFound"]);
 
             var rootId = training.SourceRowId ?? training.Id;
             var family = await _context.PeriodicTrainings
@@ -243,7 +247,7 @@ namespace SyncApp26.Infrastructure.Services
 
                 if (!users.Any())
                 {
-                    result.Errors.Add("No users found to apply training to");
+                    result.Errors.Add(_localizer["periodicTraining.noUsersToApply"]);
                     return result;
                 }
 

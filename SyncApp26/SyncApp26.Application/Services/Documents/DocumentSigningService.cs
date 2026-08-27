@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -12,18 +13,24 @@ namespace SyncApp26.Application.Services
         private readonly IDocumentService _documentService;
         private readonly IDocumentSignatureService _documentSignatureService;
         private readonly IUserService _userService;
+        private readonly IStringLocalizer _localizer;
 
-        public DocumentSigningService(IDocumentService documentService, IDocumentSignatureService documentSignatureService, IUserService userService)
+        public DocumentSigningService(
+            IDocumentService documentService,
+            IDocumentSignatureService documentSignatureService,
+            IUserService userService,
+            ILocalizationService localizationService)
         {
             _documentService = documentService;
             _documentSignatureService = documentSignatureService;
             _userService = userService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         // Names both the problem and the way out: the step isn't blocked forever, it just needs a
         // different person. Which officer role that is depends on the document type.
-        private static string SelfCountersignMessage(bool isSsm) =>
-            $"You cannot countersign your own document — another {(isSsm ? "SSM" : "SU")} officer must sign this step.";
+        private string SelfCountersignMessage(bool isSsm) =>
+            _localizer["signing.selfCountersign", isSsm ? "SSM" : "SU"];
 
         public async Task<SigningTokenResult> RequestSigningTokenAsync(UserDocument document, User caller)
         {
@@ -44,18 +51,18 @@ namespace SyncApp26.Application.Services
             {
                 case "PendingUser":
                     if (isUser && document.UserSignedAt != null)
-                        return new SigningTokenResult { ErrorMessage = "User already signed this document." };
+                        return new SigningTokenResult { ErrorMessage = _localizer["signing.userAlreadySigned"] };
                     if (!isUser)
-                        return new SigningTokenResult { ErrorMessage = "User signature not required at this time." };
+                        return new SigningTokenResult { ErrorMessage = _localizer["signing.userSignatureNotRequired"] };
                     break;
 
                 case "PendingManager":
                     if (isUser && document.UserSignedAt != null)
-                        return new SigningTokenResult { ErrorMessage = "User already signed this document." };
+                        return new SigningTokenResult { ErrorMessage = _localizer["signing.userAlreadySigned"] };
                     if (isUser)
                         return new SigningTokenResult { ErrorMessage = SelfCountersignMessage(isSsm) };
                     if (!isManager)
-                        return new SigningTokenResult { ErrorMessage = "Manager signature not required at this time." };
+                        return new SigningTokenResult { ErrorMessage = _localizer["signing.managerSignatureNotRequired"] };
                     break;
 
                 case "PendingInstructor":
@@ -67,13 +74,13 @@ namespace SyncApp26.Application.Services
                     if (!isInstructor)
                     {
                         if (isManager && document.ManagerSignedAt != null)
-                            return new SigningTokenResult { ErrorMessage = "Manager already signed this document." };
-                        return new SigningTokenResult { ErrorMessage = "Instructor signature not required at this time." };
+                            return new SigningTokenResult { ErrorMessage = _localizer["signing.managerAlreadySigned"] };
+                        return new SigningTokenResult { ErrorMessage = _localizer["signing.instructorSignatureNotRequired"] };
                     }
                     break;
 
                 default:
-                    return new SigningTokenResult { ErrorMessage = "This document does not require a signature at this time." };
+                    return new SigningTokenResult { ErrorMessage = _localizer["signing.documentNotAwaitingSignature"] };
             }
 
             var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
@@ -85,11 +92,11 @@ namespace SyncApp26.Application.Services
         public async Task<SigningContextResult> GetSigningContextAsync(string token)
         {
             if (string.IsNullOrWhiteSpace(token))
-                return new SigningContextResult { ErrorMessage = "Token is required." };
+                return new SigningContextResult { ErrorMessage = _localizer["signing.tokenRequired"] };
 
             var signatureToken = await _documentSignatureService.ValidateTokenAsync(token);
             if (signatureToken == null)
-                return new SigningContextResult { ErrorMessage = "Invalid or expired token." };
+                return new SigningContextResult { ErrorMessage = _localizer["signing.invalidOrExpiredToken"] };
 
             var document = await _documentService.GetDocumentByIdAsync(signatureToken.DocumentId);
             var signerUser = await _userService.GetUserByEmailAsync(signatureToken.Email);
@@ -135,19 +142,19 @@ namespace SyncApp26.Application.Services
         public async Task<ConsumeSigningTokenResult> ConsumeSigningTokenAsync(ConsumeSigningTokenRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Token))
-                return new ConsumeSigningTokenResult { ErrorMessage = "Token is required." };
+                return new ConsumeSigningTokenResult { ErrorMessage = _localizer["signing.tokenRequired"] };
 
             var tokenEntity = await _documentSignatureService.ValidateTokenAsync(request.Token);
             if (tokenEntity == null)
-                return new ConsumeSigningTokenResult { ErrorMessage = "Token is invalid or expired." };
+                return new ConsumeSigningTokenResult { ErrorMessage = _localizer["signing.tokenInvalidOrExpired"] };
 
             var document = await _documentService.GetDocumentByIdAsync(tokenEntity.DocumentId);
             if (document == null)
-                return new ConsumeSigningTokenResult { ErrorMessage = "Document not found." };
+                return new ConsumeSigningTokenResult { ErrorMessage = _localizer["signing.documentNotFound"] };
 
             var signerUserFromToken = await _userService.GetUserByEmailAsync(tokenEntity.Email);
             if (signerUserFromToken == null)
-                return new ConsumeSigningTokenResult { ErrorMessage = "Signer account not found." };
+                return new ConsumeSigningTokenResult { ErrorMessage = _localizer["signing.signerAccountNotFound"] };
 
             var periodicTrainingId = request.PeriodicTrainingId ?? tokenEntity.PeriodicTrainingId;
 
@@ -177,13 +184,13 @@ namespace SyncApp26.Application.Services
                 {
                     ErrorMessage = isUser && awaitingCountersignature
                         ? SelfCountersignMessage(isSsm)
-                        : "This document is not awaiting your signature at this time."
+                        : _localizer["signing.notAwaitingYourSignature"]
                 };
             }
 
             var isValidAndConsumed = await _documentSignatureService.ConsumeTokenAsync(request.Token);
             if (!isValidAndConsumed)
-                return new ConsumeSigningTokenResult { ErrorMessage = "Token could not be consumed." };
+                return new ConsumeSigningTokenResult { ErrorMessage = _localizer["signing.tokenCouldNotBeConsumed"] };
 
             await _documentService.UpdateDocumentSignatureAsync(
                 document.Id,

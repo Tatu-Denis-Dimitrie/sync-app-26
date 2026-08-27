@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
+using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
 
 namespace SyncApp26.Tests.TestHelpers
@@ -21,6 +23,14 @@ namespace SyncApp26.Tests.TestHelpers
                 NullLoggerFactory.Instance);
 
             return factory.Create(scope, typeof(LocalizationService).Assembly.GetName().Name!);
+        }
+
+        public static ILocalizationService LocalizationService()
+        {
+            var mock = new Mock<ILocalizationService>();
+            mock.Setup(s => s.GetScopedLocalizer(It.IsAny<string>()))
+                .Returns<string>(ForScope);
+            return mock.Object;
         }
     }
 }

@@ -374,4 +374,67 @@
   <data name="messages.pendingSignaturesFor" xml:space="preserve">
     <value>Users with pending signatures for {0}</value>
   </data>
+  <data name="signing.selfCountersign" xml:space="preserve">
+    <value>You cannot countersign your own document — another {0} officer must sign this step.</value>
+  </data>
+  <data name="signing.userAlreadySigned" xml:space="preserve">
+    <value>User already signed this document.</value>
+  </data>
+  <data name="signing.userSignatureNotRequired" xml:space="preserve">
+    <value>User signature not required at this time.</value>
+  </data>
+  <data name="signing.managerSignatureNotRequired" xml:space="preserve">
+    <value>Manager signature not required at this time.</value>
+  </data>
+  <data name="signing.managerAlreadySigned" xml:space="preserve">
+    <value>Manager already signed this document.</value>
+  </data>
+  <data name="signing.instructorSignatureNotRequired" xml:space="preserve">
+    <value>Instructor signature not required at this time.</value>
+  </data>
+  <data name="signing.documentNotAwaitingSignature" xml:space="preserve">
+    <value>This document does not require a signature at this time.</value>
+  </data>
+  <data name="signing.tokenRequired" xml:space="preserve">
+    <value>Token is required.</value>
+  </data>
+  <data name="signing.invalidOrExpiredToken" xml:space="preserve">
+    <value>Invalid or expired token.</value>
+  </data>
+  <data name="signing.tokenInvalidOrExpired" xml:space="preserve">
+    <value>Token is invalid or expired.</value>
+  </data>
+  <data name="signing.documentNotFound" xml:space="preserve">
+    <value>Document not found.</value>
+  </data>
+  <data name="signing.signerAccountNotFound" xml:space="preserve">
+    <value>Signer account not found.</value>
+  </data>
+  <data name="signing.notAwaitingYourSignature" xml:space="preserve">
+    <value>This document is not awaiting your signature at this time.</value>
+  </data>
+  <data name="signing.tokenCouldNotBeConsumed" xml:space="preserve">
+    <value>Token could not be consumed.</value>
+  </data>
+  <data name="periodicTraining.selfInstructor" xml:space="preserve">
+    <value>An employee cannot be their own instructor.</value>
+  </data>
+  <data name="periodicTraining.instructorNotFound" xml:space="preserve">
+    <value>Instructor not found.</value>
+  </data>
+  <data name="periodicTraining.notFound" xml:space="preserve">
+    <value>Periodic training not found</value>
+  </data>
+  <data name="periodicTraining.noUsersToApply" xml:space="preserve">
+    <value>No users found to apply training to</value>
+  </data>
+  <data name="userSignature.dataMustNotBeEmpty" xml:space="preserve">
+    <value>Signature data must not be empty.</value>
+  </data>
+  <data name="userSignature.methodMustNotBeEmpty" xml:space="preserve">
+    <value>Signature method must not be empty.</value>
+  </data>
+  <data name="userSignature.noActiveSignature" xml:space="preserve">
+    <value>No active signature found for this user.</value>
+  </data>
 </root>

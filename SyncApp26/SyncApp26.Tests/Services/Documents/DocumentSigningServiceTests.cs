@@ -3,6 +3,7 @@ using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Services.Documents
 {
@@ -16,7 +17,8 @@ namespace SyncApp26.Tests.Services.Documents
         private readonly Mock<IUserService> _userServiceMock = new();
 
         private DocumentSigningService CreateService() =>
-            new(_documentServiceMock.Object, _documentSignatureServiceMock.Object, _userServiceMock.Object);
+            new(_documentServiceMock.Object, _documentSignatureServiceMock.Object, _userServiceMock.Object,
+                RealLocalizerFactory.LocalizationService());
 
         private static User MakeUser(Guid? id = null, Guid? assignedToId = null, string? email = null) => new()
         {
