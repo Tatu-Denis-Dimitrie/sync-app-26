@@ -77,4 +77,37 @@
   <data name="changeHistory.newValue" xml:space="preserve">
     <value>New Value</value>
   </data>
+  <data name="changeHistory.unknownField" xml:space="preserve">
+    <value>Unknown Field</value>
+  </data>
+  <data name="labels.import" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="importHistory.fileLabel" xml:space="preserve">
+    <value>File:</value>
+  </data>
+  <data name="importHistory.idLabel" xml:space="preserve">
+    <value>ID:</value>
+  </data>
+  <data name="labels.database" xml:space="preserve">
+    <value>Database</value>
+  </data>
+  <data name="labels.csv" xml:space="preserve">
+    <value>CSV</value>
+  </data>
+  <data name="labels.manual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="labels.manualBadge" xml:space="preserve">
+    <value>manual</value>
+  </data>
+  <data name="labels.dateLabel" xml:space="preserve">
+    <value>Date:</value>
+  </data>
+  <data name="labels.previous" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="labels.new" xml:space="preserve">
+    <value>New</value>
+  </data>
 </root>

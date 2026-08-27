@@ -92,4 +92,7 @@
   <data name="function.label" xml:space="preserve">
     <value>Function</value>
   </data>
+  <data name="filters.allFunctions" xml:space="preserve">
+    <value>All Functions</value>
+  </data>
 </root>

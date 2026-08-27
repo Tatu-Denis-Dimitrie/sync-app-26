@@ -68,6 +68,33 @@
   <data name="buttons.cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="buttons.yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="buttons.add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="buttons.saving" xml:space="preserve">
+    <value>Saving...</value>
+  </data>
+  <data name="labels.status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="status.active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="labels.notAvailable" xml:space="preserve">
+    <value>N/A</value>
+  </data>
+  <data name="messages.submitting" xml:space="preserve">
+    <value>Submitting...</value>
+  </data>
+  <data name="messages.failedToSubmitRequest" xml:space="preserve">
+    <value>Failed to submit request.</value>
+  </data>
+  <data name="labels.none" xml:space="preserve">
+    <value>None</value>
+  </data>
   <data name="buttons.delete" xml:space="preserve">
     <value>Delete</value>
   </data>

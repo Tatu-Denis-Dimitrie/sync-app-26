@@ -83,4 +83,34 @@
   <data name="messages.alreadyResolved" xml:space="preserve">
     <value>Request is already resolved</value>
   </data>
+  <data name="actions.requestDataChange" xml:space="preserve">
+    <value>Request Data Change</value>
+  </data>
+  <data name="messages.fillFieldsToChange" xml:space="preserve">
+    <value>Fill in the fields you want to change</value>
+  </data>
+  <data name="labels.currentValueOkayPlaceholder" xml:space="preserve">
+    <value>Current value is okay (leave empty)</value>
+  </data>
+  <data name="labels.explainReasonPlaceholder" xml:space="preserve">
+    <value>Please explain why you need these changes...</value>
+  </data>
+  <data name="actions.submitRequest" xml:space="preserve">
+    <value>Submit Request</value>
+  </data>
+  <data name="messages.dataChangeSubmitted" xml:space="preserve">
+    <value>Data change request submitted successfully. It is now pending admin approval.</value>
+  </data>
+  <data name="messages.pleaseFillOneField" xml:space="preserve">
+    <value>Please fill in at least one field to change.</value>
+  </data>
+  <data name="messages.pleaseEnterValidEmail" xml:space="preserve">
+    <value>Please enter a valid email address.</value>
+  </data>
+  <data name="messages.dobCannotBeFuture" xml:space="preserve">
+    <value>Date of Birth cannot be in the future.</value>
+  </data>
+  <data name="messages.pleaseProvideReason" xml:space="preserve">
+    <value>Please provide a reason for the change.</value>
+  </data>
 </root>

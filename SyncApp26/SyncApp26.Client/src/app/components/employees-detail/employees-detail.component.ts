@@ -13,11 +13,13 @@ import { environment } from '../../../environments/environment';
 import { formatDate as formatDateUtil, formatDateTime as formatDateTimeUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-employees-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe],
   templateUrl: './employees-detail.component.html',
   styleUrls: ['./employees-detail.component.css']
 })
@@ -66,8 +68,33 @@ export class EmployeesDetailComponent implements OnInit {
     private authService: AuthenticationService,
     private router: Router,
     private route: ActivatedRoute,
-    private http: HttpClient
+    private http: HttpClient,
+    private translationService: TranslationService
   ) { }
+
+  tUsers(key: string): string {
+    return this.translationService.translate('Users', key);
+  }
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
+
+  tSync(key: string): string {
+    return this.translationService.translate('Sync', key);
+  }
+
+  entriesCountLabel(count: number): string {
+    return this.translationService.translate('Users', 'labels.entriesCount', count);
+  }
+
+  itemsCountLabel(count: number): string {
+    return this.translationService.translate('Documents', 'labels.itemsCount', count);
+  }
+
+  documentTypeFormLabel(documentType: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeForm', documentType);
+  }
 
   logout(): void {
     this.authService.logout();
@@ -274,17 +301,17 @@ export class EmployeesDetailComponent implements OnInit {
   }
 
   formatConflictField(field: string): string {
-    if (!field) return 'Unknown Field';
+    if (!field) return this.tSync('changeHistory.unknownField');
     const normalizedField = field.trim().toLowerCase();
     switch (normalizedField) {
       case 'firstname':
-        return 'First Name';
+        return this.tUsers('profile.firstName');
       case 'lastname':
-        return 'Last Name';
+        return this.tUsers('profile.lastName');
       case 'departmentname':
-        return 'Department';
+        return this.tUsers('profile.department');
       case 'assignedtoname':
-        return 'Line Manager';
+        return this.tUsers('roles.lineManager');
       default:
         return field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
     }
@@ -460,7 +487,7 @@ navigateToDocuments(): void {
           this.selectedUser.lastName = payload.lastName;
           this.selectedUser.email = payload.email;
           this.selectedUser.departmentId = payload.departmentId;
-          this.selectedUser.function = payload.function || 'unknown';
+          this.selectedUser.function = payload.function || this.tUsers('labels.unknownLowercase');
           // The re-evaluation of Role/DepartmentName will happen when users$ emits automatically in selectUser trigger
           this.users$.pipe(take(1)).subscribe(users => {
             const updated = users.find(u => u.id === this.selectedUser?.id);
@@ -470,7 +497,7 @@ navigateToDocuments(): void {
       },
       error: (err) => {
         console.error('Error updating user:', err);
-        alert(err.error?.message || 'Error updating user');
+        alert(err.error?.message || this.tUsers('messages.errorUpdatingUserToast'));
       }
     });
   }
@@ -495,7 +522,7 @@ navigateToDocuments(): void {
       },
       error: (err) => {
         console.error('Error deleting user:', err);
-        alert(err.error?.message || 'Error deleting user');
+        alert(err.error?.message || this.tUsers('messages.errorDeletingUserToast'));
       }
     });
   }

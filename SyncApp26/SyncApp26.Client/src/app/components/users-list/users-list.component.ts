@@ -15,6 +15,8 @@ import { WorkSiteService } from '../../services/work-site.service';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
 import { roleNameBadgeColor } from '../../shared/utils/role.util';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface SignatureStats {
   total: number;
@@ -47,7 +49,7 @@ type ManagerSortKey = keyof LineManagerTeamStats;
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe],
   templateUrl: './users-list.component.html',
   styleUrls: ['./users-list.component.css'],
   animations: [
@@ -128,8 +130,35 @@ export class UsersListComponent implements OnInit {
     private notificationService: NotificationService,
     private roleService: RoleService,
     private impersonationService: ImpersonationService,
-    private workSiteService: WorkSiteService
+    private workSiteService: WorkSiteService,
+    private translationService: TranslationService
   ) { }
+
+  /** This page mixes user-management text with document-signature status badges. */
+  tUsers(key: string): string {
+    return this.translationService.translate('Users', key);
+  }
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
+
+  signedLabel(signed: boolean | undefined): string {
+    return signed ? this.tDocuments('status.signed') : this.tDocuments('status.notSigned');
+  }
+
+  pendingUsersTitle(row: LineManagerTeamStats): string {
+    return row.missingAny > 0
+      ? this.translationService.translate('Documents', 'messages.viewPendingUsersFor', row.managerName, row.missingAny)
+      : this.translationService.translate('Documents', 'messages.allSubordinatesFullySignedFor', row.managerName);
+  }
+
+  viewAsButtonLabel(): string {
+    if (this.isStartingImpersonation) {
+      return this.tUsers('messages.switching');
+    }
+    return `${this.tUsers('actions.viewAs')} ${this.viewAsModalUser?.firstName ?? ''}`;
+  }
 
   logout(): void {
     this.authService.logout();
@@ -373,7 +402,7 @@ export class UsersListComponent implements OnInit {
       .filter(u => !u.hasSignedSsm || !u.hasSignedSu)
       .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
 
-    this.pendingUsersModalTitle = `Users with pending signatures for ${row.managerName}`;
+    this.pendingUsersModalTitle = this.translationService.translate('Documents', 'messages.pendingSignaturesFor', row.managerName);
     this.isPendingUsersModalOpen = true;
   }
 
@@ -393,11 +422,11 @@ export class UsersListComponent implements OnInit {
     this.notificationService.notifyAllManagers(documentType).subscribe({
       next: (res) => {
         this.isSendingNotify = false;
-        this.showToast(res.message || 'Notifications sent!');
+        this.showToast(res.message || this.tDocuments('messages.notificationsSent'));
       },
       error: (err) => {
         this.isSendingNotify = false;
-        this.showToast(err.error?.message || 'Failed to send notifications.', 'error');
+        this.showToast(err.error?.message || this.tDocuments('messages.notificationsFailed'), 'error');
       }
     });
   }
@@ -559,7 +588,7 @@ export class UsersListComponent implements OnInit {
     };
 
     if (this.editForm.role === UserRole.BasicUser && !payload.assignedToId) {
-      this.showToast('Please select a Line Manager for the Employee.', 'error');
+      this.showToast(this.tUsers('messages.pleaseSelectLineManager'), 'error');
       return;
     }
 
@@ -570,7 +599,7 @@ export class UsersListComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error updating user:', err);
-        this.showToast(err.error?.message || 'Error updating user', 'error');
+        this.showToast(err.error?.message || this.tUsers('messages.errorUpdatingUserToast'), 'error');
       }
     });
   }
@@ -595,7 +624,7 @@ export class UsersListComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error deleting user:', err);
-        this.showToast(err.error?.message || 'Error deleting user', 'error');
+        this.showToast(err.error?.message || this.tUsers('messages.errorDeletingUserToast'), 'error');
       }
     });
   }
@@ -653,7 +682,7 @@ export class UsersListComponent implements OnInit {
   private refreshRoles(): void {
     this.roleService.getAllRoles().subscribe({
       next: (roles) => this.allRoles = roles,
-      error: (err) => this.showToast(err.error?.message || 'Error loading roles', 'error')
+      error: (err) => this.showToast(err.error?.message || this.tUsers('messages.errorLoadingRoles'), 'error')
     });
   }
 
@@ -681,12 +710,12 @@ export class UsersListComponent implements OnInit {
     this.userSyncService.setUserRoles(this.rolesModalUser.id, this.selectedRoleNames).subscribe({
       next: () => {
         this.isSavingRoles = false;
-        this.showToast('Roles updated successfully.');
+        this.showToast(this.tUsers('messages.rolesUpdatedToast'));
         this.closeRolesModal();
       },
       error: (err) => {
         this.isSavingRoles = false;
-        this.showToast(err.error?.message || 'Error updating roles', 'error');
+        this.showToast(err.error?.message || this.tUsers('messages.errorUpdatingRolesToast'), 'error');
       }
     });
   }
@@ -698,10 +727,10 @@ export class UsersListComponent implements OnInit {
       next: (role) => {
         this.newRoleName = '';
         this.newRoleDescription = '';
-        this.showToast(`Role '${role.name}' created.`);
+        this.showToast(this.translationService.translate('Users', 'messages.roleCreated', role.name));
         this.refreshRoles();
       },
-      error: (err) => this.showToast(err.error?.message || 'Error creating role', 'error')
+      error: (err) => this.showToast(err.error?.message || this.tUsers('messages.errorCreatingRole'), 'error')
     });
   }
 
@@ -709,10 +738,10 @@ export class UsersListComponent implements OnInit {
     this.roleService.deleteRole(role.id).subscribe({
       next: () => {
         this.selectedRoleNames = this.selectedRoleNames.filter(name => name !== role.name);
-        this.showToast(`Role '${role.name}' deleted.`);
+        this.showToast(this.translationService.translate('Users', 'messages.roleDeleted', role.name));
         this.refreshRoles();
       },
-      error: (err) => this.showToast(err.error?.message || 'Error deleting role', 'error')
+      error: (err) => this.showToast(err.error?.message || this.tUsers('messages.errorDeletingRole'), 'error')
     });
   }
 }

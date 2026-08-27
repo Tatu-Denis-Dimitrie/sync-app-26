@@ -36,7 +36,7 @@
                 type="text"
                 [(ngModel)]="searchQuery"
                 (ngModelChange)="onSearchChange()"
-                placeholder="Search..."
+                [placeholder]="'labels.searchGenericPlaceholder' | translate:'Users'"
                 class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
                 <svg
@@ -59,7 +59,7 @@
                 (ngModelChange)="onFilterChange()"
                 class="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 >
-                <option value="all">All Departments</option>
+                <option value="all">{{ 'filters.allDepartments' | translate:'Users' }}</option>
                 @for (dept of departments$ | async; track dept) {
                   <option
                     [value]="dept.name"
@@ -141,7 +141,7 @@
                 <div
                   class="p-8 text-center"
                   >
-                  <p class="text-muted-foreground">No employees found</p>
+                  <p class="text-muted-foreground">{{ 'labels.noEmployeesFound' | translate:'Users' }}</p>
                 </div>
               }
             </div>
@@ -219,7 +219,7 @@
                         <button
                           (click)="viewSSMSUForm(selectedUser, $event)"
                           class="text-sm p-1.5 rounded-md hover:bg-secondary text-accent-foreground transition-colors"
-                          title="View SSM/SU Form"
+                          [title]="'actions.viewSsmSuForm' | translate:'Documents'"
                           >
                           <svg
                             class="w-4 h-4"
@@ -238,7 +238,7 @@
                         <button
                           (click)="openEditModal(selectedUser, $event)"
                           class="text-sm p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
-                          title="Edit User"
+                          [title]="'actions.editUser' | translate:'Users'"
                           >
                           <svg
                             class="w-4 h-4"
@@ -257,7 +257,7 @@
                         <button
                           (click)="openDeleteModal(selectedUser, $event)"
                           class="text-sm p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
-                          title="Delete User"
+                          [title]="'actions.deleteUser' | translate:'Users'"
                           >
                           <svg
                             class="w-4 h-4"
@@ -303,11 +303,11 @@
                   <h3
                     class="text-lg font-semibold text-foreground border-b border-border pb-2"
                     >
-                    Personal Information
+                    {{ 'sections.personalInformation' | translate:'Users' }}
                   </h3>
                   <div>
                     <label class="text-sm font-medium text-muted-foreground"
-                      >Employee ID</label
+                      >{{ 'profile.employeeId' | translate:'Users' }}</label
                       >
                       <p class="text-foreground font-medium mt-1">
                         {{ selectedUser.personalId }}
@@ -315,7 +315,7 @@
                     </div>
                     <div>
                       <label class="text-sm font-medium text-muted-foreground"
-                        >Full Name</label
+                        >{{ 'profile.fullName' | translate:'Users' }}</label
                         >
                         <p class="text-foreground font-medium mt-1">
                           {{ selectedUser.firstName }} {{ selectedUser.lastName }}
@@ -323,7 +323,7 @@
                       </div>
                       <div>
                         <label class="text-sm font-medium text-muted-foreground"
-                          >Email</label
+                          >{{ 'profile.email' | translate:'Users' }}</label
                           >
                           <p class="text-foreground font-medium mt-1">
                             {{ selectedUser.email }}
@@ -331,7 +331,7 @@
                         </div>
                         <div>
                           <label class="text-sm font-medium text-muted-foreground"
-                            >Role</label
+                            >{{ 'labels.role' | translate:'Users' }}</label
                             >
                             <div class="mt-1">
                               <span
@@ -342,8 +342,8 @@
                                 >
                                 {{
                                 selectedUser.role === UserRole.LineManager
-                                ? "Line Manager"
-                                : "Employee"
+                                ? ('roles.lineManager' | translate:'Users')
+                                : ('labels.employee' | translate:'Users')
                                 }}
                               </span>
                             </div>
@@ -354,11 +354,11 @@
                           <h3
                             class="text-lg font-semibold text-foreground border-b border-border pb-2"
                             >
-                            Work Information
+                            {{ 'sections.workInformation' | translate:'Users' }}
                           </h3>
                           <div>
                             <label class="text-sm font-medium text-muted-foreground"
-                              >Department</label
+                              >{{ 'profile.department' | translate:'Users' }}</label
                               >
                               <p class="text-foreground font-medium mt-1">
                                 {{ selectedUser.departmentName }}
@@ -366,16 +366,16 @@
                             </div>
                             <div>
                               <label class="text-sm font-medium text-muted-foreground"
-                                >Function</label
+                                >{{ 'profile.function' | translate:'Users' }}</label
                                 >
                                 <p class="text-foreground font-medium mt-1">
-                                  {{ selectedUser.function?.trim() || "unknown" }}
+                                  {{ selectedUser.function?.trim() || tUsers('labels.unknownLowercase') }}
                                 </p>
                               </div>
                               @if (selectedUser.assignedToPersonalId) {
                                 <div>
                                   <label class="text-sm font-medium text-muted-foreground"
-                                    >Manager ID</label
+                                    >{{ 'profile.managerId' | translate:'Users' }}</label
                                     >
                                     <p class="text-foreground font-medium mt-1">
                                       {{ selectedUser.assignedToPersonalId }}
@@ -385,7 +385,7 @@
                                 @if (selectedUser.assignedToName) {
                                   <div>
                                     <label class="text-sm font-medium text-muted-foreground"
-                                      >Line Manager</label
+                                      >{{ 'roles.lineManager' | translate:'Users' }}</label
                                       >
                                       <p class="text-foreground font-medium mt-1">
                                         {{ selectedUser.assignedToName }}
@@ -399,12 +399,12 @@
                                     <div
                                       >
                                       <label class="text-sm font-medium text-muted-foreground"
-                                        >Status</label
+                                        >{{ 'labels.status' | translate:'Common' }}</label
                                         >
                                         <p class="text-foreground font-medium mt-1">
                                           <span class="inline-flex items-center gap-2">
                                             <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
-                                            Department Manager
+                                            {{ 'labels.departmentManager' | translate:'Users' }}
                                           </span>
                                         </p>
                                       </div>
@@ -413,31 +413,31 @@
                                 </div>
                                 <!-- Additional Info Card -->
                                 <div class="mt-6 p-4 bg-muted/50 rounded-lg border border-border">
-                                  <h4 class="text-sm font-semibold text-foreground mb-3">Summary</h4>
+                                  <h4 class="text-sm font-semibold text-foreground mb-3">{{ 'labels.summary' | translate:'Users' }}</h4>
                                   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
-                                      <p class="text-xs text-muted-foreground">User Type</p>
+                                      <p class="text-xs text-muted-foreground">{{ 'labels.userType' | translate:'Users' }}</p>
                                       <p class="text-sm font-medium text-foreground mt-1">
                                         {{
                                         selectedUser.role === UserRole.LineManager
-                                        ? "Manager"
-                                        : "Employee"
+                                        ? ('roles.managerShort' | translate:'Users')
+                                        : ('labels.employee' | translate:'Users')
                                         }}
                                       </p>
                                     </div>
                                     <div>
-                                      <p class="text-xs text-muted-foreground">Department</p>
+                                      <p class="text-xs text-muted-foreground">{{ 'profile.department' | translate:'Users' }}</p>
                                       <p class="text-sm font-medium text-foreground mt-1">
                                         {{ selectedUser.departmentName }}
                                       </p>
                                     </div>
                                     <div>
-                                      <p class="text-xs text-muted-foreground">Status</p>
-                                      <p class="text-sm font-medium text-green-600 mt-1">Active</p>
+                                      <p class="text-xs text-muted-foreground">{{ 'labels.status' | translate:'Common' }}</p>
+                                      <p class="text-sm font-medium text-green-600 mt-1">{{ 'status.active' | translate:'Common' }}</p>
                                     </div>
                                     <div>
                                       <p class="text-xs text-muted-foreground">
-                                        {{ selectedUser.updatedAt ? "Last Updated" : "Created" }}
+                                        {{ selectedUser.updatedAt ? ('labels.lastUpdated' | translate:'Users') : ('labels.created' | translate:'Users') }}
                                       </p>
                                       <p class="text-sm font-medium text-foreground mt-1">
                                         {{
@@ -458,15 +458,15 @@
                                   <div class="mt-6 bg-card border border-border rounded-lg p-4">
                                     <div class="flex items-center justify-between mb-4">
                                       <h3 class="text-lg font-semibold text-foreground">
-                                        User History
+                                        {{ 'sections.userHistory' | translate:'Users' }}
                                       </h3>
                                       <span class="text-sm text-muted-foreground">
-                                        {{ conflictsPage.totalCount }} entries
+                                        {{ entriesCountLabel(conflictsPage.totalCount) }}
                                       </span>
                                     </div>
                                     @if (conflictsLoading) {
                                       <div class="text-sm text-muted-foreground">
-                                        Loading user history...
+                                        {{ 'messages.loadingUserHistory' | translate:'Users' }}
                                       </div>
                                     }
                                     @if (!conflictsLoading && conflictsError) {
@@ -484,7 +484,7 @@
                                       <div
                                         class="text-sm text-muted-foreground"
                                         >
-                                        No user history for this employee.
+                                        {{ 'messages.noUserHistory' | translate:'Users' }}
                                       </div>
                                     }
                                     @for (group of getConflictGroupsByImport(); track group) {
@@ -492,15 +492,15 @@
                                         class="border border-border rounded-lg overflow-hidden mb-4 last:mb-0"
                                         >
                                         <div class="px-4 py-3 bg-muted/30 border-b border-border">
-                                          <p class="text-xs text-muted-foreground">Import</p>
+                                          <p class="text-xs text-muted-foreground">{{ 'labels.import' | translate:'Sync' }}</p>
                                           <p class="text-sm font-semibold text-foreground">
                                             {{ formatDate(group.importDate) }}
                                           </p>
                                           <p class="text-xs text-muted-foreground">
-                                            File: {{ group.importFileName || "N/A" }}
+                                            {{ 'importHistory.fileLabel' | translate:'Sync' }} {{ group.importFileName || ('labels.notAvailable' | translate:'Common') }}
                                           </p>
                                           <p class="text-xs text-muted-foreground">
-                                            ID: {{ group.importHistoryId }}
+                                            {{ 'importHistory.idLabel' | translate:'Sync' }} {{ group.importHistoryId }}
                                           </p>
                                         </div>
                                         @for (conflict of group.conflicts; track conflict) {
@@ -527,10 +527,10 @@
                                                 <div
                                                   class="text-xs font-medium text-muted-foreground uppercase mb-2"
                                                   >
-                                                  Database
+                                                  {{ 'labels.database' | translate:'Sync' }}
                                                 </div>
                                                 <p class="font-mono text-sm text-foreground">
-                                                  {{ conflict.oldValue || "N/A" }}
+                                                  {{ conflict.oldValue || ('labels.notAvailable' | translate:'Common') }}
                                                 </p>
                                               </div>
                                               <div
@@ -554,10 +554,10 @@
                                                 <div
                                                   class="text-xs font-medium text-muted-foreground uppercase mb-2"
                                                   >
-                                                  CSV
+                                                  {{ 'labels.csv' | translate:'Sync' }}
                                                 </div>
                                                 <p class="font-mono text-sm text-foreground">
-                                                  {{ conflict.newValue || "N/A" }}
+                                                  {{ conflict.newValue || ('labels.notAvailable' | translate:'Common') }}
                                                 </p>
                                               </div>
                                             </div>
@@ -573,16 +573,16 @@
                                           class="px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between"
                                           >
                                           <div>
-                                            <p class="text-xs text-muted-foreground">Manual</p>
+                                            <p class="text-xs text-muted-foreground">{{ 'labels.manual' | translate:'Sync' }}</p>
                                             <p class="text-xs text-muted-foreground">
-                                              Date:
+                                              {{ 'labels.dateLabel' | translate:'Sync' }}
                                               {{ formatDateTime(change.createdAt || change.importDate) }}
                                             </p>
                                           </div>
                                           <span
                                             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/10 text-blue-700 border-blue-500/20"
                                             >
-                                            manual
+                                            {{ 'labels.manualBadge' | translate:'Sync' }}
                                           </span>
                                         </div>
                                         <div class="border-t border-border">
@@ -600,10 +600,10 @@
                                               <div
                                                 class="text-xs font-medium text-muted-foreground uppercase mb-2"
                                                 >
-                                                Previous
+                                                {{ 'labels.previous' | translate:'Sync' }}
                                               </div>
                                               <p class="font-mono text-sm text-foreground">
-                                                {{ change.oldValue || "N/A" }}
+                                                {{ change.oldValue || ('labels.notAvailable' | translate:'Common') }}
                                               </p>
                                             </div>
                                             <div
@@ -627,10 +627,10 @@
                                               <div
                                                 class="text-xs font-medium text-muted-foreground uppercase mb-2"
                                                 >
-                                                New
+                                                {{ 'labels.new' | translate:'Sync' }}
                                               </div>
                                               <p class="font-mono text-sm text-foreground">
-                                                {{ change.newValue || "N/A" }}
+                                                {{ change.newValue || ('labels.notAvailable' | translate:'Common') }}
                                               </p>
                                             </div>
                                           </div>
@@ -646,15 +646,15 @@
                                   <div class="mt-6 bg-card border border-border rounded-lg p-4">
                                     <div class="flex items-center justify-between mb-4">
                                       <h3 class="text-lg font-semibold text-foreground">
-                                        Documents & Signatures
+                                        {{ 'sections.documentsAndSignatures' | translate:'Documents' }}
                                       </h3>
                                       <span class="text-sm text-muted-foreground">
-                                        {{ documentsPage.totalCount || 0 }} items
+                                        {{ itemsCountLabel(documentsPage.totalCount || 0) }}
                                       </span>
                                     </div>
                                     @if (documentsLoading) {
                                       <div class="text-sm text-muted-foreground">
-                                        Loading documents...
+                                        {{ 'messages.loadingDocuments' | translate:'Documents' }}
                                       </div>
                                     }
                                     @if (!documentsLoading && documentsError) {
@@ -672,7 +672,7 @@
                                       <div
                                         class="text-sm text-muted-foreground"
                                         >
-                                        No documents generated for this employee.
+                                        {{ 'messages.noDocumentsGenerated' | translate:'Documents' }}
                                       </div>
                                     }
                                     <div class="space-y-4">
@@ -683,7 +683,7 @@
                                           <div>
                                             <div class="flex items-center gap-2">
                                               <span class="font-semibold text-foreground"
-                                                >{{ doc.documentType }} Form</span
+                                                >{{ documentTypeFormLabel(doc.documentType) }}</span
                                                 >
                                                 <span
                       [ngClass]="{
@@ -700,7 +700,7 @@
                                                 </span>
                                               </div>
                                               <p class="text-xs text-muted-foreground mt-1">
-                                                Generated: {{ formatDate(doc.generatedAt) }}
+                                                {{ 'labels.generatedPrefix' | translate:'Documents' }} {{ formatDate(doc.generatedAt) }}
                                               </p>
                                             </div>
                                             <div
@@ -708,7 +708,7 @@
                                               >
                                               @if (doc.userSignedAt) {
                                                 <div>
-                                                  User
+                                                  {{ 'labels.userSignedShort' | translate:'Documents' }}
                                                   <svg
                                                     class="inline w-3 h-3 text-green-500"
                                                     fill="none"
@@ -727,7 +727,7 @@
                                               }
                                               @if (doc.managerSignedAt) {
                                                 <div>
-                                                  Mgr
+                                                  {{ 'labels.managerSignedShort' | translate:'Documents' }}
                                                   <svg
                                                     class="inline w-3 h-3 text-green-500"
                                                     fill="none"
@@ -779,10 +779,10 @@
                                       </svg>
                                     </div>
                                     <h3 class="text-xl font-semibold text-foreground mb-2">
-                                      Select an employee
+                                      {{ 'labels.selectAnEmployee' | translate:'Users' }}
                                     </h3>
                                     <p class="text-muted-foreground">
-                                      Choose a user from the list on the left to see full details
+                                      {{ 'messages.chooseUserFromList' | translate:'Users' }}
                                     </p>
                                   </div>
                                 }
@@ -801,7 +801,7 @@
                                 (click)="$event.stopPropagation()"
                                 >
                                 <div class="flex justify-between items-center mb-4">
-                                  <h2 class="text-lg font-semibold text-foreground">Edit User</h2>
+                                  <h2 class="text-lg font-semibold text-foreground">{{ 'actions.editUser' | translate:'Users' }}</h2>
                                   <button
                                     (click)="closeEditModal()"
                                     class="text-muted-foreground hover:text-foreground"
@@ -825,7 +825,7 @@
                                   <div class="grid grid-cols-2 gap-4">
                                     <div class="space-y-2">
                                       <label class="text-sm font-medium text-foreground"
-                                        >First Name</label
+                                        >{{ 'profile.firstName' | translate:'Users' }}</label
                                         >
                                         <input
                                           type="text"
@@ -836,7 +836,7 @@
                                           />
                                         </div>
                                         <div class="space-y-2">
-                                          <label class="text-sm font-medium text-foreground">Last Name</label>
+                                          <label class="text-sm font-medium text-foreground">{{ 'profile.lastName' | translate:'Users' }}</label>
                                           <input
                                             type="text"
                                             [(ngModel)]="editForm.lastName"
@@ -847,7 +847,7 @@
                                           </div>
                                         </div>
                                         <div class="space-y-2">
-                                          <label class="text-sm font-medium text-foreground">Email</label>
+                                          <label class="text-sm font-medium text-foreground">{{ 'profile.email' | translate:'Users' }}</label>
                                           <input
                                             type="email"
                                             [(ngModel)]="editForm.email"
@@ -857,7 +857,7 @@
                                             />
                                           </div>
                                           <div class="space-y-2">
-                                            <label class="text-sm font-medium text-foreground">Department</label>
+                                            <label class="text-sm font-medium text-foreground">{{ 'profile.department' | translate:'Users' }}</label>
                                             <select
                                               [(ngModel)]="editForm.departmentId"
                                               (ngModelChange)="onDepartmentChange($event)"
@@ -873,14 +873,14 @@
                                             </select>
                                           </div>
                                           <div class="space-y-2">
-                                            <label class="text-sm font-medium text-foreground">Function</label>
+                                            <label class="text-sm font-medium text-foreground">{{ 'profile.function' | translate:'Users' }}</label>
                                             <select
                                               [(ngModel)]="editForm.function"
                                               name="function"
                                               required
                                               class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                               >
-                                              <option value="" disabled>Select Function</option>
+                                              <option value="" disabled>{{ 'labels.selectFunction' | translate:'Users' }}</option>
                                               @for (fn of availableFunctions; track fn) {
                                                 <option [value]="fn">
                                                   {{ fn }}
@@ -889,20 +889,20 @@
                                             </select>
                                           </div>
                                           <div class="space-y-2">
-                                            <label class="text-sm font-medium text-foreground">Role</label>
+                                            <label class="text-sm font-medium text-foreground">{{ 'labels.role' | translate:'Users' }}</label>
                                             <select
                                               [(ngModel)]="editForm.role"
                                               name="role"
                                               required
                                               class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                               >
-                                              <option [value]="UserRole.BasicUser">Employee</option>
-                                              <option [value]="UserRole.LineManager">Line Manager</option>
+                                              <option [value]="UserRole.BasicUser">{{ 'labels.employee' | translate:'Users' }}</option>
+                                              <option [value]="UserRole.LineManager">{{ 'roles.lineManager' | translate:'Users' }}</option>
                                             </select>
                                           </div>
                                           <div class="space-y-2">
                                             <label class="text-sm font-medium text-foreground">
-                                              Line Manager
+                                              {{ 'roles.lineManager' | translate:'Users' }}
                                               @if (editForm.role === UserRole.BasicUser) {
                                                 <span class="text-destructive">*</span>
                                               }
@@ -914,7 +914,7 @@
                                               class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                               >
                                               <option value="">
-                                                {{ editForm.role === UserRole.LineManager ? "No line manager (top level)" : "Select Line Manager" }}
+                                                {{ editForm.role === UserRole.LineManager ? ('labels.noLineManagerTopLevel' | translate:'Users') : ('labels.selectLineManager' | translate:'Users') }}
                                               </option>
                                               @for (m of getAvailableLineManagers(); track m) {
                                                 <option [value]="m.id">
@@ -929,13 +929,13 @@
                                                 (click)="closeEditModal()"
                                                 class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
                                                 >
-                                                Cancel
+                                                {{ 'buttons.cancel' | translate:'Common' }}
                                               </button>
                                               <button
                                                 type="submit"
                                                 class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
                                                 >
-                                                Save Changes
+                                                {{ 'buttons.saveChanges' | translate:'Users' }}
                                               </button>
                                             </div>
                                           </form>
@@ -953,12 +953,12 @@
                                           class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
                                           (click)="$event.stopPropagation()"
                                           >
-                                          <h2 class="text-lg font-semibold text-foreground mb-2">Delete User</h2>
+                                          <h2 class="text-lg font-semibold text-foreground mb-2">{{ 'actions.deleteUser' | translate:'Users' }}</h2>
                                           <p class="text-muted-foreground text-sm mb-6">
-                                            Are you sure you want to delete
+                                            {{ 'messages.deleteUserConfirmPrefix' | translate:'Users' }}
                                             <strong
                                               >{{ selectedUser?.firstName }} {{ selectedUser?.lastName }}</strong
-                                              >? This action cannot be undone.
+                                              >{{ 'messages.deleteUserConfirmSuffix' | translate:'Users' }}
                                             </p>
                                             <div class="flex justify-end gap-3">
                                               <button
@@ -966,14 +966,14 @@
                                                 (click)="closeDeleteModal()"
                                                 class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
                                                 >
-                                                Cancel
+                                                {{ 'buttons.cancel' | translate:'Common' }}
                                               </button>
                                               <button
                                                 type="button"
                                                 (click)="confirmDelete()"
                                                 class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90"
                                                 >
-                                                Delete
+                                                {{ 'buttons.delete' | translate:'Common' }}
                                               </button>
                                             </div>
                                           </div>

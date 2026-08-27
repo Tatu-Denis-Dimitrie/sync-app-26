@@ -53,34 +53,34 @@
             >
             <div class="bg-card border border-border rounded-lg p-4">
               <p class="text-xs uppercase tracking-wide text-muted-foreground">
-                Users in View
+                {{ 'stats.usersInView' | translate:'Users' }}
               </p>
               <p class="text-2xl font-bold text-foreground mt-1">
                 {{ signatureStats.total }}
               </p>
             </div>
             <div class="bg-card border border-blue-200 rounded-lg p-4">
-              <p class="text-xs uppercase tracking-wide text-blue-600">SSM Signed</p>
+              <p class="text-xs uppercase tracking-wide text-blue-600">{{ 'status.ssmSigned' | translate:'Documents' }}</p>
               <p class="text-2xl font-bold text-blue-700 mt-1">
                 {{ signatureStats.ssmSigned }}
               </p>
             </div>
             <div class="bg-card border border-teal-200 rounded-lg p-4">
-              <p class="text-xs uppercase tracking-wide text-teal-600">SU Signed</p>
+              <p class="text-xs uppercase tracking-wide text-teal-600">{{ 'status.suSigned' | translate:'Documents' }}</p>
               <p class="text-2xl font-bold text-teal-700 mt-1">
                 {{ signatureStats.suSigned }}
               </p>
             </div>
             <div class="bg-card border border-emerald-200 rounded-lg p-4">
               <p class="text-xs uppercase tracking-wide text-emerald-600">
-                Both Signed
+                {{ 'status.bothSigned' | translate:'Documents' }}
               </p>
               <p class="text-2xl font-bold text-emerald-700 mt-1">
                 {{ signatureStats.bothSigned }}
               </p>
             </div>
             <div class="bg-card border border-rose-200 rounded-lg p-4">
-              <p class="text-xs uppercase tracking-wide text-rose-600">Not Signed</p>
+              <p class="text-xs uppercase tracking-wide text-rose-600">{{ 'status.notSigned' | translate:'Documents' }}</p>
               <p class="text-2xl font-bold text-rose-700 mt-1">
                 {{ signatureStats.unsigned }}
               </p>
@@ -119,10 +119,10 @@
             </div>
             <div>
               <p class="text-sm font-medium text-foreground leading-tight">
-                Statistics by Department
+                {{ 'stats.statisticsByDepartment' | translate:'Users' }}
               </p>
               <p class="text-xs text-muted-foreground mt-0.5">
-                Signature coverage per department
+                {{ 'stats.signatureCoveragePerDepartment' | translate:'Users' }}
               </p>
             </div>
           </button>
@@ -156,10 +156,10 @@
             </div>
             <div>
               <p class="text-sm font-medium text-foreground leading-tight">
-                Statistics by Line Manager
+                {{ 'stats.statisticsByLineManager' | translate:'Users' }}
               </p>
               <p class="text-xs text-muted-foreground mt-0.5">
-                Teams needing follow-up
+                {{ 'stats.teamsNeedingFollowUp' | translate:'Users' }}
               </p>
             </div>
           </button>
@@ -177,10 +177,10 @@
                 class="px-5 py-4 bg-gradient-to-r from-slate-50 to-sky-50 border-b border-border"
                 >
                 <h3 class="text-sm font-semibold text-foreground">
-                  Signature Statistics by Department
+                  {{ 'stats.signatureStatisticsByDepartment' | translate:'Users' }}
                 </h3>
                 <p class="text-xs text-muted-foreground mt-1">
-                  Quick overview of signing coverage for each department
+                  {{ 'stats.quickOverviewSigningCoverage' | translate:'Users' }}
                 </p>
               </div>
               <div class="overflow-x-auto">
@@ -191,37 +191,37 @@
                         class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
                         (click)="toggleDepartmentTableSort('departmentName')"
                         >
-                        Department{{ getDepartmentSortIndicator("departmentName") }}
+                        {{ 'profile.department' | translate:'Users' }}{{ getDepartmentSortIndicator("departmentName") }}
                       </th>
                       <th
                         class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                         (click)="toggleDepartmentTableSort('total')"
                         >
-                        Total{{ getDepartmentSortIndicator("total") }}
+                        {{ 'table.total' | translate:'Users' }}{{ getDepartmentSortIndicator("total") }}
                       </th>
                       <th
                         class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                         (click)="toggleDepartmentTableSort('ssmSigned')"
                         >
-                        SSM Signed{{ getDepartmentSortIndicator("ssmSigned") }}
+                        {{ 'status.ssmSigned' | translate:'Documents' }}{{ getDepartmentSortIndicator("ssmSigned") }}
                       </th>
                       <th
                         class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                         (click)="toggleDepartmentTableSort('suSigned')"
                         >
-                        SU Signed{{ getDepartmentSortIndicator("suSigned") }}
+                        {{ 'status.suSigned' | translate:'Documents' }}{{ getDepartmentSortIndicator("suSigned") }}
                       </th>
                       <th
                         class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                         (click)="toggleDepartmentTableSort('bothSigned')"
                         >
-                        Both Signed{{ getDepartmentSortIndicator("bothSigned") }}
+                        {{ 'status.bothSigned' | translate:'Documents' }}{{ getDepartmentSortIndicator("bothSigned") }}
                       </th>
                       <th
                         class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                         (click)="toggleDepartmentTableSort('unsigned')"
                         >
-                        Not Signed{{ getDepartmentSortIndicator("unsigned") }}
+                        {{ 'status.notSigned' | translate:'Documents' }}{{ getDepartmentSortIndicator("unsigned") }}
                       </th>
                     </tr>
                   </thead>
@@ -283,10 +283,10 @@
                           >
                           <div>
                             <h3 class="text-sm font-semibold text-foreground">
-                              Line Manager Team Signing Status
+                              {{ 'stats.lineManagerTeamSigningStatus' | translate:'Users' }}
                             </h3>
                             <p class="text-xs text-muted-foreground mt-1">
-                              Teams needing follow-up are highlighted
+                              {{ 'stats.teamsHighlighted' | translate:'Users' }}
                             </p>
                           </div>
                           <div class="flex items-center gap-2 shrink-0">
@@ -314,7 +314,7 @@
                                       d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                                       />
                                     </svg>
-                                    Sending emails…
+                                    {{ 'messages.sendingEmails' | translate:'Users' }}
                                   </div>
                                 } @else {
                                   @if (confirmingNotify !== 'SSM') {
@@ -322,7 +322,7 @@
                                       type="button"
                                       (click)="notifyAllManagers('SSM')"
                                       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors"
-                                      title="Send a reminder email to all line managers with unsigned SSM documents"
+                                      [title]="'actions.sendSsmRemindersTitle' | translate:'Documents'"
                                       >
                                       <svg
                                         class="w-3.5 h-3.5"
@@ -337,25 +337,25 @@
                                           d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                                           />
                                         </svg>
-                                        Notify SSM
+                                        {{ 'actions.notifySsm' | translate:'Documents' }}
                                       </button>
                                     } @else {
                                       <span class="text-xs text-muted-foreground"
-                                        >Send SSM reminders?</span
+                                        >{{ 'actions.sendSsmReminders' | translate:'Documents' }}</span
                                         >
                                         <button
                                           type="button"
                                           (click)="notifyAllManagers('SSM')"
                                           class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
                                           >
-                                          Yes
+                                          {{ 'buttons.yes' | translate:'Common' }}
                                         </button>
                                         <button
                                           type="button"
                                           (click)="cancelNotify()"
                                           class="px-2.5 py-1 rounded-lg border border-input text-muted-foreground text-xs font-medium hover:bg-muted transition-colors"
                                           >
-                                          Cancel
+                                          {{ 'buttons.cancel' | translate:'Common' }}
                                         </button>
                                       }
                                       @if (confirmingNotify !== 'SU') {
@@ -363,7 +363,7 @@
                                           type="button"
                                           (click)="notifyAllManagers('SU')"
                                           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-700 text-xs font-medium hover:bg-teal-100 transition-colors"
-                                          title="Send a reminder email to all line managers with unsigned SU documents"
+                                          [title]="'actions.sendSuRemindersTitle' | translate:'Documents'"
                                           >
                                           <svg
                                             class="w-3.5 h-3.5"
@@ -378,25 +378,25 @@
                                               d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                                               />
                                             </svg>
-                                            Notify SU
+                                            {{ 'actions.notifySu' | translate:'Documents' }}
                                           </button>
                                         } @else {
                                           <span class="text-xs text-muted-foreground"
-                                            >Send SU reminders?</span
+                                            >{{ 'actions.sendSuReminders' | translate:'Documents' }}</span
                                             >
                                             <button
                                               type="button"
                                               (click)="notifyAllManagers('SU')"
                                               class="px-2.5 py-1 rounded-lg bg-teal-600 text-white text-xs font-medium hover:bg-teal-700 transition-colors"
                                               >
-                                              Yes
+                                              {{ 'buttons.yes' | translate:'Common' }}
                                             </button>
                                             <button
                                               type="button"
                                               (click)="cancelNotify()"
                                               class="px-2.5 py-1 rounded-lg border border-input text-muted-foreground text-xs font-medium hover:bg-muted transition-colors"
                                               >
-                                              Cancel
+                                              {{ 'buttons.cancel' | translate:'Common' }}
                                             </button>
                                           }
                                         }
@@ -413,43 +413,43 @@
                                                 class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
                                                 (click)="toggleManagerTableSort('managerName')"
                                                 >
-                                                Line Manager{{ getManagerSortIndicator("managerName") }}
+                                                {{ 'roles.lineManager' | translate:'Users' }}{{ getManagerSortIndicator("managerName") }}
                                               </th>
                                               <th
                                                 class="text-left py-3 px-4 font-semibold cursor-pointer select-none"
                                                 (click)="toggleManagerTableSort('departmentName')"
                                                 >
-                                                Department{{ getManagerSortIndicator("departmentName") }}
+                                                {{ 'profile.department' | translate:'Users' }}{{ getManagerSortIndicator("departmentName") }}
                                               </th>
                                               <th
                                                 class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                                                 (click)="toggleManagerTableSort('totalSubordinates')"
                                                 >
-                                                Subordinates{{ getManagerSortIndicator("totalSubordinates") }}
+                                                {{ 'table.subordinates' | translate:'Users' }}{{ getManagerSortIndicator("totalSubordinates") }}
                                               </th>
                                               <th
                                                 class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                                                 (click)="toggleManagerTableSort('missingSsm')"
                                                 >
-                                                Missing SSM{{ getManagerSortIndicator("missingSsm") }}
+                                                {{ 'table.missingSsm' | translate:'Users' }}{{ getManagerSortIndicator("missingSsm") }}
                                               </th>
                                               <th
                                                 class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                                                 (click)="toggleManagerTableSort('missingSu')"
                                                 >
-                                                Missing SU{{ getManagerSortIndicator("missingSu") }}
+                                                {{ 'table.missingSu' | translate:'Users' }}{{ getManagerSortIndicator("missingSu") }}
                                               </th>
                                               <th
                                                 class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                                                 (click)="toggleManagerTableSort('missingAny')"
                                                 >
-                                                Missing Any{{ getManagerSortIndicator("missingAny") }}
+                                                {{ 'table.missingAny' | translate:'Users' }}{{ getManagerSortIndicator("missingAny") }}
                                               </th>
                                               <th
                                                 class="text-right py-3 px-4 font-semibold cursor-pointer select-none"
                                                 (click)="toggleManagerTableSort('fullySignedBoth')"
                                                 >
-                                                Fully Signed Both
+                                                {{ 'table.fullySignedBoth' | translate:'Users' }}
                                                 {{ getManagerSortIndicator("fullySignedBoth") }}
                                               </th>
                                             </tr>
@@ -506,21 +506,12 @@
                                                           [class.border-emerald-300]="row.missingAny === 0"
                                                           [class.cursor-not-allowed]="row.missingAny === 0"
                                                           [disabled]="row.missingAny === 0"
-                    [title]="
-                      row.missingAny > 0
-                        ? 'View pending users for ' +
-                          row.managerName +
-                          ' (' +
-                          row.missingAny +
-                          ' pending)'
-                        : 'All subordinates are fully signed for ' +
-                          row.managerName
-                    "
+                    [title]="pendingUsersTitle(row)"
                                                           (click)="openPendingUsersForManager(row, $event)"
                                                           >
                                                           <span>{{ row.missingAny }}</span>
                                                           @if (row.missingAny > 0) {
-                                                            <span>View</span>
+                                                            <span>{{ 'actions.view' | translate:'Users' }}</span>
                                                           }
                                                         </button>
                                                       </td>
@@ -537,7 +528,7 @@
                                               </div>
                                             } @else {
                                               <p class="text-sm text-muted-foreground p-5">
-                                                No line managers with assigned subordinates in this filter scope.
+                                                {{ 'messages.noManagersWithSubordinates' | translate:'Users' }}
                                               </p>
                                             }
                                           </div>
@@ -552,7 +543,7 @@
                                               type="text"
                                               [(ngModel)]="searchQuery"
                                               (ngModelChange)="onSearchChange()"
-                                              placeholder="Search users..."
+                                              [placeholder]="'labels.searchPlaceholder' | translate:'Users'"
                                               class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                               />
                                               <svg
@@ -575,7 +566,7 @@
                                               (ngModelChange)="onFilterChange()"
                                               class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                               >
-                                              <option value="all">All Departments</option>
+                                              <option value="all">{{ 'filters.allDepartments' | translate:'Users' }}</option>
                                               @for (dept of departments$ | async; track dept) {
                                                 <option [value]="dept.name">
                                                   {{ dept.name }}
@@ -588,9 +579,9 @@
                                               (ngModelChange)="onFilterChange()"
                                               class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                               >
-                                              <option value="all">All Roles</option>
-                                              <option [value]="UserRole.LineManager">Line Managers</option>
-                                              <option [value]="UserRole.BasicUser">Employees</option>
+                                              <option value="all">{{ 'filters.allRoles' | translate:'Users' }}</option>
+                                              <option [value]="UserRole.LineManager">{{ 'labels.lineManagers' | translate:'Users' }}</option>
+                                              <option [value]="UserRole.BasicUser">{{ 'labels.employees' | translate:'Users' }}</option>
                                             </select>
 
                                             <select
@@ -598,11 +589,11 @@
                                               (ngModelChange)="onFilterChange()"
                                               class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                                               >
-                                              <option value="all">All Signature Status</option>
-                                              <option value="ssm-signed">SSM Signed</option>
-                                              <option value="su-signed">SU Signed</option>
-                                              <option value="both-signed">Both Signed</option>
-                                              <option value="unsigned">Not Signed (SSM+SU)</option>
+                                              <option value="all">{{ 'filters.allSignatureStatus' | translate:'Organization' }}</option>
+                                              <option value="ssm-signed">{{ 'status.ssmSigned' | translate:'Documents' }}</option>
+                                              <option value="su-signed">{{ 'status.suSigned' | translate:'Documents' }}</option>
+                                              <option value="both-signed">{{ 'status.bothSigned' | translate:'Documents' }}</option>
+                                              <option value="unsigned">{{ 'labels.notSignedBothFilter' | translate:'Users' }}</option>
                                             </select>
                                           </div>
                                         </div>
@@ -670,38 +661,38 @@
                                                     (click)="openViewAsModal(user, $event)"
                                                     class="user-card-action text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >
-                                                    View as
+                                                    {{ 'actions.viewAs' | translate:'Users' }}
                                                   </button>
                                                   <button
                                                     (click)="openRolesModal(user, $event)"
                                                     class="user-card-action text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >
-                                                    Roles
+                                                    {{ 'actions.roles' | translate:'Users' }}
                                                   </button>
                                                   <button
                                                     (click)="openEditModal(user, $event)"
                                                     class="user-card-action text-xs p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
                                                     >
-                                                    Edit
+                                                    {{ 'buttons.edit' | translate:'Common' }}
                                                   </button>
                                                   <button
                                                     (click)="openDeleteModal(user, $event)"
                                                     class="user-card-action text-xs p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
                                                     >
-                                                    Delete
+                                                    {{ 'buttons.delete' | translate:'Common' }}
                                                   </button>
                                                 </div>
                                               </div>
                                               <div class="space-y-2">
                                                 <div class="flex items-center justify-between text-sm">
-                                                  <span class="text-muted-foreground">Department:</span>
+                                                  <span class="text-muted-foreground">{{ 'labels.departmentColon' | translate:'Users' }}</span>
                                                   <span class="font-medium text-foreground">{{
                                                     user.departmentName
                                                   }}</span>
                                                 </div>
                                                 @if (user.roles && user.roles.length > 0) {
                                                   <div class="flex items-center justify-between text-sm gap-2">
-                                                    <span class="text-muted-foreground shrink-0">Roles:</span>
+                                                    <span class="text-muted-foreground shrink-0">{{ 'labels.rolesColon' | translate:'Users' }}</span>
                                                     <span class="flex flex-wrap justify-end gap-1">
                                                       @for (roleName of user.roles; track roleName) {
                                                         <span [class]="'px-2 py-0.5 rounded border text-xs font-medium ' + roleNameBadgeColor(roleName)">
@@ -715,7 +706,7 @@
                                                   <div
                                                     class="flex items-center justify-between text-sm"
                                                     >
-                                                    <span class="text-muted-foreground">Manager:</span>
+                                                    <span class="text-muted-foreground">{{ 'labels.managerColon' | translate:'Users' }}</span>
                                                     <span class="font-medium text-foreground">{{
                                                       user.assignedToName
                                                     }}</span>
@@ -724,7 +715,7 @@
                                                 <div
                                                   class="pt-2 border-t border-border flex items-center justify-between text-sm"
                                                   >
-                                                  <span class="text-muted-foreground">SSM</span>
+                                                  <span class="text-muted-foreground">{{ 'documentType.ssm' | translate:'Documents' }}</span>
                                                   <span
               [class]="
                 user.hasSignedSsm
@@ -732,11 +723,11 @@
                   : 'text-rose-600 font-semibold'
               "
                                                     >
-                                                    {{ user.hasSignedSsm ? "Signed" : "Not Signed" }}
+                                                    {{ signedLabel(user.hasSignedSsm) }}
                                                   </span>
                                                 </div>
                                                 <div class="flex items-center justify-between text-sm">
-                                                  <span class="text-muted-foreground">SU</span>
+                                                  <span class="text-muted-foreground">{{ 'documentType.su' | translate:'Documents' }}</span>
                                                   <span
               [class]="
                 user.hasSignedSu
@@ -744,7 +735,7 @@
                   : 'text-rose-600 font-semibold'
               "
                                                     >
-                                                    {{ user.hasSignedSu ? "Signed" : "Not Signed" }}
+                                                    {{ signedLabel(user.hasSignedSu) }}
                                                   </span>
                                                 </div>
                                               </div>
@@ -773,9 +764,9 @@
                                                   ></path>
                                                 </svg>
                                               </div>
-                                              <h3 class="text-lg font-medium text-foreground mb-2">No users found</h3>
+                                              <h3 class="text-lg font-medium text-foreground mb-2">{{ 'labels.noUsersFound' | translate:'Users' }}</h3>
                                               <p class="text-muted-foreground">
-                                                There are no users matching the filter criteria.
+                                                {{ 'messages.noUsersMatchingFilter' | translate:'Users' }}
                                               </p>
                                             </div>
                                           }
@@ -847,7 +838,7 @@
                   : 'text-rose-700 font-semibold'
               "
                                                         >
-                                                        SSM: {{ user.hasSignedSsm ? "Signed" : "Not Signed" }}
+                                                        {{ 'documentType.ssm' | translate:'Documents' }}: {{ signedLabel(user.hasSignedSsm) }}
                                                       </p>
                                                       <p
               [class]="
@@ -856,7 +847,7 @@
                   : 'text-rose-700 font-semibold'
               "
                                                         >
-                                                        SU: {{ user.hasSignedSu ? "Signed" : "Not Signed" }}
+                                                        {{ 'documentType.su' | translate:'Documents' }}: {{ signedLabel(user.hasSignedSu) }}
                                                       </p>
                                                     </div>
                                                   </div>
@@ -864,7 +855,7 @@
                                               </div>
                                             } @else {
                                               <p class="text-sm text-muted-foreground">
-                                                All subordinates are fully signed.
+                                                {{ 'messages.allSubordinatesFullySigned' | translate:'Documents' }}
                                               </p>
                                             }
                                           </div>
@@ -882,7 +873,7 @@
                                             (click)="$event.stopPropagation()"
                                             >
                                             <div class="flex justify-between items-center mb-4">
-                                              <h2 class="text-lg font-semibold text-foreground">Edit User</h2>
+                                              <h2 class="text-lg font-semibold text-foreground">{{ 'actions.editUser' | translate:'Users' }}</h2>
                                               <button
                                                 (click)="closeEditModal()"
                                                 class="text-muted-foreground hover:text-foreground"
@@ -906,7 +897,7 @@
                                               <div class="grid grid-cols-2 gap-4">
                                                 <div class="space-y-2">
                                                   <label class="text-sm font-medium text-foreground"
-                                                    >First Name</label
+                                                    >{{ 'profile.firstName' | translate:'Users' }}</label
                                                     >
                                                     <input
                                                       type="text"
@@ -918,7 +909,7 @@
                                                       />
                                                     </div>
                                                     <div class="space-y-2">
-                                                      <label class="text-sm font-medium text-foreground">Last Name</label>
+                                                      <label class="text-sm font-medium text-foreground">{{ 'profile.lastName' | translate:'Users' }}</label>
                                                       <input
                                                         type="text"
                                                         [(ngModel)]="editForm.lastName"
@@ -930,7 +921,7 @@
                                                       </div>
                                                     </div>
                                                     <div class="space-y-2">
-                                                      <label class="text-sm font-medium text-foreground">Email</label>
+                                                      <label class="text-sm font-medium text-foreground">{{ 'profile.email' | translate:'Users' }}</label>
                                                       <input
                                                         type="email"
                                                         [(ngModel)]="editForm.email"
@@ -940,7 +931,7 @@
                                                         />
                                                       </div>
                                                       <div class="space-y-2">
-                                                        <label class="text-sm font-medium text-foreground">Department</label>
+                                                        <label class="text-sm font-medium text-foreground">{{ 'profile.department' | translate:'Users' }}</label>
                                                         <select
                                                           [(ngModel)]="editForm.departmentId"
                                                           (ngModelChange)="onDepartmentChange($event)"
@@ -956,14 +947,14 @@
                                                         </select>
                                                       </div>
                                                       <div class="space-y-2">
-                                                        <label class="text-sm font-medium text-foreground">Function</label>
+                                                        <label class="text-sm font-medium text-foreground">{{ 'profile.function' | translate:'Users' }}</label>
                                                         <select
                                                           [(ngModel)]="editForm.function"
                                                           name="function"
                                                           required
                                                           class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                                           >
-                                                          <option value="" disabled>Select Function</option>
+                                                          <option value="" disabled>{{ 'labels.selectFunction' | translate:'Users' }}</option>
                                                           @for (fn of availableFunctions; track fn) {
                                                             <option [value]="fn">
                                                               {{ fn }}
@@ -972,13 +963,13 @@
                                                         </select>
                                                       </div>
                                                       <div class="space-y-2">
-                                                        <label class="text-sm font-medium text-foreground">Work Site</label>
+                                                        <label class="text-sm font-medium text-foreground">{{ 'profile.workSite' | translate:'Users' }}</label>
                                                         <select
                                                           [(ngModel)]="editForm.workSiteId"
                                                           name="workSiteId"
                                                           class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                                           >
-                                                          <option value="">No work site</option>
+                                                          <option value="">{{ 'labels.noWorkSite' | translate:'Users' }}</option>
                                                           @for (ws of availableWorkSites; track ws.id) {
                                                             <option [value]="ws.id">
                                                               {{ ws.name }}
@@ -987,20 +978,20 @@
                                                         </select>
                                                       </div>
                                                       <div class="space-y-2">
-                                                        <label class="text-sm font-medium text-foreground">Role</label>
+                                                        <label class="text-sm font-medium text-foreground">{{ 'labels.role' | translate:'Users' }}</label>
                                                         <select
                                                           [(ngModel)]="editForm.role"
                                                           name="role"
                                                           required
                                                           class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                                           >
-                                                          <option [value]="UserRole.BasicUser">Employee</option>
-                                                          <option [value]="UserRole.LineManager">Line Manager</option>
+                                                          <option [value]="UserRole.BasicUser">{{ 'labels.employee' | translate:'Users' }}</option>
+                                                          <option [value]="UserRole.LineManager">{{ 'roles.lineManager' | translate:'Users' }}</option>
                                                         </select>
                                                       </div>
                                                       <div class="space-y-2">
                                                         <label class="text-sm font-medium text-foreground">
-                                                          Line Manager
+                                                          {{ 'roles.lineManager' | translate:'Users' }}
                                                           @if (editForm.role === UserRole.BasicUser) {
                                                             <span class="text-destructive">*</span>
                                                           }
@@ -1012,7 +1003,7 @@
                                                           class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                                                           >
                                                           <option value="">
-                                                            {{ editForm.role === UserRole.LineManager ? "No line manager (top level)" : "Select Line Manager" }}
+                                                            {{ editForm.role === UserRole.LineManager ? ('labels.noLineManagerTopLevel' | translate:'Users') : ('labels.selectLineManager' | translate:'Users') }}
                                                           </option>
                                                           @for (m of getAvailableLineManagers(); track m) {
                                                             <option [value]="m.id">
@@ -1027,13 +1018,13 @@
                                                             (click)="closeEditModal()"
                                                             class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
                                                             >
-                                                            Cancel
+                                                            {{ 'buttons.cancel' | translate:'Common' }}
                                                           </button>
                                                           <button
                                                             type="submit"
                                                             class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
                                                             >
-                                                            Save Changes
+                                                            {{ 'buttons.saveChanges' | translate:'Users' }}
                                                           </button>
                                                         </div>
                                                       </form>
@@ -1053,7 +1044,7 @@
                                                       >
                                                       <div class="flex justify-between items-center mb-4">
                                                         <h2 class="text-lg font-semibold text-foreground">
-                                                          Roles for {{ rolesModalUser.firstName }} {{ rolesModalUser.lastName }}
+                                                          {{ 'labels.rolesForPrefix' | translate:'Users' }} {{ rolesModalUser.firstName }} {{ rolesModalUser.lastName }}
                                                         </h2>
                                                         <button
                                                           (click)="closeRolesModal()"
@@ -1096,24 +1087,24 @@
                                                                 (click)="deleteRole(role)"
                                                                 class="text-xs text-destructive hover:underline"
                                                                 >
-                                                                Delete
+                                                                {{ 'buttons.delete' | translate:'Common' }}
                                                               </button>
                                                             }
                                                           </div>
                                                         }
                                                         @if (allRoles.length === 0) {
-                                                          <p class="text-sm text-muted-foreground">No roles found.</p>
+                                                          <p class="text-sm text-muted-foreground">{{ 'labels.noRolesFound' | translate:'Users' }}</p>
                                                         }
                                                       </div>
 
                                                       <div class="border-t border-border mt-4 pt-4 space-y-2">
-                                                        <label class="text-sm font-medium text-foreground">Create a custom role</label>
+                                                        <label class="text-sm font-medium text-foreground">{{ 'actions.createCustomRole' | translate:'Users' }}</label>
                                                         <div class="flex gap-2">
                                                           <input
                                                             type="text"
                                                             [(ngModel)]="newRoleName"
                                                             name="newRoleName"
-                                                            placeholder="Role name"
+                                                            [placeholder]="'labels.roleNamePlaceholder' | translate:'Users'"
                                                             maxlength="50"
                                                             class="flex-1 px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
                                                             />
@@ -1123,14 +1114,14 @@
                                                             [disabled]="!newRoleName.trim()"
                                                             class="px-3 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 disabled:opacity-50"
                                                             >
-                                                            Add
+                                                            {{ 'buttons.add' | translate:'Common' }}
                                                           </button>
                                                         </div>
                                                         <input
                                                           type="text"
                                                           [(ngModel)]="newRoleDescription"
                                                           name="newRoleDescription"
-                                                          placeholder="Description (optional)"
+                                                          [placeholder]="'labels.roleDescriptionPlaceholder' | translate:'Users'"
                                                           maxlength="200"
                                                           class="w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
                                                           />
@@ -1142,7 +1133,7 @@
                                                           (click)="closeRolesModal()"
                                                           class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
                                                           >
-                                                          Cancel
+                                                          {{ 'buttons.cancel' | translate:'Common' }}
                                                         </button>
                                                         <button
                                                           type="button"
@@ -1150,7 +1141,7 @@
                                                           [disabled]="isSavingRoles"
                                                           class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
                                                           >
-                                                          {{ isSavingRoles ? 'Saving...' : 'Save Roles' }}
+                                                          {{ isSavingRoles ? ('buttons.saving' | translate:'Common') : ('buttons.saveRoles' | translate:'Users') }}
                                                         </button>
                                                       </div>
                                                     </div>
@@ -1167,9 +1158,9 @@
                                                       class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
                                                       (click)="$event.stopPropagation()"
                                                       >
-                                                      <h2 class="text-lg font-semibold text-foreground mb-2">View as {{ viewAsModalUser.firstName }} {{ viewAsModalUser.lastName }}?</h2>
+                                                      <h2 class="text-lg font-semibold text-foreground mb-2">{{ 'actions.viewAs' | translate:'Users' }} {{ viewAsModalUser.firstName }} {{ viewAsModalUser.lastName }}?</h2>
                                                       <p class="text-muted-foreground text-sm mb-6">
-                                                        Your session switches to theirs immediately, with their permissions. You can return to your own session anytime from the header.
+                                                        {{ 'messages.viewAsWarning' | translate:'Users' }}
                                                       </p>
                                                       <div class="flex flex-wrap justify-end gap-3">
                                                         <button
@@ -1178,7 +1169,7 @@
                                                           [disabled]="isStartingImpersonation"
                                                           class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent disabled:opacity-50"
                                                           >
-                                                          Cancel
+                                                          {{ 'buttons.cancel' | translate:'Common' }}
                                                         </button>
                                                         <button
                                                           type="button"
@@ -1186,7 +1177,7 @@
                                                           [disabled]="isStartingImpersonation"
                                                           class="max-w-full truncate px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
                                                           >
-                                                          {{ isStartingImpersonation ? 'Switching…' : 'View as ' + viewAsModalUser.firstName }}
+                                                          {{ viewAsButtonLabel() }}
                                                         </button>
                                                       </div>
                                                     </div>
@@ -1203,12 +1194,12 @@
                                                       class="bg-card w-full max-w-sm rounded-lg shadow-lg border border-border p-6"
                                                       (click)="$event.stopPropagation()"
                                                       >
-                                                      <h2 class="text-lg font-semibold text-foreground mb-2">Delete User</h2>
+                                                      <h2 class="text-lg font-semibold text-foreground mb-2">{{ 'actions.deleteUser' | translate:'Users' }}</h2>
                                                       <p class="text-muted-foreground text-sm mb-6">
-                                                        Are you sure you want to delete
+                                                        {{ 'messages.deleteUserConfirmPrefix' | translate:'Users' }}
                                                         <strong
                                                           >{{ selectedUser?.firstName }} {{ selectedUser?.lastName }}</strong
-                                                          >? This action cannot be undone.
+                                                          >{{ 'messages.deleteUserConfirmSuffix' | translate:'Users' }}
                                                         </p>
                                                         <div class="flex justify-end gap-3">
                                                           <button
@@ -1216,14 +1207,14 @@
                                                             (click)="closeDeleteModal()"
                                                             class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
                                                             >
-                                                            Cancel
+                                                            {{ 'buttons.cancel' | translate:'Common' }}
                                                           </button>
                                                           <button
                                                             type="button"
                                                             (click)="confirmDelete()"
                                                             class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90"
                                                             >
-                                                            Delete
+                                                            {{ 'buttons.delete' | translate:'Common' }}
                                                           </button>
                                                         </div>
                                                       </div>

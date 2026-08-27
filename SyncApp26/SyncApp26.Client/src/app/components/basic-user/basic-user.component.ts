@@ -17,11 +17,13 @@ import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { CustomSelectComponent, SelectOption } from '../../shared/components/custom-select/custom-select.component';
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-basic-user',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent, TranslatePipe],
   templateUrl: './basic-user.component.html',
   styleUrls: ['./basic-user.component.css']
 })
@@ -113,20 +115,9 @@ export class BasicUserComponent implements OnInit {
   availableWorkSites: string[] = [];
   registeredFunctions: string[] = [];
   
-  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
-    { key: 'LastName', label: 'Last Name', type: 'text' },
-    { key: 'FirstName', label: 'First Name', type: 'text' },
-    { key: 'DateOfBirth', label: 'Date of Birth', type: 'date' },
-    { key: 'PlaceOfBirth', label: 'Place of Birth', type: 'text' },
-    { key: 'Department', label: 'Department (Name)', type: 'select' },
-    { key: 'Function', label: 'Function (Name)', type: 'select' },
-    { key: 'WorkSite', label: 'Work Site (Name)', type: 'select' },
-    { key: 'Address', label: 'Address', type: 'text' },
-    { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
-    { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS },
-    { key: 'CommuteRoute', label: 'Commute Route', type: 'text' },
-    { key: 'CommuteDurationMinutes', label: 'Commute Duration (minutes)', type: 'text' }
-  ];
+  // Populated in the constructor body, not here - a field initializer can run before the
+  // translationService parameter property is assigned, and these labels need it.
+  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [];
   selectedFieldKey = '';
   newFieldValue = '';
   requestedChanges: { [key: string]: string } = {};
@@ -144,13 +135,69 @@ export class BasicUserComponent implements OnInit {
     private dataChangeRequestService: DataChangeRequestService,
     private workSiteService: WorkSiteService,
     private router: Router,
-    private http: HttpClient
-  ) { }
+    private http: HttpClient,
+    private translationService: TranslationService
+  ) {
+    this.availableFields = [
+      { key: 'LastName', label: this.tUsers('profile.lastName'), type: 'text' },
+      { key: 'FirstName', label: this.tUsers('profile.firstName'), type: 'text' },
+      { key: 'DateOfBirth', label: this.tUsers('profile.dateOfBirth'), type: 'date' },
+      { key: 'PlaceOfBirth', label: this.tUsers('fields.placeOfBirth'), type: 'text' },
+      { key: 'Department', label: this.tUsers('fields.departmentName'), type: 'select' },
+      { key: 'Function', label: this.tUsers('fields.functionName'), type: 'select' },
+      { key: 'WorkSite', label: this.tUsers('fields.workSiteName'), type: 'select' },
+      { key: 'Address', label: this.tUsers('profile.address'), type: 'text' },
+      { key: 'BadgeNumber', label: this.tUsers('profile.badgeNumber'), type: 'text' },
+      { key: 'BloodType', label: this.tUsers('profile.bloodType'), type: 'select', options: BLOOD_TYPE_OPTIONS },
+      { key: 'CommuteRoute', label: this.tUsers('fields.commuteRoute'), type: 'text' },
+      { key: 'CommuteDurationMinutes', label: this.tUsers('fields.commuteDurationMinutes'), type: 'text' }
+    ];
+  }
+
+  tUsers(key: string): string {
+    return this.translationService.translate('Users', key);
+  }
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
+
+  tRequests(key: string): string {
+    return this.translationService.translate('Requests', key);
+  }
+
+  tCommon(key: string): string {
+    return this.translationService.translate('Common', key);
+  }
+
+  documentTypeFileLabel(documentType: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeFile', documentType);
+  }
+
+  documentTypeFileSubordinateLabel(documentType: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeFileSubordinate', documentType);
+  }
+
+  documentTypeFileTrainingLabel(documentType: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeFileTraining', documentType);
+  }
+
+  signedByYouOnLabel(date: string): string {
+    return this.translationService.translate('Documents', 'messages.signedByYouOn', date);
+  }
+
+  countersignedByYouOnLabel(date: string): string {
+    return this.translationService.translate('Documents', 'messages.countersignedByYouOn', date);
+  }
+
+  signedAsInstructorOnLabel(date: string): string {
+    return this.translationService.translate('Documents', 'messages.signedAsInstructorOn', date);
+  }
 
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser?.id) {
-      this.errorMessage = 'User session not found.';
+      this.errorMessage = this.tUsers('messages.userSessionNotFound');
       this.isLoading = false;
       return;
     }
@@ -159,12 +206,12 @@ export class BasicUserComponent implements OnInit {
       next: (user) => {
         this.user = user;
         if (!user) {
-          this.errorMessage = 'Could not load user details.';
+          this.errorMessage = this.tUsers('messages.couldNotLoadUserDetails');
         }
         this.isLoading = false;
       },
       error: () => {
-        this.errorMessage = 'Could not load user details.';
+        this.errorMessage = this.tUsers('messages.couldNotLoadUserDetails');
         this.isLoading = false;
       }
     });
@@ -296,7 +343,7 @@ export class BasicUserComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error generating token', err);
-        alert(err.error?.message || 'Could not initiate signature block.');
+        alert(err.error?.message || this.tDocuments('messages.couldNotInitiateSignatureBlock'));
       }
     });
   }
@@ -311,7 +358,7 @@ export class BasicUserComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error fetching PDF', err);
-        alert('Could not open document. Please try again.');
+        alert(this.tDocuments('messages.couldNotOpenDocument'));
       }
     });
   }
@@ -353,11 +400,11 @@ export class BasicUserComponent implements OnInit {
 
   saveSignature(): void {
     if (this.sigMode === 'type' && !this.typedSig.trim()) {
-      this.sigErrorMessage = 'Please type your name as your signature.';
+      this.sigErrorMessage = this.tDocuments('messages.pleaseTypeYourName');
       return;
     }
     if (this.sigMode === 'draw' && !this.isSigConfirmed) {
-      this.sigErrorMessage = 'Please draw your signature on the pad.';
+      this.sigErrorMessage = this.tDocuments('messages.pleaseDrawYourSignature');
       return;
     }
 
@@ -374,20 +421,20 @@ export class BasicUserComponent implements OnInit {
       next: (res) => {
         this.isSigLoading = false;
         this.savedSignature = res.signature;
-        this.sigSuccessMessage = 'Signature saved successfully!';
+        this.sigSuccessMessage = this.tDocuments('messages.signatureSavedSuccessfully');
         this.isSigConfirmed = false;
         this.typedSig = '';
         if (this.sigMode === 'draw') this.clearSigCanvas();
       },
       error: (err) => {
         this.isSigLoading = false;
-        this.sigErrorMessage = err.error?.message || 'Failed to save signature. Please try again.';
+        this.sigErrorMessage = err.error?.message || this.tDocuments('messages.failedToSaveSignature');
       }
     });
   }
 
   revokeSignature(): void {
-    if (!confirm('Are you sure you want to remove your saved signature? This will be recorded in the audit log.')) return;
+    if (!confirm(this.tDocuments('messages.confirmRevokeSignature'))) return;
     this.isSigLoading = true;
     this.sigErrorMessage = '';
     this.sigSuccessMessage = '';
@@ -399,7 +446,7 @@ export class BasicUserComponent implements OnInit {
       },
       error: (err) => {
         this.isSigLoading = false;
-        this.sigErrorMessage = err.error?.message || 'Failed to revoke signature.';
+        this.sigErrorMessage = err.error?.message || this.tDocuments('messages.failedToRevokeSignature');
       }
     });
   }
@@ -435,7 +482,7 @@ export class BasicUserComponent implements OnInit {
   submitEmailChangeRequest(): void {
     const localPart = this.emailChangeLocalPart.trim();
     if (!localPart || /[\s@]/.test(localPart)) {
-      this.emailChangeError = 'Please enter a valid email name (no spaces or @).';
+      this.emailChangeError = this.tUsers('messages.invalidEmailLocalPart');
       return;
     }
 
@@ -449,14 +496,14 @@ export class BasicUserComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.isSubmittingEmailChange = false;
-        this.emailChangeSuccess = 'Your email change request has been submitted. It is now pending admin approval.';
+        this.emailChangeSuccess = this.tUsers('messages.emailChangeSubmitted');
         this.emailChangeLocalPart = '';
         this.emailChangeReason = '';
         setTimeout(() => this.closeEmailChangeModal(), 3000);
       },
       error: (err) => {
         this.isSubmittingEmailChange = false;
-        this.emailChangeError = err.error?.message || 'Failed to submit request.';
+        this.emailChangeError = err.error?.message || this.tCommon('messages.failedToSubmitRequest');
       }
     });
   }
@@ -486,14 +533,14 @@ export class BasicUserComponent implements OnInit {
 
     // Validation checks
     if (Object.keys(actualChanges).length === 0) {
-      this.dataChangeError = 'Please fill in at least one field to change.';
+      this.dataChangeError = this.tRequests('messages.pleaseFillOneField');
       return;
     }
-    
+
     if (actualChanges['Email']) {
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailPattern.test(actualChanges['Email'])) {
-        this.dataChangeError = 'Please enter a valid email address.';
+        this.dataChangeError = this.tRequests('messages.pleaseEnterValidEmail');
         return;
       }
     }
@@ -502,7 +549,7 @@ export class BasicUserComponent implements OnInit {
       const dob = new Date(actualChanges['DateOfBirth']);
       const today = new Date();
       if (dob > today) {
-        this.dataChangeError = 'Date of Birth cannot be in the future.';
+        this.dataChangeError = this.tRequests('messages.dobCannotBeFuture');
         return;
       }
     }
@@ -521,7 +568,7 @@ export class BasicUserComponent implements OnInit {
     }
 
     if (!this.dataChangeReason.trim()) {
-      this.dataChangeError = 'Please provide a reason for the change.';
+      this.dataChangeError = this.tRequests('messages.pleaseProvideReason');
       return;
     }
 
@@ -536,14 +583,14 @@ export class BasicUserComponent implements OnInit {
     this.dataChangeRequestService.createRequest(payload).subscribe({
       next: (res) => {
         this.isSubmittingDataChange = false;
-        this.dataChangeSuccess = 'Data change request submitted successfully. It is now pending admin approval.';
+        this.dataChangeSuccess = this.tRequests('messages.dataChangeSubmitted');
         this.requestedChanges = {};
         this.dataChangeReason = '';
         setTimeout(() => this.closeDataChangeModal(), 3000);
       },
       error: (err) => {
         this.isSubmittingDataChange = false;
-        this.dataChangeError = err.error?.message || 'Failed to submit request.';
+        this.dataChangeError = err.error?.message || this.tCommon('messages.failedToSubmitRequest');
       }
     });
   }

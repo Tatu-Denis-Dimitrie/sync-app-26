@@ -95,4 +95,283 @@
   <data name="actions.regenerateDocuments" xml:space="preserve">
     <value>Regenerate Documents</value>
   </data>
+  <data name="status.bothSigned" xml:space="preserve">
+    <value>Both Signed</value>
+  </data>
+  <data name="status.ssmSigned" xml:space="preserve">
+    <value>SSM Signed</value>
+  </data>
+  <data name="status.suSigned" xml:space="preserve">
+    <value>SU Signed</value>
+  </data>
+  <data name="status.notSigned" xml:space="preserve">
+    <value>Not Signed</value>
+  </data>
+  <data name="status.signed" xml:space="preserve">
+    <value>Signed</value>
+  </data>
+  <data name="messages.viewPendingUsersFor" xml:space="preserve">
+    <value>View pending users for {0} ({1} pending)</value>
+  </data>
+  <data name="messages.allSubordinatesFullySignedFor" xml:space="preserve">
+    <value>All subordinates are fully signed for {0}</value>
+  </data>
+  <data name="messages.allSubordinatesFullySigned" xml:space="preserve">
+    <value>All subordinates are fully signed.</value>
+  </data>
+  <data name="actions.viewSsmSuForm" xml:space="preserve">
+    <value>View SSM/SU Form</value>
+  </data>
+  <data name="sections.documentsAndSignatures" xml:space="preserve">
+    <value>Documents &amp; Signatures</value>
+  </data>
+  <data name="labels.itemsCount" xml:space="preserve">
+    <value>{0} items</value>
+  </data>
+  <data name="messages.loadingDocuments" xml:space="preserve">
+    <value>Loading documents...</value>
+  </data>
+  <data name="messages.noDocumentsGenerated" xml:space="preserve">
+    <value>No documents generated for this employee.</value>
+  </data>
+  <data name="labels.documentTypeForm" xml:space="preserve">
+    <value>{0} Form</value>
+  </data>
+  <data name="labels.generatedPrefix" xml:space="preserve">
+    <value>Generated:</value>
+  </data>
+  <data name="labels.userSignedShort" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="labels.managerSignedShort" xml:space="preserve">
+    <value>Mgr</value>
+  </data>
+  <data name="sections.documentsPendingSignature" xml:space="preserve">
+    <value>Documents Pending Signature</value>
+  </data>
+  <data name="labels.myDocuments" xml:space="preserve">
+    <value>My Documents</value>
+  </data>
+  <data name="labels.documentTypeFile" xml:space="preserve">
+    <value>{0} File</value>
+  </data>
+  <data name="messages.requiresSignatureAsEmployee" xml:space="preserve">
+    <value>Requires your signature as employee</value>
+  </data>
+  <data name="actions.sign" xml:space="preserve">
+    <value>Sign</value>
+  </data>
+  <data name="actions.countersign" xml:space="preserve">
+    <value>Countersign</value>
+  </data>
+  <data name="labels.awaitingCountersignature" xml:space="preserve">
+    <value>Awaiting Your Countersignature</value>
+  </data>
+  <data name="labels.documentTypeFileSubordinate" xml:space="preserve">
+    <value>{0} File (Subordinate Employee)</value>
+  </data>
+  <data name="messages.requiresCountersignatureAsManager" xml:space="preserve">
+    <value>Requires your countersignature as manager</value>
+  </data>
+  <data name="labels.employeeSignedPrefix" xml:space="preserve">
+    <value>Employee signed:</value>
+  </data>
+  <data name="labels.awaitingInstructorSignature" xml:space="preserve">
+    <value>Awaiting Your Instructor Signature</value>
+  </data>
+  <data name="labels.documentTypeFileTraining" xml:space="preserve">
+    <value>{0} File (Training)</value>
+  </data>
+  <data name="messages.requiresSignatureAsInstructor" xml:space="preserve">
+    <value>Requires your signature as instructor</value>
+  </data>
+  <data name="labels.managerSignedPrefix" xml:space="preserve">
+    <value>Manager signed:</value>
+  </data>
+  <data name="sections.signedDocuments" xml:space="preserve">
+    <value>Signed Documents</value>
+  </data>
+  <data name="messages.signedByYouOn" xml:space="preserve">
+    <value>Signed by you on {0}</value>
+  </data>
+  <data name="labels.securedAndVerified" xml:space="preserve">
+    <value>Secured &amp; Verified</value>
+  </data>
+  <data name="actions.viewPdf" xml:space="preserve">
+    <value>View PDF</value>
+  </data>
+  <data name="status.awaitingManager" xml:space="preserve">
+    <value>Awaiting manager</value>
+  </data>
+  <data name="labels.countersignedByYou" xml:space="preserve">
+    <value>Countersigned By You</value>
+  </data>
+  <data name="messages.countersignedByYouOn" xml:space="preserve">
+    <value>Countersigned by you on {0}</value>
+  </data>
+  <data name="labels.signedAsInstructor" xml:space="preserve">
+    <value>Signed As Instructor</value>
+  </data>
+  <data name="messages.signedAsInstructorOn" xml:space="preserve">
+    <value>Signed as instructor on {0}</value>
+  </data>
+  <data name="sections.mySignature" xml:space="preserve">
+    <value>My Signature</value>
+  </data>
+  <data name="labels.audited" xml:space="preserve">
+    <value>Audited</value>
+  </data>
+  <data name="messages.noSavedSignatureYet" xml:space="preserve">
+    <value>You do not have a saved signature yet. Create one below and it will be available as a one-click option when signing documents.</value>
+  </data>
+  <data name="labels.savedSignature" xml:space="preserve">
+    <value>Saved Signature</value>
+  </data>
+  <data name="labels.yourSavedSignatureAlt" xml:space="preserve">
+    <value>Your saved signature</value>
+  </data>
+  <data name="labels.savedPrefix" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="labels.methodPrefix" xml:space="preserve">
+    <value>Method:</value>
+  </data>
+  <data name="actions.revoke" xml:space="preserve">
+    <value>Revoke</value>
+  </data>
+  <data name="labels.updateSignature" xml:space="preserve">
+    <value>Update Signature</value>
+  </data>
+  <data name="labels.createSignature" xml:space="preserve">
+    <value>Create Signature</value>
+  </data>
+  <data name="tabs.draw" xml:space="preserve">
+    <value>Draw</value>
+  </data>
+  <data name="tabs.type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="messages.drawSignatureInstructions" xml:space="preserve">
+    <value>Draw your signature below using mouse or touch.</value>
+  </data>
+  <data name="actions.clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="messages.typeSignatureInstructions" xml:space="preserve">
+    <value>Type your full name as your legally binding signature.</value>
+  </data>
+  <data name="labels.yourFullNamePlaceholder" xml:space="preserve">
+    <value>Your full name</value>
+  </data>
+  <data name="messages.signatureConfirmation" xml:space="preserve">
+    <value>I confirm this is my intended signature and I authorise its use on documents.</value>
+  </data>
+  <data name="messages.savingEllipsis" xml:space="preserve">
+    <value>Saving…</value>
+  </data>
+  <data name="labels.saveSignature" xml:space="preserve">
+    <value>Save Signature</value>
+  </data>
+  <data name="actions.signatureHistory" xml:space="preserve">
+    <value>Signature History</value>
+  </data>
+  <data name="messages.noHistoryFound" xml:space="preserve">
+    <value>No history found.</value>
+  </data>
+  <data name="table.date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="table.action" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="table.method" xml:space="preserve">
+    <value>Method</value>
+  </data>
+  <data name="table.by" xml:space="preserve">
+    <value>By</value>
+  </data>
+  <data name="messages.couldNotInitiateSignatureBlock" xml:space="preserve">
+    <value>Could not initiate signature block.</value>
+  </data>
+  <data name="messages.couldNotOpenDocument" xml:space="preserve">
+    <value>Could not open document. Please try again.</value>
+  </data>
+  <data name="messages.pleaseTypeYourName" xml:space="preserve">
+    <value>Please type your name as your signature.</value>
+  </data>
+  <data name="messages.pleaseDrawYourSignature" xml:space="preserve">
+    <value>Please draw your signature on the pad.</value>
+  </data>
+  <data name="messages.signatureSavedSuccessfully" xml:space="preserve">
+    <value>Signature saved successfully!</value>
+  </data>
+  <data name="messages.failedToSaveSignature" xml:space="preserve">
+    <value>Failed to save signature. Please try again.</value>
+  </data>
+  <data name="messages.failedToRevokeSignature" xml:space="preserve">
+    <value>Failed to revoke signature.</value>
+  </data>
+  <data name="messages.confirmRevokeSignature" xml:space="preserve">
+    <value>Are you sure you want to remove your saved signature? This will be recorded in the audit log.</value>
+  </data>
+  <data name="actions.ssmSuFormShort" xml:space="preserve">
+    <value>SSM/SU Form</value>
+  </data>
+  <data name="table.missingSignaturesActions" xml:space="preserve">
+    <value>Missing Signatures / Actions</value>
+  </data>
+  <data name="actions.notifyMissingSsmTitle" xml:space="preserve">
+    <value>Notify missing SSM</value>
+  </data>
+  <data name="actions.notifyMissingSuTitle" xml:space="preserve">
+    <value>Notify missing SU</value>
+  </data>
+  <data name="actions.signAllPending" xml:space="preserve">
+    <value>Sign All Pending ({0})</value>
+  </data>
+  <data name="messages.couldNotInitiateBulkSigning" xml:space="preserve">
+    <value>Could not initiate bulk signing.</value>
+  </data>
+  <data name="messages.confirmNotifyUser" xml:space="preserve">
+    <value>Are you sure you want to notify {0} {1} about the missing {2} document?</value>
+  </data>
+  <data name="messages.notificationSent" xml:space="preserve">
+    <value>Notification sent!</value>
+  </data>
+  <data name="messages.failedToSendNotification" xml:space="preserve">
+    <value>Failed to send notification.</value>
+  </data>
+  <data name="documentType.ssm" xml:space="preserve">
+    <value>SSM</value>
+  </data>
+  <data name="documentType.su" xml:space="preserve">
+    <value>SU</value>
+  </data>
+  <data name="actions.notifySsm" xml:space="preserve">
+    <value>Notify SSM</value>
+  </data>
+  <data name="actions.notifySu" xml:space="preserve">
+    <value>Notify SU</value>
+  </data>
+  <data name="actions.sendSsmReminders" xml:space="preserve">
+    <value>Send SSM reminders?</value>
+  </data>
+  <data name="actions.sendSuReminders" xml:space="preserve">
+    <value>Send SU reminders?</value>
+  </data>
+  <data name="actions.sendSsmRemindersTitle" xml:space="preserve">
+    <value>Send a reminder email to all line managers with unsigned SSM documents</value>
+  </data>
+  <data name="actions.sendSuRemindersTitle" xml:space="preserve">
+    <value>Send a reminder email to all line managers with unsigned SU documents</value>
+  </data>
+  <data name="messages.notificationsSent" xml:space="preserve">
+    <value>Notifications sent!</value>
+  </data>
+  <data name="messages.notificationsFailed" xml:space="preserve">
+    <value>Failed to send notifications.</value>
+  </data>
+  <data name="messages.pendingSignaturesFor" xml:space="preserve">
+    <value>Users with pending signatures for {0}</value>
+  </data>
 </root>

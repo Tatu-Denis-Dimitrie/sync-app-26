@@ -161,4 +161,295 @@
   <data name="messages.languagePreferenceUpdated" xml:space="preserve">
     <value>Language preference updated successfully</value>
   </data>
+  <data name="labels.employee" xml:space="preserve">
+    <value>Employee</value>
+  </data>
+  <data name="labels.employees" xml:space="preserve">
+    <value>Employees</value>
+  </data>
+  <data name="labels.lineManagers" xml:space="preserve">
+    <value>Line Managers</value>
+  </data>
+  <data name="labels.role" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="labels.rolesColon" xml:space="preserve">
+    <value>Roles:</value>
+  </data>
+  <data name="labels.departmentColon" xml:space="preserve">
+    <value>Department:</value>
+  </data>
+  <data name="labels.managerColon" xml:space="preserve">
+    <value>Manager:</value>
+  </data>
+  <data name="labels.selectFunction" xml:space="preserve">
+    <value>Select Function</value>
+  </data>
+  <data name="labels.noRolesFound" xml:space="preserve">
+    <value>No roles found.</value>
+  </data>
+  <data name="labels.noUsersFound" xml:space="preserve">
+    <value>No users found</value>
+  </data>
+  <data name="labels.noWorkSite" xml:space="preserve">
+    <value>No work site</value>
+  </data>
+  <data name="labels.searchPlaceholder" xml:space="preserve">
+    <value>Search users...</value>
+  </data>
+  <data name="labels.roleNamePlaceholder" xml:space="preserve">
+    <value>Role name</value>
+  </data>
+  <data name="labels.roleDescriptionPlaceholder" xml:space="preserve">
+    <value>Description (optional)</value>
+  </data>
+  <data name="actions.view" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="messages.pleaseSelectLineManager" xml:space="preserve">
+    <value>Please select a Line Manager for the Employee.</value>
+  </data>
+  <data name="messages.errorUpdatingUserToast" xml:space="preserve">
+    <value>Error updating user</value>
+  </data>
+  <data name="messages.errorDeletingUserToast" xml:space="preserve">
+    <value>Error deleting user</value>
+  </data>
+  <data name="messages.errorLoadingRoles" xml:space="preserve">
+    <value>Error loading roles</value>
+  </data>
+  <data name="messages.rolesUpdatedToast" xml:space="preserve">
+    <value>Roles updated successfully.</value>
+  </data>
+  <data name="messages.errorUpdatingRolesToast" xml:space="preserve">
+    <value>Error updating roles</value>
+  </data>
+  <data name="messages.errorCreatingRole" xml:space="preserve">
+    <value>Error creating role</value>
+  </data>
+  <data name="messages.errorDeletingRole" xml:space="preserve">
+    <value>Error deleting role</value>
+  </data>
+  <data name="messages.roleCreated" xml:space="preserve">
+    <value>Role '{0}' created.</value>
+  </data>
+  <data name="messages.roleDeleted" xml:space="preserve">
+    <value>Role '{0}' deleted.</value>
+  </data>
+  <data name="stats.usersInView" xml:space="preserve">
+    <value>Users in View</value>
+  </data>
+  <data name="stats.statisticsByDepartment" xml:space="preserve">
+    <value>Statistics by Department</value>
+  </data>
+  <data name="stats.signatureCoveragePerDepartment" xml:space="preserve">
+    <value>Signature coverage per department</value>
+  </data>
+  <data name="stats.statisticsByLineManager" xml:space="preserve">
+    <value>Statistics by Line Manager</value>
+  </data>
+  <data name="stats.teamsNeedingFollowUp" xml:space="preserve">
+    <value>Teams needing follow-up</value>
+  </data>
+  <data name="stats.signatureStatisticsByDepartment" xml:space="preserve">
+    <value>Signature Statistics by Department</value>
+  </data>
+  <data name="stats.quickOverviewSigningCoverage" xml:space="preserve">
+    <value>Quick overview of signing coverage for each department</value>
+  </data>
+  <data name="stats.lineManagerTeamSigningStatus" xml:space="preserve">
+    <value>Line Manager Team Signing Status</value>
+  </data>
+  <data name="stats.teamsHighlighted" xml:space="preserve">
+    <value>Teams needing follow-up are highlighted</value>
+  </data>
+  <data name="table.total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="table.subordinates" xml:space="preserve">
+    <value>Subordinates</value>
+  </data>
+  <data name="table.missingSsm" xml:space="preserve">
+    <value>Missing SSM</value>
+  </data>
+  <data name="table.missingSu" xml:space="preserve">
+    <value>Missing SU</value>
+  </data>
+  <data name="table.missingAny" xml:space="preserve">
+    <value>Missing Any</value>
+  </data>
+  <data name="table.fullySignedBoth" xml:space="preserve">
+    <value>Fully Signed Both</value>
+  </data>
+  <data name="messages.sendingEmails" xml:space="preserve">
+    <value>Sending emails…</value>
+  </data>
+  <data name="messages.noManagersWithSubordinates" xml:space="preserve">
+    <value>No line managers with assigned subordinates in this filter scope.</value>
+  </data>
+  <data name="actions.viewAs" xml:space="preserve">
+    <value>View as</value>
+  </data>
+  <data name="actions.roles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="labels.rolesForPrefix" xml:space="preserve">
+    <value>Roles for</value>
+  </data>
+  <data name="messages.noUsersMatchingFilter" xml:space="preserve">
+    <value>There are no users matching the filter criteria.</value>
+  </data>
+  <data name="labels.noLineManagerTopLevel" xml:space="preserve">
+    <value>No line manager (top level)</value>
+  </data>
+  <data name="labels.selectLineManager" xml:space="preserve">
+    <value>Select Line Manager</value>
+  </data>
+  <data name="buttons.saveChanges" xml:space="preserve">
+    <value>Save Changes</value>
+  </data>
+  <data name="buttons.saveRoles" xml:space="preserve">
+    <value>Save Roles</value>
+  </data>
+  <data name="messages.viewAsWarning" xml:space="preserve">
+    <value>Your session switches to theirs immediately, with their permissions. You can return to your own session anytime from the header.</value>
+  </data>
+  <data name="messages.switching" xml:space="preserve">
+    <value>Switching…</value>
+  </data>
+  <data name="messages.deleteUserConfirmPrefix" xml:space="preserve">
+    <value>Are you sure you want to delete</value>
+  </data>
+  <data name="messages.deleteUserConfirmSuffix" xml:space="preserve">
+    <value>? This action cannot be undone.</value>
+  </data>
+  <data name="labels.notSignedBothFilter" xml:space="preserve">
+    <value>Not Signed (SSM+SU)</value>
+  </data>
+  <data name="labels.searchGenericPlaceholder" xml:space="preserve">
+    <value>Search...</value>
+  </data>
+  <data name="labels.noEmployeesFound" xml:space="preserve">
+    <value>No employees found</value>
+  </data>
+  <data name="sections.personalInformation" xml:space="preserve">
+    <value>Personal Information</value>
+  </data>
+  <data name="profile.employeeId" xml:space="preserve">
+    <value>Employee ID</value>
+  </data>
+  <data name="profile.fullName" xml:space="preserve">
+    <value>Full Name</value>
+  </data>
+  <data name="sections.workInformation" xml:space="preserve">
+    <value>Work Information</value>
+  </data>
+  <data name="labels.unknownLowercase" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="profile.managerId" xml:space="preserve">
+    <value>Manager ID</value>
+  </data>
+  <data name="labels.departmentManager" xml:space="preserve">
+    <value>Department Manager</value>
+  </data>
+  <data name="labels.summary" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="labels.userType" xml:space="preserve">
+    <value>User Type</value>
+  </data>
+  <data name="roles.managerShort" xml:space="preserve">
+    <value>Manager</value>
+  </data>
+  <data name="labels.lastUpdated" xml:space="preserve">
+    <value>Last Updated</value>
+  </data>
+  <data name="labels.created" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="sections.userHistory" xml:space="preserve">
+    <value>User History</value>
+  </data>
+  <data name="labels.entriesCount" xml:space="preserve">
+    <value>{0} entries</value>
+  </data>
+  <data name="messages.loadingUserHistory" xml:space="preserve">
+    <value>Loading user history...</value>
+  </data>
+  <data name="messages.noUserHistory" xml:space="preserve">
+    <value>No user history for this employee.</value>
+  </data>
+  <data name="labels.selectAnEmployee" xml:space="preserve">
+    <value>Select an employee</value>
+  </data>
+  <data name="messages.chooseUserFromList" xml:space="preserve">
+    <value>Choose a user from the list on the left to see full details</value>
+  </data>
+  <data name="messages.loadingProfile" xml:space="preserve">
+    <value>Loading profile...</value>
+  </data>
+  <data name="actions.changeEmail" xml:space="preserve">
+    <value>Change Email</value>
+  </data>
+  <data name="messages.emailChangeReviewNotice" xml:space="preserve">
+    <value>Your request will be reviewed by an administrator before it takes effect.</value>
+  </data>
+  <data name="labels.newEmailAddress" xml:space="preserve">
+    <value>New email address</value>
+  </data>
+  <data name="labels.newEmailLocalPartPlaceholder" xml:space="preserve">
+    <value>new.name</value>
+  </data>
+  <data name="labels.reasonOptional" xml:space="preserve">
+    <value>Reason (optional)</value>
+  </data>
+  <data name="labels.emailChangeReasonPlaceholder" xml:space="preserve">
+    <value>e.g. changed my last name after marriage</value>
+  </data>
+  <data name="messages.emailChangeSubmitted" xml:space="preserve">
+    <value>Your email change request has been submitted. It is now pending admin approval.</value>
+  </data>
+  <data name="messages.userSessionNotFound" xml:space="preserve">
+    <value>User session not found.</value>
+  </data>
+  <data name="messages.couldNotLoadUserDetails" xml:space="preserve">
+    <value>Could not load user details.</value>
+  </data>
+  <data name="fields.placeOfBirth" xml:space="preserve">
+    <value>Place of Birth</value>
+  </data>
+  <data name="fields.departmentName" xml:space="preserve">
+    <value>Department (Name)</value>
+  </data>
+  <data name="fields.functionName" xml:space="preserve">
+    <value>Function (Name)</value>
+  </data>
+  <data name="fields.workSiteName" xml:space="preserve">
+    <value>Work Site (Name)</value>
+  </data>
+  <data name="fields.commuteRoute" xml:space="preserve">
+    <value>Commute Route</value>
+  </data>
+  <data name="fields.commuteDurationMinutes" xml:space="preserve">
+    <value>Commute Duration (minutes)</value>
+  </data>
+  <data name="messages.invalidEmailLocalPart" xml:space="preserve">
+    <value>Please enter a valid email name (no spaces or @).</value>
+  </data>
+  <data name="profile.personalId" xml:space="preserve">
+    <value>Personal ID</value>
+  </data>
+  <data name="sections.assignedEmployees" xml:space="preserve">
+    <value>Assigned Employees</value>
+  </data>
+  <data name="labels.searchByNamePlaceholder" xml:space="preserve">
+    <value>Search by first name or last name...</value>
+  </data>
+  <data name="messages.noAssignedUsersFound" xml:space="preserve">
+    <value>No assigned users found.</value>
+  </data>
+  <data name="messages.couldNotLoadProfileDetails" xml:space="preserve">
+    <value>Could not load profile details.</value>
+  </data>
 </root>
