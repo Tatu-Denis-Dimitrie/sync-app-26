@@ -31,7 +31,7 @@ namespace SyncApp26.Tests.Services.Documents
             keyProviderMock.Setup(p => p.GetCurrentKeyAsync()).ReturnsAsync(Encoding.UTF8.GetBytes(TestKey));
             var hmacService = new HmacSignatureService(keyProviderMock.Object);
 
-            return new DocumentService(_dbFixture.Context, _cryptographyServiceMock.Object, hmacService);
+            return new DocumentService(_dbFixture.Context, _cryptographyServiceMock.Object, hmacService, RealLocalizerFactory.LocalizationService());
         }
 
         // Recomputes the HMAC independently of DocumentService, so a passing assertion proves

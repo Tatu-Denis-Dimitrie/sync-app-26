@@ -17,7 +17,7 @@ namespace SyncApp26.Tests.Controllers.Documents
 
         private UserSignatureController CreateController(Guid? callerId = null, string role = Roles.BasicUser)
         {
-            var controller = new UserSignatureController(_signatureServiceMock.Object, _userServiceMock.Object);
+            var controller = new UserSignatureController(_signatureServiceMock.Object, _userServiceMock.Object, RealLocalizerFactory.LocalizationService());
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }

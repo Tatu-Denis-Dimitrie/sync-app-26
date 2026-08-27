@@ -437,4 +437,115 @@
   <data name="userSignature.noActiveSignature" xml:space="preserve">
     <value>No active signature found for this user.</value>
   </data>
+  <data name="generation.userNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+  <data name="generation.cannotGenerateForAdmin" xml:space="preserve">
+    <value>Cannot generate documents for admin users.</value>
+  </data>
+  <data name="generation.documentNotPendingOfficer" xml:space="preserve">
+    <value>Document is not pending an officer signature.</value>
+  </data>
+  <data name="generation.signerCannotCountersignOwn" xml:space="preserve">
+    <value>A signer cannot countersign their own document.</value>
+  </data>
+  <data name="generation.signerNotOfficerForType" xml:space="preserve">
+    <value>Signer does not hold the officer role for this document's type.</value>
+  </data>
+  <data name="api.documentTypeRequiredWithBoth" xml:space="preserve">
+    <value>DocumentType is required (SSM, SU, or Both).</value>
+  </data>
+  <data name="api.noDocumentsToGenerate" xml:space="preserve">
+    <value>No documents to generate.</value>
+  </data>
+  <data name="api.jobNotFound" xml:space="preserve">
+    <value>Job not found</value>
+  </data>
+  <data name="api.userNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+  <data name="api.documentGeneratedAndSignatureRequested" xml:space="preserve">
+    <value>Document generated successfully and signature requested.</value>
+  </data>
+  <data name="api.associatedUserNotFound" xml:space="preserve">
+    <value>Associated user not found.</value>
+  </data>
+  <data name="api.regenerateDocumentsResult" xml:space="preserve">
+    <value>Regenerated {0} document(s) in the GeneratedDocuments folder.</value>
+  </data>
+  <data name="api.backfillSignatureVersionsResult" xml:space="preserve">
+    <value>Recalculated {0} signature version(s).</value>
+  </data>
+  <data name="api.bulkGenerate.complete" xml:space="preserve">
+    <value>Bulk generation complete. {0} document(s) generated{1}, {2} skipped.</value>
+  </data>
+  <data name="api.bulkGenerate.emailsBackground" xml:space="preserve">
+    <value> Signature request emails are being sent in the background.</value>
+  </data>
+  <data name="api.bulkGenerate.emailsAllSent" xml:space="preserve">
+    <value> {0} signature request(s) sent to employees.</value>
+  </data>
+  <data name="api.bulkGenerate.emailsPartial" xml:space="preserve">
+    <value> {0} signature request(s) sent, {1} failed</value>
+  </data>
+  <data name="api.bulkGenerate.emailsAbortedSuffix" xml:space="preserve">
+    <value> — remaining notifications skipped because email delivery is failing repeatedly</value>
+  </data>
+  <data name="api.bulkGenerate.firstErrorSuffix" xml:space="preserve">
+    <value>. First error: {0}</value>
+  </data>
+  <data name="api.emailRequired" xml:space="preserve">
+    <value>Email is required.</value>
+  </data>
+  <data name="api.signatureRequestProcessed" xml:space="preserve">
+    <value>Signature request processed successfully.</value>
+  </data>
+  <data name="api.successfullySignedCount" xml:space="preserve">
+    <value>Successfully signed {0} document(s).</value>
+  </data>
+  <data name="api.documentSignedViaSecureLink" xml:space="preserve">
+    <value>Document successfully signed using secure link.</value>
+  </data>
+  <data name="api.signatureDataRequired" xml:space="preserve">
+    <value>Signature data is required.</value>
+  </data>
+  <data name="api.documentTypeMustBeSsmOrSu" xml:space="preserve">
+    <value>DocumentType must be 'SSM' or 'SU'.</value>
+  </data>
+  <data name="api.noDocumentsToSign" xml:space="preserve">
+    <value>No documents to sign.</value>
+  </data>
+  <data name="api.periodicTrainingDeleted" xml:space="preserve">
+    <value>Periodic training deleted successfully</value>
+  </data>
+  <data name="api.allBulkCreationsFailed" xml:space="preserve">
+    <value>All bulk creations failed</value>
+  </data>
+  <data name="api.noSignatureRecordWithId" xml:space="preserve">
+    <value>No signature record found with this id.</value>
+  </data>
+  <data name="api.signatureIdsAtLeastOne" xml:space="preserve">
+    <value>SignatureIds must contain at least one id.</value>
+  </data>
+  <data name="api.signatureIdsMax" xml:space="preserve">
+    <value>SignatureIds must not contain more than {0} ids.</value>
+  </data>
+  <data name="api.noPeriodicTrainingWithId" xml:space="preserve">
+    <value>No periodic training found with this id.</value>
+  </data>
+  <data name="api.userIdsAtLeastOne" xml:space="preserve">
+    <value>UserIds must contain at least one id.</value>
+  </data>
+  <data name="api.userIdsMax" xml:space="preserve">
+    <value>UserIds must not contain more than {0} ids.</value>
+  </data>
+  <data name="api.signatureMethodMustBeDrawOrType" xml:space="preserve">
+    <value>SignatureMethod must be 'Draw' or 'Type'.</value>
+  </data>
+  <data name="api.signatureSaved" xml:space="preserve">
+    <value>Signature saved successfully.</value>
+  </data>
+  <data name="api.signatureRevokedAuditPreserved" xml:space="preserve">
+    <value>Signature revoked. The audit trail has been preserved.</value>
+  </data>
 </root>

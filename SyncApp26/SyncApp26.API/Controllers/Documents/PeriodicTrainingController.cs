@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.PeriodicTraining;
@@ -17,15 +18,18 @@ namespace SyncApp26.API.Controllers
         private readonly IPeriodicTrainingService _periodicTrainingService;
         private readonly IUserService _userService;
         private readonly ILogger<PeriodicTrainingController> _logger;
+        private readonly IStringLocalizer _localizer;
 
         public PeriodicTrainingController(
             IPeriodicTrainingService periodicTrainingService,
             IUserService userService,
-            ILogger<PeriodicTrainingController> logger)
+            ILogger<PeriodicTrainingController> logger,
+            ILocalizationService localizationService)
         {
             _periodicTrainingService = periodicTrainingService;
             _userService = userService;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         // Same officer-or-line-manager reach BulkCreate already enforces per document type, collapsed
@@ -75,7 +79,7 @@ namespace SyncApp26.API.Controllers
         {
             var result = await _periodicTrainingService.GetByIdAsync(id);
             if (result == null)
-                return NotFound(new { message = "Periodic training not found" });
+                return NotFound(new { message = _localizer["periodicTraining.notFound"].Value });
 
             if (!await CanReadTrainingForUserAsync(result.UserId))
                 return Forbid();
@@ -104,7 +108,7 @@ namespace SyncApp26.API.Controllers
         {
             var existing = await _periodicTrainingService.GetByIdAsync(id);
             if (existing == null)
-                return NotFound(new { message = "Periodic training not found" });
+                return NotFound(new { message = _localizer["periodicTraining.notFound"].Value });
 
             if (!await CanWriteTrainingForUserAsync(existing.UserId))
                 return Forbid();
@@ -133,16 +137,16 @@ namespace SyncApp26.API.Controllers
         {
             var existing = await _periodicTrainingService.GetByIdAsync(id);
             if (existing == null)
-                return NotFound(new { message = "Periodic training not found" });
+                return NotFound(new { message = _localizer["periodicTraining.notFound"].Value });
 
             if (!await CanWriteTrainingForUserAsync(existing.UserId))
                 return Forbid();
 
             var success = await _periodicTrainingService.DeleteAsync(id);
             if (!success)
-                return NotFound(new { message = "Periodic training not found" });
+                return NotFound(new { message = _localizer["periodicTraining.notFound"].Value });
 
-            return Ok(new { message = "Periodic training deleted successfully" });
+            return Ok(new { message = _localizer["api.periodicTrainingDeleted"].Value });
         }
 
         /// <summary>
@@ -238,7 +242,7 @@ namespace SyncApp26.API.Controllers
                 {
                     return BadRequest(new
                     {
-                        message = "All bulk creations failed",
+                        message = _localizer["api.allBulkCreationsFailed"].Value,
                         errors = result.Errors,
                         result
                     });

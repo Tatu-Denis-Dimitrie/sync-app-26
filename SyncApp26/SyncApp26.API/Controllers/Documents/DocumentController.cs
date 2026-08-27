@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.API.Services;
 using SyncApp26.Domain.Entities;
@@ -25,6 +26,7 @@ namespace SyncApp26.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<DocumentController> _logger;
+        private readonly IStringLocalizer _localizer;
 
         // Same in-memory job board as DocumentSignatureController's bulk-sign jobs: a bulk generation
         // outlives its HTTP request, so its progress lives here and is polled by jobId.
@@ -39,7 +41,8 @@ namespace SyncApp26.API.Controllers
             ISignatureVerificationService signatureVerificationService,
             IConfiguration configuration,
             IServiceScopeFactory scopeFactory,
-            ILogger<DocumentController> logger)
+            ILogger<DocumentController> logger,
+            ILocalizationService localizationService)
         {
             _documentService = documentService;
             _emailService = emailService;
@@ -50,6 +53,7 @@ namespace SyncApp26.API.Controllers
             _configuration = configuration;
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         // Flat DTO — avoids serializing deep User navigation property chains
@@ -115,7 +119,7 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> BulkGenerateDocuments([FromBody] BulkGenerateDocumentDto request)
         {
             if (string.IsNullOrWhiteSpace(request.DocumentType))
-                return BadRequest(new { message = "DocumentType is required (SSM, SU, or Both)." });
+                return BadRequest(new { message = _localizer["api.documentTypeRequiredWithBoth"].Value });
 
             var adminEmail = User.GetEmail() ?? "admin@syncapp26.com";
             var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
@@ -142,7 +146,7 @@ namespace SyncApp26.API.Controllers
 
             return Ok(new
             {
-                message = BuildBulkGenerateMessage(totalGenerated, totalSkipped, countsByType, emailOutcome),
+                message = BuildBulkGenerateMessage(totalGenerated, totalSkipped, countsByType, emailOutcome, _localizer),
                 generated = totalGenerated,
                 skipped = totalSkipped,
                 generatedByType = countsByType,
@@ -156,7 +160,7 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> BulkGenerateDocumentsAsync([FromBody] BulkGenerateDocumentDto request)
         {
             if (string.IsNullOrWhiteSpace(request.DocumentType))
-                return BadRequest(new { message = "DocumentType is required (SSM, SU, or Both)." });
+                return BadRequest(new { message = _localizer["api.documentTypeRequiredWithBoth"].Value });
 
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
@@ -173,7 +177,7 @@ namespace SyncApp26.API.Controllers
                 total += (await _documentService.GetBulkGenerateTargetUserIdsAsync(request.SelectedUserIds, restrictToAssignedToId)).Count;
 
             if (total == 0)
-                return Ok(new { message = "No documents to generate.", jobId = (string?)null, total = 0 });
+                return Ok(new { message = _localizer["api.noDocumentsToGenerate"].Value, jobId = (string?)null, total = 0 });
 
             var jobId = Guid.NewGuid().ToString();
             var progress = new BulkGenerateProgress { OwnerUserId = userId, Total = total };
@@ -210,7 +214,7 @@ namespace SyncApp26.API.Controllers
                         generatedIdsByType.Add((type, result.GeneratedDocumentIds));
                     }
 
-                    progress.Message = BuildBulkGenerateMessage(progress.Generated, progress.Skipped, progress.GeneratedByType, null);
+                    progress.Message = BuildBulkGenerateMessage(progress.Generated, progress.Skipped, progress.GeneratedByType, null, _localizer);
                 }
                 catch (Exception ex)
                 {
@@ -264,7 +268,7 @@ namespace SyncApp26.API.Controllers
                 return Unauthorized();
 
             if (!BulkGenerateJobs.TryGetValue(jobId, out var progress))
-                return NotFound(new { message = "Job not found" });
+                return NotFound(new { message = _localizer["api.jobNotFound"].Value });
 
             if (progress.OwnerUserId != userId)
                 return Forbid();
@@ -307,24 +311,26 @@ namespace SyncApp26.API.Controllers
             return typesToProcess;
         }
 
-        private static string BuildBulkGenerateMessage(int generated, int skipped, Dictionary<string, int> byType, BulkEmailOutcome? email)
+        private static string BuildBulkGenerateMessage(int generated, int skipped, Dictionary<string, int> byType, BulkEmailOutcome? email, IStringLocalizer localizer)
         {
             var breakdown = byType.Count > 1
                 ? $" ({string.Join(", ", byType.Select(kv => $"{kv.Value} {kv.Key}"))})"
                 : string.Empty;
 
-            var message = $"Bulk generation complete. {generated} document(s) generated{breakdown}, {skipped} skipped.";
+            string message = localizer["api.bulkGenerate.complete", generated, breakdown, skipped];
 
             if (email is null)
-                return $"{message} Signature request emails are being sent in the background.";
+                return message + localizer["api.bulkGenerate.emailsBackground"].Value;
 
             if (email.Failed == 0)
-                return $"{message} {email.Sent} signature request(s) sent to employees.";
+                return message + localizer["api.bulkGenerate.emailsAllSent", email.Sent].Value;
 
-            message += $" {email.Sent} signature request(s) sent, {email.Failed} failed";
+            message += localizer["api.bulkGenerate.emailsPartial", email.Sent, email.Failed].Value;
             if (email.AbortedEarly)
-                message += " — remaining notifications skipped because email delivery is failing repeatedly";
-            return string.IsNullOrWhiteSpace(email.FirstError) ? $"{message}." : $"{message}. First error: {email.FirstError}";
+                message += localizer["api.bulkGenerate.emailsAbortedSuffix"].Value;
+            return string.IsNullOrWhiteSpace(email.FirstError)
+                ? message + "."
+                : message + localizer["api.bulkGenerate.firstErrorSuffix", email.FirstError].Value;
         }
 
         private sealed class BulkEmailOutcome
@@ -396,7 +402,7 @@ namespace SyncApp26.API.Controllers
                 var adminEmail = User.GetEmail() ?? "admin@syncapp26.com";
 
                 var user = await _userService.GetUserByIdAsync(request.UserId);
-                if (user == null) return NotFound(new { message = "User not found." });
+                if (user == null) return NotFound(new { message = _localizer["api.userNotFound"].Value });
 
                 // The officer for this document's type can generate for anyone; a line manager is
                 // restricted to their own direct reports. Admin has no standing here at all.
@@ -424,7 +430,7 @@ namespace SyncApp26.API.Controllers
                 }
 
                 _logger.LogInformation("Document {DocumentId} ({DocumentType}) generated for user {UserId}.", document.Id, document.DocumentType, request.UserId);
-                return Ok(new { message = "Document generated successfully and signature requested.", documentId = document.Id });
+                return Ok(new { message = _localizer["api.documentGeneratedAndSignatureRequested"].Value, documentId = document.Id });
             }
             catch (Exception ex)
             {
@@ -577,7 +583,7 @@ namespace SyncApp26.API.Controllers
             var count = await _documentService.RegenerateDocumentsAsync();
             return Ok(new
             {
-                message = $"S-au regenerat {count} document(e) în folderul GeneratedDocuments.",
+                message = _localizer["api.regenerateDocumentsResult", count].Value,
                 regenerated = count
             });
         }
@@ -593,7 +599,7 @@ namespace SyncApp26.API.Controllers
             var count = await _documentService.BackfillSignatureRecordVersionsAsync();
             return Ok(new
             {
-                message = $"S-au recalculat {count} versiune(i) de semnătură.",
+                message = _localizer["api.backfillSignatureVersionsResult", count].Value,
                 updated = count
             });
         }
@@ -605,7 +611,7 @@ namespace SyncApp26.API.Controllers
                 return Unauthorized();
 
             var document = await _documentService.GetDocumentByIdAsync(documentId);
-            if (document == null) return NotFound(new { message = "Document not found." });
+            if (document == null) return NotFound(new { message = _localizer["signing.documentNotFound"].Value });
 
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null) return NotFound();
@@ -630,7 +636,7 @@ namespace SyncApp26.API.Controllers
                 return Unauthorized();
 
             var document = await _documentService.GetDocumentByIdAsync(documentId);
-            if (document == null) return NotFound(new { message = "Document not found." });
+            if (document == null) return NotFound(new { message = _localizer["signing.documentNotFound"].Value });
 
             bool isDocOwner = document.UserId == userId;
             bool isManager = document.User?.AssignedToId == userId;
@@ -649,7 +655,7 @@ namespace SyncApp26.API.Controllers
                 return Forbid();
 
             var docUser = document.User;
-            if (docUser == null) return NotFound(new { message = "Associated user not found." });
+            if (docUser == null) return NotFound(new { message = _localizer["api.associatedUserNotFound"].Value });
 
             var safeFirst = string.Concat(docUser.FirstName.Where(char.IsLetterOrDigit));
             var safeLast = string.Concat(docUser.LastName.Where(char.IsLetterOrDigit));

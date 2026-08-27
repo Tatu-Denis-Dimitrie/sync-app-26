@@ -31,7 +31,7 @@ namespace SyncApp26.Tests.Services.Documents
         // Signatures are created through the already-tested DocumentService so the chain/HMAC
         // fixtures reflect real production output, not a hand-rolled approximation of it.
         private DocumentService CreateDocumentService() =>
-            new(_dbFixture.Context, _cryptographyServiceMock.Object, _hmacService);
+            new(_dbFixture.Context, _cryptographyServiceMock.Object, _hmacService, RealLocalizerFactory.LocalizationService());
 
         private SignatureVerificationService CreateVerificationService() =>
             new(_dbFixture.Context, _hmacService);

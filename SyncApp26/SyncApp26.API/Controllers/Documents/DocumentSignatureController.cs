@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Localization;
 using SyncApp26.API.Hubs;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
@@ -27,6 +28,7 @@ namespace SyncApp26.API.Controllers
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHubContext<SyncHub> _hubContext;
         private readonly ILogger<DocumentSignatureController> _logger;
+        private readonly IStringLocalizer _localizer;
 
         private static readonly ConcurrentDictionary<string, BulkSignProgress> BulkSignJobs = new();
 
@@ -39,7 +41,8 @@ namespace SyncApp26.API.Controllers
             IConfiguration configuration,
             IServiceScopeFactory scopeFactory,
             IHubContext<SyncHub> hubContext,
-            ILogger<DocumentSignatureController> logger)
+            ILogger<DocumentSignatureController> logger,
+            ILocalizationService localizationService)
         {
             _documentSignatureService = documentSignatureService;
             _documentSigningService = documentSigningService;
@@ -50,6 +53,7 @@ namespace SyncApp26.API.Controllers
             _scopeFactory = scopeFactory;
             _hubContext = hubContext;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         public class RequestSignatureDto
@@ -66,7 +70,7 @@ namespace SyncApp26.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Email))
             {
-                return BadRequest(new { message = "Email is required." });
+                return BadRequest(new { message = _localizer["api.emailRequired"].Value });
             }
 
             var normalizedEmail = request.Email.ToLowerInvariant().Trim();
@@ -113,7 +117,7 @@ namespace SyncApp26.API.Controllers
                 }
             }
 
-            return Ok(new { message = "Signature request processed successfully." });
+            return Ok(new { message = _localizer["api.signatureRequestProcessed"].Value });
         }
 
         [HttpGet("validate-token/{token}")]
@@ -195,8 +199,8 @@ namespace SyncApp26.API.Controllers
             }
 
             var msg = result.TotalSigned > 1
-                ? $"Successfully signed {result.TotalSigned} document(s)."
-                : "Document successfully signed using secure link.";
+                ? _localizer["api.successfullySignedCount", result.TotalSigned].Value
+                : _localizer["api.documentSignedViaSecureLink"].Value;
 
             // Notify all connected clients that a signature was recorded so dashboards can refresh
             await _hubContext.Clients.All.SendAsync("SignatureUpdated");
@@ -217,7 +221,7 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> BulkSign([FromBody] BulkSignDto request)
         {
             if (string.IsNullOrWhiteSpace(request.SignatureData))
-                return BadRequest(new { message = "Signature data is required." });
+                return BadRequest(new { message = _localizer["api.signatureDataRequired"].Value });
 
             if (User.GetUserId() is not { } userId)
                 return Unauthorized();
@@ -229,7 +233,7 @@ namespace SyncApp26.API.Controllers
 
             await _hubContext.Clients.All.SendAsync("SignatureUpdated");
 
-            return Ok(new { message = $"Successfully signed {count} document(s).", count });
+            return Ok(new { message = _localizer["api.successfullySignedCount", count].Value, count });
         }
 
         [HttpPost("bulk-sign-async")]
@@ -250,7 +254,7 @@ namespace SyncApp26.API.Controllers
             }
             else
             {
-                return BadRequest(new { message = "DocumentType must be 'SSM' or 'SU'." });
+                return BadRequest(new { message = _localizer["api.documentTypeMustBeSsmOrSu"].Value });
             }
 
             // This endpoint processes the officer queue only (GetPendingDocumentsForOfficerListAsync) —
@@ -263,7 +267,7 @@ namespace SyncApp26.API.Controllers
 
             int total = await _documentService.GetPendingDocumentsForOfficerAsync(documentType, userId);
             if (total == 0)
-                return Ok(new { message = "No documents to sign.", jobId = (string?)null });
+                return Ok(new { message = _localizer["api.noDocumentsToSign"].Value, jobId = (string?)null });
 
             string jobId = Guid.NewGuid().ToString();
             var progress = new BulkSignProgress { OwnerUserId = userId, Total = total, Signed = 0, Completed = false };
@@ -309,7 +313,7 @@ namespace SyncApp26.API.Controllers
 
                 return Ok(new { total = progress.Total, signed = progress.Signed, completed = progress.Completed, error = progress.Error });
             }
-            return NotFound(new { message = "Job not found" });
+            return NotFound(new { message = _localizer["api.jobNotFound"].Value });
         }
 
         [HttpGet("pending-ssm-admin-count")]

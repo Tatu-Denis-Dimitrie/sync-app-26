@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.SignatureVerification;
@@ -20,12 +21,14 @@ namespace SyncApp26.API.Controllers
         private readonly ISignatureVerificationService _verificationService;
         private readonly IUserService _userService;
         private readonly IDocumentService _documentService;
+        private readonly IStringLocalizer _localizer;
 
-        public SignatureVerificationController(ISignatureVerificationService verificationService, IUserService userService, IDocumentService documentService)
+        public SignatureVerificationController(ISignatureVerificationService verificationService, IUserService userService, IDocumentService documentService, ILocalizationService localizationService)
         {
             _verificationService = verificationService;
             _userService = userService;
             _documentService = documentService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────────────
@@ -76,7 +79,7 @@ namespace SyncApp26.API.Controllers
 
             var status = await _verificationService.GetVerificationStatusAsync(id);
             if (status == null)
-                return NotFound(new { message = "No signature record found with this id." });
+                return NotFound(new { message = _localizer["api.noSignatureRecordWithId"].Value });
 
             var documentType = status.UserDocumentId == Guid.Empty
                 ? null
@@ -102,10 +105,10 @@ namespace SyncApp26.API.Controllers
                 return Unauthorized();
 
             if (request.SignatureIds.Count == 0)
-                return BadRequest(new { message = "SignatureIds must contain at least one id." });
+                return BadRequest(new { message = _localizer["api.signatureIdsAtLeastOne"].Value });
 
             if (request.SignatureIds.Count > MaxBatchSize)
-                return BadRequest(new { message = $"SignatureIds must not contain more than {MaxBatchSize} ids." });
+                return BadRequest(new { message = _localizer["api.signatureIdsMax", MaxBatchSize].Value });
 
             var results = await _verificationService.GetVerificationStatusBatchAsync(request.SignatureIds);
 
@@ -141,7 +144,7 @@ namespace SyncApp26.API.Controllers
 
             var history = await _verificationService.GetSignatureHistoryForTrainingAsync(periodicTrainingId);
             if (history == null)
-                return NotFound(new { message = "No periodic training found with this id." });
+                return NotFound(new { message = _localizer["api.noPeriodicTrainingWithId"].Value });
 
             if (!await CanAccessSignaturesOfAsync(history.UserId, callerId, history.DocumentType))
                 return Forbid();
@@ -169,10 +172,10 @@ namespace SyncApp26.API.Controllers
             var userIds = request.UserIds.Distinct().ToList();
 
             if (userIds.Count == 0)
-                return BadRequest(new { message = "UserIds must contain at least one id." });
+                return BadRequest(new { message = _localizer["api.userIdsAtLeastOne"].Value });
 
             if (userIds.Count > MaxUsersPerRequest)
-                return BadRequest(new { message = $"UserIds must not contain more than {MaxUsersPerRequest} ids." });
+                return BadRequest(new { message = _localizer["api.userIdsMax", MaxUsersPerRequest].Value });
 
             var statusesByUser = await _verificationService.GetVerificationStatusForUsersAsync(userIds);
 

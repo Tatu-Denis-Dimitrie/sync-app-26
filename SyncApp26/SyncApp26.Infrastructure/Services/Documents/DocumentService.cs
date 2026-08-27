@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
@@ -26,12 +27,14 @@ namespace SyncApp26.Infrastructure.Services
         private readonly ApplicationDbContext _context;
         private readonly ICryptographyService _cryptographyService;
         private readonly IHmacSignatureService _hmacSignatureService;
+        private readonly IStringLocalizer _localizer;
 
-        public DocumentService(ApplicationDbContext context, ICryptographyService cryptographyService, IHmacSignatureService hmacSignatureService)
+        public DocumentService(ApplicationDbContext context, ICryptographyService cryptographyService, IHmacSignatureService hmacSignatureService, ILocalizationService localizationService)
         {
             _context = context;
             _cryptographyService = cryptographyService;
             _hmacSignatureService = hmacSignatureService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         // Returnează numărul de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU.
@@ -83,7 +86,7 @@ namespace SyncApp26.Infrastructure.Services
             await _context.SaveChangesAsync();
 
             var user = await LoadUserWithDocumentDataAsync(userId)
-                ?? throw new ArgumentException("User not found.");
+                ?? throw new ArgumentException(_localizer["generation.userNotFound"]);
 
             var pdfPath = await GeneratePdfSnapshotAsync(user, doc);
             doc.PdfFilePath = pdfPath;
@@ -97,7 +100,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             bool isAdmin = await _context.Users.Where(u => u.Id == userId).WithRole(Roles.Admin).AnyAsync();
             if (isAdmin)
-                throw new InvalidOperationException("Cannot generate documents for admin users.");
+                throw new InvalidOperationException(_localizer["generation.cannotGenerateForAdmin"]);
         }
 
         private async Task<UserDocument> CreateUserDocumentAsync(Guid userId, string documentType)
@@ -254,13 +257,13 @@ namespace SyncApp26.Infrastructure.Services
             // unauthorized signature actually being written. Wrong state and lack of authorization are
             // deliberately different exception types so callers can tell them apart.
             if (doc.Status != DocumentStatuses.PendingInstructor)
-                throw new InvalidOperationException("Document is not pending an officer signature.");
+                throw new InvalidOperationException(_localizer["generation.documentNotPendingOfficer"]);
 
             // Separation of duties. The officer queues already exclude the signer's own document, so
             // reaching this is a bug rather than a user action — fail loudly instead of writing a
             // signature the rule forbids.
             if (doc.UserId == signerUserId)
-                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
+                throw new DocumentSigningAuthorizationException(_localizer["generation.signerCannotCountersignOwn"]);
 
             var docType = DocumentTypes.Normalize(doc.DocumentType);
             var requiredOfficerRole = docType switch
@@ -272,7 +275,7 @@ namespace SyncApp26.Infrastructure.Services
             bool isOfficerForType = requiredOfficerRole != null &&
                 await _context.Users.Where(u => u.Id == signerUserId).WithRole(requiredOfficerRole).AnyAsync();
             if (!isOfficerForType)
-                throw new DocumentSigningAuthorizationException("Signer does not hold the officer role for this document's type.");
+                throw new DocumentSigningAuthorizationException(_localizer["generation.signerNotOfficerForType"]);
 
             var timestamp = DateTime.UtcNow;
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
@@ -1926,7 +1929,7 @@ namespace SyncApp26.Infrastructure.Services
             // Same defence in depth as SignSingleDocumentAsOfficerAsync: the loader above already
             // filters these out, so this only fires if that filter is ever loosened.
             if (doc.UserId == signerUserId)
-                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
+                throw new DocumentSigningAuthorizationException(_localizer["generation.signerCannotCountersignOwn"]);
 
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
             var signerRole = doc.Status == DocumentStatuses.PendingManager ? "Manager" : "Instructor";

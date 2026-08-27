@@ -46,7 +46,8 @@ namespace SyncApp26.Tests.Controllers.Documents
                 _configurationMock.Object,
                 _scopeFactoryMock.Object,
                 _hubContextMock.Object,
-                NullLogger<DocumentSignatureController>.Instance);
+                NullLogger<DocumentSignatureController>.Instance,
+                RealLocalizerFactory.LocalizationService());
 
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;

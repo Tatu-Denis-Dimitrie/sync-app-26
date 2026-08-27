@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.UserSignature;
 using SyncApp26.Shared.DTOs.Response.UserSignature;
@@ -15,11 +16,13 @@ namespace SyncApp26.API.Controllers
     {
         private readonly IUserSignatureService _signatureService;
         private readonly IUserService _userService;
+        private readonly IStringLocalizer _localizer;
 
-        public UserSignatureController(IUserSignatureService signatureService, IUserService userService)
+        public UserSignatureController(IUserSignatureService signatureService, IUserService userService, ILocalizationService localizationService)
         {
             _signatureService = signatureService;
             _userService = userService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────────────
@@ -86,7 +89,7 @@ namespace SyncApp26.API.Controllers
 
             var sig = await _signatureService.GetUserSignatureAsync(userId);
             if (sig == null)
-                return NotFound(new { message = "No active signature found for this user." });
+                return NotFound(new { message = _localizer["userSignature.noActiveSignature"].Value });
 
             return Ok(MapToDto(sig));
         }
@@ -105,11 +108,11 @@ namespace SyncApp26.API.Controllers
                 return Unauthorized();
 
             if (string.IsNullOrWhiteSpace(request.SignatureData))
-                return BadRequest(new { message = "SignatureData is required." });
+                return BadRequest(new { message = _localizer["api.signatureDataRequired"].Value });
 
             var allowedMethods = new[] { "Draw", "Type" };
             if (!allowedMethods.Contains(request.SignatureMethod, StringComparer.OrdinalIgnoreCase))
-                return BadRequest(new { message = "SignatureMethod must be 'Draw' or 'Type'." });
+                return BadRequest(new { message = _localizer["api.signatureMethodMustBeDrawOrType"].Value });
 
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
@@ -126,7 +129,7 @@ namespace SyncApp26.API.Controllers
                 var saved = await _signatureService.GetUserSignatureAsync(callerId);
                 return Ok(new
                 {
-                    message = "Signature saved successfully.",
+                    message = _localizer["api.signatureSaved"].Value,
                     signature = saved != null ? MapToDto(saved) : null
                 });
             }
@@ -153,7 +156,7 @@ namespace SyncApp26.API.Controllers
             try
             {
                 await _signatureService.RevokeUserSignatureAsync(callerId, ip, callerId, CallerEmail);
-                return Ok(new { message = "Signature revoked. The audit trail has been preserved." });
+                return Ok(new { message = _localizer["api.signatureRevokedAuditPreserved"].Value });
             }
             catch (InvalidOperationException ex)
             {
