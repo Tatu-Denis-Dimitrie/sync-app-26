@@ -10,10 +10,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__DefaultConnection: "Data Source=/app/data/SyncApp26.db;Mode=ReadWriteCreate"
-      # No TLS anywhere in this stack — a Secure cookie set over plain HTTP is silently dropped by
-      # the browser, so this must be forced off here regardless of ASPNETCORE_ENVIRONMENT. Flip to
-      # "true" once a TLS-terminating layer is added in front of this stack.
-      Auth__Cookie__Secure: "false"
+      # No TLS by default; set AUTH_COOKIE_SECURE=true in .env once TLS is added.
+      Auth__Cookie__Secure: ${AUTH_COOKIE_SECURE:-false}
     volumes:
       - syncapp26_db_data:/app/data
       - syncapp26_logs:/app/logs

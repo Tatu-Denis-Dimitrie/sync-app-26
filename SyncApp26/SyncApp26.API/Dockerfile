@@ -1,7 +1,5 @@
 # syntax=docker/dockerfile:1
-# Build context is the solution folder (SyncApp26/), not this directory alone — the API project
-# references sibling projects (Application, Domain, Infrastructure, Shared) that must be present
-# for `dotnet restore`/`publish` to resolve them.
+# Build context: SyncApp26/ (sibling projects needed for restore).
 
 ########################
 # Build stage
@@ -9,7 +7,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Restore first, from just the .csproj files, so this layer is cached across source-only changes.
+# Restore separately for layer caching.
 COPY SyncApp26.API/SyncApp26.API.csproj SyncApp26.API/
 COPY SyncApp26.Application/SyncApp26.Application.csproj SyncApp26.Application/
 COPY SyncApp26.Domain/SyncApp26.Domain.csproj SyncApp26.Domain/
@@ -18,7 +16,7 @@ COPY SyncApp26.Shared/SyncApp26.Shared.csproj SyncApp26.Shared/
 
 RUN dotnet restore SyncApp26.API/SyncApp26.API.csproj
 
-# Now bring in the rest of the source (Tests and Client are excluded via .dockerignore) and publish.
+# Tests/Client excluded via .dockerignore.
 COPY SyncApp26.API/ SyncApp26.API/
 COPY SyncApp26.Application/ SyncApp26.Application/
 COPY SyncApp26.Domain/ SyncApp26.Domain/
@@ -38,22 +36,21 @@ RUN dotnet publish SyncApp26.API/SyncApp26.API.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-# curl is needed for the HEALTHCHECK below; the aspnet base image doesn't ship it.
+# curl needed for HEALTHCHECK below.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Pre-create the SQLite data dir and log dirs with the right ownership before dropping privileges —
-# EF creates the .db file itself but never its parent directory, and a named volume mounted here
-# inherits whatever the image already has at this path.
+# EF creates the .db file but not its parent dir.
 RUN mkdir -p /app/data /app/logs/errors \
     && chown -R app:app /app
 
 COPY --from=build /app/publish .
 COPY --from=build /src/VERSION /VERSION
-# Baked-in config is the safe, secret-free template — real values (JWT secret, SMTP, OAuth, HMAC
-# key) are injected at `docker compose up` time via environment variables, never into the image.
+# Secret-free template; real values are injected via env vars at runtime.
 COPY SyncApp26.API/appsettings.example.json ./appsettings.json
+# Point the default connection string at the volume mount, not the dev-relative path.
+RUN sed -i 's#Data Source=../SyncApp26.Infrastructure/SyncApp26.db;Mode=ReadWrite#Data Source=/app/data/SyncApp26.db;Mode=ReadWriteCreate#' ./appsettings.json
 
 RUN chown app:app ./appsettings.json
 
