@@ -455,6 +455,7 @@
                                     </div>
                                   </div>
                                   <!-- Conflict History -->
+                                  @if (canViewUserHistory) {
                                   <div class="mt-6 bg-card border border-border rounded-lg p-4">
                                     <div class="flex items-center justify-between mb-4">
                                       <h3 class="text-lg font-semibold text-foreground">
@@ -642,6 +643,7 @@
                                       [pageSize]="conflictsPage.pageSize" storageKey="employees-conflicts" (pageChange)="onConflictsPageChange($event)" (pageSizeChange)="onConflictsPageSizeChange($event)"></app-pagination>
                                     }
                                   </div>
+                                  }
                                   <!-- Documents / Signatures -->
                                   <div class="mt-6 bg-card border border-border rounded-lg p-4">
                                     <div class="flex items-center justify-between mb-4">

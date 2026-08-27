@@ -241,9 +241,6 @@ export class LineManagerComponent implements OnInit {
 
     this.loadPendingSignatures();
     this.loadSavedSignature();
-    this.loadDepartments();
-    this.loadWorkSites();
-    this.loadFunctions();
   }
 
   loadDepartments(): void {
@@ -303,10 +300,14 @@ export class LineManagerComponent implements OnInit {
   loadPendingSignatures(): void {
     this.loadPendingUserSignatures();
     this.loadPendingManagerSignatures();
-    this.loadPendingInstructorSignatures();
     this.loadSignedUserSignatures();
     this.loadSignedManagerSignatures();
-    this.loadSignedInstructorSignatures();
+
+    // Instructor queue is always empty unless this line manager also holds an SSM/SU officer role.
+    if (this.authService.isOfficer()) {
+      this.loadPendingInstructorSignatures();
+      this.loadSignedInstructorSignatures();
+    }
   }
 
   private loadDocumentPage(endpoint: string, target: DocumentPageState, page: number,
@@ -589,6 +590,11 @@ export class LineManagerComponent implements OnInit {
     this.dataChangeSuccess = '';
     this.dataChangeReason = '';
     this.requestedChanges = {};
+
+    // Fetched lazily, once, only when this modal is actually opened — not on every page load.
+    if (this.availableDepartments.length === 0) this.loadDepartments();
+    if (this.availableWorkSites.length === 0) this.loadWorkSites();
+    if (this.registeredFunctions.length === 0) this.loadFunctions();
   }
 
   closeDataChangeModal(): void {

@@ -37,6 +37,13 @@ export class EmployeesDetailComponent implements OnInit {
   /** The grouping helpers below (getConflictGroupsByImport/getManualChanges) read from this. */
   get importConflicts(): UserChangeHistory[] { return this.conflictsPage.items; }
 
+  // Mirrors the backend's own rule (UserChangeHistoryController.GetUserChangeHistoriesByUserId):
+  // Admin, or the viewer looking at their own record. Anyone else (e.g. an SSM/SU officer viewing
+  // another employee) would always get a 403, so the section is hidden rather than shown-then-fail.
+  get canViewUserHistory(): boolean {
+    return this.authService.isAdmin() || this.selectedUser?.id === this.authService.getCurrentUser()?.id;
+  }
+
   successMessage: string = '';
 
   documentsPage: DocumentPageState = emptyDocumentPageState(10);
@@ -147,7 +154,9 @@ export class EmployeesDetailComponent implements OnInit {
 
   selectUser(user: User): void {
     this.selectedUser = user;
-    this.loadUserConflicts(user.id);
+    if (this.canViewUserHistory) {
+      this.loadUserConflicts(user.id);
+    }
     this.loadUserDocuments(user.id);
   }
 
