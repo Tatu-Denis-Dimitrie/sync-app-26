@@ -171,9 +171,6 @@ export class BasicUserComponent implements OnInit {
 
     this.loadPendingSignatures();
     this.loadSavedSignature();
-    this.loadDepartments();
-    this.loadWorkSites();
-    this.loadFunctions();
   }
 
   loadDepartments(): void {
@@ -232,15 +229,18 @@ export class BasicUserComponent implements OnInit {
 
   loadPendingSignatures(): void {
     this.loadPendingUserSignatures();
-    this.loadPendingManagerSignatures();
-    this.loadPendingInstructorSignatures();
     this.loadSignedUserSignatures();
-    // Predates pagination, unrelated to it: manager-signed-documents is only meaningful for line
-    // managers, so it's the one load call gated by role (manager-pending-signatures is not).
-    if (this.user?.role === UserRole.LineManager) {
+
+    // Manager/instructor queues are always empty for anyone not holding that role, so gate them
+    // on the session's actual roles instead of fetching unconditionally for every basic user.
+    if (this.authService.isLineManager()) {
+      this.loadPendingManagerSignatures();
       this.loadSignedManagerSignatures();
     }
-    this.loadSignedInstructorSignatures();
+    if (this.authService.isOfficer()) {
+      this.loadPendingInstructorSignatures();
+      this.loadSignedInstructorSignatures();
+    }
   }
 
   private loadDocumentPage(endpoint: string, target: DocumentPageState, page: number,
@@ -469,6 +469,11 @@ export class BasicUserComponent implements OnInit {
     this.dataChangeSuccess = '';
     this.dataChangeReason = '';
     this.requestedChanges = {};
+
+    // Fetched lazily, once, only when this modal is actually opened — not on every page load.
+    if (this.availableDepartments.length === 0) this.loadDepartments();
+    if (this.availableWorkSites.length === 0) this.loadWorkSites();
+    if (this.registeredFunctions.length === 0) this.loadFunctions();
   }
 
   closeDataChangeModal(): void {
