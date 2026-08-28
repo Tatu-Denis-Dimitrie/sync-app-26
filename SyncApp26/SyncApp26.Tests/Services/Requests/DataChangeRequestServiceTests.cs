@@ -292,9 +292,8 @@ namespace SyncApp26.Tests.Services.Requests
         [InlineData("PasswordHash")]
         [InlineData("Role")]
         [InlineData("DeletedAt")]
-        // Email is deliberately not covered here - CreateRequestAsync itself must let it through
-        // (RequestEmailChangeAsync depends on that); blocking it for THIS generic flow is the
-        // controller's job (DataChangeRequestController.Create), tested at that layer instead.
+        // Regression: CreateRequestAsync must strip Email by default too, not just the controller.
+        [InlineData("Email")]
         public async Task CreateRequestAsync_DisallowedField_IsStrippedBeforePersisting(string fieldName)
         {
             var user = SeedUser();
@@ -310,6 +309,46 @@ namespace SyncApp26.Tests.Services.Requests
             _dbFixture.Context.ChangeTracker.Clear();
             var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Id);
             Assert.Equal("{}", persisted.RequestedChangesJson);
+        }
+
+        [Fact]
+        public async Task CreateRequestAsync_EmailWithMixedNonStringValue_StillStripsEmail()
+        {
+            // Regression: a non-string value used to crash the controller's parse and skip filtering.
+            var user = SeedUser();
+            var service = CreateService();
+            var dto = new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"Address\":\"New Address\",\"Email\":\"attacker@evil.com\",\"IsActive\":false}",
+                Reason = "Attempted"
+            };
+
+            var result = await service.CreateRequestAsync(user.Id, dto);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Id);
+            Assert.DoesNotContain("Email", persisted.RequestedChangesJson);
+            Assert.DoesNotContain("IsActive", persisted.RequestedChangesJson);
+            Assert.Contains("Address", persisted.RequestedChangesJson);
+        }
+
+        [Fact]
+        public async Task CreateRequestAsync_AllowEmailFieldTrue_LetsEmailThrough()
+        {
+            // Covers the one legitimate caller: RequestEmailChangeAsync's own internal call.
+            var user = SeedUser();
+            var service = CreateService();
+            var dto = new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"Email\":\"newname@same-domain.com\"}",
+                Reason = "Self-service email change"
+            };
+
+            var result = await service.CreateRequestAsync(user.Id, dto, "Pending", allowEmailField: true);
+
+            _dbFixture.Context.ChangeTracker.Clear();
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Id);
+            Assert.Contains("newname@same-domain.com", persisted.RequestedChangesJson);
         }
 
         [Fact]
