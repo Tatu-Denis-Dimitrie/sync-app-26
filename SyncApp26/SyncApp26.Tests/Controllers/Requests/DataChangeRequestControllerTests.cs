@@ -74,6 +74,24 @@ namespace SyncApp26.Tests.Controllers.Requests
         }
 
         [Fact]
+        public async Task Create_NonStringValueInJson_FailsClosedInsteadOfSkippingAllowlistCheck()
+        {
+            // Regression: a non-string value used to throw, hit an empty catch{}, and skip filtering.
+            var controller = CreateController();
+            _serviceMock.SetupGet(s => s.AllowedFields).Returns(TestAllowedFields);
+            var dto = new CreateDataChangeRequestDTO
+            {
+                RequestedChangesJson = "{\"Address\":\"x\",\"Email\":\"attacker@evil.com\",\"IsActive\":false}",
+                Reason = "Attempted"
+            };
+
+            var result = await controller.Create(dto);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+            _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
         public async Task Create_MixOfAllowedAndDisallowedFields_StripsDisallowedAndStillSucceeds()
         {
             var controller = CreateController();

@@ -199,7 +199,9 @@ namespace SyncApp26.API.Controllers
                 : "Document successfully signed using secure link.";
 
             // Notify all connected clients that a signature was recorded so dashboards can refresh
-            await _hubContext.Clients.All.SendAsync("SignatureUpdated");
+            await _hubContext.Clients.Groups(
+                $"role:{Roles.Admin}", $"role:{Roles.LineManager}", $"role:{Roles.SsmOfficer}", $"role:{Roles.SuOfficer}"
+            ).SendAsync("SignatureUpdated");
 
             return Ok(new { message = msg, count = result.TotalSigned });
         }
@@ -227,7 +229,9 @@ namespace SyncApp26.API.Controllers
             var count = await _documentService.BulkSignDocumentsAsync(
                 userId, request.SignatureMethod, request.SignatureData, ipAddress);
 
-            await _hubContext.Clients.All.SendAsync("SignatureUpdated");
+            await _hubContext.Clients.Groups(
+                $"role:{Roles.Admin}", $"role:{Roles.LineManager}", $"role:{Roles.SsmOfficer}", $"role:{Roles.SuOfficer}"
+            ).SendAsync("SignatureUpdated");
 
             return Ok(new { message = $"Successfully signed {count} document(s).", count });
         }

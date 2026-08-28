@@ -210,14 +210,16 @@ namespace SyncApp26.Application.Services
             return req == null ? null : MapToDTO(req);
         }
 
-        public async Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending")
+        public Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending") =>
+            CreateRequestCoreAsync(userId, dto, initialStatus, AllowedFieldNames);
+
+        // Not on the interface on purpose - only RequestEmailChangeAsync may pass WritableFieldNames.
+        private async Task<DataChangeRequestDTO> CreateRequestCoreAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus, HashSet<string> fieldSet)
         {
             var user = await _repository.GetUserByIdAsync(userId);
 
-            // The real security boundary: whatever the caller sent, only WritableFieldNames survives
-            // into what actually gets persisted - the controller's own allowlist check (for the
-            // client-facing Create endpoint) is just a friendlier, earlier version of this same check.
-            var filteredChangesJson = FilterToWritableFields(dto.RequestedChangesJson);
+            // The real security boundary - the controller's own check is just a friendlier early copy.
+            var filteredChangesJson = FilterToFieldSet(dto.RequestedChangesJson, fieldSet);
 
             var req = new DataChangeRequest
             {
@@ -233,23 +235,23 @@ namespace SyncApp26.Application.Services
             return MapToDTO(req);
         }
 
-        private static string FilterToWritableFields(string? requestedChangesJson)
+        private static string FilterToFieldSet(string? requestedChangesJson, HashSet<string> fieldSet)
         {
             if (string.IsNullOrWhiteSpace(requestedChangesJson)) return requestedChangesJson ?? string.Empty;
 
             try
             {
                 var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
-                if (changes == null) return requestedChangesJson;
+                if (changes == null) return "{}";
 
-                var filtered = changes.Where(kv => WritableFieldNames.Contains(kv.Key))
+                var filtered = changes.Where(kv => fieldSet.Contains(kv.Key))
                                        .ToDictionary(kv => kv.Key, kv => kv.Value);
                 return JsonSerializer.Serialize(filtered);
             }
             catch
             {
-                // Malformed JSON can't be filtered; resolve-time handling already treats it safely.
-                return requestedChangesJson;
+                // Can't filter what won't parse - drop it rather than persist an unfiltered payload.
+                return "{}";
             }
         }
 
@@ -299,11 +301,11 @@ namespace SyncApp26.Application.Services
             }
 
             var changesJson = JsonSerializer.Serialize(new Dictionary<string, string> { ["Email"] = normalizedNewEmail });
-            var created = await CreateRequestAsync(userId, new CreateDataChangeRequestDTO
+            var created = await CreateRequestCoreAsync(userId, new CreateDataChangeRequestDTO
             {
                 RequestedChangesJson = changesJson,
                 Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Email address change (self-service)" : dto.Reason!
-            }, "Pending");
+            }, "Pending", WritableFieldNames);
 
             return AccountActionResult<DataChangeRequestDTO>.Ok(created);
         }

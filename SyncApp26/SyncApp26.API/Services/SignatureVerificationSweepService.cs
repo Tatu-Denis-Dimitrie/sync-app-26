@@ -128,7 +128,7 @@ namespace SyncApp26.API.Services
                     // (e.g. no clients connected) is independent of whether the email alert succeeded.
                     try
                     {
-                        await _hubContext.Clients.All.SendAsync("SignatureAnomalyAlert", new
+                        await _hubContext.Clients.Group($"role:{Roles.Admin}").SendAsync("SignatureAnomalyAlert", new
                         {
                             anomaliesFound = summary.AnomaliesFound,
                             recordsChecked = summary.RecordsChecked,
