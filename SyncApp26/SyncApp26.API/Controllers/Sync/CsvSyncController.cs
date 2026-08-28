@@ -33,8 +33,7 @@ public class CsvSyncController : ControllerBase
         _logger = logger;
     }
 
-    // Matches CsvValidationService's cap for the person-upload path; this endpoint parses its own
-    // loop and doesn't go through that service, so it needs the same bound applied separately.
+    // Same cap as CsvValidationService, applied separately since this endpoint doesn't use it.
     private const int MaxDepartmentRows = 50_000;
 
     // Progress updates are streamed over SignalR, keyed by this ID
