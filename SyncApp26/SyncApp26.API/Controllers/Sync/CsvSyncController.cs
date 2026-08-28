@@ -33,6 +33,10 @@ public class CsvSyncController : ControllerBase
         _logger = logger;
     }
 
+    // Matches CsvValidationService's cap for the person-upload path; this endpoint parses its own
+    // loop and doesn't go through that service, so it needs the same bound applied separately.
+    private const int MaxDepartmentRows = 50_000;
+
     // Progress updates are streamed over SignalR, keyed by this ID
     private string? GetConnectionId() =>
         Request.Headers["X-Connection-Id"].FirstOrDefault() ?? Request.Query["connectionId"].FirstOrDefault();
@@ -251,6 +255,7 @@ public class CsvSyncController : ControllerBase
     }
 
     [HttpPost("upload-departments")]
+    [RequestSizeLimit(100 * 1024 * 1024)] // 100MB limit, matching upload
     public async Task<ActionResult<List<CSVDepartmentComparisionDTO>>> UploadAndCompareDepartments(IFormFile file)
     {
         if (ValidateCsvUpload(file) is { } fileError)
@@ -282,10 +287,15 @@ public class CsvSyncController : ControllerBase
 
                 while (csv.Read())
                 {
+                    var rowNumber = csv.Context.Parser?.Row ?? 0;
+                    if (rowNumber > MaxDepartmentRows)
+                    {
+                        return BadRequest(new { error = $"CSV contains more than {MaxDepartmentRows} rows. Split the file into smaller batches." });
+                    }
+
                     var fieldCount = csv.Context.Parser?.Count ?? 0;
                     if (fieldCount != 1)
                     {
-                        var rowNumber = csv.Context.Parser?.Row ?? 0;
                         errors.Add($"Row {rowNumber}: CSV must contain exactly one column (name). Found {fieldCount} columns.");
                         continue;
                     }
