@@ -203,6 +203,8 @@ try
     var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"]
         ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
     var key = Encoding.ASCII.GetBytes(jwtSecretKey);
+    var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
+    var jwtAudience = builder.Configuration["JwtSettings:Audience"];
 
     builder.Services.AddAuthentication(options =>
     {
@@ -217,8 +219,10 @@ try
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
             ClockSkew = TimeSpan.Zero
         };
         options.Events = new JwtBearerEvents
