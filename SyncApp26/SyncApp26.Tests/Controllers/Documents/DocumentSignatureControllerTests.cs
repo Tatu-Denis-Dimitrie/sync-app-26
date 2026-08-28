@@ -31,6 +31,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             var hubClientsMock = new Mock<IHubClients>();
             hubClientsMock.Setup(c => c.All).Returns(_clientProxyMock.Object);
+            hubClientsMock.Setup(c => c.Groups(It.IsAny<IReadOnlyList<string>>())).Returns(_clientProxyMock.Object);
             _hubContextMock.Setup(h => h.Clients).Returns(hubClientsMock.Object);
             _clientProxyMock.Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default)).Returns(Task.CompletedTask);
         }
