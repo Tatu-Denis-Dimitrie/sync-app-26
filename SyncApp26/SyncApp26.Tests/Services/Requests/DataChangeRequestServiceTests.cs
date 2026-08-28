@@ -333,22 +333,19 @@ namespace SyncApp26.Tests.Services.Requests
         }
 
         [Fact]
-        public async Task CreateRequestAsync_AllowEmailFieldTrue_LetsEmailThrough()
+        public async Task RequestEmailChangeAsync_SameDomain_PersistsEmailInTheRequest()
         {
-            // Covers the one legitimate caller: RequestEmailChangeAsync's own internal call.
+            // The one legitimate caller for an Email key.
             var user = SeedUser();
             var service = CreateService();
-            var dto = new CreateDataChangeRequestDTO
-            {
-                RequestedChangesJson = "{\"Email\":\"newname@same-domain.com\"}",
-                Reason = "Self-service email change"
-            };
+            var newEmail = $"newname-{Guid.NewGuid():N}@example.com";
 
-            var result = await service.CreateRequestAsync(user.Id, dto, "Pending", allowEmailField: true);
+            var result = await service.RequestEmailChangeAsync(user.Id, new RequestEmailChangeDTO { NewEmail = newEmail });
 
+            Assert.True(result.Success);
             _dbFixture.Context.ChangeTracker.Clear();
-            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Id);
-            Assert.Contains("newname@same-domain.com", persisted.RequestedChangesJson);
+            var persisted = _dbFixture.Context.DataChangeRequests.Single(r => r.Id == result.Data!.Id);
+            Assert.Contains(newEmail, persisted.RequestedChangesJson);
         }
 
         [Fact]

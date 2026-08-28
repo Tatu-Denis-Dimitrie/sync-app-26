@@ -210,12 +210,15 @@ namespace SyncApp26.Application.Services
             return req == null ? null : MapToDTO(req);
         }
 
-        public async Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending", bool allowEmailField = false)
+        public Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending") =>
+            CreateRequestCoreAsync(userId, dto, initialStatus, AllowedFieldNames);
+
+        // Not on the interface on purpose - only RequestEmailChangeAsync may pass WritableFieldNames.
+        private async Task<DataChangeRequestDTO> CreateRequestCoreAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus, HashSet<string> fieldSet)
         {
             var user = await _repository.GetUserByIdAsync(userId);
 
             // The real security boundary - the controller's own check is just a friendlier early copy.
-            var fieldSet = allowEmailField ? WritableFieldNames : AllowedFieldNames;
             var filteredChangesJson = FilterToFieldSet(dto.RequestedChangesJson, fieldSet);
 
             var req = new DataChangeRequest
@@ -239,7 +242,7 @@ namespace SyncApp26.Application.Services
             try
             {
                 var changes = JsonSerializer.Deserialize<Dictionary<string, object>>(requestedChangesJson);
-                if (changes == null) return requestedChangesJson;
+                if (changes == null) return "{}";
 
                 var filtered = changes.Where(kv => fieldSet.Contains(kv.Key))
                                        .ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -298,11 +301,11 @@ namespace SyncApp26.Application.Services
             }
 
             var changesJson = JsonSerializer.Serialize(new Dictionary<string, string> { ["Email"] = normalizedNewEmail });
-            var created = await CreateRequestAsync(userId, new CreateDataChangeRequestDTO
+            var created = await CreateRequestCoreAsync(userId, new CreateDataChangeRequestDTO
             {
                 RequestedChangesJson = changesJson,
                 Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Email address change (self-service)" : dto.Reason!
-            }, "Pending", allowEmailField: true);
+            }, "Pending", WritableFieldNames);
 
             return AccountActionResult<DataChangeRequestDTO>.Ok(created);
         }

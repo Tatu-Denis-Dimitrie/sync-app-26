@@ -12,7 +12,7 @@ public class CsvValidationService : ICsvValidationService
     private static readonly string[] OptionalHeaders = { "AssignedToPersonalId", "Function", "WorkSite" };
     private static readonly Regex EmailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
 
-    // Bounds memory independent of the byte-size cap.
+    // Caps rows parsed/validated (the file is still fully buffered first for encoding checks).
     private const int MaxRows = 50_000;
 
     private readonly ILogger<CsvValidationService> _logger;

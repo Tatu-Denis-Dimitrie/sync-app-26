@@ -70,7 +70,7 @@ namespace SyncApp26.Tests.Controllers.Requests
 
             var badRequest = Assert.IsType<BadRequestObjectResult>(result);
             Assert.Contains("PasswordHash", GetProp<string>(badRequest.Value!, "message"));
-            _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -88,7 +88,7 @@ namespace SyncApp26.Tests.Controllers.Requests
             var result = await controller.Create(dto);
 
             Assert.IsType<BadRequestObjectResult>(result);
-            _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -97,8 +97,8 @@ namespace SyncApp26.Tests.Controllers.Requests
             var controller = CreateController();
             _serviceMock.SetupGet(s => s.AllowedFields).Returns(TestAllowedFields);
             CreateDataChangeRequestDTO? forwarded = null;
-            _serviceMock.Setup(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>(), It.IsAny<bool>()))
-                .Callback<Guid, CreateDataChangeRequestDTO, string, bool>((_, d, _, _) => forwarded = d)
+            _serviceMock.Setup(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()))
+                .Callback<Guid, CreateDataChangeRequestDTO, string>((_, d, _) => forwarded = d)
                 .ReturnsAsync(new DataChangeRequestDTO { Id = Guid.NewGuid(), Status = "Pending" });
             var dto = new CreateDataChangeRequestDTO
             {
@@ -119,7 +119,7 @@ namespace SyncApp26.Tests.Controllers.Requests
         {
             var controller = CreateController();
             _serviceMock.SetupGet(s => s.AllowedFields).Returns(TestAllowedFields);
-            _serviceMock.Setup(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>(), It.IsAny<bool>()))
+            _serviceMock.Setup(s => s.CreateRequestAsync(It.IsAny<Guid>(), It.IsAny<CreateDataChangeRequestDTO>(), It.IsAny<string>()))
                 .ReturnsAsync(new DataChangeRequestDTO { Id = Guid.NewGuid(), Status = "Pending" });
             var dto = new CreateDataChangeRequestDTO { RequestedChangesJson = "{\"FirstName\":\"New\"}", Reason = "Name changed legally" };
 
@@ -128,7 +128,7 @@ namespace SyncApp26.Tests.Controllers.Requests
             Assert.IsType<OkObjectResult>(result);
             _serviceMock.Verify(s => s.CreateRequestAsync(It.IsAny<Guid>(),
                 It.Is<CreateDataChangeRequestDTO>(d => d.RequestedChangesJson.Contains("FirstName")),
-                It.IsAny<string>(), It.IsAny<bool>()), Times.Once);
+                It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
