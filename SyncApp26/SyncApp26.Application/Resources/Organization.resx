@@ -95,4 +95,307 @@
   <data name="filters.allFunctions" xml:space="preserve">
     <value>All Functions</value>
   </data>
+  <data name="department.scheduledForDeletionNotFound" xml:space="preserve">
+    <value>Scheduled for deletion department not found</value>
+  </data>
+  <data name="department.restored" xml:space="preserve">
+    <value>Department successfully restored</value>
+  </data>
+  <data name="department.created" xml:space="preserve">
+    <value>Department created successfully</value>
+  </data>
+  <data name="department.nameRequired" xml:space="preserve">
+    <value>Department name is required</value>
+  </data>
+  <data name="department.updated" xml:space="preserve">
+    <value>Department updated successfully</value>
+  </data>
+  <data name="department.notFound" xml:space="preserve">
+    <value>Department not found</value>
+  </data>
+  <data name="department.hasAssignedUsers" xml:space="preserve">
+    <value>Department has assigned users. Please provide a transfer department ID.</value>
+  </data>
+  <data name="department.transferNotFound" xml:space="preserve">
+    <value>Transfer department not found.</value>
+  </data>
+  <data name="department.cannotTransferToSame" xml:space="preserve">
+    <value>Cannot transfer users to the same department being deleted.</value>
+  </data>
+  <data name="department.deleted" xml:space="preserve">
+    <value>Department deleted/deactivated successfully</value>
+  </data>
+  <data name="workSite.scheduledForDeletionNotFound" xml:space="preserve">
+    <value>Scheduled for deletion work site not found</value>
+  </data>
+  <data name="workSite.restored" xml:space="preserve">
+    <value>Work site successfully restored</value>
+  </data>
+  <data name="workSite.created" xml:space="preserve">
+    <value>Work site created successfully</value>
+  </data>
+  <data name="workSite.nameRequired" xml:space="preserve">
+    <value>Work site name is required</value>
+  </data>
+  <data name="workSite.updated" xml:space="preserve">
+    <value>Work site updated successfully</value>
+  </data>
+  <data name="workSite.notFound" xml:space="preserve">
+    <value>Work site not found</value>
+  </data>
+  <data name="workSite.deleted" xml:space="preserve">
+    <value>Work site deleted/deactivated successfully</value>
+  </data>
+  <data name="departments.totalDepartments" xml:space="preserve">
+    <value>Total Departments</value>
+  </data>
+  <data name="departments.totalManagers" xml:space="preserve">
+    <value>Total Managers</value>
+  </data>
+  <data name="departments.totalEmployees" xml:space="preserve">
+    <value>Total Employees</value>
+  </data>
+  <data name="departments.searchPlaceholder" xml:space="preserve">
+    <value>Search departments...</value>
+  </data>
+  <data name="filters.sizeSmall" xml:space="preserve">
+    <value>Small (≤10 people)</value>
+  </data>
+  <data name="filters.sizeMedium" xml:space="preserve">
+    <value>Medium (11-50 people)</value>
+  </data>
+  <data name="filters.sizeLarge" xml:space="preserve">
+    <value>Large (&gt;50 people)</value>
+  </data>
+  <data name="filters.hasSsmSigned" xml:space="preserve">
+    <value>Has SSM Signed</value>
+  </data>
+  <data name="filters.hasSuSigned" xml:space="preserve">
+    <value>Has SU Signed</value>
+  </data>
+  <data name="filters.hasBothSigned" xml:space="preserve">
+    <value>Has Both Signed</value>
+  </data>
+  <data name="departments.deactivateTitle" xml:space="preserve">
+    <value>Deactivate department</value>
+  </data>
+  <data name="departments.activateTitle" xml:space="preserve">
+    <value>Activate department</value>
+  </data>
+  <data name="departments.deactivate" xml:space="preserve">
+    <value>Deactivate</value>
+  </data>
+  <data name="departments.activate" xml:space="preserve">
+    <value>Activate</value>
+  </data>
+  <data name="departments.lineManagers" xml:space="preserve">
+    <value>Line Managers</value>
+  </data>
+  <data name="departments.employees" xml:space="preserve">
+    <value>Employees</value>
+  </data>
+  <data name="departments.documentSignatures" xml:space="preserve">
+    <value>Document Signatures</value>
+  </data>
+  <data name="departments.ssmSignedLabel" xml:space="preserve">
+    <value>SSM Signed:</value>
+  </data>
+  <data name="departments.suSignedLabel" xml:space="preserve">
+    <value>SU Signed:</value>
+  </data>
+  <data name="departments.bothSignedLabel" xml:space="preserve">
+    <value>Both Signed:</value>
+  </data>
+  <data name="departments.notSignedLabel" xml:space="preserve">
+    <value>Not Signed:</value>
+  </data>
+  <data name="departments.viewNotSignedTitle" xml:space="preserve">
+    <value>View users who have not signed SSM and SU</value>
+  </data>
+  <data name="departments.noneFound" xml:space="preserve">
+    <value>No departments found</value>
+  </data>
+  <data name="departments.tryAdjustingSearch" xml:space="preserve">
+    <value>Try adjusting your search or filters.</value>
+  </data>
+  <data name="departments.noneInSystem" xml:space="preserve">
+    <value>There are no departments in the system at the moment.</value>
+  </data>
+  <data name="departments.scheduledForDeletion" xml:space="preserve">
+    <value>Scheduled for Deletion</value>
+  </data>
+  <data name="departments.restore" xml:space="preserve">
+    <value>Restore Department</value>
+  </data>
+  <data name="departments.permanentlyDeletingIn" xml:space="preserve">
+    <value>Permanently deleting in {0} days</value>
+  </data>
+  <data name="departments.deactivatedOn" xml:space="preserve">
+    <value>Deactivated on</value>
+  </data>
+  <data name="departments.saveChanges" xml:space="preserve">
+    <value>Save Changes</value>
+  </data>
+  <data name="departments.restoreConfirmPrefix" xml:space="preserve">
+    <value>Are you sure you want to restore</value>
+  </data>
+  <data name="departments.restoreConfirmSuffix" xml:space="preserve">
+    <value>? The department will be moved back to your Active Departments list (but remain inactive until you toggle it).</value>
+  </data>
+  <data name="departments.confirmRestore" xml:space="preserve">
+    <value>Confirm Restore</value>
+  </data>
+  <data name="departments.deleteConfirmPrefix" xml:space="preserve">
+    <value>Are you sure you want to delete</value>
+  </data>
+  <data name="departments.deleteConfirmSuffix" xml:space="preserve">
+    <value>? The department will be deactivated immediately and scheduled for permanent deletion in 90 days.</value>
+  </data>
+  <data name="departments.hasActiveUsersPrefix" xml:space="preserve">
+    <value>This department has</value>
+  </data>
+  <data name="departments.hasActiveUsersSuffix" xml:space="preserve">
+    <value>active users. You must transfer them to another department before deleting.</value>
+  </data>
+  <data name="departments.confirmDelete" xml:space="preserve">
+    <value>Confirm Delete</value>
+  </data>
+  <data name="departments.errorUpdating" xml:space="preserve">
+    <value>Error updating department</value>
+  </data>
+  <data name="departments.errorDeleting" xml:space="preserve">
+    <value>Error deleting department</value>
+  </data>
+  <data name="departments.errorRestoring" xml:space="preserve">
+    <value>Error restoring department</value>
+  </data>
+  <data name="departments.pleaseSelectTransfer" xml:space="preserve">
+    <value>Please select a department to transfer the existing users to.</value>
+  </data>
+  <data name="workSites.title" xml:space="preserve">
+    <value>Work Sites</value>
+  </data>
+  <data name="workSites.headerOf" xml:space="preserve">
+    <value>of</value>
+  </data>
+  <data name="workSites.headerAcross" xml:space="preserve">
+    <value>assigned employees across</value>
+  </data>
+  <data name="workSites.headerActive" xml:space="preserve">
+    <value>active</value>
+  </data>
+  <data name="workSites.headerSite" xml:space="preserve">
+    <value>site</value>
+  </data>
+  <data name="workSites.headerSites" xml:space="preserve">
+    <value>sites</value>
+  </data>
+  <data name="workSites.headerCompleted" xml:space="preserve">
+    <value>have completed both SSM and SU sign-off.</value>
+  </data>
+  <data name="workSites.emptyHeaderHint" xml:space="preserve">
+    <value>Physical locations employees are assigned to. Sign-off coverage appears here once people are assigned.</value>
+  </data>
+  <data name="workSites.addWorkSite" xml:space="preserve">
+    <value>Add work site</value>
+  </data>
+  <data name="workSites.fullyCovered" xml:space="preserve">
+    <value>Fully covered</value>
+  </data>
+  <data name="workSites.searchPlaceholder" xml:space="preserve">
+    <value>Search work sites</value>
+  </data>
+  <data name="workSites.employee" xml:space="preserve">
+    <value>employee</value>
+  </data>
+  <data name="workSites.employees" xml:space="preserve">
+    <value>employees</value>
+  </data>
+  <data name="workSites.unsigned" xml:space="preserve">
+    <value>unsigned</value>
+  </data>
+  <data name="workSites.noEmployeesYet" xml:space="preserve">
+    <value>No employees assigned yet.</value>
+  </data>
+  <data name="workSites.rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="workSites.renameAria" xml:space="preserve">
+    <value>Rename {0}</value>
+  </data>
+  <data name="workSites.deleteAria" xml:space="preserve">
+    <value>Delete {0}</value>
+  </data>
+  <data name="workSites.noneYet" xml:space="preserve">
+    <value>No work sites yet</value>
+  </data>
+  <data name="workSites.emptyStateHint" xml:space="preserve">
+    <value>Add the locations your people work from. Once a site exists, you can assign it to employees and this page starts tracking SSM and SU coverage per location.</value>
+  </data>
+  <data name="workSites.noMatch" xml:space="preserve">
+    <value>No work sites match "{0}".</value>
+  </data>
+  <data name="workSites.scheduledForDeletion" xml:space="preserve">
+    <value>Scheduled for deletion</value>
+  </data>
+  <data name="workSites.newWorkSite" xml:space="preserve">
+    <value>New work site</value>
+  </data>
+  <data name="workSites.name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="workSites.namePlaceholder" xml:space="preserve">
+    <value>e.g. Timisoara</value>
+  </data>
+  <data name="workSites.createSite" xml:space="preserve">
+    <value>Create site</value>
+  </data>
+  <data name="workSites.renameWorkSite" xml:space="preserve">
+    <value>Rename work site</value>
+  </data>
+  <data name="workSites.saveChanges" xml:space="preserve">
+    <value>Save changes</value>
+  </data>
+  <data name="workSites.deleteWorkSite" xml:space="preserve">
+    <value>Delete work site</value>
+  </data>
+  <data name="workSites.deleteConfirmPrefix" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="workSites.deleteConfirmSuffix" xml:space="preserve">
+    <value>? Employees assigned to it are left without a work site. Their department, manager, and existing signatures are not affected.</value>
+  </data>
+  <data name="workSites.deleteSite" xml:space="preserve">
+    <value>Delete site</value>
+  </data>
+  <data name="workSites.restoreWorkSite" xml:space="preserve">
+    <value>Restore work site</value>
+  </data>
+  <data name="workSites.restoreConfirmPrefix" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="workSites.restoreConfirmSuffix" xml:space="preserve">
+    <value>? It returns to the roster as inactive, so nobody can be assigned to it until you activate it again.</value>
+  </data>
+  <data name="workSites.restoreSite" xml:space="preserve">
+    <value>Restore site</value>
+  </data>
+  <data name="workSites.employeesAt" xml:space="preserve">
+    <value>Employees at {0}</value>
+  </data>
+  <data name="workSites.errorLoading" xml:space="preserve">
+    <value>Failed to load work sites.</value>
+  </data>
+  <data name="workSites.errorUpdating" xml:space="preserve">
+    <value>Failed to update work site.</value>
+  </data>
+  <data name="workSites.errorCreating" xml:space="preserve">
+    <value>Failed to create work site.</value>
+  </data>
+  <data name="workSites.errorDeleting" xml:space="preserve">
+    <value>Failed to delete work site.</value>
+  </data>
+  <data name="workSites.errorRestoring" xml:space="preserve">
+    <value>Failed to restore work site.</value>
+  </data>
 </root>

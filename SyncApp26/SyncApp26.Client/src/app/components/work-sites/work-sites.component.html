@@ -4,19 +4,19 @@
     <!-- Header: the roster's headline answer, in the same twin-track motif the rows use -->
     <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
       <div class="min-w-0">
-        <h1 class="text-3xl font-bold tracking-tight text-foreground">Work Sites</h1>
+        <h1 class="text-3xl font-bold tracking-tight text-foreground">{{ 'workSites.title' | translate:'Organization' }}</h1>
         @if (aggregateStats.employeeCount > 0) {
           <p class="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
             <span class="font-semibold text-foreground">{{ aggregateStats.bothSigned }}</span>
-            of
+            {{ 'workSites.headerOf' | translate:'Organization' }}
             <span class="font-semibold text-foreground">{{ aggregateStats.employeeCount }}</span>
-            assigned employees across
+            {{ 'workSites.headerAcross' | translate:'Organization' }}
             <span class="font-semibold text-foreground">{{ activeCount }}</span>
-            active {{ activeCount === 1 ? 'site' : 'sites' }} have completed both SSM and SU sign-off.
+            {{ 'workSites.headerActive' | translate:'Organization' }} {{ siteWord(activeCount) }} {{ 'workSites.headerCompleted' | translate:'Organization' }}
           </p>
         } @else {
           <p class="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Physical locations employees are assigned to. Sign-off coverage appears here once people are assigned.
+            {{ 'workSites.emptyHeaderHint' | translate:'Organization' }}
           </p>
         }
       </div>
@@ -27,7 +27,7 @@
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
           <path d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        Add work site
+        {{ 'workSites.addWorkSite' | translate:'Organization' }}
       </button>
     </div>
 
@@ -37,7 +37,7 @@
           <p class="font-mono text-5xl font-semibold leading-none tabular-nums tracking-tight" [ngClass]="coverageTone(aggregateStats.bothPct)">
             {{ aggregateStats.bothPct }}<span class="text-2xl">%</span>
           </p>
-          <p class="mt-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">Fully covered</p>
+          <p class="mt-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">{{ 'workSites.fullyCovered' | translate:'Organization' }}</p>
         </div>
         <div class="flex-1 space-y-2.5">
           <div class="flex items-center gap-4">
@@ -77,8 +77,8 @@
         <input
           type="text"
           [(ngModel)]="searchQuery"
-          placeholder="Search work sites"
-          aria-label="Search work sites"
+          placeholder="{{ 'workSites.searchPlaceholder' | translate:'Organization' }}"
+          [attr.aria-label]="'workSites.searchPlaceholder' | translate:'Organization'"
           class="w-full rounded-md border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
       </div>
@@ -111,7 +111,7 @@
                 <h2 class="truncate text-lg font-semibold tracking-tight text-foreground">{{ workSite.name }}</h2>
                 @if (!workSite.isActive) {
                   <span class="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Inactive
+                    {{ 'status.inactive' | translate:'Common' }}
                   </span>
                 }
               </div>
@@ -123,17 +123,17 @@
                     class="underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 rounded"
                     >
                     <span class="font-mono tabular-nums">{{ stats.employeeCount }}</span>
-                    {{ stats.employeeCount === 1 ? 'employee' : 'employees' }}
+                    {{ employeeWord(stats.employeeCount) }}
                   </button>
                 } @else {
                   <span>
-                    <span class="font-mono tabular-nums">{{ stats.employeeCount }}</span> employees
+                    <span class="font-mono tabular-nums">{{ stats.employeeCount }}</span> {{ 'workSites.employees' | translate:'Organization' }}
                   </span>
                 }
                 @if (stats.unsigned > 0) {
                   <span class="text-border"> · </span>
                   <span class="font-medium text-amber-600">
-                    <span class="font-mono tabular-nums">{{ stats.unsigned }}</span> unsigned
+                    <span class="font-mono tabular-nums">{{ stats.unsigned }}</span> {{ 'workSites.unsigned' | translate:'Organization' }}
                   </span>
                 }
               </p>
@@ -162,7 +162,7 @@
                 </div>
               </div>
             } @else {
-              <p class="text-sm text-muted-foreground">No employees assigned yet.</p>
+              <p class="text-sm text-muted-foreground">{{ 'workSites.noEmployeesYet' | translate:'Organization' }}</p>
             }
 
             <!-- Actions: the state toggle stays put, secondary edits surface on hover -->
@@ -173,14 +173,14 @@
                   ? 'rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40'
                   : 'rounded-md border border-emerald-500/40 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-500/10 focus:outline-none focus:ring-2 focus:ring-primary/40'"
                 >
-                {{ workSite.isActive ? 'Deactivate' : 'Activate' }}
+                {{ workSite.isActive ? ('departments.deactivate' | translate:'Organization') : ('departments.activate' | translate:'Organization') }}
               </button>
               <div class="flex items-center gap-1 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-within:opacity-100">
               <button
                 (click)="openEditModal(workSite)"
                 class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                [attr.aria-label]="'Rename ' + workSite.name"
-                title="Rename"
+                [attr.aria-label]="renameAria(workSite.name)"
+                [title]="'workSites.rename' | translate:'Organization'"
                 >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                   <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -189,8 +189,8 @@
               <button
                 (click)="openDeleteModal(workSite)"
                 class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus:outline-none focus:ring-2 focus:ring-destructive/40"
-                [attr.aria-label]="'Delete ' + workSite.name"
-                title="Delete"
+                [attr.aria-label]="deleteAria(workSite.name)"
+                [title]="'buttons.delete' | translate:'Common'"
                 >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -203,10 +203,9 @@
       </div>
     } @else if (workSites.length === 0) {
       <div class="mt-8 border-y border-border py-20 text-center">
-        <h2 class="text-lg font-semibold tracking-tight text-foreground">No work sites yet</h2>
+        <h2 class="text-lg font-semibold tracking-tight text-foreground">{{ 'workSites.noneYet' | translate:'Organization' }}</h2>
         <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-          Add the locations your people work from. Once a site exists, you can assign it to employees and this page
-          starts tracking SSM and SU coverage per location.
+          {{ 'workSites.emptyStateHint' | translate:'Organization' }}
         </p>
         <button
           (click)="openAddModal()"
@@ -215,12 +214,12 @@
           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
             <path d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Add work site
+          {{ 'workSites.addWorkSite' | translate:'Organization' }}
         </button>
       </div>
     } @else {
       <div class="mt-4 border-y border-border py-16 text-center text-sm text-muted-foreground">
-        No work sites match “{{ searchQuery }}”.
+        {{ noMatchLabel(searchQuery) }}
       </div>
     }
 
@@ -239,7 +238,7 @@
             >
             <path d="M9 5l7 7-7 7" />
           </svg>
-          Scheduled for deletion
+          {{ 'workSites.scheduledForDeletion' | translate:'Organization' }}
           <span class="font-mono tabular-nums">({{ deletedWorkSites.length }})</span>
         </button>
         @if (showDeleted) {
@@ -251,7 +250,7 @@
                   (click)="openRestoreModal(workSite)"
                   class="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/40"
                   >
-                  Restore
+                  {{ 'buttons.restore' | translate:'Common' }}
                 </button>
               </div>
             }
@@ -272,8 +271,8 @@
         (click)="$event.stopPropagation()"
         >
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold tracking-tight text-foreground">New work site</h2>
-          <button (click)="closeAddModal()" aria-label="Close" class="text-muted-foreground transition-colors hover:text-foreground">
+          <h2 class="text-lg font-semibold tracking-tight text-foreground">{{ 'workSites.newWorkSite' | translate:'Organization' }}</h2>
+          <button (click)="closeAddModal()" [attr.aria-label]="'buttons.close' | translate:'Common'" class="text-muted-foreground transition-colors hover:text-foreground">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -281,23 +280,23 @@
         </div>
         <form (ngSubmit)="saveNewWorkSite()" class="space-y-4">
           <div class="space-y-2">
-            <label for="new-work-site" class="text-sm font-medium text-foreground">Name</label>
+            <label for="new-work-site" class="text-sm font-medium text-foreground">{{ 'workSites.name' | translate:'Organization' }}</label>
             <input
               id="new-work-site"
               type="text"
               [(ngModel)]="newWorkSiteName"
               name="newWorkSiteName"
               required
-              placeholder="e.g. Timisoara"
+              placeholder="{{ 'workSites.namePlaceholder' | translate:'Organization' }}"
               class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
               />
           </div>
           <div class="mt-6 flex justify-end gap-3">
             <button type="button" (click)="closeAddModal()" class="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent">
-              Cancel
+              {{ 'buttons.cancel' | translate:'Common' }}
             </button>
             <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-              Create site
+              {{ 'workSites.createSite' | translate:'Organization' }}
             </button>
           </div>
         </form>
@@ -316,8 +315,8 @@
         (click)="$event.stopPropagation()"
         >
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold tracking-tight text-foreground">Rename work site</h2>
-          <button (click)="closeEditModal()" aria-label="Close" class="text-muted-foreground transition-colors hover:text-foreground">
+          <h2 class="text-lg font-semibold tracking-tight text-foreground">{{ 'workSites.renameWorkSite' | translate:'Organization' }}</h2>
+          <button (click)="closeEditModal()" [attr.aria-label]="'buttons.close' | translate:'Common'" class="text-muted-foreground transition-colors hover:text-foreground">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -325,7 +324,7 @@
         </div>
         <form (ngSubmit)="saveWorkSite()" class="space-y-4">
           <div class="space-y-2">
-            <label for="edit-work-site" class="text-sm font-medium text-foreground">Name</label>
+            <label for="edit-work-site" class="text-sm font-medium text-foreground">{{ 'workSites.name' | translate:'Organization' }}</label>
             <input
               id="edit-work-site"
               type="text"
@@ -337,10 +336,10 @@
           </div>
           <div class="mt-6 flex justify-end gap-3">
             <button type="button" (click)="closeEditModal()" class="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent">
-              Cancel
+              {{ 'buttons.cancel' | translate:'Common' }}
             </button>
             <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-              Save changes
+              {{ 'workSites.saveChanges' | translate:'Organization' }}
             </button>
           </div>
         </form>
@@ -359,23 +358,22 @@
         (click)="$event.stopPropagation()"
         >
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold tracking-tight text-foreground">Delete work site</h2>
-          <button (click)="closeDeleteModal()" aria-label="Close" class="text-muted-foreground transition-colors hover:text-foreground">
+          <h2 class="text-lg font-semibold tracking-tight text-foreground">{{ 'workSites.deleteWorkSite' | translate:'Organization' }}</h2>
+          <button (click)="closeDeleteModal()" [attr.aria-label]="'buttons.close' | translate:'Common'" class="text-muted-foreground transition-colors hover:text-foreground">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         <p class="mb-6 text-sm leading-relaxed text-muted-foreground">
-          Delete <strong class="font-semibold text-foreground">{{ workSiteToDelete?.name }}</strong>? Employees assigned
-          to it are left without a work site. Their department, manager, and existing signatures are not affected.
+          {{ 'workSites.deleteConfirmPrefix' | translate:'Organization' }} <strong class="font-semibold text-foreground">{{ workSiteToDelete?.name }}</strong>{{ 'workSites.deleteConfirmSuffix' | translate:'Organization' }}
         </p>
         <div class="flex justify-end gap-3">
           <button type="button" (click)="closeDeleteModal()" class="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent">
-            Cancel
+            {{ 'buttons.cancel' | translate:'Common' }}
           </button>
           <button type="button" (click)="confirmDelete()" class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90">
-            Delete site
+            {{ 'workSites.deleteSite' | translate:'Organization' }}
           </button>
         </div>
       </div>
@@ -393,23 +391,22 @@
         (click)="$event.stopPropagation()"
         >
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold tracking-tight text-foreground">Restore work site</h2>
-          <button (click)="closeRestoreModal()" aria-label="Close" class="text-muted-foreground transition-colors hover:text-foreground">
+          <h2 class="text-lg font-semibold tracking-tight text-foreground">{{ 'workSites.restoreWorkSite' | translate:'Organization' }}</h2>
+          <button (click)="closeRestoreModal()" [attr.aria-label]="'buttons.close' | translate:'Common'" class="text-muted-foreground transition-colors hover:text-foreground">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         <p class="mb-6 text-sm leading-relaxed text-muted-foreground">
-          Restore <strong class="font-semibold text-foreground">{{ workSiteToRestore?.name }}</strong>? It returns to the
-          roster as inactive, so nobody can be assigned to it until you activate it again.
+          {{ 'workSites.restoreConfirmPrefix' | translate:'Organization' }} <strong class="font-semibold text-foreground">{{ workSiteToRestore?.name }}</strong>{{ 'workSites.restoreConfirmSuffix' | translate:'Organization' }}
         </p>
         <div class="flex justify-end gap-3">
           <button type="button" (click)="closeRestoreModal()" class="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent">
-            Cancel
+            {{ 'buttons.cancel' | translate:'Common' }}
           </button>
           <button type="button" (click)="confirmRestore()" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-            Restore site
+            {{ 'workSites.restoreSite' | translate:'Organization' }}
           </button>
         </div>
       </div>
@@ -427,8 +424,8 @@
         (click)="$event.stopPropagation()"
         >
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold tracking-tight text-foreground">Employees at {{ workSite.name }}</h2>
-          <button (click)="closeEmployeesModal()" aria-label="Close" class="text-muted-foreground transition-colors hover:text-foreground">
+          <h2 class="text-lg font-semibold tracking-tight text-foreground">{{ employeesAtLabel(workSite.name) }}</h2>
+          <button (click)="closeEmployeesModal()" [attr.aria-label]="'buttons.close' | translate:'Common'" class="text-muted-foreground transition-colors hover:text-foreground">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -471,7 +468,7 @@
         </div>
         <div class="mt-4 flex justify-end">
           <button type="button" (click)="closeEmployeesModal()" class="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent">
-            Close
+            {{ 'buttons.close' | translate:'Common' }}
           </button>
         </div>
       </div>

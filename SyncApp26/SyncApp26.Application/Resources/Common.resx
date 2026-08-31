@@ -83,6 +83,9 @@
   <data name="status.active" xml:space="preserve">
     <value>Active</value>
   </data>
+  <data name="status.inactive" xml:space="preserve">
+    <value>Inactive</value>
+  </data>
   <data name="labels.notAvailable" xml:space="preserve">
     <value>N/A</value>
   </data>

@@ -5,6 +5,8 @@ import { Router } from '@angular/router';
 import { WorkSiteService } from '../../services/work-site.service';
 import { UserSyncService } from '../../services/user-sync.service';
 import { WorkSite, User } from '../../models/csv-sync.model';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface WorkSiteStats {
   employeeCount: number;
@@ -26,7 +28,7 @@ const EMPTY_STATS: WorkSiteStats = {
 @Component({
   selector: 'app-work-sites',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './work-sites.component.html',
   styleUrls: ['./work-sites.component.css']
 })
@@ -55,7 +57,35 @@ export class WorkSitesComponent implements OnInit {
   isEmployeesModalOpen = false;
   workSiteForEmployees: WorkSite | null = null;
 
-  constructor(private workSiteService: WorkSiteService, private userSyncService: UserSyncService, private router: Router) {}
+  constructor(private workSiteService: WorkSiteService, private userSyncService: UserSyncService, private router: Router, private translationService: TranslationService) {}
+
+  tOrg(key: string): string {
+    return this.translationService.translate('Organization', key);
+  }
+
+  siteWord(count: number): string {
+    return this.tOrg(count === 1 ? 'workSites.headerSite' : 'workSites.headerSites');
+  }
+
+  employeeWord(count: number): string {
+    return this.tOrg(count === 1 ? 'workSites.employee' : 'workSites.employees');
+  }
+
+  renameAria(name: string): string {
+    return this.translationService.translate('Organization', 'workSites.renameAria', name);
+  }
+
+  deleteAria(name: string): string {
+    return this.translationService.translate('Organization', 'workSites.deleteAria', name);
+  }
+
+  noMatchLabel(query: string): string {
+    return this.translationService.translate('Organization', 'workSites.noMatch', query);
+  }
+
+  employeesAtLabel(name: string): string {
+    return this.translationService.translate('Organization', 'workSites.employeesAt', name);
+  }
 
   ngOnInit(): void {
     this.loadWorkSites();
@@ -65,7 +95,7 @@ export class WorkSitesComponent implements OnInit {
   loadWorkSites(): void {
     this.workSiteService.getAll().subscribe({
       next: workSites => this.workSites = workSites,
-      error: () => this.errorMessage = 'Failed to load work sites.'
+      error: () => this.errorMessage = this.tOrg('workSites.errorLoading')
     });
     this.workSiteService.getDeleted().subscribe({
       next: workSites => this.deletedWorkSites = workSites,
@@ -129,7 +159,7 @@ export class WorkSitesComponent implements OnInit {
   toggleActive(workSite: WorkSite): void {
     this.workSiteService.update(workSite.id, workSite.name, !workSite.isActive).subscribe({
       next: () => this.loadWorkSites(),
-      error: () => this.errorMessage = 'Failed to update work site.'
+      error: () => this.errorMessage = this.tOrg('workSites.errorUpdating')
     });
   }
 
@@ -151,7 +181,7 @@ export class WorkSitesComponent implements OnInit {
         this.closeAddModal();
         this.loadWorkSites();
       },
-      error: () => this.errorMessage = 'Failed to create work site.'
+      error: () => this.errorMessage = this.tOrg('workSites.errorCreating')
     });
   }
 
@@ -175,7 +205,7 @@ export class WorkSitesComponent implements OnInit {
         this.closeEditModal();
         this.loadWorkSites();
       },
-      error: () => this.errorMessage = 'Failed to update work site.'
+      error: () => this.errorMessage = this.tOrg('workSites.errorUpdating')
     });
   }
 
@@ -198,7 +228,7 @@ export class WorkSitesComponent implements OnInit {
         this.closeDeleteModal();
         this.loadWorkSites();
       },
-      error: () => this.errorMessage = 'Failed to delete work site.'
+      error: () => this.errorMessage = this.tOrg('workSites.errorDeleting')
     });
   }
 
@@ -221,7 +251,7 @@ export class WorkSitesComponent implements OnInit {
         this.closeRestoreModal();
         this.loadWorkSites();
       },
-      error: () => this.errorMessage = 'Failed to restore work site.'
+      error: () => this.errorMessage = this.tOrg('workSites.errorRestoring')
     });
   }
 

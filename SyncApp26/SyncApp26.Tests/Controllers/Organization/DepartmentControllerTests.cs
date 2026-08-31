@@ -17,7 +17,7 @@ namespace SyncApp26.Tests.Controllers.Organization
 
         private DepartmentController CreateController(string role = Roles.Admin)
         {
-            var controller = new DepartmentController(_departmentServiceMock.Object);
+            var controller = new DepartmentController(_departmentServiceMock.Object, RealLocalizerFactory.LocalizationService());
             controller.SetUser(Guid.NewGuid(), role: role);
             return controller;
         }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -14,10 +15,12 @@ namespace SyncApp26.API.Controllers
     public class WorkSiteController : ControllerBase
     {
         private readonly IWorkSiteService _workSiteService;
+        private readonly IStringLocalizer _localizer;
 
-        public WorkSiteController(IWorkSiteService workSiteService)
+        public WorkSiteController(IWorkSiteService workSiteService, ILocalizationService localizationService)
         {
             _workSiteService = workSiteService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Organization);
         }
 
         [HttpGet("{id}")]
@@ -72,7 +75,7 @@ namespace SyncApp26.API.Controllers
                 return new WorkSiteResponseDTO
                 {
                     Success = false,
-                    Message = "Scheduled for deletion work site not found",
+                    Message = _localizer["workSite.scheduledForDeletionNotFound"].Value,
                 };
             }
 
@@ -85,7 +88,7 @@ namespace SyncApp26.API.Controllers
             return new WorkSiteResponseDTO
             {
                 Success = true,
-                Message = "Work site successfully restored"
+                Message = _localizer["workSite.restored"].Value
             };
         }
 
@@ -106,7 +109,7 @@ namespace SyncApp26.API.Controllers
             return new WorkSiteResponseDTO
             {
                 Success = true,
-                Message = "Work site created successfully",
+                Message = _localizer["workSite.created"].Value,
             };
         }
 
@@ -119,7 +122,7 @@ namespace SyncApp26.API.Controllers
                 return new WorkSiteResponseDTO
                 {
                     Success = false,
-                    Message = "Work site name is required",
+                    Message = _localizer["workSite.nameRequired"].Value,
                 };
             }
 
@@ -135,7 +138,7 @@ namespace SyncApp26.API.Controllers
             return new WorkSiteResponseDTO
             {
                 Success = true,
-                Message = "Work site updated successfully",
+                Message = _localizer["workSite.updated"].Value,
             };
         }
 
@@ -149,7 +152,7 @@ namespace SyncApp26.API.Controllers
                 return new WorkSiteResponseDTO
                 {
                     Success = false,
-                    Message = "Work site not found",
+                    Message = _localizer["workSite.notFound"].Value,
                 };
             }
 
@@ -169,7 +172,7 @@ namespace SyncApp26.API.Controllers
             return new WorkSiteResponseDTO
             {
                 Success = true,
-                Message = "Work site deleted/deactivated successfully",
+                Message = _localizer["workSite.deleted"].Value,
             };
         }
     }
