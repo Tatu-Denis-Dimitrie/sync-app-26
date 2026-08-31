@@ -16,12 +16,12 @@
       </svg>
     </div>
 
-    <h1 class="title">Access Restricted</h1>
+    <h1 class="title">{{ 'accessRestricted.title' | translate:'Common' }}</h1>
 
     @if (currentUser) {
       <div class="user-info">
         <p class="greeting">
-          Hello,
+          {{ 'accessRestricted.greeting' | translate:'Common' }}
           <strong>{{ currentUser.firstName }} {{ currentUser.lastName }}</strong>
         </p>
         <p class="role-badge">
@@ -30,10 +30,7 @@
       </div>
     }
 
-    <p class="message">
-      The full application features are currently only available for
-      <strong>Admin</strong> users.
-    </p>
+    <p class="message" [innerHTML]="tCommon('accessRestricted.message')"></p>
 
     <div class="info-box">
       <svg
@@ -50,18 +47,14 @@
         ></path>
       </svg>
       <div class="info-text">
-        <p class="info-title">Development in Progress</p>
-        <p class="info-description">
-          We're currently developing features for
-          <strong>Basic Users</strong> and <strong>Line Managers</strong>. These
-          will be available soon!
-        </p>
+        <p class="info-title">{{ 'accessRestricted.devInProgressTitle' | translate:'Common' }}</p>
+        <p class="info-description" [innerHTML]="tCommon('accessRestricted.devInProgressDescription')"></p>
       </div>
     </div>
 
     <div class="actions">
       <button type="button" class="logout-button" (click)="onLogout()">
-        Logout
+        {{ 'buttons.logout' | translate:'Common' }}
       </button>
     </div>
   </div>

@@ -1,26 +1,27 @@
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 
 @Component({
   selector: 'app-pagination',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   template: `
     <div class="pagination-root border-t border-border px-4 py-3">
       <div class="pagination-bar">
         <div class="pagination-meta">
           <p class="whitespace-nowrap text-sm text-muted-foreground">
-            Showing
+            {{ 'pagination.showing' | translate:'Common' }}
             <span class="font-medium">{{ startItem }}</span>
-            to
+            {{ 'pagination.to' | translate:'Common' }}
             <span class="font-medium">{{ endItem }}</span>
-            of
+            {{ 'pagination.of' | translate:'Common' }}
             <span class="font-medium">{{ totalItems }}</span>
-            results
+            {{ 'pagination.results' | translate:'Common' }}
           </p>
           <div class="flex items-center gap-2">
-            <label for="pageSizeSelect" class="whitespace-nowrap text-sm text-muted-foreground">Per page:</label>
+            <label for="pageSizeSelect" class="whitespace-nowrap text-sm text-muted-foreground">{{ 'pagination.perPage' | translate:'Common' }}</label>
             <select
               id="pageSizeSelect"
               class="rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground hover:bg-accent focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
@@ -29,7 +30,7 @@ import { FormsModule } from '@angular/forms';
               @for (size of pageSizeOptions; track size) {
                 <option [value]="size" [selected]="size === pageSize">{{ size }}</option>
               }
-              <option value="custom" [selected]="isCustomPageSize">Custom…</option>
+              <option value="custom" [selected]="isCustomPageSize">{{ 'pagination.custom' | translate:'Common' }}</option>
             </select>
             @if (showCustomInput) {
               <input
@@ -47,14 +48,14 @@ import { FormsModule } from '@angular/forms';
           </div>
         </div>
         <div class="pagination-nav-wrap max-w-full overflow-x-auto">
-        <nav class="pagination-nav isolate -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+        <nav class="pagination-nav isolate -space-x-px rounded-md shadow-sm" [attr.aria-label]="'pagination.label' | translate:'Common'">
           <!-- Previous Button -->
           <button
             (click)="onPageChange(currentPage - 1)"
             [disabled]="currentPage === 1"
             class="relative inline-flex flex-1 items-center justify-center rounded-l-md px-2 py-2 text-muted-foreground ring-1 ring-inset ring-border hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:z-20"
             >
-            <span class="sr-only">Previous</span>
+            <span class="sr-only">{{ 'pagination.previous' | translate:'Common' }}</span>
             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
             </svg>
@@ -89,7 +90,7 @@ import { FormsModule } from '@angular/forms';
             [disabled]="currentPage === totalPages"
             class="relative inline-flex flex-1 items-center justify-center rounded-r-md px-2 py-2 text-muted-foreground ring-1 ring-inset ring-border hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:z-20"
             >
-            <span class="sr-only">Next</span>
+            <span class="sr-only">{{ 'pagination.next' | translate:'Common' }}</span>
             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
             </svg>

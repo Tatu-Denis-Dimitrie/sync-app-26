@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 
 import { Router } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
+import { TranslationService } from '../../services/translation.service';
 
 @Component({
   selector: 'app-loading-screen',
@@ -12,13 +13,20 @@ import { AuthenticationService } from '../../services/authentication.service';
 })
 export class LoadingScreenComponent implements OnInit {
   loadingProgress = 0;
-  loadingText = 'Initialization...';
+  loadingText = '';
   isCollapsing = false;
 
   constructor(
     private router: Router,
-    private authService: AuthenticationService
-  ) {}
+    private authService: AuthenticationService,
+    private translationService: TranslationService
+  ) {
+    this.loadingText = this.tCommon('loadingScreen.initialization');
+  }
+
+  private tCommon(key: string): string {
+    return this.translationService.translate('Common', key);
+  }
 
   ngOnInit(): void {
     this.simulateLoading();
@@ -26,11 +34,11 @@ export class LoadingScreenComponent implements OnInit {
 
   private simulateLoading(): void {
     const steps = [
-      { progress: 20, text: 'Resources loading...' },
-      { progress: 40, text: 'Connecting to server...' },
-      { progress: 60, text: 'Synchronizing data...' },
-      { progress: 80, text: 'Preparing interface...' },
-      { progress: 100, text: 'Done!' }
+      { progress: 20, text: this.tCommon('loadingScreen.resourcesLoading') },
+      { progress: 40, text: this.tCommon('loadingScreen.connectingToServer') },
+      { progress: 60, text: this.tCommon('loadingScreen.synchronizingData') },
+      { progress: 80, text: this.tCommon('loadingScreen.preparingInterface') },
+      { progress: 100, text: this.tCommon('loadingScreen.done') }
     ];
 
     let currentStep = 0;

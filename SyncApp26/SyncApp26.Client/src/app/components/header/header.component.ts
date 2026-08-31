@@ -8,12 +8,14 @@ import { UserSyncSignalrService, SignatureAnomalyAlert } from '../../services/us
 import { SignatureAnomalyAlertService } from '../../services/signature-anomaly-alert.service';
 import { ImpersonationService } from '../../services/impersonation.service';
 import { LanguageSwitcherComponent } from '../language-switcher/language-switcher.component';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { filter, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, LanguageSwitcherComponent],
+  imports: [CommonModule, RouterModule, LanguageSwitcherComponent, TranslatePipe],
   templateUrl: './header.component.html',
   styleUrl: './header.component.css'
 })
@@ -48,8 +50,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private dataChangeRequestService: DataChangeRequestService,
     private signalrService: UserSyncSignalrService,
     private signatureAnomalyAlertService: SignatureAnomalyAlertService,
-    private impersonationService: ImpersonationService
+    private impersonationService: ImpersonationService,
+    private translationService: TranslationService
   ) { }
+
+  tCommon(key: string, ...args: (string | number)[]): string {
+    return this.translationService.translate('Common', key, ...args);
+  }
 
   ngOnInit(): void {
     this.checkAuthStatus();
