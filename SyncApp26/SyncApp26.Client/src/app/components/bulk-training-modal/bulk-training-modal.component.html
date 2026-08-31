@@ -2,8 +2,8 @@
   <div class="modal-overlay" (click)="closeModal()">
     <div class="modal-content" #modalContent (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2 class="modal-title">Add Bulk Periodic Training</h2>
-        <button class="close-button" (click)="closeModal()" aria-label="Close">
+        <h2 class="modal-title">{{ 'bulkTraining.title' | translate:'Documents' }}</h2>
+        <button class="close-button" (click)="closeModal()" [attr.aria-label]="'buttons.close' | translate:'Common'">
           <svg
             class="w-6 h-6"
             fill="none"
@@ -21,25 +21,24 @@
       </div>
       <div class="modal-body">
         <p class="modal-description">
-          Add periodic training records with the same data for users in a selected
-          department. This will create a new training entry in each user's
+          {{ 'bulkTraining.descriptionBefore' | translate:'Documents' }}
           <select
             [(ngModel)]="formData.documentType"
             (ngModelChange)="onDocumentTypeChanged()"
             name="documentType"
             class="inline-dropdown"
             >
-            <option value="Both">SSM & SU</option>
+            <option value="Both">{{ 'bulkTraining.optionBoth' | translate:'Documents' }}</option>
             <option value="SSM">SSM</option>
             <option value="SU">SU</option>
           </select>
-          document.
+          {{ 'bulkTraining.descriptionAfter' | translate:'Documents' }}
         </p>
         <form class="training-form">
           <div class="form-row">
             <div class="form-group">
               <label for="trainingDate" class="form-label">
-                Training Date <span class="required">*</span>
+                {{ 'bulkTraining.trainingDate' | translate:'Documents' }} <span class="required">*</span>
               </label>
               <input
                 type="date"
@@ -54,14 +53,13 @@
                   <p
                     class="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1"
                     >
-                    ⚠️ Aceasta dată este în trecut. Continuarea poate cauza erori în
-                    generarea documentelor.
+                    ⚠️ {{ 'bulkTraining.pastDateWarning' | translate:'Documents' }}
                   </p>
                 }
               </div>
               <div class="form-group">
                 <label for="durationHours" class="form-label">
-                  Duration (hours) <span class="required">*</span>
+                  {{ 'bulkTraining.durationHours' | translate:'Documents' }} <span class="required">*</span>
                 </label>
                 <input
                   type="number"
@@ -71,12 +69,12 @@
                   class="form-input"
                   min="0"
                   step="0.5"
-                  placeholder="e.g., 2.5"
+                  placeholder="{{ 'bulkTraining.durationPlaceholder' | translate:'Documents' }}"
                   />
                 </div>
               </div>
               <div class="form-group">
-                <label for="department" class="form-label"> Department </label>
+                <label for="department" class="form-label"> {{ 'labels.department' | translate:'Common' }} </label>
                 <select
                   id="department"
                   [(ngModel)]="formData.selectedDepartmentId"
@@ -88,8 +86,8 @@
                   <option [ngValue]="null">
                     {{
                     isLoadingDepartments
-                    ? "Loading departments..."
-                    : "All users (all departments)"
+                    ? ('status.loadingDepartments' | translate:'Common')
+                    : ('bulkTraining.allUsersAllDepartments' | translate:'Documents')
                     }}
                   </option>
                   @for (department of departments; track department) {
@@ -101,13 +99,12 @@
                   }
                 </select>
                 <p class="form-hint">
-                  Leave on "All users" to apply globally, or choose one department to
-                  target only that team.
+                  {{ 'bulkTraining.departmentHint' | translate:'Documents' }}
                 </p>
               </div>
               <div class="form-group">
                 <label for="materialTaught" class="form-label">
-                  Material Taught <span class="required">*</span>
+                  {{ 'bulkTraining.materialTaught' | translate:'Documents' }} <span class="required">*</span>
                 </label>
                 <textarea
                   id="materialTaught"
@@ -116,7 +113,7 @@
                   class="form-textarea"
                   rows="3"
                   maxlength="2000"
-                  placeholder="Enter the training material covered..."
+                  placeholder="{{ 'bulkTraining.materialPlaceholder' | translate:'Documents' }}"
                 ></textarea>
                 <p
                   class="form-hint text-right"
@@ -129,7 +126,7 @@
                   @if (formData.documentType !== 'SU') {
                     <div class="form-group">
                       <label for="verifierName" class="form-label">
-                        Verifier Name (SSM) <span class="required">*</span>
+                        {{ 'bulkTraining.verifierName' | translate:'Documents' }} <span class="required">*</span>
                       </label>
                       <input
                         type="text"
@@ -138,7 +135,7 @@
                         name="verifierName"
                         maxlength="100"
                         class="form-input"
-                        placeholder="Name of the verifier"
+                        placeholder="{{ 'bulkTraining.verifierPlaceholder' | translate:'Documents' }}"
                         />
                       </div>
                     }
@@ -152,23 +149,23 @@
                       class="form-checkbox"
                       />
                       <label for="applyToAllUsers" class="checkbox-label">
-                        Apply to all active users
+                        {{ 'bulkTraining.applyToAllUsers' | translate:'Documents' }}
                       </label>
                     </div>
                     @if (!formData.applyToAllUsers) {
                       <div class="selection-panel">
                         <div class="selection-panel-header">
-                          <p class="selection-panel-title">Custom user selection</p>
+                          <p class="selection-panel-title">{{ 'bulkTraining.customUserSelection' | translate:'Documents' }}</p>
                           <button
                             type="button"
                             class="btn-secondary"
                             (click)="openUserPicker()"
                             [disabled]="isLoadingUsers"
                             >
-                            {{ isLoadingUsers ? "Loading users..." : "Select users" }}
+                            {{ isLoadingUsers ? ('status.loadingUsers' | translate:'Common') : ('bulkTraining.selectUsers' | translate:'Documents') }}
                           </button>
                         </div>
-                        <p class="form-hint">Selected users: {{ selectedUsersCount }}</p>
+                        <p class="form-hint">{{ 'bulkTraining.selectedUsersCount' | translate:'Documents':selectedUsersCount }}</p>
                       </div>
                     }
                   </form>
@@ -180,12 +177,12 @@
                     >
                     <div class="user-picker-modal" (click)="$event.stopPropagation()">
                       <div class="user-picker-header">
-                        <h3>Select users for training</h3>
+                        <h3>{{ 'bulkTraining.selectUsersForTraining' | translate:'Documents' }}</h3>
                         <button
                           type="button"
                           class="close-button"
                           (click)="closeUserPicker()"
-                          aria-label="Close user selector"
+                          [attr.aria-label]="'buttons.close' | translate:'Common'"
                           >
                           <svg
                             class="w-5 h-5"
@@ -209,14 +206,14 @@
                             class="form-input"
                             [(ngModel)]="userSearchQuery"
                             name="userSearchQuery"
-                            placeholder="Search by name or email..."
+                            placeholder="{{ 'bulkTraining.searchByNameEmail' | translate:'Documents' }}"
                             />
                             <select
                               class="form-input"
                               [(ngModel)]="pickerDepartmentId"
                               name="pickerDepartmentId"
                               >
-                              <option [ngValue]="null">All departments</option>
+                              <option [ngValue]="null">{{ 'bulkTraining.allDepartments' | translate:'Documents' }}</option>
                               @for (dept of departments; track dept) {
                                 <option [ngValue]="dept.id">
                                   {{ dept.name }}
@@ -230,7 +227,7 @@
                                 [(ngModel)]="pickerShowSelectedOnly"
                                 name="pickerShowSelectedOnly"
                                 />
-                                <span>Show selected only ({{ selectedUsersCount }})</span>
+                                <span>{{ 'bulkTraining.showSelectedOnly' | translate:'Documents':selectedUsersCount }}</span>
                               </label>
                             </div>
                             <div class="picker-actions">
@@ -239,14 +236,14 @@
                                 class="btn-secondary"
                                 (click)="selectAllFilteredUsers()"
                                 >
-                                Select all shown
+                                {{ 'bulkTraining.selectAllShown' | translate:'Documents' }}
                               </button>
                               <button
                                 type="button"
                                 class="btn-secondary"
                                 (click)="deselectAllFilteredUsers()"
                                 >
-                                Deselect all shown
+                                {{ 'bulkTraining.deselectAllShown' | translate:'Documents' }}
                               </button>
                             </div>
                             @if (!isLoadingUsers) {
@@ -273,20 +270,20 @@
                                       }
                                       @if (filteredUsers.length === 0) {
                                         <p class="form-hint">
-                                          No users found for this filter.
+                                          {{ 'bulkTraining.noUsersForFilter' | translate:'Documents' }}
                                         </p>
                                       }
                                     </div>
                                   } @else {
-                                    <p class="form-hint">Loading users...</p>
+                                    <p class="form-hint">{{ 'status.loadingUsers' | translate:'Common' }}</p>
                                   }
                                 </div>
                                 <div class="user-picker-footer">
                                   <span class="form-hint"
-                                    >Selected users: {{ selectedUsersCount }}</span
+                                    >{{ 'bulkTraining.selectedUsersCount' | translate:'Documents':selectedUsersCount }}</span
                                     >
                                     <button type="button" class="btn-primary" (click)="closeUserPicker()">
-                                      Done
+                                      {{ 'buttons.done' | translate:'Common' }}
                                     </button>
                                   </div>
                                 </div>
@@ -313,7 +310,7 @@
                                     (click)="closeModal()"
                                     [disabled]="isSubmitting"
                                     >
-                                    Cancel
+                                    {{ 'buttons.cancel' | translate:'Common' }}
                                   </button>
                                   <button
                                     type="button"
@@ -323,7 +320,7 @@
             isSubmitting || !formData.trainingDate || isLoadingDepartments
           "
                                     >
-                                    {{ isSubmitting ? "Adding..." : "Add Training Records" }}
+                                    {{ isSubmitting ? ('bulkTraining.addingEllipsis' | translate:'Documents') : ('bulkTraining.addTrainingRecords' | translate:'Documents') }}
                                   </button>
                                 </div>
                               </div>
@@ -348,32 +345,32 @@
                                         ></div>
                                       </div>
                                       <p class="text-sm text-gray-700 text-center mt-2">
-                                        <strong>{{ generatedCount }}</strong> of
-                                        <strong>{{ totalToGenerate }}</strong> documents generated
+                                        <strong>{{ generatedCount }}</strong> {{ 'bulkTraining.progressOf' | translate:'Documents' }}
+                                        <strong>{{ totalToGenerate }}</strong> {{ 'bulkTraining.progressDocsGenerated' | translate:'Documents' }}
                                       </p>
                                       @if (skippedCount > 0) {
                                         <p class="text-xs text-gray-500 text-center mt-1">
-                                          {{ skippedCount }} skipped
+                                          {{ 'bulkTraining.skippedCount' | translate:'Documents':skippedCount }}
                                         </p>
                                       }
                                       <p class="text-xs text-gray-500 text-center mt-1">
-                                        Signature request emails are sent in the background.
+                                        {{ 'bulkTraining.emailsBackground' | translate:'Documents' }}
                                       </p>
                                     </div>
                                   </div>
                                 }
                                 @if (!isGenerating) {
                                   <p class="text-sm text-gray-700 text-center">
-                                    ✅ Training records added for
-                                    <strong>{{ submittedCount }}</strong> user(s).<br />
-                                    Would you like to generate documents for them now?
+                                    ✅ {{ 'bulkTraining.recordsAddedForPrefix' | translate:'Documents' }}
+                                    <strong>{{ submittedCount }}</strong> {{ 'bulkTraining.recordsAddedForSuffix' | translate:'Documents' }}<br />
+                                    {{ 'bulkTraining.wouldYouGenerate' | translate:'Documents' }}
                                   </p>
 
                                   <!-- Task 3: confirm the new session didn't break any of the affected employees' existing signatures -->
                                   @if (isValidatingExistingSignatures) {
                                     <div class="flex items-center justify-center gap-2 text-sm text-gray-500 w-full">
                                       <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600"></div>
-                                      Checking existing signatures for affected employees...
+                                      {{ 'bulkTraining.checkingSignatures' | translate:'Documents' }}
                                     </div>
                                   }
                                   @if (existingSignaturesValidationError && !isValidatingExistingSignatures) {
@@ -390,21 +387,20 @@
                                       [class.bg-green-50]="existingSignaturesValidation.invalid === 0 && existingSignaturesValidation.chainBroken === 0"
                                       >
                                       @if (existingSignaturesValidation.total === 0) {
-                                        <p class="text-gray-600">No prior signatures found for the affected employees — nothing to invalidate.</p>
+                                        <p class="text-gray-600">{{ 'bulkTraining.noPriorSignatures' | translate:'Documents' }}</p>
                                       }
                                       @if (existingSignaturesValidation.total > 0 && existingSignaturesValidation.invalid === 0 && existingSignaturesValidation.chainBroken === 0) {
                                         <p class="text-green-700">
-                                          All {{ existingSignaturesValidation.total }} existing signature(s) for the affected employees are still valid.
+                                          {{ 'bulkTraining.allSignaturesValid' | translate:'Documents':existingSignaturesValidation.total }}
                                         </p>
                                       }
                                       @if (existingSignaturesValidation.total > 0 && (existingSignaturesValidation.invalid > 0 || existingSignaturesValidation.chainBroken > 0)) {
                                         <p class="text-red-700">
-                                          {{ existingSignaturesValidation.invalid }} invalid and {{ existingSignaturesValidation.chainBroken }} chain-broken
-                                          signature(s) out of {{ existingSignaturesValidation.total }} for the affected employees.
+                                          {{ 'bulkTraining.someSignaturesInvalid' | translate:'Documents':existingSignaturesValidation.invalid:existingSignaturesValidation.chainBroken:existingSignaturesValidation.total }}
                                         </p>
                                       }
                                       @if (existingSignaturesValidation.truncated) {
-                                        <p class="text-xs text-gray-500 mt-1">Only the first {{ existingSignaturesValidation.checkedUserCount }} affected employees were checked.</p>
+                                        <p class="text-xs text-gray-500 mt-1">{{ 'bulkTraining.onlyFirstChecked' | translate:'Documents':existingSignaturesValidation.checkedUserCount }}</p>
                                       }
                                     </div>
                                   }
@@ -416,14 +412,14 @@
                                   }
                                   <div class="flex gap-3 justify-end w-full">
                                     <button type="button" class="btn-secondary" (click)="skipGenerate()">
-                                      Skip
+                                      {{ 'buttons.skip' | translate:'Common' }}
                                     </button>
                                     <button
                                       type="button"
                                       class="btn-primary"
                                       (click)="generateDocuments()"
                                       >
-                                      Generate Documents
+                                      {{ 'bulkTraining.generateDocumentsButton' | translate:'Documents' }}
                                     </button>
                                   </div>
                                 }

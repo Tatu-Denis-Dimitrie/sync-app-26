@@ -6,6 +6,8 @@ import { environment } from '../../../environments/environment';
 import { SignatureVerificationService } from '../../services/signature-verification.service';
 import { AuthenticationService } from '../../services/authentication.service';
 import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 // Endpoint cap on SyncApp26.API/Controllers/Documents/SignatureVerificationController.cs (MaxUsersPerRequest).
 const MAX_VALIDATION_USERS = 200;
@@ -72,7 +74,7 @@ interface BulkTrainingData {
 @Component({
   selector: 'app-bulk-training-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   templateUrl: './bulk-training-modal.component.html',
   styleUrls: ['./bulk-training-modal.component.css']
 })
@@ -125,8 +127,13 @@ export class BulkTrainingModalComponent {
   constructor(
     private http: HttpClient,
     private signatureVerificationService: SignatureVerificationService,
-    private authService: AuthenticationService
+    private authService: AuthenticationService,
+    private translationService: TranslationService
   ) {
+  }
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
   }
 
   private currentUserFullName(): string {
@@ -317,19 +324,19 @@ export class BulkTrainingModalComponent {
     this.errorMessage = '';
 
     if (!this.formData.trainingDate) {
-      this.validationMessage = 'Please select a training date.';
+      this.validationMessage = this.tDocuments('bulkTraining.validation.trainingDateRequired');
       return;
     }
     if (!this.formData.durationHours || this.formData.durationHours <= 0) {
-      this.validationMessage = 'Please enter a valid duration in hours.';
+      this.validationMessage = this.tDocuments('bulkTraining.validation.durationRequired');
       return;
     }
     if (!this.formData.materialTaught?.trim()) {
-      this.validationMessage = 'Please enter the material taught.';
+      this.validationMessage = this.tDocuments('bulkTraining.validation.materialRequired');
       return;
     }
     if (this.formData.documentType !== 'SU' && !this.formData.verifierName?.trim()) {
-      this.validationMessage = 'Please enter the verifier name (required for SSM documents).';
+      this.validationMessage = this.tDocuments('bulkTraining.validation.verifierRequired');
       return;
     }
     if (this.formData.verifierName?.trim() && !isValidName(this.formData.verifierName.trim())) {
@@ -337,7 +344,7 @@ export class BulkTrainingModalComponent {
       return;
     }
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {
-      this.validationMessage = 'Please select at least one user for this training.';
+      this.validationMessage = this.tDocuments('bulkTraining.validation.selectAtLeastOneUser');
       return;
     }
 
@@ -365,7 +372,7 @@ export class BulkTrainingModalComponent {
         error: (err) => {
           this.isSubmitting = false;
           console.error('Error creating bulk training:', err);
-          this.errorMessage = err?.error?.message || 'Error creating bulk training records. Please try again.';
+          this.errorMessage = err?.error?.message || this.tDocuments('bulkTraining.errorCreating');
         }
       });
   }
@@ -406,7 +413,7 @@ export class BulkTrainingModalComponent {
         this.isValidatingExistingSignatures = false;
       },
       error: () => {
-        this.existingSignaturesValidationError = 'Could not verify the affected employees\' existing signatures.';
+        this.existingSignaturesValidationError = this.tDocuments('bulkTraining.errorVerifyingSignatures');
         this.isValidatingExistingSignatures = false;
       }
     });
@@ -419,7 +426,7 @@ export class BulkTrainingModalComponent {
   }
 
   get generationPhaseLabel(): string {
-    return 'Generating documents';
+    return this.tDocuments('bulkTraining.generatingDocuments');
   }
 
   generateDocuments() {
@@ -451,7 +458,7 @@ export class BulkTrainingModalComponent {
         error: (err) => {
           this.isGenerating = false;
           console.error('Error generating documents:', err);
-          this.errorMessage = 'Error generating documents. Please try again.';
+          this.errorMessage = this.tDocuments('bulkTraining.errorGenerating');
         }
       });
   }
@@ -479,7 +486,7 @@ export class BulkTrainingModalComponent {
 
           this.isGenerating = false;
           if (status.error) {
-            this.errorMessage = `Error generating documents: ${status.error}`;
+            this.errorMessage = this.translationService.translate('Documents', 'bulkTraining.errorGeneratingDetail', status.error);
             return;
           }
           // The job reports complete once the documents exist; their notification emails keep
@@ -489,7 +496,7 @@ export class BulkTrainingModalComponent {
         },
         error: () => {
           this.isGenerating = false;
-          this.errorMessage = 'Lost track of the generation job. Refresh to see the generated documents.';
+          this.errorMessage = this.tDocuments('bulkTraining.lostJob');
         }
       });
   }

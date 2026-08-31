@@ -128,4 +128,19 @@
   <data name="buttons.hide" xml:space="preserve">
     <value>Hide</value>
   </data>
+  <data name="buttons.skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="buttons.done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="labels.department" xml:space="preserve">
+    <value>Department</value>
+  </data>
+  <data name="status.loadingUsers" xml:space="preserve">
+    <value>Loading users...</value>
+  </data>
+  <data name="status.loadingDepartments" xml:space="preserve">
+    <value>Loading departments...</value>
+  </data>
 </root>

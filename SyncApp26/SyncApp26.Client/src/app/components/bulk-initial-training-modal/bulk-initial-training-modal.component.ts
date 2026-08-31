@@ -3,6 +3,8 @@ import { Component, EventEmitter, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface DepartmentOption {
   id: string;
@@ -40,7 +42,7 @@ interface BulkInitialTrainingData {
 @Component({
   selector: 'app-bulk-initial-training-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   templateUrl: './bulk-initial-training-modal.component.html',
   styleUrls: ['./bulk-initial-training-modal.component.css']
 })
@@ -83,7 +85,11 @@ export class BulkInitialTrainingModalComponent {
     selectedUserIds: []
   };
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private translationService: TranslationService) {}
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
 
   private loadDepartments(): void {
     this.isLoadingDepartments = true;
@@ -263,43 +269,43 @@ export class BulkInitialTrainingModalComponent {
     this.errorMessage = '';
 
     if (!this.formData.introductoryTrainingDate) {
-      this.validationMessage = 'Please provide the introductory training date.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.introDateRequired');
       return;
     }
     if (!this.formData.introductoryTrainingHours || this.formData.introductoryTrainingHours <= 0) {
-      this.validationMessage = 'Please enter the introductory training hours.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.introHoursRequired');
       return;
     }
     if (!this.formData.introductoryTrainingInstructor?.trim()) {
-      this.validationMessage = 'Please enter the introductory training instructor name.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.introInstructorRequired');
       return;
     }
     if (!this.formData.introductoryTrainingInstructorFunction?.trim()) {
-      this.validationMessage = 'Please enter the introductory training instructor function.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.introInstructorFunctionRequired');
       return;
     }
     if (!this.formData.workplaceTrainingDate) {
-      this.validationMessage = 'Please provide the workplace training date.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.workDateRequired');
       return;
     }
     if (!this.formData.workplaceTrainingHours || this.formData.workplaceTrainingHours <= 0) {
-      this.validationMessage = 'Please enter the workplace training hours.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.workHoursRequired');
       return;
     }
     if (!this.formData.jobTitle?.trim()) {
-      this.validationMessage = 'Please enter the job title / workplace location.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.jobTitleRequired');
       return;
     }
     if (!this.formData.workplaceTrainingInstructor?.trim()) {
-      this.validationMessage = 'Please enter the workplace training instructor name.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.workInstructorRequired');
       return;
     }
     if (!this.formData.workplaceTrainingInstructorFunction?.trim()) {
-      this.validationMessage = 'Please enter the workplace training instructor function.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.workInstructorFunctionRequired');
       return;
     }
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {
-      this.validationMessage = 'Please select at least one user for this operation.';
+      this.validationMessage = this.tDocuments('bulkInitialTraining.validation.selectAtLeastOneUser');
       return;
     }
 
@@ -323,7 +329,7 @@ export class BulkInitialTrainingModalComponent {
         error: (err) => {
           this.isSubmitting = false;
           console.error('Error applying initial training in bulk:', err);
-          this.errorMessage = err?.error?.errors?.[0] || err?.error?.message || 'Error applying initial training in bulk. Please try again.';
+          this.errorMessage = err?.error?.errors?.[0] || err?.error?.message || this.tDocuments('bulkInitialTraining.errorApplying');
         }
       });
   }

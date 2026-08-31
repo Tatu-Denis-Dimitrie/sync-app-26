@@ -617,4 +617,247 @@
   <data name="form.generateError" xml:space="preserve">
     <value>Error generating document. Please try again.</value>
   </data>
+  <data name="bulkTraining.title" xml:space="preserve">
+    <value>Add Bulk Periodic Training</value>
+  </data>
+  <data name="bulkTraining.descriptionBefore" xml:space="preserve">
+    <value>Add periodic training records with the same data for users in a selected department. This will create a new training entry in each user's</value>
+  </data>
+  <data name="bulkTraining.descriptionAfter" xml:space="preserve">
+    <value>document.</value>
+  </data>
+  <data name="bulkTraining.optionBoth" xml:space="preserve">
+    <value>SSM &amp; SU</value>
+  </data>
+  <data name="bulkTraining.trainingDate" xml:space="preserve">
+    <value>Training Date</value>
+  </data>
+  <data name="bulkTraining.pastDateWarning" xml:space="preserve">
+    <value>This date is in the past. Continuing may cause errors when generating documents.</value>
+  </data>
+  <data name="bulkTraining.durationHours" xml:space="preserve">
+    <value>Duration (hours)</value>
+  </data>
+  <data name="bulkTraining.durationPlaceholder" xml:space="preserve">
+    <value>e.g., 2.5</value>
+  </data>
+  <data name="bulkTraining.allUsersAllDepartments" xml:space="preserve">
+    <value>All users (all departments)</value>
+  </data>
+  <data name="bulkTraining.departmentHint" xml:space="preserve">
+    <value>Leave on "All users" to apply globally, or choose one department to target only that team.</value>
+  </data>
+  <data name="bulkTraining.materialTaught" xml:space="preserve">
+    <value>Material Taught</value>
+  </data>
+  <data name="bulkTraining.materialPlaceholder" xml:space="preserve">
+    <value>Enter the training material covered...</value>
+  </data>
+  <data name="bulkTraining.verifierName" xml:space="preserve">
+    <value>Verifier Name (SSM)</value>
+  </data>
+  <data name="bulkTraining.verifierPlaceholder" xml:space="preserve">
+    <value>Name of the verifier</value>
+  </data>
+  <data name="bulkTraining.applyToAllUsers" xml:space="preserve">
+    <value>Apply to all active users</value>
+  </data>
+  <data name="bulkTraining.customUserSelection" xml:space="preserve">
+    <value>Custom user selection</value>
+  </data>
+  <data name="bulkTraining.selectUsers" xml:space="preserve">
+    <value>Select users</value>
+  </data>
+  <data name="bulkTraining.selectedUsersCount" xml:space="preserve">
+    <value>Selected users: {0}</value>
+  </data>
+  <data name="bulkTraining.selectUsersForTraining" xml:space="preserve">
+    <value>Select users for training</value>
+  </data>
+  <data name="bulkTraining.searchByNameEmail" xml:space="preserve">
+    <value>Search by name or email...</value>
+  </data>
+  <data name="bulkTraining.allDepartments" xml:space="preserve">
+    <value>All departments</value>
+  </data>
+  <data name="bulkTraining.showSelectedOnly" xml:space="preserve">
+    <value>Show selected only ({0})</value>
+  </data>
+  <data name="bulkTraining.selectAllShown" xml:space="preserve">
+    <value>Select all shown</value>
+  </data>
+  <data name="bulkTraining.deselectAllShown" xml:space="preserve">
+    <value>Deselect all shown</value>
+  </data>
+  <data name="bulkTraining.noUsersForFilter" xml:space="preserve">
+    <value>No users found for this filter.</value>
+  </data>
+  <data name="bulkTraining.addingEllipsis" xml:space="preserve">
+    <value>Adding...</value>
+  </data>
+  <data name="bulkTraining.addTrainingRecords" xml:space="preserve">
+    <value>Add Training Records</value>
+  </data>
+  <data name="bulkTraining.generatingDocuments" xml:space="preserve">
+    <value>Generating documents</value>
+  </data>
+  <data name="bulkTraining.generateDocumentsButton" xml:space="preserve">
+    <value>Generate Documents</value>
+  </data>
+  <data name="bulkTraining.progressOf" xml:space="preserve">
+    <value>of</value>
+  </data>
+  <data name="bulkTraining.progressDocsGenerated" xml:space="preserve">
+    <value>documents generated</value>
+  </data>
+  <data name="bulkTraining.skippedCount" xml:space="preserve">
+    <value>{0} skipped</value>
+  </data>
+  <data name="bulkTraining.emailsBackground" xml:space="preserve">
+    <value>Signature request emails are sent in the background.</value>
+  </data>
+  <data name="bulkTraining.recordsAddedForPrefix" xml:space="preserve">
+    <value>Training records added for</value>
+  </data>
+  <data name="bulkTraining.recordsAddedForSuffix" xml:space="preserve">
+    <value>user(s).</value>
+  </data>
+  <data name="bulkTraining.wouldYouGenerate" xml:space="preserve">
+    <value>Would you like to generate documents for them now?</value>
+  </data>
+  <data name="bulkTraining.checkingSignatures" xml:space="preserve">
+    <value>Checking existing signatures for affected employees...</value>
+  </data>
+  <data name="bulkTraining.noPriorSignatures" xml:space="preserve">
+    <value>No prior signatures found for the affected employees — nothing to invalidate.</value>
+  </data>
+  <data name="bulkTraining.allSignaturesValid" xml:space="preserve">
+    <value>All {0} existing signature(s) for the affected employees are still valid.</value>
+  </data>
+  <data name="bulkTraining.someSignaturesInvalid" xml:space="preserve">
+    <value>{0} invalid and {1} chain-broken signature(s) out of {2} for the affected employees.</value>
+  </data>
+  <data name="bulkTraining.onlyFirstChecked" xml:space="preserve">
+    <value>Only the first {0} affected employees were checked.</value>
+  </data>
+  <data name="bulkTraining.validation.trainingDateRequired" xml:space="preserve">
+    <value>Please select a training date.</value>
+  </data>
+  <data name="bulkTraining.validation.durationRequired" xml:space="preserve">
+    <value>Please enter a valid duration in hours.</value>
+  </data>
+  <data name="bulkTraining.validation.materialRequired" xml:space="preserve">
+    <value>Please enter the material taught.</value>
+  </data>
+  <data name="bulkTraining.validation.verifierRequired" xml:space="preserve">
+    <value>Please enter the verifier name (required for SSM documents).</value>
+  </data>
+  <data name="bulkTraining.validation.selectAtLeastOneUser" xml:space="preserve">
+    <value>Please select at least one user for this training.</value>
+  </data>
+  <data name="bulkTraining.errorCreating" xml:space="preserve">
+    <value>Error creating bulk training records. Please try again.</value>
+  </data>
+  <data name="bulkTraining.errorVerifyingSignatures" xml:space="preserve">
+    <value>Could not verify the affected employees' existing signatures.</value>
+  </data>
+  <data name="bulkTraining.errorGenerating" xml:space="preserve">
+    <value>Error generating documents. Please try again.</value>
+  </data>
+  <data name="bulkTraining.errorGeneratingDetail" xml:space="preserve">
+    <value>Error generating documents: {0}</value>
+  </data>
+  <data name="bulkTraining.lostJob" xml:space="preserve">
+    <value>Lost track of the generation job. Refresh to see the generated documents.</value>
+  </data>
+  <data name="bulkInitialTraining.title" xml:space="preserve">
+    <value>Add Bulk Initial Training</value>
+  </data>
+  <data name="bulkInitialTraining.descriptionBefore" xml:space="preserve">
+    <value>Fill first-employment training fields for multiple users into each user's</value>
+  </data>
+  <data name="bulkInitialTraining.descriptionAfter" xml:space="preserve">
+    <value>document. Existing values are preserved and will not be overwritten.</value>
+  </data>
+  <data name="bulkInitialTraining.applyToAllInScope" xml:space="preserve">
+    <value>Apply to all users in selected scope</value>
+  </data>
+  <data name="bulkInitialTraining.selectUsersTitle" xml:space="preserve">
+    <value>Select users for initial training</value>
+  </data>
+  <data name="bulkInitialTraining.introductoryTraining" xml:space="preserve">
+    <value>Introductory Training</value>
+  </data>
+  <data name="bulkInitialTraining.workplaceTraining" xml:space="preserve">
+    <value>Workplace Training</value>
+  </data>
+  <data name="bulkInitialTraining.date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="bulkInitialTraining.hours" xml:space="preserve">
+    <value>Hours</value>
+  </data>
+  <data name="bulkInitialTraining.instructor" xml:space="preserve">
+    <value>Instructor</value>
+  </data>
+  <data name="bulkInitialTraining.instructorFunction" xml:space="preserve">
+    <value>Instructor Function</value>
+  </data>
+  <data name="bulkInitialTraining.content" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="bulkInitialTraining.jobTitle" xml:space="preserve">
+    <value>Job Title</value>
+  </data>
+  <data name="bulkInitialTraining.appliedSuccessfully" xml:space="preserve">
+    <value>Initial training data applied successfully.</value>
+  </data>
+  <data name="bulkInitialTraining.updatedPrefix" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="bulkInitialTraining.updatedSuffix" xml:space="preserve">
+    <value>user record(s).</value>
+  </data>
+  <data name="bulkInitialTraining.existingNotOverwritten" xml:space="preserve">
+    <value>Existing values were not overwritten.</value>
+  </data>
+  <data name="bulkInitialTraining.applyingEllipsis" xml:space="preserve">
+    <value>Applying...</value>
+  </data>
+  <data name="bulkInitialTraining.applyButton" xml:space="preserve">
+    <value>Apply Initial Training</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introDateRequired" xml:space="preserve">
+    <value>Please provide the introductory training date.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introHoursRequired" xml:space="preserve">
+    <value>Please enter the introductory training hours.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introInstructorRequired" xml:space="preserve">
+    <value>Please enter the introductory training instructor name.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introInstructorFunctionRequired" xml:space="preserve">
+    <value>Please enter the introductory training instructor function.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workDateRequired" xml:space="preserve">
+    <value>Please provide the workplace training date.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workHoursRequired" xml:space="preserve">
+    <value>Please enter the workplace training hours.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.jobTitleRequired" xml:space="preserve">
+    <value>Please enter the job title / workplace location.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workInstructorRequired" xml:space="preserve">
+    <value>Please enter the workplace training instructor name.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workInstructorFunctionRequired" xml:space="preserve">
+    <value>Please enter the workplace training instructor function.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.selectAtLeastOneUser" xml:space="preserve">
+    <value>Please select at least one user for this operation.</value>
+  </data>
+  <data name="bulkInitialTraining.errorApplying" xml:space="preserve">
+    <value>Error applying initial training in bulk. Please try again.</value>
+  </data>
 </root>
