@@ -92,4 +92,16 @@
   <data name="field.instructorFunction" xml:space="preserve">
     <value>Instructor/admitted-by function</value>
   </data>
+  <data name="verifierName.pattern" xml:space="preserve">
+    <value>Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).</value>
+  </data>
+  <data name="name.patternLettersOnly" xml:space="preserve">
+    <value>Name must contain letters only (spaces, hyphens and apostrophes allowed).</value>
+  </data>
+  <data name="instructorName.pattern" xml:space="preserve">
+    <value>Instructor name must contain letters only (spaces, hyphens and apostrophes allowed).</value>
+  </data>
+  <data name="status.approvedOrRejected" xml:space="preserve">
+    <value>Status must be 'Approved' or 'Rejected'.</value>
+  </data>
 </root>

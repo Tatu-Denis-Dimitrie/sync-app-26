@@ -155,6 +155,9 @@
   <data name="labels.documentTypeFile" xml:space="preserve">
     <value>{0} File</value>
   </data>
+  <data name="labels.typeDocument" xml:space="preserve">
+    <value>{0} Document</value>
+  </data>
   <data name="messages.requiresSignatureAsEmployee" xml:space="preserve">
     <value>Requires your signature as employee</value>
   </data>

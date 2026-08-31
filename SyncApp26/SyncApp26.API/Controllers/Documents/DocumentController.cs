@@ -142,7 +142,7 @@ namespace SyncApp26.API.Controllers
             }
 
             var emailOutcome = await SendSignatureRequestsAsync(
-                _documentService, _documentSignatureService, _emailService, frontendUrl, generatedIdsByType);
+                _documentService, _documentSignatureService, _emailService, frontendUrl, generatedIdsByType, _localizer);
 
             return Ok(new
             {
@@ -236,7 +236,7 @@ namespace SyncApp26.API.Controllers
                         serviceProvider.GetRequiredService<IDocumentService>(),
                         serviceProvider.GetRequiredService<IDocumentSignatureService>(),
                         serviceProvider.GetRequiredService<IEmailService>(),
-                        frontendUrl, generatedIdsByType);
+                        frontendUrl, generatedIdsByType, _localizer);
 
                     progress.EmailsSent = emailOutcome.Sent;
                     progress.EmailsFailed = emailOutcome.Failed;
@@ -353,7 +353,8 @@ namespace SyncApp26.API.Controllers
             IDocumentSignatureService documentSignatureService,
             IEmailService emailService,
             string frontendUrl,
-            IReadOnlyList<(string Type, List<Guid> DocumentIds)> generatedIdsByType)
+            IReadOnlyList<(string Type, List<Guid> DocumentIds)> generatedIdsByType,
+            IStringLocalizer localizer)
         {
             var outcome = new BulkEmailOutcome();
             int consecutiveFailures = 0;
@@ -375,10 +376,11 @@ namespace SyncApp26.API.Controllers
                     try
                     {
                         var currentRowId = await documentService.GetCurrentTrainingIdForDocumentAsync(doc.Id);
+                        var typeDocumentName = localizer["labels.typeDocument", type].Value;
                         var token = await documentSignatureService.GenerateSignatureTokenAsync(
-                            userEmail, doc.Id, $"{type} Document", currentRowId);
+                            userEmail, doc.Id, typeDocumentName, currentRowId);
                         var link = $"{frontendUrl}/sign/{token}";
-                        await emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{type} Document", link);
+                        await emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, typeDocumentName, link);
                         outcome.Sent++;
                         consecutiveFailures = 0;
                     }
@@ -422,11 +424,12 @@ namespace SyncApp26.API.Controllers
                 if (!string.IsNullOrEmpty(userEmail))
                 {
                     var currentRowId = await _documentService.GetCurrentTrainingIdForDocumentAsync(document.Id);
-                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(userEmail, document.Id, $"{document.DocumentType} Document", currentRowId);
+                    var typeDocumentName = _localizer["labels.typeDocument", document.DocumentType].Value;
+                    var token = await _documentSignatureService.GenerateSignatureTokenAsync(userEmail, document.Id, typeDocumentName, currentRowId);
                     var frontendUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:4200";
                     var secureLink = $"{frontendUrl}/sign/{token}";
 
-                    await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, $"{document.DocumentType} Document", secureLink);
+                    await _emailService.SendDocumentSignatureEmailWithLinkAsync(userEmail, typeDocumentName, secureLink);
                 }
 
                 _logger.LogInformation("Document {DocumentId} ({DocumentType}) generated for user {UserId}.", document.Id, document.DocumentType, request.UserId);

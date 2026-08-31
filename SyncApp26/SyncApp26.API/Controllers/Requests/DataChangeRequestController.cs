@@ -25,6 +25,7 @@ namespace SyncApp26.API.Controllers
         private readonly IDataChangeRequestRepository _repository;
         private readonly ILogger<DataChangeRequestController> _logger;
         private readonly IStringLocalizer _localizer;
+        private readonly IStringLocalizer _emailLocalizer;
 
         public DataChangeRequestController(
             IDataChangeRequestService service,
@@ -38,6 +39,7 @@ namespace SyncApp26.API.Controllers
             _repository = repository;
             _logger = logger;
             _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Requests);
+            _emailLocalizer = localizationService.GetScopedLocalizer(LocalizationScopes.Emails);
         }
 
         private Guid GetUserId()
@@ -169,8 +171,8 @@ namespace SyncApp26.API.Controllers
                     var user = await _repository.GetUserByIdAsync(result.UserId);
                     if (user != null && !string.IsNullOrWhiteSpace(user.Email))
                     {
-                        var emailHtml = $"<p>Hello {user.FirstName},</p><p>Your data change request submitted on {result.CreatedAt:d} has been approved and applied to your profile by our administrators.</p>";
-                        await _emailService.SendEmailAsync(user.Email, "Data Change Request Approved", emailHtml);
+                        var emailHtml = _emailLocalizer["dataChangeApproved.body", user.FirstName, $"{result.CreatedAt:d}"].Value;
+                        await _emailService.SendEmailAsync(user.Email, _emailLocalizer["dataChangeApproved.subject"].Value, emailHtml);
                     }
                 }
                 catch (Exception ex)

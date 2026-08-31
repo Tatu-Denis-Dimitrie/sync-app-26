@@ -18,7 +18,7 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
         public Guid InstructorId { get; set; }
 
         [StringLength(NameValidationConstants.NameMaxLength)]
-        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).")]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "verifierName.pattern")]
         public string? VerifierName { get; set; }
     }
 
@@ -35,7 +35,7 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
         public Guid InstructorId { get; set; }
 
         [StringLength(NameValidationConstants.NameMaxLength)]
-        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).")]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "verifierName.pattern")]
         public string? VerifierName { get; set; }
     }
 
