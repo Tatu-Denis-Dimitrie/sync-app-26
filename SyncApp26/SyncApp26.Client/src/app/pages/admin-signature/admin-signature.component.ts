@@ -4,11 +4,13 @@ import { Router } from '@angular/router';
 import { AuthenticationService, Roles, rolesLabel } from '../../services/authentication.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-admin-signature',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './admin-signature.component.html',
   styleUrls: ['./admin-signature.component.css']
 })
@@ -35,7 +37,13 @@ export class AdminSignatureComponent {
     const officerRoles = (this.authService.getCurrentUser()?.roles || [])
       .filter(role => role === Roles.SsmOfficer || role === Roles.SuOfficer);
 
-    return officerRoles.length > 0 ? `${rolesLabel(officerRoles)} Signature` : 'Admin Signature';
+    return officerRoles.length > 0
+      ? this.translationService.translate('Documents', 'adminSignature.roleSignatureTitle', rolesLabel(officerRoles))
+      : this.translationService.translate('Documents', 'adminSignature.adminSignatureTitle');
+  }
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
   }
 
   ngOnInit() {
@@ -78,7 +86,8 @@ export class AdminSignatureComponent {
   constructor(
     private userSignatureService: UserSignatureService,
     private router: Router,
-    private authService: AuthenticationService
+    private authService: AuthenticationService,
+    private translationService: TranslationService
   ) {}
 
   ngAfterViewInit() {
@@ -145,14 +154,14 @@ export class AdminSignatureComponent {
     this.userSignatureService.saveMySignature(payload).subscribe({
       next: (response) => {
         console.log('Response:', response);
-        alert('Signature saved successfully!');
+        alert(this.tDocuments('messages.signatureSavedSuccessfully'));
         this.loadSignature();
         this.isSigConfirmed = false;
         this.clearSignature();
       },
       error: (err) => {
         console.error('Error saving admin signature:', err);
-        alert('Error saving signature!');
+        alert(this.tDocuments('adminSignature.errorSaving'));
       }
     });
   }

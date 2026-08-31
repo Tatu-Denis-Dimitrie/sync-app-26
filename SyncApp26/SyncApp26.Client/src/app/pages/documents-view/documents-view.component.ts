@@ -13,6 +13,8 @@ import { SignatureStatusBadgeComponent } from '../../components/signature-status
 import { SignatureVerificationService, SignatureVerificationStatus, SignatureVerificationStatusValue } from '../../services/signature-verification.service';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface DocumentDto {
   id: string;
@@ -39,7 +41,7 @@ interface DocumentDto {
 @Component({
   selector: 'app-documents-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent, BulkInitialTrainingModalComponent, SignatureStatusBadgeComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent, BulkInitialTrainingModalComponent, SignatureStatusBadgeComponent, TranslatePipe],
   templateUrl: './documents-view.component.html',
   styleUrl: './documents-view.component.css'
 })
@@ -110,8 +112,13 @@ export class DocumentsViewComponent implements OnInit {
     private router: Router,
     private authService: AuthenticationService,
     private sanitizer: DomSanitizer,
-    private signatureVerificationService: SignatureVerificationService
+    private signatureVerificationService: SignatureVerificationService,
+    private translationService: TranslationService
   ) {}
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
 
   get isAdmin(): boolean {
     return this.authService.isAdmin();
@@ -142,7 +149,7 @@ export class DocumentsViewComponent implements OnInit {
         return docs;
       }),
       catchError(err => {
-        this.error = 'Failed to load documents.';
+        this.error = this.tDocuments('documentsView.failedToLoad');
         this.loading = false;
         return of([]);
       }),
@@ -226,7 +233,7 @@ export class DocumentsViewComponent implements OnInit {
       error: (err) => {
         this.isBulkGenerating = false;
         this.bulkGenerateResult = {
-          message: err.error?.message || 'Bulk generation failed.',
+          message: err.error?.message || this.tDocuments('documentsView.bulkGenerationFailed'),
           generated: 0,
           skipped: 0
         };
@@ -243,13 +250,13 @@ export class DocumentsViewComponent implements OnInit {
   }
 
   onBulkTrainingSuccess(): void {
-    this.successMessage = 'Bulk periodic training created successfully for all users!';
+    this.successMessage = this.tDocuments('documentsView.bulkTrainingSuccess');
     this.loadDocuments();
     setTimeout(() => this.successMessage = '', 5000);
   }
 
   onBulkInitialTrainingSuccess(): void {
-    this.successMessage = 'Bulk initial training applied successfully. Existing initial values were kept unchanged.';
+    this.successMessage = this.tDocuments('documentsView.bulkInitialTrainingSuccess');
     this.loadDocuments();
     setTimeout(() => this.successMessage = '', 5000);
   }
@@ -264,15 +271,15 @@ export class DocumentsViewComponent implements OnInit {
   onFilterChange(): void { this.currentPage = 1; }
 
   getStatusLabel(status: string): string {
-    switch (status) {
-      case 'PendingUser': return 'Pending User';
-      case 'PendingManager': return 'Pending Manager';
-      case 'PendingInstructor': return 'Pending Instructor';
-      case 'PendingAdmin': return 'Pending Admin';
-      case 'Completed': return 'Completed';
-      case 'Superseded': return 'Superseded';
-      default: return status;
-    }
+    const keys: Record<string, string> = {
+      PendingUser: 'status.pendingUser',
+      PendingManager: 'status.pendingManager',
+      PendingInstructor: 'status.pendingInstructor',
+      PendingAdmin: 'status.pendingAdmin',
+      Completed: 'status.completed',
+      Superseded: 'status.superseded'
+    };
+    return keys[status] ? this.tDocuments(keys[status]) : status;
   }
 
   getStatusClass(status: string): string {
@@ -295,7 +302,7 @@ export class DocumentsViewComponent implements OnInit {
           this.router.navigate(['/sign', res.token]);
         },
         error: (err) => {
-          this.error = err.error?.message || 'Failed to get signing token.';
+          this.error = err.error?.message || this.tDocuments('documentsView.failedToGetToken');
         }
       });
   }
@@ -306,7 +313,7 @@ export class DocumentsViewComponent implements OnInit {
     // page in bulk mode.
     const pendingDoc = this.allDocuments.find(d => d.status === 'PendingInstructor');
     if (!pendingDoc) {
-      this.error = 'No documents pending your signature.';
+      this.error = this.tDocuments('documentsView.noDocumentsPendingSignature');
       return;
     }
     this.http.get<{ token: string }>(`${environment.apiUrl}/document/token-for-document/${pendingDoc.id}`)
@@ -315,7 +322,7 @@ export class DocumentsViewComponent implements OnInit {
           this.router.navigate(['/sign', res.token], { queryParams: { bulk: 'true' } });
         },
         error: (err) => {
-          this.error = err.error?.message || 'Failed to get signing token.';
+          this.error = err.error?.message || this.tDocuments('documentsView.failedToGetToken');
         }
       });
   }
@@ -347,7 +354,7 @@ export class DocumentsViewComponent implements OnInit {
         this.validatingDocId = null;
       },
       error: () => {
-        this.signatureValidationError = 'Failed to validate signatures for this document.';
+        this.signatureValidationError = this.tDocuments('documentsView.failedValidateDoc');
         this.validatingDocId = null;
       }
     });
@@ -367,7 +374,7 @@ export class DocumentsViewComponent implements OnInit {
           this.isBulkValidating = false;
         },
         error: () => {
-          this.signatureValidationError = 'Failed to validate signatures.';
+          this.signatureValidationError = this.tDocuments('documentsView.failedValidateAll');
           this.isBulkValidating = false;
         }
       });
@@ -385,7 +392,7 @@ export class DocumentsViewComponent implements OnInit {
         this.showPdfModal = true;
       },
       error: () => {
-        this.error = 'Failed to open PDF.';
+        this.error = this.tDocuments('documentsView.failedOpenPdf');
       }
     });
   }
@@ -422,7 +429,7 @@ export class DocumentsViewComponent implements OnInit {
       error: (err) => {
         this.isRegenerating = false;
         this.regenerateResult = {
-          message: err.error?.message || 'Regenerarea a eșuat.',
+          message: err.error?.message || this.tDocuments('documentsView.regenerationFailed'),
           regenerated: 0
         };
       }

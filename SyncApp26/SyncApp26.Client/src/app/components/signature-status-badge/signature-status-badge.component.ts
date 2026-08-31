@@ -1,5 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { SignatureVerificationStatusValue } from '../../services/signature-verification.service';
+import { TranslationService } from '../../services/translation.service';
 
 @Component({
   selector: 'app-signature-status-badge',
@@ -16,6 +17,8 @@ import { SignatureVerificationStatusValue } from '../../services/signature-verif
   styles: []
 })
 export class SignatureStatusBadgeComponent {
+  private translationService = inject(TranslationService);
+
   @Input() status: SignatureVerificationStatusValue | null | undefined;
 
   get statusClass(): string {
@@ -30,13 +33,14 @@ export class SignatureStatusBadgeComponent {
   }
 
   get statusLabel(): string {
-    switch (this.status) {
-      case 'Valid': return 'Valid';
-      case 'Invalid': return 'Invalid';
-      case 'ChainBroken': return 'Chain Broken';
-      case 'Legacy': return 'Legacy';
-      case 'NotFound': return 'Not Found';
-      default: return 'Unknown';
-    }
+    const keys: Record<string, string> = {
+      Valid: 'signatureStatus.valid',
+      Invalid: 'signatureStatus.invalid',
+      ChainBroken: 'signatureStatus.chainBroken',
+      Legacy: 'signatureStatus.legacy',
+      NotFound: 'signatureStatus.notFound'
+    };
+    const key = keys[this.status ?? ''] ?? 'signatureStatus.unknown';
+    return this.translationService.translate('Documents', key);
   }
 }

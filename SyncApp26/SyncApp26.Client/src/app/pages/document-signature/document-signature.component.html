@@ -10,8 +10,8 @@
             d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
-        <h2 class="text-center text-2xl font-bold text-gray-900">Sign Document</h2>
-        <p class="mt-1 text-center text-sm text-gray-500">Secure &amp; legally-binding digital signature</p>
+        <h2 class="text-center text-2xl font-bold text-gray-900">{{ 'documentSignature.signDocument' | translate:'Documents' }}</h2>
+        <p class="mt-1 text-center text-sm text-gray-500">{{ 'documentSignature.subtitle' | translate:'Documents' }}</p>
       </div>
     </div>
 
@@ -28,7 +28,7 @@
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
               </path>
             </svg>
-            <span class="text-gray-500 text-sm">Validating secure link...</span>
+            <span class="text-gray-500 text-sm">{{ 'documentSignature.validatingLink' | translate:'Documents' }}</span>
           </div>
         }
 
@@ -44,19 +44,19 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-sm font-semibold text-red-800">Link Error</h3>
+                  <h3 class="text-sm font-semibold text-red-800">{{ 'documentSignature.linkError' | translate:'Documents' }}</h3>
                   <p class="text-sm text-red-700 mt-1">{{ errorMessage }}</p>
                   <div class="mt-4">
                     @if (isLoggedIn) {
                       <button (click)="goToDashboard()"
                         class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-md hover:bg-teal-700 transition">
-                        Go to Dashboard
+                        {{ 'documentSignature.goToDashboard' | translate:'Documents' }}
                       </button>
                     }
                     @if (!isLoggedIn) {
                       <button (click)="goToLogin()"
                         class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-md hover:bg-teal-700 transition">
-                        Log in to your account
+                        {{ 'documentSignature.logInToAccount' | translate:'Documents' }}
                       </button>
                     }
                   </div>
@@ -70,14 +70,14 @@
             <div class="w-full flex flex-col items-center my-6">
               <div class="w-full max-w-md">
                 <div class="flex justify-between mb-1">
-                  <span class="text-xs font-medium text-teal-700">Bulk signing progress</span>
+                  <span class="text-xs font-medium text-teal-700">{{ 'documentSignature.bulkProgress' | translate:'Documents' }}</span>
                   <span class="text-xs font-medium text-teal-700">{{ bulkSigned }} / {{ bulkTotal }}</span>
                 </div>
                 <div class="progress-bar-bg">
                   <div class="progress-bar-fill" [style.width.%]="(bulkSigned / bulkTotal) * 100"></div>
                 </div>
               </div>
-              <span class="text-xs text-gray-500 mt-2">Please wait, documents are being signed...</span>
+              <span class="text-xs text-gray-500 mt-2">{{ 'documentSignature.pleaseWaitSigning' | translate:'Documents' }}</span>
             </div>
           }
 
@@ -89,9 +89,9 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 class="text-xl font-bold text-green-800 mb-2">Signature Complete</h3>
+              <h3 class="text-xl font-bold text-green-800 mb-2">{{ 'documentSignature.signatureComplete' | translate:'Documents' }}</h3>
               <p class="text-base text-green-700 mb-2">{{ successMessage }}</p>
-              <p class="text-sm text-gray-500 mb-6">Your signature has been cryptographically secured and permanently recorded.</p>
+              <p class="text-sm text-gray-500 mb-6">{{ 'documentSignature.securedAndRecorded' | translate:'Documents' }}</p>
               <!-- Logged in: go to own dashboard, no register prompt -->
               @if (isLoggedIn) {
                 <div>
@@ -101,17 +101,17 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M4 6h16M4 12h8m-8 6h16" />
                       </svg>
-                      Go to Dashboard
+                      {{ 'documentSignature.goToDashboard' | translate:'Documents' }}
                     </button>
                   </div>
                 }
                 <!-- Not logged in: offer to log in -->
                 @if (!isLoggedIn) {
                   <div class="border-t border-gray-200 pt-6 mt-4">
-                    <p class="text-sm text-gray-500 mb-4">Track your signed documents by logging in to your account.</p>
+                    <p class="text-sm text-gray-500 mb-4">{{ 'documentSignature.trackByLoggingIn' | translate:'Documents' }}</p>
                     <button (click)="goToLogin()"
                       class="px-6 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 transition shadow-sm">
-                      Log In
+                      {{ 'documentSignature.logIn' | translate:'Documents' }}
                     </button>
                   </div>
                 }
@@ -124,23 +124,23 @@
                 <!-- Document Info -->
                 <div class="px-6 py-5">
                   <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-semibold text-gray-900">Document Information</h3>
+                    <h3 class="text-base font-semibold text-gray-900">{{ 'documentSignature.documentInformation' | translate:'Documents' }}</h3>
                     <span
                       class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                      Pending Signature
+                      {{ 'documentSignature.pendingSignature' | translate:'Documents' }}
                     </span>
                   </div>
                   <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Recipient</dt>
+                      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ 'documentSignature.recipient' | translate:'Documents' }}</dt>
                       <dd class="mt-1 text-sm font-semibold text-gray-900">{{ documentData.email }}</dd>
                     </div>
                     <div>
-                      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Document Type</dt>
-                      <dd class="mt-1 text-sm text-gray-900">SSM / SU Acknowledgement</dd>
+                      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ 'documentType.label' | translate:'Documents' }}</dt>
+                      <dd class="mt-1 text-sm text-gray-900">{{ 'documentSignature.ssmSuAcknowledgement' | translate:'Documents' }}</dd>
                     </div>
                     <div class="sm:col-span-2">
-                      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Document Name</dt>
+                      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ 'documentSignature.documentName' | translate:'Documents' }}</dt>
                       <dd class="mt-1 text-base font-bold text-gray-900 pl-3 border-l-4 border-teal-500">{{ documentData.documentName }}</dd>
                     </div>
                   </dl>
@@ -151,9 +151,9 @@
                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                       <div>
-                        <p class="text-xs font-semibold text-teal-900 uppercase tracking-wide">Cryptographically Secured</p>
+                        <p class="text-xs font-semibold text-teal-900 uppercase tracking-wide">{{ 'documentSignature.cryptographicallySecured' | translate:'Documents' }}</p>
                         <p class="text-xs text-teal-800 mt-0.5 leading-relaxed">
-                          Protected with <strong>SHA-256</strong> fingerprinting and an <strong>RSA-2048</strong> server stamp. Your IP and timestamp are permanently recorded.
+                          {{ 'documentSignature.protectedWithPrefix' | translate:'Documents' }} <strong>SHA-256</strong> {{ 'documentSignature.protectedWithMid' | translate:'Documents' }} <strong>RSA-2048</strong> {{ 'documentSignature.protectedWithSuffix' | translate:'Documents' }}
                         </p>
                       </div>
                     </div>
@@ -164,7 +164,7 @@
                       <!-- Mock document header -->
                       <div class="px-5 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                         <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{{ documentData.documentName }}</span>
-                        <span class="text-xs text-gray-400 italic">SSM / SU Acknowledgement</span>
+                        <span class="text-xs text-gray-400 italic">{{ 'documentSignature.ssmSuAcknowledgement' | translate:'Documents' }}</span>
                       </div>
                       <!-- Simulated document body -->
                       <div class="px-5 pt-4 pb-2 space-y-2">
@@ -191,7 +191,7 @@
                   [ngClass]="{
                     'text-teal-700': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
                     'text-gray-500': documentData.isManagerSigning || documentData.isInstructorSigning || documentData.isAdminSigning
-                  }">Employee Signature</p>
+                  }">{{ 'documentSignature.employeeSignature' | translate:'Documents' }}</p>
                           <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
                   <svg class="w-5 h-5" [ngClass]="{
                     'text-teal-300': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
@@ -210,7 +210,7 @@
                     'text-teal-600': !documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning,
                     'text-gray-400': documentData.isManagerSigning || documentData.isInstructorSigning || documentData.isAdminSigning
                   }">
-                                {{ 'Awaiting employee' }}
+                                {{ 'documentSignature.awaitingEmployee' | translate:'Documents' }}
                               </p>
                             </div>
                             @if (!documentData.isManagerSigning && !documentData.isInstructorSigning && !documentData.isAdminSigning) {
@@ -220,7 +220,7 @@
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                   </svg>
-                                  Your signature goes here
+                                  {{ 'documentSignature.yourSignatureGoesHere' | translate:'Documents' }}
                                 </span>
                               }
                             </div>
@@ -234,7 +234,7 @@
                   [ngClass]="{
                     'text-teal-700': documentData.isManagerSigning,
                     'text-gray-500': !documentData.isManagerSigning
-                  }">Manager Signature</p>
+                  }">{{ 'documentSignature.managerSignature' | translate:'Documents' }}</p>
                               <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
                   <svg class="w-5 h-5" [ngClass]="{
                     'text-teal-300': documentData.isManagerSigning,
@@ -253,7 +253,7 @@
                     'text-teal-600': documentData.isManagerSigning,
                     'text-gray-400': !documentData.isManagerSigning
                   }">
-                                    {{ 'Awaiting manager' }}
+                                    {{ 'status.awaitingManager' | translate:'Documents' }}
                                   </p>
                                 </div>
                                 @if (documentData.isManagerSigning) {
@@ -263,7 +263,7 @@
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                       </svg>
-                                      Your signature goes here
+                                      {{ 'documentSignature.yourSignatureGoesHere' | translate:'Documents' }}
                                     </span>
                                   }
                                 </div>
@@ -277,7 +277,7 @@
                   [ngClass]="{
                     'text-teal-700': documentData.isInstructorSigning,
                     'text-gray-500': !documentData.isInstructorSigning
-                  }">Instructor Signature</p>
+                  }">{{ 'documentSignature.instructorSignature' | translate:'Documents' }}</p>
                                   <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
                   <svg class="w-5 h-5" [ngClass]="{
                     'text-teal-300': documentData.isInstructorSigning,
@@ -296,7 +296,7 @@
                     'text-teal-600': documentData.isInstructorSigning,
                     'text-gray-400': !documentData.isInstructorSigning
                   }">
-                                      {{ 'Awaiting instructor' }}
+                                      {{ 'documentSignature.awaitingInstructor' | translate:'Documents' }}
                                     </p>
                                   </div>
                                   @if (documentData.isInstructorSigning) {
@@ -306,7 +306,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
-                                        Your signature goes here
+                                        {{ 'documentSignature.yourSignatureGoesHere' | translate:'Documents' }}
                                       </span>
                                     }
                                   </div>
@@ -320,7 +320,7 @@
                   [ngClass]="{
                     'text-teal-700': documentData.isAdminSigning,
                     'text-gray-500': !documentData.isAdminSigning
-                  }">Verifier (Admin) Signature</p>
+                  }">{{ 'documentSignature.verifierAdminSignature' | translate:'Documents' }}</p>
                                     <div class="w-full h-10 flex items-end justify-center" aria-hidden="true">
                   <svg class="w-5 h-5" [ngClass]="{
                     'text-teal-300': documentData.isAdminSigning,
@@ -331,7 +331,7 @@
                                         </svg>
                                       </div>
                                       <div class="w-full pt-1 text-center border-t border-teal-300">
-                                        <p class="text-xs truncate text-teal-600">Admin</p>
+                                        <p class="text-xs truncate text-teal-600">{{ 'documentSignature.admin' | translate:'Documents' }}</p>
                                       </div>
                                       @if (documentData.isAdminSigning) {
                                         <span
@@ -340,7 +340,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
-                                            Your signature goes here
+                                            {{ 'documentSignature.yourSignatureGoesHere' | translate:'Documents' }}
                                           </span>
                                         }
                                       </div>
@@ -349,7 +349,7 @@
                                 </div>
                               <!-- Signature Section -->
                               <div class="px-6 py-5">
-                                <h3 class="text-base font-semibold text-gray-900 mb-4">Your Signature</h3>
+                                <h3 class="text-base font-semibold text-gray-900 mb-4">{{ 'documentSignature.yourSignature' | translate:'Documents' }}</h3>
                                 <!-- Method Tabs -->
                                 <div class="flex rounded-lg border border-gray-200 overflow-hidden mb-5 bg-gray-50 w-fit">
                                   @if (isLoggedIn && savedSignature?.isActive) {
@@ -360,7 +360,7 @@
                                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                       </svg>
-                                      Saved Signature
+                                      {{ 'labels.savedSignature' | translate:'Documents' }}
                                     </button>
                                   }
                                   <button (click)="setSignatureMethod('draw')"
@@ -370,7 +370,7 @@
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                       </svg>
-                                      Draw
+                                      {{ 'tabs.draw' | translate:'Documents' }}
                                     </button>
                                     <button (click)="setSignatureMethod('type')"
                                       [class]="signatureMethod === 'type' ? 'bg-teal-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
@@ -378,20 +378,20 @@
                                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
                                       </svg>
-                                      Type
+                                      {{ 'tabs.type' | translate:'Documents' }}
                                     </button>
                                   </div>
                                   <!-- Saved Signature Preview -->
                                   @if (signatureMethod === 'saved' && savedSignature) {
                                     <div class="mb-5">
                                       <div class="border border-teal-200 rounded-lg bg-white p-4 flex flex-col items-center shadow-inner">
-                                        <img [src]="savedSignature.signatureData" alt="Your saved signature"
+                                        <img [src]="savedSignature.signatureData" [attr.alt]="'labels.yourSavedSignatureAlt' | translate:'Documents'"
                                           class="max-h-28 object-contain" />
                                           <p class="text-xs text-teal-700 mt-2 font-medium flex items-center gap-1">
                                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                             </svg>
-                                            Using your saved profile signature
+                                            {{ 'documentSignature.usingSavedProfileSignature' | translate:'Documents' }}
                                           </p>
                                         </div>
                                       </div>
@@ -411,7 +411,7 @@
                                           </canvas>
                                           <button (click)="clearCanvas()"
                                             class="mt-2 text-xs text-red-600 hover:text-red-700 font-medium px-3 py-1 rounded hover:bg-red-50 transition">
-                                            ✕ Clear
+                                            ✕ {{ 'actions.clear' | translate:'Documents' }}
                                           </button>
                                         </div>
                                       </div>
@@ -422,7 +422,7 @@
                                         <div class="border-2 border-dashed border-gray-200 rounded-lg bg-white shadow-inner px-6 py-5">
                                           <input type="text" [(ngModel)]="typedSignature"
                                             (ngModelChange)="signatureConfirmed = typedSignature.trim().length > 0"
-                                            placeholder="Type your full name"
+                                            placeholder="{{ 'documentSignature.typeYourFullName' | translate:'Documents' }}"
                                             class="block w-full text-3xl text-center border-b-2 border-gray-300 focus:border-teal-500 focus:ring-0 bg-transparent text-gray-900 placeholder-gray-300 pb-2 outline-none"
                                             style="font-family: 'Brush Script MT', 'Dancing Script', cursive, serif;" />
                                           </div>
@@ -445,10 +445,9 @@
                                           <input id="sig_confirm" type="checkbox" [(ngModel)]="signatureConfirmed"
                                             class="mt-0.5 h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 cursor-pointer" />
                                             <label for="sig_confirm" class="text-sm cursor-pointer">
-                                              <span class="font-medium text-gray-900">I acknowledge and sign this document</span>
+                                              <span class="font-medium text-gray-900">{{ 'documentSignature.acknowledgeAndSign' | translate:'Documents' }}</span>
                                               <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                                                By checking this box, I confirm my signature constitutes a legally binding electronic signature.
-                                                My IP address, method, and timestamp will be permanently recorded.
+                                                {{ 'documentSignature.consentText' | translate:'Documents' }}
                                               </p>
                                             </label>
                                           </div>
@@ -457,7 +456,7 @@
                                             @if (isLoggedIn) {
                                               <button (click)="goToDashboard()"
                                                 class="sm:mr-auto text-sm font-medium text-gray-500 hover:text-gray-700 transition">
-                                                ← Back to Dashboard
+                                                {{ 'documentSignature.backToDashboard' | translate:'Documents' }}
                                               </button>
                                             }
                                             <button type="button" (click)="signDocument()"
@@ -477,7 +476,7 @@
                                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                   </svg>
                                                 }
-                                                {{ isLoading ? 'Signing...' : 'Sign Document' }}
+                                                {{ isLoading ? ('documentSignature.signingEllipsis' | translate:'Documents') : ('documentSignature.signDocument' | translate:'Documents') }}
                                               </button>
                                             </div>
                                           </div>

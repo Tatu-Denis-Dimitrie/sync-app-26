@@ -8,7 +8,7 @@
             type="text"
             [(ngModel)]="searchQuery"
             (ngModelChange)="onSearchChange()"
-            placeholder="Search by employee name, email, department..."
+            placeholder="{{ 'documentsView.searchPlaceholder' | translate:'Documents' }}"
             class="pl-10 pr-4 py-2 w-full border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             />
             <svg
@@ -40,12 +40,12 @@
             (ngModelChange)="onFilterChange()"
             class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             >
-            <option value="all">All statuses</option>
-            <option value="PendingUser">Pending User</option>
-            <option value="PendingManager">Pending Manager</option>
-            <option value="PendingInstructor">Pending Instructor</option>
-            <option value="PendingAdmin">Pending Admin</option>
-            <option value="Completed">Completed</option>
+            <option value="all">{{ 'filters.allStatuses' | translate:'Documents' }}</option>
+            <option value="PendingUser">{{ 'status.pendingUser' | translate:'Documents' }}</option>
+            <option value="PendingManager">{{ 'status.pendingManager' | translate:'Documents' }}</option>
+            <option value="PendingInstructor">{{ 'status.pendingInstructor' | translate:'Documents' }}</option>
+            <option value="PendingAdmin">{{ 'status.pendingAdmin' | translate:'Documents' }}</option>
+            <option value="Completed">{{ 'status.completed' | translate:'Documents' }}</option>
           </select>
 
           <select
@@ -53,10 +53,10 @@
             (ngModelChange)="onFilterChange()"
             class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             >
-            <option value="all">All signatures</option>
-            <option value="employeeSigned">Employee signed only</option>
-            <option value="managerSigned">Manager signed</option>
-            <option value="completed">Fully signed</option>
+            <option value="all">{{ 'filters.allSignatures' | translate:'Documents' }}</option>
+            <option value="employeeSigned">{{ 'filters.employeeSignedOnly' | translate:'Documents' }}</option>
+            <option value="managerSigned">{{ 'filters.managerSigned' | translate:'Documents' }}</option>
+            <option value="completed">{{ 'filters.fullySigned' | translate:'Documents' }}</option>
           </select>
 
           <!-- Page actions moved inline with filters -->
@@ -66,14 +66,14 @@
                 (click)="openBulkTrainingModal()"
                 class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
                 >
-                Bulk Periodic Training
+                {{ 'documentsView.bulkPeriodicTraining' | translate:'Documents' }}
               </button>
 
               <button
                 (click)="openBulkInitialTrainingModal()"
                 class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors"
                 >
-                Bulk Initial Training
+                {{ 'documentsView.bulkInitialTraining' | translate:'Documents' }}
               </button>
             }
 
@@ -85,7 +85,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                 </svg>
-                Sign All as Verifier ({{ pendingAdminCount }})
+                {{ 'documentsView.signAllAsVerifier' | translate:'Documents':pendingAdminCount }}
               </button>
             }
 
@@ -96,7 +96,7 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Regenerate Documents
+              {{ 'actions.regenerateDocuments' | translate:'Documents' }}
             </button>
 
             <button
@@ -112,7 +112,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               }
-              Validate All (this page)
+              {{ 'documentsView.validateAllThisPage' | translate:'Documents' }}
             </button>
 
           </div>
@@ -141,10 +141,10 @@
             <div class="flex items-start justify-between mb-4 gap-4">
               <div>
                 <h2 class="text-lg font-semibold text-foreground">
-                  Generate All Documents
+                  {{ 'documentsView.generateAllDocuments' | translate:'Documents' }}
                 </h2>
                 <p class="text-sm text-muted-foreground mt-1">
-                  Generate documents for all the users for the selected type.
+                  {{ 'documentsView.generateAllHint' | translate:'Documents' }}
                 </p>
               </div>
               <button
@@ -173,19 +173,19 @@
               @if (isBulkGenerating) {
                 <div class="flex flex-col items-center justify-center py-8 gap-3">
                   <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600"></div>
-                  <p class="text-sm text-muted-foreground">Generating documents, please wait...</p>
+                  <p class="text-sm text-muted-foreground">{{ 'documentsView.generatingPleaseWait' | translate:'Documents' }}</p>
                 </div>
               }
               @if (!isBulkGenerating) {
                 <div>
                   <label class="text-sm font-medium text-foreground"
-                    >Document Type</label
+                    >{{ 'documentType.label' | translate:'Documents' }}</label
                     >
                     <select
                       [(ngModel)]="bulkGenerateType"
                       class="mt-2 w-full px-3 py-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
                       >
-                      <option value="Both">Both (SSM + SU)</option>
+                      <option value="Both">{{ 'documentsView.bothSsmSu' | translate:'Documents' }}</option>
                       <option value="SSM">SSM</option>
                       <option value="SU">SU</option>
                     </select>
@@ -199,8 +199,7 @@
                       {{ bulkGenerateResult.message }}
                     </p>
                     <p class="text-muted-foreground mt-1">
-                      Generated: {{ bulkGenerateResult.generated }} | Skipped:
-                      {{ bulkGenerateResult.skipped }}
+                      {{ 'documentsView.generatedSkipped' | translate:'Documents':bulkGenerateResult.generated:bulkGenerateResult.skipped }}
                     </p>
                   </div>
                 }
@@ -212,14 +211,14 @@
                     (click)="closeBulkGenerateModal()"
                     class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent"
                     >
-                    Cancel
+                    {{ 'buttons.cancel' | translate:'Common' }}
                   </button>
                   <button
                     type="button"
                     (click)="confirmBulkGenerate()"
                     class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                    Generate
+                    {{ 'documentsView.generate' | translate:'Documents' }}
                   </button>
                 </div>
               }
@@ -240,9 +239,9 @@
               >
               <div class="flex items-start justify-between mb-4 gap-4">
                 <div>
-                  <h2 class="text-lg font-semibold text-foreground">Regenerate Documents</h2>
+                  <h2 class="text-lg font-semibold text-foreground">{{ 'actions.regenerateDocuments' | translate:'Documents' }}</h2>
                   <p class="text-sm text-muted-foreground mt-1">
-                    Regenerate the PDF files <strong>GeneratedDocuments</strong> for all existing documents. Use this option if the folder was accidentally emptied.
+                    {{ 'documentsView.regenerateHintPrefix' | translate:'Documents' }} <strong>GeneratedDocuments</strong> {{ 'documentsView.regenerateHintSuffix' | translate:'Documents' }}
                   </p>
                 </div>
                 <button type="button" (click)="closeRegenerateModal()" class="text-muted-foreground hover:text-foreground" [disabled]="isRegenerating">
@@ -255,7 +254,7 @@
                 @if (isRegenerating) {
                   <div class="flex flex-col items-center justify-center py-8 gap-3">
                     <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-500"></div>
-                    <p class="text-sm text-muted-foreground">Regenerating documents, please wait...</p>
+                    <p class="text-sm text-muted-foreground">{{ 'documentsView.regeneratingPleaseWait' | translate:'Documents' }}</p>
                   </div>
                 }
                 @if (regenerateResult && !isRegenerating) {
@@ -267,7 +266,7 @@
               @if (!isRegenerating) {
                 <div class="flex justify-end gap-3 mt-6">
                   <button type="button" (click)="closeRegenerateModal()" class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent">
-                    Close
+                    {{ 'buttons.close' | translate:'Common' }}
                   </button>
                   <button
                     type="button"
@@ -275,7 +274,7 @@
                     [disabled]="!!regenerateResult"
                     class="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-medium hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                    Regenerate
+                    {{ 'documentsView.regenerate' | translate:'Documents' }}
                   </button>
                 </div>
               }
@@ -311,7 +310,7 @@
         <!-- Stats -->
         @if (!loading) {
           <div class="mb-4 text-sm text-muted-foreground">
-            {{ (totalItems$ | async) || 0 }} document(s) found
+            {{ 'documentsView.documentsFound' | translate:'Documents':((totalItems$ | async) || 0) }}
           </div>
         }
 
@@ -327,57 +326,57 @@
                     <th
                       class="text-left px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Employee
+                      {{ 'documentsView.employee' | translate:'Documents' }}
                     </th>
                     <th
                       class="text-left px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Department
+                      {{ 'labels.department' | translate:'Common' }}
                     </th>
                     <th
                       class="text-left px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Function
+                      {{ 'function.label' | translate:'Organization' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Type
+                      {{ 'documentsView.type' | translate:'Documents' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Status
+                      {{ 'labels.status' | translate:'Common' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Generated
+                      {{ 'documentsView.generated' | translate:'Documents' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Signed by Employee
+                      {{ 'documentsView.signedByEmployee' | translate:'Documents' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Signed by Manager
+                      {{ 'documentsView.signedByManager' | translate:'Documents' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Signed by Instructor
+                      {{ 'documentsView.signedByInstructor' | translate:'Documents' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Signed by Admin
+                      {{ 'documentsView.signedByAdmin' | translate:'Documents' }}
                     </th>
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      Actions
+                      {{ 'documentsView.actions' | translate:'Documents' }}
                     </th>
                   </tr>
                 </thead>
@@ -499,7 +498,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                 </svg>
-                                Sign
+                                {{ 'actions.sign' | translate:'Documents' }}
                               </button>
                             }
                             @if (!doc.adminSignedAt && doc.status !== 'PendingAdmin') {
@@ -534,7 +533,7 @@
                                       d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                     ></path>
                                   </svg>
-                                  PDF
+                                  {{ 'documentsView.pdf' | translate:'Documents' }}
                                 </button>
                                 <button
                                   (click)="validateDocument(doc)"
@@ -549,7 +548,7 @@
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                   }
-                                  Validate
+                                  {{ 'documentsView.validate' | translate:'Documents' }}
                                 </button>
                               </div>
                             </td>
@@ -577,7 +576,7 @@
                         ></path>
                       </svg>
                       <p class="mt-2 text-sm text-muted-foreground">
-                        No documents generated.
+                        {{ 'documentsView.noDocumentsGenerated' | translate:'Documents' }}
                       </p>
                     </div>
                   }

@@ -860,4 +860,283 @@
   <data name="bulkInitialTraining.errorApplying" xml:space="preserve">
     <value>Error applying initial training in bulk. Please try again.</value>
   </data>
+  <data name="signatureStatus.valid" xml:space="preserve">
+    <value>Valid</value>
+  </data>
+  <data name="signatureStatus.invalid" xml:space="preserve">
+    <value>Invalid</value>
+  </data>
+  <data name="signatureStatus.chainBroken" xml:space="preserve">
+    <value>Chain Broken</value>
+  </data>
+  <data name="signatureStatus.legacy" xml:space="preserve">
+    <value>Legacy</value>
+  </data>
+  <data name="signatureStatus.notFound" xml:space="preserve">
+    <value>Not Found</value>
+  </data>
+  <data name="signatureStatus.unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="documentSignature.signDocument" xml:space="preserve">
+    <value>Sign Document</value>
+  </data>
+  <data name="documentSignature.subtitle" xml:space="preserve">
+    <value>Secure &amp; legally-binding digital signature</value>
+  </data>
+  <data name="documentSignature.validatingLink" xml:space="preserve">
+    <value>Validating secure link...</value>
+  </data>
+  <data name="documentSignature.linkError" xml:space="preserve">
+    <value>Link Error</value>
+  </data>
+  <data name="documentSignature.goToDashboard" xml:space="preserve">
+    <value>Go to Dashboard</value>
+  </data>
+  <data name="documentSignature.logInToAccount" xml:space="preserve">
+    <value>Log in to your account</value>
+  </data>
+  <data name="documentSignature.logIn" xml:space="preserve">
+    <value>Log In</value>
+  </data>
+  <data name="documentSignature.bulkProgress" xml:space="preserve">
+    <value>Bulk signing progress</value>
+  </data>
+  <data name="documentSignature.pleaseWaitSigning" xml:space="preserve">
+    <value>Please wait, documents are being signed...</value>
+  </data>
+  <data name="documentSignature.signatureComplete" xml:space="preserve">
+    <value>Signature Complete</value>
+  </data>
+  <data name="documentSignature.securedAndRecorded" xml:space="preserve">
+    <value>Your signature has been cryptographically secured and permanently recorded.</value>
+  </data>
+  <data name="documentSignature.trackByLoggingIn" xml:space="preserve">
+    <value>Track your signed documents by logging in to your account.</value>
+  </data>
+  <data name="documentSignature.documentInformation" xml:space="preserve">
+    <value>Document Information</value>
+  </data>
+  <data name="documentSignature.pendingSignature" xml:space="preserve">
+    <value>Pending Signature</value>
+  </data>
+  <data name="documentSignature.recipient" xml:space="preserve">
+    <value>Recipient</value>
+  </data>
+  <data name="documentSignature.ssmSuAcknowledgement" xml:space="preserve">
+    <value>SSM / SU Acknowledgement</value>
+  </data>
+  <data name="documentSignature.documentName" xml:space="preserve">
+    <value>Document Name</value>
+  </data>
+  <data name="documentSignature.cryptographicallySecured" xml:space="preserve">
+    <value>Cryptographically Secured</value>
+  </data>
+  <data name="documentSignature.protectedWithPrefix" xml:space="preserve">
+    <value>Protected with</value>
+  </data>
+  <data name="documentSignature.protectedWithMid" xml:space="preserve">
+    <value>fingerprinting and an</value>
+  </data>
+  <data name="documentSignature.protectedWithSuffix" xml:space="preserve">
+    <value>server stamp. Your IP and timestamp are permanently recorded.</value>
+  </data>
+  <data name="documentSignature.employeeSignature" xml:space="preserve">
+    <value>Employee Signature</value>
+  </data>
+  <data name="documentSignature.managerSignature" xml:space="preserve">
+    <value>Manager Signature</value>
+  </data>
+  <data name="documentSignature.instructorSignature" xml:space="preserve">
+    <value>Instructor Signature</value>
+  </data>
+  <data name="documentSignature.verifierAdminSignature" xml:space="preserve">
+    <value>Verifier (Admin) Signature</value>
+  </data>
+  <data name="documentSignature.admin" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="documentSignature.awaitingEmployee" xml:space="preserve">
+    <value>Awaiting employee</value>
+  </data>
+  <data name="documentSignature.awaitingInstructor" xml:space="preserve">
+    <value>Awaiting instructor</value>
+  </data>
+  <data name="documentSignature.yourSignatureGoesHere" xml:space="preserve">
+    <value>Your signature goes here</value>
+  </data>
+  <data name="documentSignature.yourSignature" xml:space="preserve">
+    <value>Your Signature</value>
+  </data>
+  <data name="documentSignature.usingSavedProfileSignature" xml:space="preserve">
+    <value>Using your saved profile signature</value>
+  </data>
+  <data name="documentSignature.typeYourFullName" xml:space="preserve">
+    <value>Type your full name</value>
+  </data>
+  <data name="documentSignature.acknowledgeAndSign" xml:space="preserve">
+    <value>I acknowledge and sign this document</value>
+  </data>
+  <data name="documentSignature.consentText" xml:space="preserve">
+    <value>By checking this box, I confirm my signature constitutes a legally binding electronic signature. My IP address, method, and timestamp will be permanently recorded.</value>
+  </data>
+  <data name="documentSignature.backToDashboard" xml:space="preserve">
+    <value>← Back to Dashboard</value>
+  </data>
+  <data name="documentSignature.signingEllipsis" xml:space="preserve">
+    <value>Signing...</value>
+  </data>
+  <data name="documentSignature.invalidLinkNoToken" xml:space="preserve">
+    <value>Invalid link. No token provided.</value>
+  </data>
+  <data name="documentSignature.linkInvalidOrExpired" xml:space="preserve">
+    <value>The secure link is invalid or has expired.</value>
+  </data>
+  <data name="documentSignature.pleaseTypeFullName" xml:space="preserve">
+    <value>Please type your full name as your signature.</value>
+  </data>
+  <data name="documentSignature.noActiveSavedSignature" xml:space="preserve">
+    <value>No active saved signature found.</value>
+  </data>
+  <data name="documentSignature.mustConfirmBeforeSigning" xml:space="preserve">
+    <value>You must confirm your signature before signing.</value>
+  </data>
+  <data name="documentSignature.failedToStartBulk" xml:space="preserve">
+    <value>Failed to start bulk signing.</value>
+  </data>
+  <data name="documentSignature.failedToSign" xml:space="preserve">
+    <value>Failed to sign the document. Please try again.</value>
+  </data>
+  <data name="documentSignature.documentSignedSuccess" xml:space="preserve">
+    <value>Document successfully signed!</value>
+  </data>
+  <data name="documentSignature.bulkSigningError" xml:space="preserve">
+    <value>Bulk signing error: {0}</value>
+  </data>
+  <data name="documentSignature.bulkStatusError" xml:space="preserve">
+    <value>Bulk signing status error.</value>
+  </data>
+  <data name="adminSignature.roleSignatureTitle" xml:space="preserve">
+    <value>{0} Signature</value>
+  </data>
+  <data name="adminSignature.adminSignatureTitle" xml:space="preserve">
+    <value>Admin Signature</value>
+  </data>
+  <data name="adminSignature.errorSaving" xml:space="preserve">
+    <value>Error saving signature!</value>
+  </data>
+  <data name="status.superseded" xml:space="preserve">
+    <value>Superseded</value>
+  </data>
+  <data name="documentsView.searchPlaceholder" xml:space="preserve">
+    <value>Search by employee name, email, department...</value>
+  </data>
+  <data name="documentsView.bulkPeriodicTraining" xml:space="preserve">
+    <value>Bulk Periodic Training</value>
+  </data>
+  <data name="documentsView.bulkInitialTraining" xml:space="preserve">
+    <value>Bulk Initial Training</value>
+  </data>
+  <data name="documentsView.signAllAsVerifier" xml:space="preserve">
+    <value>Sign All as Verifier ({0})</value>
+  </data>
+  <data name="documentsView.validateAllThisPage" xml:space="preserve">
+    <value>Validate All (this page)</value>
+  </data>
+  <data name="documentsView.generateAllDocuments" xml:space="preserve">
+    <value>Generate All Documents</value>
+  </data>
+  <data name="documentsView.generateAllHint" xml:space="preserve">
+    <value>Generate documents for all the users for the selected type.</value>
+  </data>
+  <data name="documentsView.generatingPleaseWait" xml:space="preserve">
+    <value>Generating documents, please wait...</value>
+  </data>
+  <data name="documentsView.bothSsmSu" xml:space="preserve">
+    <value>Both (SSM + SU)</value>
+  </data>
+  <data name="documentsView.generatedSkipped" xml:space="preserve">
+    <value>Generated: {0} | Skipped: {1}</value>
+  </data>
+  <data name="documentsView.generate" xml:space="preserve">
+    <value>Generate</value>
+  </data>
+  <data name="documentsView.regenerateHintPrefix" xml:space="preserve">
+    <value>Regenerate the PDF files</value>
+  </data>
+  <data name="documentsView.regenerateHintSuffix" xml:space="preserve">
+    <value>for all existing documents. Use this option if the folder was accidentally emptied.</value>
+  </data>
+  <data name="documentsView.regeneratingPleaseWait" xml:space="preserve">
+    <value>Regenerating documents, please wait...</value>
+  </data>
+  <data name="documentsView.regenerate" xml:space="preserve">
+    <value>Regenerate</value>
+  </data>
+  <data name="documentsView.documentsFound" xml:space="preserve">
+    <value>{0} document(s) found</value>
+  </data>
+  <data name="documentsView.employee" xml:space="preserve">
+    <value>Employee</value>
+  </data>
+  <data name="documentsView.type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="documentsView.generated" xml:space="preserve">
+    <value>Generated</value>
+  </data>
+  <data name="documentsView.signedByEmployee" xml:space="preserve">
+    <value>Signed by Employee</value>
+  </data>
+  <data name="documentsView.signedByManager" xml:space="preserve">
+    <value>Signed by Manager</value>
+  </data>
+  <data name="documentsView.signedByInstructor" xml:space="preserve">
+    <value>Signed by Instructor</value>
+  </data>
+  <data name="documentsView.signedByAdmin" xml:space="preserve">
+    <value>Signed by Admin</value>
+  </data>
+  <data name="documentsView.actions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="documentsView.pdf" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="documentsView.validate" xml:space="preserve">
+    <value>Validate</value>
+  </data>
+  <data name="documentsView.noDocumentsGenerated" xml:space="preserve">
+    <value>No documents generated.</value>
+  </data>
+  <data name="documentsView.failedToLoad" xml:space="preserve">
+    <value>Failed to load documents.</value>
+  </data>
+  <data name="documentsView.bulkGenerationFailed" xml:space="preserve">
+    <value>Bulk generation failed.</value>
+  </data>
+  <data name="documentsView.bulkTrainingSuccess" xml:space="preserve">
+    <value>Bulk periodic training created successfully for all users!</value>
+  </data>
+  <data name="documentsView.bulkInitialTrainingSuccess" xml:space="preserve">
+    <value>Bulk initial training applied successfully. Existing initial values were kept unchanged.</value>
+  </data>
+  <data name="documentsView.failedToGetToken" xml:space="preserve">
+    <value>Failed to get signing token.</value>
+  </data>
+  <data name="documentsView.noDocumentsPendingSignature" xml:space="preserve">
+    <value>No documents pending your signature.</value>
+  </data>
+  <data name="documentsView.failedValidateDoc" xml:space="preserve">
+    <value>Failed to validate signatures for this document.</value>
+  </data>
+  <data name="documentsView.failedValidateAll" xml:space="preserve">
+    <value>Failed to validate signatures.</value>
+  </data>
+  <data name="documentsView.failedOpenPdf" xml:space="preserve">
+    <value>Failed to open PDF.</value>
+  </data>
+  <data name="documentsView.regenerationFailed" xml:space="preserve">
+    <value>Regeneration failed.</value>
+  </data>
 </root>
