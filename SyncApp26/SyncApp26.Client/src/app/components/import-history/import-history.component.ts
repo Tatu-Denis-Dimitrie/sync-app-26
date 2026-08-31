@@ -6,6 +6,8 @@ import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserChangeHistory, User } from '../../models/csv-sync.model';
 import { formatDateTime as formatDateTimeUtil } from '../../shared/utils/date-format.util';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface ImportHistoryGroup {
   importHistoryId: string;
@@ -29,7 +31,7 @@ interface DataChangeRequestDayGroup {
 @Component({
   selector: 'app-import-history',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './import-history.component.html',
   styleUrl: './import-history.component.css'
 })
@@ -49,8 +51,17 @@ export class ImportHistoryComponent implements OnInit {
   constructor(
     private userSyncService: UserSyncService,
     private authService: AuthenticationService,
-    private router: Router
+    private router: Router,
+    private translationService: TranslationService
   ) {}
+
+  tSync(key: string, ...args: (string | number)[]): string {
+    return this.translationService.translate('Sync', key, ...args);
+  }
+
+  tCommon(key: string): string {
+    return this.translationService.translate('Common', key);
+  }
 
   logout(): void {
     this.authService.logout();
@@ -79,7 +90,7 @@ export class ImportHistoryComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        this.error = 'Failed to load user change history.';
+        this.error = this.tSync('importHistory.loadError');
       }
     });
   }
@@ -164,7 +175,7 @@ export class ImportHistoryComponent implements OnInit {
 
   getUserName(userId: string): string {
     const user = this.usersById.get(userId);
-    return user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
+    return user ? `${user.firstName} ${user.lastName}` : this.tSync('comparison.unknownUser');
   }
 
   getFilteredImportGroups(): ImportHistoryGroup[] {
@@ -331,7 +342,7 @@ export class ImportHistoryComponent implements OnInit {
   }
 
   formatDate(date?: string): string {
-    if (!date) return 'N/A';
+    if (!date) return this.tCommon('labels.notAvailable');
     return new Date(date).toLocaleDateString('ro-RO');
   }
 
@@ -351,18 +362,18 @@ export class ImportHistoryComponent implements OnInit {
   }
 
   formatConflictField(field: string): string {
-    if (!field) return 'Unknown Field';
+    if (!field) return this.tSync('changeHistory.unknownField');
     const normalizedField = field.trim().toLowerCase();
     switch (normalizedField) {
       case 'firstname':
-        return 'First Name';
+        return this.tSync('importHistory.field.firstName');
       case 'lastname':
-        return 'Last Name';
+        return this.tSync('importHistory.field.lastName');
       case 'departmentname':
-        return 'Department';
+        return this.tSync('importHistory.field.department');
       case 'assignedtoname':
       case 'linemanager':
-        return 'Line Manager';
+        return this.tSync('importHistory.field.lineManager');
       default:
         return field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
     }

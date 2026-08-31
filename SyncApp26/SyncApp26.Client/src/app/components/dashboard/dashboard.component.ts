@@ -15,11 +15,13 @@ import { UserSyncSignalrService, UploadProgress, SyncProgressUpdate } from '../.
 import { RouterModule } from '@angular/router';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule],
+  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule, TranslatePipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -98,8 +100,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private departmentsSyncService: DepartmentsSyncService,
     private authService: AuthenticationService,
     private router: Router,
-    private signalrService: UserSyncSignalrService
+    private signalrService: UserSyncSignalrService,
+    private translationService: TranslationService
   ) { }
+
+  tSync(key: string, ...args: (string | number)[]): string {
+    return this.translationService.translate('Sync', key, ...args);
+  }
+
+  tCommon(key: string): string {
+    return this.translationService.translate('Common', key);
+  }
+
+  departmentStatusLabel(status: string): string {
+    const keys: Record<string, string> = {
+      new: 'dashboard.status.new',
+      unchanged: 'dashboard.status.unchanged'
+    };
+    return this.tSync(keys[status] ?? 'dashboard.status.unchanged');
+  }
 
   logout(): void {
     this.authService.logout();
@@ -240,16 +259,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
             this.serverTimingInfo = timing;
             if (timing) {
-              this.successMessage = `Analysis completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(timing.totalTimeMs)}, Network: ${this.formatDuration(duration - timing.totalTimeMs)})`;
+              this.successMessage = this.tSync('dashboard.analysisCompletedDetailed', this.formatDuration(duration), this.formatDuration(timing.totalTimeMs), this.formatDuration(duration - timing.totalTimeMs));
             } else {
-              this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
+              this.successMessage = this.tSync('dashboard.analysisCompleted', this.formatDuration(duration));
             }
           });
 
           // Check for warnings
           this.userSyncService.warnings$.pipe(takeUntil(this.destroy$)).subscribe(warnings => {
             if (warnings && warnings.length > 0) {
-              this.errorModalTitle = 'CSV Validation Warnings';
+              this.errorModalTitle = this.tSync('dashboard.validationWarningsTitle');
               this.errorModalErrors = [];
               this.errorModalWarnings = warnings;
               this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
@@ -272,8 +291,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
               this.canProceedWithValidRows = errorData.canProceedWithValidRows === true;
 
               this.errorModalTitle = this.canProceedWithValidRows
-                ? 'CSV Has Invalid Rows - Proceed with Valid Rows?'
-                : 'CSV Validation Failed';
+                ? this.tSync('dashboard.hasInvalidRowsProceedTitle')
+                : this.tSync('dashboard.validationFailedTitle');
               this.errorModalErrors = [];
               this.errorModalWarnings = [];
 
@@ -288,12 +307,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 } else if (err.row === 0 || !err.row) {
                   this.errorModalErrors.push(err.message || err);
                 } else {
-                  this.errorModalErrors.push(`Row ${err.row}: ${err.field} - ${err.message}`);
+                  this.errorModalErrors.push(this.tSync('dashboard.rowFieldMessage', err.row, err.field, err.message));
                 }
               });
 
               if (errorData.errors.length > maxErrors) {
-                this.errorModalErrors.push(`...and ${errorData.errors.length - maxErrors} more errors`);
+                this.errorModalErrors.push(this.tSync('dashboard.moreErrors', errorData.errors.length - maxErrors));
               }
 
               // Format warnings
@@ -302,7 +321,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                   if (typeof warn === 'string') {
                     this.errorModalWarnings.push(warn);
                   } else {
-                    this.errorModalWarnings.push(`Row ${warn.row}: ${warn.field} - ${warn.message}`);
+                    this.errorModalWarnings.push(this.tSync('dashboard.rowFieldMessage', warn.row, warn.field, warn.message));
                   }
                 });
               }
@@ -318,15 +337,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
               this.showErrorModal = true;
             } else if (errorData.error) {
-              this.errorModalTitle = 'Upload Error';
+              this.errorModalTitle = this.tSync('dashboard.uploadErrorTitle');
               this.errorModalErrors = [errorData.error];
               this.errorModalWarnings = [];
               this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
               this.showErrorModal = true;
             }
           } else {
-            this.errorModalTitle = 'Upload Failed';
-            this.errorModalErrors = [error.message || 'Unknown error occurred'];
+            this.errorModalTitle = this.tSync('dashboard.uploadFailedTitle');
+            this.errorModalErrors = [error.message || this.tSync('dashboard.unknownError')];
             this.errorModalWarnings = [];
             this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
             this.showErrorModal = true;
@@ -354,19 +373,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
             const errorData = error.error;
 
             if (errorData.errors && errorData.errors.length > 0) {
-              this.errorModalTitle = 'CSV Validation Failed';
+              this.errorModalTitle = this.tSync('dashboard.validationFailedTitle');
               this.errorModalErrors = errorData.errors.slice(0, 20);
               this.errorModalWarnings = errorData.warnings || [];
               this.showErrorModal = true;
             } else if (errorData.error) {
-              this.errorModalTitle = 'Upload Error';
+              this.errorModalTitle = this.tSync('dashboard.uploadErrorTitle');
               this.errorModalErrors = [errorData.error];
               this.errorModalWarnings = [];
               this.showErrorModal = true;
             }
           } else {
-            this.errorModalTitle = 'Upload Failed';
-            this.errorModalErrors = [error.message || 'Unknown error occurred'];
+            this.errorModalTitle = this.tSync('dashboard.uploadFailedTitle');
+            this.errorModalErrors = [error.message || this.tSync('dashboard.unknownError')];
             this.errorModalWarnings = [];
             this.showErrorModal = true;
           }
@@ -406,9 +425,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.userSyncService.timingInfo$.pipe(takeUntil(this.destroy$)).subscribe(timing => {
             this.serverTimingInfo = timing;
             if (timing) {
-              this.successMessage = `Analysis completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(timing.totalTimeMs)}, Network: ${this.formatDuration(duration - timing.totalTimeMs)})`;
+              this.successMessage = this.tSync('dashboard.analysisCompletedDetailed', this.formatDuration(duration), this.formatDuration(timing.totalTimeMs), this.formatDuration(duration - timing.totalTimeMs));
             } else {
-              this.successMessage = `Analysis completed in ${this.formatDuration(duration)}`;
+              this.successMessage = this.tSync('dashboard.analysisCompleted', this.formatDuration(duration));
             }
           });
 
@@ -417,7 +436,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             if (errors && errors.length > 0) {
               // Show notification about skipped rows
               const skippedCount = errors.length;
-              this.successMessage += ` (${skippedCount} invalid rows skipped)`;
+              this.successMessage += this.tSync('dashboard.invalidRowsSkipped', skippedCount);
             }
           });
 
@@ -426,8 +445,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Upload with valid rows failed:', error);
           this.isUploading = false;
-          this.errorModalTitle = 'Upload Failed';
-          this.errorModalErrors = [error.message || 'Unknown error occurred'];
+          this.errorModalTitle = this.tSync('dashboard.uploadFailedTitle');
+          this.errorModalErrors = [error.message || this.tSync('dashboard.unknownError')];
           this.errorModalWarnings = [];
           this.errorModalStats = { totalRows: 0, validRows: 0, invalidRows: 0 };
           this.canProceedWithValidRows = false;
@@ -453,9 +472,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.showComparison = false;
 
           if (result.processingTimeMs) {
-            this.successMessage = `Sync completed in ${this.formatDuration(duration)} (Server: ${this.formatDuration(result.processingTimeMs)}, Network: ${this.formatDuration(duration - result.processingTimeMs)})`;
+            this.successMessage = this.tSync('dashboard.syncCompletedDetailed', this.formatDuration(duration), this.formatDuration(result.processingTimeMs), this.formatDuration(duration - result.processingTimeMs));
           } else {
-            this.successMessage = `Sync completed in ${this.formatDuration(duration)}`;
+            this.successMessage = this.tSync('dashboard.syncCompleted', this.formatDuration(duration));
           }
 
           setTimeout(() => this.successMessage = '', 5000);

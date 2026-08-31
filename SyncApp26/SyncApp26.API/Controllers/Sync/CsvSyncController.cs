@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Shared.DTOs;
 using System.Globalization;
 using System.Text;
@@ -20,17 +21,20 @@ public class CsvSyncController : ControllerBase
     private readonly ICsvValidationService _csvValidationService;
     private readonly IDepartmentService _departmentService;
     private readonly ILogger<CsvSyncController> _logger;
+    private readonly IStringLocalizer _localizer;
 
     public CsvSyncController(
         ICsvSyncService csvSyncService,
         ICsvValidationService csvValidationService,
         IDepartmentService departmentService,
-        ILogger<CsvSyncController> logger)
+        ILogger<CsvSyncController> logger,
+        ILocalizationService localizationService)
     {
         _csvSyncService = csvSyncService;
         _csvValidationService = csvValidationService;
         _departmentService = departmentService;
         _logger = logger;
+        _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Sync);
     }
 
     // Same cap as CsvValidationService, applied separately since this endpoint doesn't use it.
@@ -44,12 +48,12 @@ public class CsvSyncController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
-            return BadRequest(new { error = "No file uploaded" });
+            return BadRequest(new { error = _localizer["csvSync.noFileUploaded"].Value });
         }
 
         if (!file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new { error = "File must be a CSV file" });
+            return BadRequest(new { error = _localizer["csvSync.fileMustBeCsv"].Value });
         }
 
         return null;
@@ -70,10 +74,10 @@ public class CsvSyncController : ControllerBase
         PrepareHeaderForMatch = args => NormalizeCsvHeader(args.Header)
     };
 
-    private ObjectResult HandleCsvException(Exception ex, string logMessage, string errorPrefix)
+    private ObjectResult HandleCsvException(Exception ex, string logMessage, LocalizedString errorMessage)
     {
         _logger.LogError(ex, logMessage);
-        return StatusCode(500, new { error = errorPrefix });
+        return StatusCode(500, new { error = errorMessage.Value });
     }
 
     /// <summary>
@@ -122,7 +126,7 @@ public class CsvSyncController : ControllerBase
             {
                 return BadRequest(new
                 {
-                    error = "CSV validation failed",
+                    error = _localizer["csvSync.validationFailed"].Value,
                     errors = validationResult.Errors,
                     warnings = validationResult.Warnings,
                     totalRows = validationResult.TotalRows,
@@ -136,7 +140,7 @@ public class CsvSyncController : ControllerBase
             {
                 return BadRequest(new
                 {
-                    error = "CSV has some invalid rows",
+                    error = _localizer["csvSync.someInvalidRows"].Value,
                     errors = validationResult.Errors,
                     warnings = validationResult.Warnings,
                     totalRows = validationResult.TotalRows,
@@ -208,7 +212,7 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            return HandleCsvException(ex, "Error processing CSV file", "Error processing CSV");
+            return HandleCsvException(ex, "Error processing CSV file", _localizer["csvSync.errorProcessing"]);
         }
     }
 
@@ -220,7 +224,7 @@ public class CsvSyncController : ControllerBase
     {
         if (syncRequest?.Items == null || syncRequest.Items.Count == 0)
         {
-            return BadRequest(new { error = "No sync items provided" });
+            return BadRequest(new { error = _localizer["csvSync.noSyncItems"].Value });
         }
 
         string? connectionId = GetConnectionId();
@@ -249,7 +253,7 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            return HandleCsvException(ex, "Error syncing users", "Error syncing users");
+            return HandleCsvException(ex, "Error syncing users", _localizer["csvSync.errorSyncingUsers"]);
         }
     }
 
@@ -274,14 +278,14 @@ public class CsvSyncController : ControllerBase
                 csv.Context.RegisterClassMap<CsvDepartmentMap>();
                 if (!csv.Read() || !csv.ReadHeader())
                 {
-                    return BadRequest(new { error = "CSV file is empty or invalid" });
+                    return BadRequest(new { error = _localizer["csvSync.emptyOrInvalid"].Value });
                 }
 
                 var header = csv.Context.Reader?.HeaderRecord ?? Array.Empty<string>();
                 var hasNameColumn = header.Any(h => string.Equals(h?.Trim(), "name", StringComparison.OrdinalIgnoreCase));
                 if (!hasNameColumn)
                 {
-                    errors.Add("CSV must contain a 'name' column.");
+                    errors.Add(_localizer["csvSync.nameColumnRequired"]);
                 }
 
                 while (csv.Read())
@@ -289,13 +293,13 @@ public class CsvSyncController : ControllerBase
                     var rowNumber = csv.Context.Parser?.Row ?? 0;
                     if (rowNumber > MaxDepartmentRows)
                     {
-                        return BadRequest(new { error = $"CSV contains more than {MaxDepartmentRows} rows. Split the file into smaller batches." });
+                        return BadRequest(new { error = _localizer["csvSync.tooManyDepartmentRows", MaxDepartmentRows].Value });
                     }
 
                     var fieldCount = csv.Context.Parser?.Count ?? 0;
                     if (fieldCount != 1)
                     {
-                        errors.Add($"Row {rowNumber}: CSV must contain exactly one column (name). Found {fieldCount} columns.");
+                        errors.Add(_localizer["csvSync.departmentRowOneColumn", rowNumber, fieldCount]);
                         continue;
                     }
 
@@ -314,7 +318,7 @@ public class CsvSyncController : ControllerBase
 
             if (csvDepartments.Count == 0)
             {
-                return BadRequest(new { error = "CSV file is empty or invalid" });
+                return BadRequest(new { error = _localizer["csvSync.emptyOrInvalid"].Value });
             }
 
             var comparisons = await _csvSyncService.CompareDepartmentsWithDatabase(csvDepartments);
@@ -326,7 +330,7 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            return HandleCsvException(ex, "Error processing CSV file", "Error processing CSV");
+            return HandleCsvException(ex, "Error processing CSV file", _localizer["csvSync.errorProcessing"]);
         }
     }
 
@@ -335,7 +339,7 @@ public class CsvSyncController : ControllerBase
     {
         if (syncRequest?.Items == null || syncRequest.Items.Count == 0)
         {
-            return BadRequest(new { error = "No sync items provided" });
+            return BadRequest(new { error = _localizer["csvSync.noSyncItems"].Value });
         }
 
         try
@@ -362,7 +366,7 @@ public class CsvSyncController : ControllerBase
         }
         catch (Exception ex)
         {
-            return HandleCsvException(ex, "Error syncing departments", "Error syncing departments");
+            return HandleCsvException(ex, "Error syncing departments", _localizer["csvSync.errorSyncingDepartments"]);
         }
     }
 }

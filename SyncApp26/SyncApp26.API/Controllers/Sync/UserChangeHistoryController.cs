@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.CSV.History;
 using SyncApp26.Domain.Entities;
@@ -14,10 +15,12 @@ namespace SyncApp26.API.Controllers
     public class UserChangeHistoryController : ControllerBase
     {
         private IUserChangeHistoryService _userChangeHistoryService;
+        private readonly IStringLocalizer _localizer;
 
-        public UserChangeHistoryController(IUserChangeHistoryService userChangeHistoryService)
+        public UserChangeHistoryController(IUserChangeHistoryService userChangeHistoryService, ILocalizationService localizationService)
         {
             _userChangeHistoryService = userChangeHistoryService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Sync);
         }
 
         [HttpGet]
@@ -69,7 +72,7 @@ namespace SyncApp26.API.Controllers
         {
             if(userChangeHistoryRequestDTO == null || userChangeHistoryRequestDTO.UserId == Guid.Empty || string.IsNullOrEmpty(userChangeHistoryRequestDTO.FieldName))
             {
-                return BadRequest("Invalid user change history data.");
+                return BadRequest(_localizer["csvSync.invalidUserChangeHistoryData"].Value);
             }
 
             var userChangeHistory = new UserChangeHistory

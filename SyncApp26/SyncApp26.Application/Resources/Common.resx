@@ -146,4 +146,19 @@
   <data name="status.loadingDepartments" xml:space="preserve">
     <value>Loading departments...</value>
   </data>
+  <data name="buttons.ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="buttons.selectAll" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="buttons.deselectAll" xml:space="preserve">
+    <value>Deselect All</value>
+  </data>
+  <data name="labels.yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="labels.no" xml:space="preserve">
+    <value>No</value>
+  </data>
 </root>

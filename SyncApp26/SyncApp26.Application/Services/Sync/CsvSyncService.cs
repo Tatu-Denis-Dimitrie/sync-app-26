@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.IRepositories;
@@ -24,6 +25,7 @@ public class CsvSyncService : ICsvSyncService
     private readonly IUserChangeHistoryRepository _userChangeHistoryRepository;
     private readonly IDataChangeRequestRepository _dataChangeRequestRepository;
     private readonly ILogger<CsvSyncService> _logger;
+    private readonly IStringLocalizer _localizer;
 
 
     private static readonly Dictionary<string, string> CsvFieldToUserProperty = new(StringComparer.OrdinalIgnoreCase)
@@ -57,7 +59,7 @@ public class CsvSyncService : ICsvSyncService
     private static StringComparison ComparisonForProperty(string propertyName) =>
         CaseInsensitiveProperties.Contains(propertyName) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
-    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, IWorkSiteRepository workSiteRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository, ILogger<CsvSyncService> logger)
+    public CsvSyncService(IUserRepository userRepository, IDepartmentRepository departmentRepository, IFunctionRepository functionRepository, IWorkSiteRepository workSiteRepository, ISyncNotificationService notificationService, IImportHistoryRepository importHistoryRepository, IUserChangeHistoryRepository userChangeHistoryRepositoryRepository, IDataChangeRequestRepository dataChangeRequestRepository, ILogger<CsvSyncService> logger, ILocalizationService localizationService)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
@@ -68,6 +70,7 @@ public class CsvSyncService : ICsvSyncService
         _userChangeHistoryRepository = userChangeHistoryRepositoryRepository;
         _dataChangeRequestRepository = dataChangeRequestRepository;
         _logger = logger;
+        _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Sync);
     }
 
     public async Task<List<UserComparisonDTO>> CompareWithDatabase(IEnumerable<CsvUserDTO> csvUsers, int totalRows, string? connectionId = null)
@@ -462,7 +465,7 @@ public class CsvSyncService : ICsvSyncService
                     if (!dbUserMap.TryGetValue(item.Id, out var existingUser))
                     {
                         result.RecordsFailed++;
-                        result.Errors.Add($"User {item.CsvData.Email} not found");
+                        result.Errors.Add(_localizer["csvSync.userNotFound", item.CsvData.Email]);
                         continue;
                     }
 
@@ -535,7 +538,7 @@ public class CsvSyncService : ICsvSyncService
             catch (Exception ex)
             {
                 result.RecordsFailed++;
-                result.Errors.Add($"Failed to process user {item.CsvData?.Email ?? item.Id}: {ex.Message}");
+                result.Errors.Add(_localizer["csvSync.failedProcessUser", item.CsvData?.Email ?? item.Id, ex.Message]);
             }
         }
 
@@ -611,7 +614,7 @@ public class CsvSyncService : ICsvSyncService
         {
             _logger.LogError(ex, "CSV user sync: batch database operations failed.");
             result.Success = false;
-            result.Errors.Add($"Failed to execute batch operations: {ex.Message}");
+            result.Errors.Add(_localizer["csvSync.failedBatchOperations", ex.Message]);
         }
 
         // Final status update
@@ -624,8 +627,8 @@ public class CsvSyncService : ICsvSyncService
         result.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
         result.Success = result.RecordsFailed == 0;
         result.Message = result.Success
-            ? $"Successfully synced {result.RecordsProcessed} records in {result.ProcessingTimeMs}ms"
-            : $"Synced with errors: {result.RecordsFailed} failed";
+            ? _localizer["csvSync.syncSuccess", result.RecordsProcessed, result.ProcessingTimeMs]
+            : _localizer["csvSync.syncWithErrors", result.RecordsFailed];
 
         return result;
     }
@@ -637,7 +640,7 @@ public class CsvSyncService : ICsvSyncService
         {
             // Department does not exist or is inactive - cannot create user
             result.RecordsFailed++;
-            result.Errors.Add($"User {csvData.Email}: Department '{csvData.DepartmentName}' does not exist or is inactive. Please ensure the department exists and is active.");
+            result.Errors.Add(_localizer["csvSync.departmentInactiveCreate", csvData.Email, csvData.DepartmentName]);
             return null;
         }
 
@@ -668,7 +671,7 @@ public class CsvSyncService : ICsvSyncService
         if (!basicUserRoleId.HasValue)
         {
             result.RecordsFailed++;
-            result.Errors.Add($"User {csvData.Email}: The BasicUser role is not configured. Cannot create the account without it.");
+            result.Errors.Add(_localizer["csvSync.basicUserRoleMissing", csvData.Email]);
             return null;
         }
         newUser.RoleAssignments.Add(new UserRoleAssignment { UserId = newUser.Id, RoleId = basicUserRoleId.Value });
@@ -1122,7 +1125,7 @@ public class CsvSyncService : ICsvSyncService
         if (department == null)
         {
             // Department does not exist or is inactive - skip this field update
-            result.Errors.Add($"User {csvData.Email}: Cannot update department to '{selectedName}' - department does not exist or is inactive.");
+            result.Errors.Add(_localizer["csvSync.departmentInactiveUpdateField", csvData.Email, selectedName]);
             return false;
         }
 
@@ -1270,7 +1273,7 @@ public class CsvSyncService : ICsvSyncService
         {
             // Department does not exist or is inactive - skip this user update
             result.RecordsFailed++;
-            result.Errors.Add($"User {csvData.Email}: Department '{csvData.DepartmentName}' does not exist or is inactive. Cannot update user.");
+            result.Errors.Add(_localizer["csvSync.departmentInactiveUpdate", csvData.Email, csvData.DepartmentName]);
             return (false, hasChanges);
         }
         if (existingUser.DepartmentId != department.Id)
@@ -1435,7 +1438,7 @@ public class CsvSyncService : ICsvSyncService
             catch (Exception ex)
             {
                 result.RecordsFailed++;
-                result.Errors.Add($"Failed to process department {item.CsvDepartment?.Name ?? item.DbDepartment?.Name ?? "Unknown"}: {ex.Message}");
+                result.Errors.Add(_localizer["csvSync.failedProcessDepartment", item.CsvDepartment?.Name ?? item.DbDepartment?.Name ?? "Unknown", ex.Message]);
             }
         }
 
@@ -1448,8 +1451,8 @@ public class CsvSyncService : ICsvSyncService
 
         result.Success = result.RecordsFailed == 0;
         result.Message = result.Success
-            ? $"Successfully synced {result.RecordsProcessed} departments"
-            : $"Synced with errors: {result.RecordsFailed} failed";
+            ? _localizer["csvSync.deptSyncSuccess", result.RecordsProcessed]
+            : _localizer["csvSync.syncWithErrors", result.RecordsFailed];
 
         return result;
     }

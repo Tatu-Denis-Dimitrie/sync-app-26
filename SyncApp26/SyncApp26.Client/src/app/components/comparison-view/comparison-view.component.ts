@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserComparison, FieldConflict, PendingRequestOption } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil } from '../../shared/utils/date-format.util';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-comparison-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './comparison-view.component.html',
   styleUrls: ['./comparison-view.component.css']
 })
@@ -37,6 +39,16 @@ export class ComparisonViewComponent implements OnChanges {
       .flatMap(c => c.conflicts)
       .filter(conflict => !this.conflictHasPendingChoice(conflict));
     return conflicts.length > 0 && conflicts.every(conflict => conflict.selected);
+  }
+
+  constructor(private translationService: TranslationService) {}
+
+  tSync(key: string, ...args: (string | number)[]): string {
+    return this.translationService.translate('Sync', key, ...args);
+  }
+
+  tCommon(key: string): string {
+    return this.translationService.translate('Common', key);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -187,7 +199,7 @@ export class ComparisonViewComponent implements OnChanges {
   getCsvConflictValue(comparison: UserComparison, field: string): string {
     const conflict = comparison.conflicts.find(c => c.field === field);
     const value = conflict?.csvValue;
-    return value === null || value === undefined || value === '' ? 'N/A' : String(value);
+    return value === null || value === undefined || value === '' ? this.tCommon('labels.notAvailable') : String(value);
   }
 
   toggleSelectAllConflicts(): void {
@@ -228,6 +240,16 @@ export class ComparisonViewComponent implements OnChanges {
       default:
         return 'bg-muted text-muted-foreground border-border';
     }
+  }
+
+  statusLabel(status: string): string {
+    const keys: Record<string, string> = {
+      new: 'comparison.status.new',
+      modified: 'comparison.status.modified',
+      unchanged: 'comparison.status.unchanged',
+      deleted: 'comparison.status.deleted'
+    };
+    return this.tSync(keys[status] ?? 'comparison.status.unchanged');
   }
 
   getStatusIcon(status: string): string {

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -13,10 +14,12 @@ namespace SyncApp26.API.Controllers
     public class ImportHistoryController : ControllerBase
     {
         private readonly IImportHistoryService _importHistoryService;
+        private readonly IStringLocalizer _localizer;
 
-        public ImportHistoryController(IImportHistoryService importHistoryService)
+        public ImportHistoryController(IImportHistoryService importHistoryService, ILocalizationService localizationService)
         {
             _importHistoryService = importHistoryService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Sync);
         }
 
         [HttpGet]
@@ -43,7 +46,7 @@ namespace SyncApp26.API.Controllers
         {
             if(importHistoryRequestDTO == null || string.IsNullOrEmpty(importHistoryRequestDTO.FileName))
             {
-                return BadRequest("Invalid import history data.");
+                return BadRequest(_localizer["csvSync.invalidImportHistoryData"].Value);
             }
 
             var importHistory = new ImportHistory

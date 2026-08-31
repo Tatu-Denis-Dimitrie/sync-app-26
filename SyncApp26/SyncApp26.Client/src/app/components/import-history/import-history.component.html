@@ -5,7 +5,7 @@
         <input
           type="text"
           [(ngModel)]="searchQuery"
-          placeholder="Search by file name, user or day..."
+          placeholder="{{ 'importHistory.searchPlaceholder' | translate:'Sync' }}"
           class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
           />
         <svg
@@ -26,13 +26,13 @@
         (click)="toggleSortOrder()"
         class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors"
         >
-        Sort: {{ sortOrder === "asc" ? "Oldest" : "Newest" }}
+        {{ 'importHistory.sortPrefix' | translate:'Sync' }}{{ sortOrder === "asc" ? ('importHistory.oldest' | translate:'Sync') : ('importHistory.newest' | translate:'Sync') }}
       </button>
     </div>
 
     @if (loading) {
       <div class="text-sm text-muted-foreground">
-        Loading change history...
+        {{ 'importHistory.loading' | translate:'Sync' }}
       </div>
     }
     @if (!loading && error) {
@@ -50,7 +50,7 @@
       <div
         class="text-sm text-muted-foreground"
         >
-        No change history available.
+        {{ 'importHistory.noneAvailable' | translate:'Sync' }}
       </div>
     }
 
@@ -61,7 +61,7 @@
             <div
               class="text-sm font-semibold text-foreground uppercase tracking-wide"
               >
-              Import Conflicts
+              {{ 'importHistory.sectionImportConflicts' | translate:'Sync' }}
             </div>
             @for (group of getFilteredImportGroups(); track group.importHistoryId) {
               <div
@@ -73,18 +73,18 @@
                   >
                   <div>
                     <h3 class="text-lg font-semibold text-foreground">
-                      {{ group.importFileName || "Import" }}
+                      {{ group.importFileName || ('labels.import' | translate:'Sync') }}
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                      ID: {{ group.importHistoryId }}
+                      {{ 'importHistory.idLabel' | translate:'Sync' }} {{ group.importHistoryId }}
                     </p>
                     <p class="text-xs text-muted-foreground">
-                      Date: {{ formatDate(group.importDate) }}
+                      {{ 'labels.dateLabel' | translate:'Sync' }} {{ formatDate(group.importDate) }}
                     </p>
                   </div>
                   <div class="flex items-center gap-3">
                     <span class="text-sm text-muted-foreground">
-                      {{ group.conflicts.length }} conflicts
+                      {{ 'importHistory.conflictsCount' | translate:'Sync':group.conflicts.length }}
                     </span>
                   </div>
                 </div>
@@ -96,7 +96,7 @@
                       <div
                         class="p-6 text-sm text-muted-foreground"
                         >
-                        No conflicts for this import.
+                        {{ 'importHistory.noConflictsForImport' | translate:'Sync' }}
                       </div>
                     }
                     @for (userGroup of getConflictGroups(group.conflicts); track userGroup.userId) {
@@ -108,7 +108,7 @@
                             {{ userGroup.userName }}
                           </p>
                           <p class="text-xs text-muted-foreground">
-                            ID: {{ userGroup.userId }}
+                            {{ 'importHistory.idLabel' | translate:'Sync' }} {{ userGroup.userId }}
                           </p>
                         </div>
                         @for (conflict of userGroup.conflicts; track conflict.id) {
@@ -125,7 +125,7 @@
                                 [ngClass]="getStatusColor(conflict.status)"
                                 class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
                                 >
-                                {{ conflict.status || "N/A" }}
+                                {{ conflict.status || ('labels.notAvailable' | translate:'Common') }}
                               </span>
                             </div>
                             <div class="grid grid-cols-[1fr,auto,1fr]">
@@ -133,10 +133,10 @@
                                 <div
                                   class="text-xs font-medium text-muted-foreground uppercase mb-2"
                                   >
-                                  Database
+                                  {{ 'labels.database' | translate:'Sync' }}
                                 </div>
                                 <p class="font-mono text-sm text-foreground">
-                                  {{ conflict.oldValue || "N/A" }}
+                                  {{ conflict.oldValue || ('labels.notAvailable' | translate:'Common') }}
                                 </p>
                               </div>
                               <div
@@ -160,10 +160,10 @@
                                 <div
                                   class="text-xs font-medium text-muted-foreground uppercase mb-2"
                                   >
-                                  CSV
+                                  {{ 'labels.csv' | translate:'Sync' }}
                                 </div>
                                 <p class="font-mono text-sm text-foreground">
-                                  {{ conflict.newValue || "N/A" }}
+                                  {{ conflict.newValue || ('labels.notAvailable' | translate:'Common') }}
                                 </p>
                               </div>
                             </div>
@@ -182,7 +182,7 @@
             <div
               class="text-sm font-semibold text-foreground uppercase tracking-wide"
               >
-              Manual Changes
+              {{ 'importHistory.sectionManualChanges' | translate:'Sync' }}
             </div>
             @for (dayGroup of getFilteredManualDayGroups(); track dayGroup.dayKey) {
               <div
@@ -197,7 +197,7 @@
                       {{ formatDate(dayGroup.dayDate) }}
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                      {{ dayGroup.changes.length }} changes
+                      {{ 'importHistory.changesCount' | translate:'Sync':dayGroup.changes.length }}
                     </p>
                   </div>
                 </div>
@@ -222,7 +222,7 @@
                           <span
                             class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/10 text-blue-700 border-blue-500/20"
                             >
-                            manual
+                            {{ 'labels.manualBadge' | translate:'Sync' }}
                           </span>
                         </div>
                         <div class="grid grid-cols-[1fr,auto,1fr]">
@@ -230,10 +230,10 @@
                             <div
                               class="text-xs font-medium text-muted-foreground uppercase mb-2"
                               >
-                              Previous
+                              {{ 'labels.previous' | translate:'Sync' }}
                             </div>
                             <p class="font-mono text-sm text-foreground">
-                              {{ change.oldValue || "N/A" }}
+                              {{ change.oldValue || ('labels.notAvailable' | translate:'Common') }}
                             </p>
                           </div>
                           <div class="flex items-center justify-center bg-muted/20 px-2">
@@ -255,10 +255,10 @@
                             <div
                               class="text-xs font-medium text-muted-foreground uppercase mb-2"
                               >
-                              New
+                              {{ 'labels.new' | translate:'Sync' }}
                             </div>
                             <p class="font-mono text-sm text-foreground">
-                              {{ change.newValue || "N/A" }}
+                              {{ change.newValue || ('labels.notAvailable' | translate:'Common') }}
                             </p>
                           </div>
                         </div>
@@ -275,7 +275,7 @@
             <div
               class="text-sm font-semibold text-foreground uppercase tracking-wide"
               >
-              Data Change Requests
+              {{ 'importHistory.sectionDataChangeRequests' | translate:'Sync' }}
             </div>
             @for (dayGroup of getFilteredDataChangeRequestGroups(); track dayGroup.dayKey) {
               <div
@@ -290,7 +290,7 @@
                       {{ formatDate(dayGroup.dayDate) }}
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                      {{ dayGroup.changes.length }} changes
+                      {{ 'importHistory.changesCount' | translate:'Sync':dayGroup.changes.length }}
                     </p>
                   </div>
                 </div>
@@ -326,10 +326,10 @@
                             <div
                               class="text-xs font-medium text-muted-foreground uppercase mb-2"
                               >
-                              Previous
+                              {{ 'labels.previous' | translate:'Sync' }}
                             </div>
                             <p class="font-mono text-sm text-foreground">
-                              {{ change.oldValue || "N/A" }}
+                              {{ change.oldValue || ('labels.notAvailable' | translate:'Common') }}
                             </p>
                           </div>
                           <div class="flex items-center justify-center bg-muted/20 px-2">
@@ -351,10 +351,10 @@
                             <div
                               class="text-xs font-medium text-muted-foreground uppercase mb-2"
                               >
-                              Requested
+                              {{ 'importHistory.requested' | translate:'Sync' }}
                             </div>
                             <p class="font-mono text-sm text-foreground">
-                              {{ change.newValue || "N/A" }}
+                              {{ change.newValue || ('labels.notAvailable' | translate:'Common') }}
                             </p>
                           </div>
                         </div>

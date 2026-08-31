@@ -6,18 +6,18 @@
       <div>
         <div class="mb-6">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-2xl font-bold text-foreground">CSV Comparison</h2>
+            <h2 class="text-2xl font-bold text-foreground">{{ 'dashboard.csvComparison' | translate:'Sync' }}</h2>
             <div class="flex gap-3">
               <button (click)="cancelComparison()"
                 class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
-                Cancel
+                {{ 'buttons.cancel' | translate:'Common' }}
               </button>
               <button (click)="syncSelectedUsers()" [disabled]="isSyncing || getSelectedSyncCount() === 0"
                 class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {{
                 isSyncing
-                ? "Synchronizing..."
-                : `Synchronize ${getSelectedSyncCount()} selected users`
+                ? ('dashboard.synchronizing' | translate:'Sync')
+                : ('dashboard.synchronizeSelectedUsers' | translate:'Sync':getSelectedSyncCount())
                 }}
               </button>
             </div>
@@ -36,13 +36,13 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-6">
                 <div>
-                  <p class="text-sm text-muted-foreground">Total Changes</p>
+                  <p class="text-sm text-muted-foreground">{{ 'dashboard.totalChanges' | translate:'Sync' }}</p>
                   <p class="text-2xl font-bold text-foreground">
                     {{ getDepartmentChangesCount() }}
                   </p>
                 </div>
                 <div>
-                  <p class="text-sm text-muted-foreground">Selected</p>
+                  <p class="text-sm text-muted-foreground">{{ 'dashboard.selected' | translate:'Sync' }}</p>
                   <p class="text-2xl font-bold text-blue-600">
                     {{ getSelectedDepartmentSyncCount() }}
                   </p>
@@ -51,22 +51,22 @@
               <div class="flex gap-2">
                 <button (click)="toggleAllDepartmentSelections(true)" [disabled]="!hasDepartmentChanges()"
                   class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  Select All
+                  {{ 'buttons.selectAll' | translate:'Common' }}
                 </button>
                 <button (click)="toggleAllDepartmentSelections(false)" [disabled]="!hasDepartmentChanges()"
                   class="px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  Deselect All
+                  {{ 'buttons.deselectAll' | translate:'Common' }}
                 </button>
               </div>
             </div>
           </div>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-2xl font-bold text-foreground">
-              Department CSV Comparison
+              {{ 'dashboard.departmentCsvComparison' | translate:'Sync' }}
             </h2>
             <div class="flex gap-3">
               <div class="relative flex-1 max-w-xs">
-                <input type="text" [(ngModel)]="departmentSearchQuery" placeholder="Search departments..."
+                <input type="text" [(ngModel)]="departmentSearchQuery" placeholder="{{ 'dashboard.searchDepartments' | translate:'Sync' }}"
                   class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                   <svg class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" fill="none"
                     stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@
                 </div>
                 <button (click)="cancelDepartmentComparison()"
                   class="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground bg-background hover:bg-accent transition-colors">
-                  Cancel
+                  {{ 'buttons.cancel' | translate:'Common' }}
                 </button>
             <button (click)="syncSelectedDepartments()" [disabled]="
                 isSyncing ||
@@ -86,10 +86,10 @@
                   class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                   {{
                   !hasDepartmentChanges()
-                  ? "No new departments to import"
+                  ? ('dashboard.noNewDepartments' | translate:'Sync')
                   : isSyncing
-                  ? "Synchronizing..."
-                  : `Synchronize ${getSelectedDepartmentSyncCount()} selected departments`
+                  ? ('dashboard.synchronizing' | translate:'Sync')
+                  : ('dashboard.synchronizeSelectedDepartments' | translate:'Sync':getSelectedDepartmentSyncCount())
                   }}
                 </button>
               </div>
@@ -109,10 +109,10 @@
                               {{
                               comparison.csvDepartment?.name ||
                               comparison.dbDepartment?.name ||
-                              "Unknown Department"
+                              ('dashboard.unknownDepartment' | translate:'Sync')
                               }}
                             </h3>
-                            <p class="text-sm text-muted-foreground">Department</p>
+                            <p class="text-sm text-muted-foreground">{{ 'labels.department' | translate:'Common' }}</p>
                           </div>
                         </div>
                 <span [ngClass]="{
@@ -122,17 +122,17 @@
                     'bg-gray-500/10 text-gray-700 border-gray-500/20':
                       comparison.status === 'unchanged',
                   }">
-                          {{ comparison.status }}
+                          {{ departmentStatusLabel(comparison.status) }}
                         </span>
                       </div>
                     </div>
                     <div class="grid grid-cols-[1fr,auto,1fr]">
                       <div class="p-4 bg-red-50/30">
                         <div class="flex items-center justify-between mb-2">
-                          <span class="text-xs font-medium text-muted-foreground uppercase">Department (Database)</span>
+                          <span class="text-xs font-medium text-muted-foreground uppercase">{{ 'dashboard.departmentDatabase' | translate:'Sync' }}</span>
                         </div>
                         <p class="font-mono text-sm">
-                          {{ comparison.dbDepartment?.name || "N/A" }}
+                          {{ comparison.dbDepartment?.name || ('labels.notAvailable' | translate:'Common') }}
                         </p>
                       </div>
                       <div class="flex items-center justify-center bg-muted/20 px-2">
@@ -140,14 +140,14 @@
                       </div>
                       <div class="p-4 bg-green-50/30">
                         <div class="flex items-center justify-between mb-2">
-                          <span class="text-xs font-medium text-muted-foreground uppercase">Department (CSV)</span>
+                          <span class="text-xs font-medium text-muted-foreground uppercase">{{ 'dashboard.departmentCsv' | translate:'Sync' }}</span>
                           @if (comparison.status === 'new') {
-                            <span class="text-xs text-green-600">+ added</span>
+                            <span class="text-xs text-green-600">{{ 'dashboard.added' | translate:'Sync' }}</span>
                           }
                         </div>
                         <p class="font-mono text-sm" [class.font-semibold]="comparison.status === 'new'"
                           [class.text-green-700]="comparison.status === 'new'">
-                          {{ comparison.csvDepartment?.name || "N/A" }}
+                          {{ comparison.csvDepartment?.name || ('labels.notAvailable' | translate:'Common') }}
                         </p>
                       </div>
                     </div>
@@ -168,7 +168,7 @@
                   <div class="flex items-center justify-between">
                     <div>
                       <p class="text-sm font-medium text-muted-foreground">
-                        Total Users
+                        {{ 'dashboard.totalUsers' | translate:'Sync' }}
                       </p>
                       <p class="text-2xl font-bold text-foreground mt-1">
                         {{ stats.total }}
@@ -187,7 +187,7 @@
                   <div class="flex items-center justify-between">
                     <div>
                       <p class="text-sm font-medium text-muted-foreground">
-                        Line Managers
+                        {{ 'dashboard.lineManagers' | translate:'Sync' }}
                       </p>
                       <p class="text-2xl font-bold text-purple-600 mt-1">
                         {{ stats.lineManagers }}
@@ -208,7 +208,7 @@
                 <div class="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div class="flex items-center justify-between">
                     <div>
-                      <p class="text-sm font-medium text-muted-foreground">Employees</p>
+                      <p class="text-sm font-medium text-muted-foreground">{{ 'dashboard.employees' | translate:'Sync' }}</p>
                       <p class="text-2xl font-bold text-blue-600 mt-1">
                         {{ stats.employees }}
                       </p>
@@ -227,7 +227,7 @@
                   <div class="flex items-center justify-between">
                     <div>
                       <p class="text-sm font-medium text-muted-foreground">
-                        Departments
+                        {{ 'dashboard.departments' | translate:'Sync' }}
                       </p>
                       <p class="text-2xl font-bold text-green-600 mt-1">
                         {{ stats.departments }}
@@ -250,7 +250,7 @@
                 <div class="flex flex-col sm:flex-row gap-3">
                   <div class="relative">
                     <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
-                      placeholder="Search users..."
+                      placeholder="{{ 'dashboard.searchUsers' | translate:'Sync' }}"
                       class="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all w-full sm:w-64" />
                       <svg class="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
@@ -260,7 +260,7 @@
                     </div>
                     <select [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentFilterChange()"
                       class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
-                      <option value="all">All Departments</option>
+                      <option value="all">{{ 'dashboard.allDepartments' | translate:'Sync' }}</option>
                       @for (dept of departments; track dept) {
                         <option [value]="dept.name">
                           {{ dept.name }} ({{
@@ -272,7 +272,7 @@
                     <select [(ngModel)]="selectedFunction" (ngModelChange)="onFunctionFilterChange()"
                       [disabled]="selectedDepartment === 'all'"
                       class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                      <option value="all">Select Function</option>
+                      <option value="all">{{ 'dashboard.selectFunction' | translate:'Sync' }}</option>
                       @for (fn of availableDepartmentFunctions; track fn) {
                         <option [value]="fn">
                           {{ fn }}
@@ -281,9 +281,9 @@
                     </select>
                     <select [(ngModel)]="selectedRole" (ngModelChange)="onRoleFilterChange()"
                       class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
-                      <option value="all">All Roles</option>
-                      <option [value]="UserRole.LineManager">Line Managers</option>
-                      <option [value]="UserRole.BasicUser">Employees</option>
+                      <option value="all">{{ 'dashboard.allRoles' | translate:'Sync' }}</option>
+                      <option [value]="UserRole.LineManager">{{ 'dashboard.lineManagers' | translate:'Sync' }}</option>
+                      <option [value]="UserRole.BasicUser">{{ 'dashboard.employees' | translate:'Sync' }}</option>
                     </select>
                   </div>
                   <div class="flex gap-3">
@@ -293,7 +293,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                       </svg>
-                      {{ isUploading ? "Loading..." : "Import CSV" }}
+                      {{ isUploading ? ('status.loading' | translate:'Common') : ('dashboard.importCsv' | translate:'Sync') }}
                       <input type="file" accept=".csv" (change)="onFileSelected($event)" [disabled]="isUploading"
                         class="hidden" />
                       </label>
@@ -304,7 +304,7 @@
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
                           </path>
                         </svg>
-                        {{ isUploading ? "Loading..." : "Import Departments" }}
+                        {{ isUploading ? ('status.loading' | translate:'Common') : ('dashboard.importDepartments' | translate:'Sync') }}
                         <input type="file" accept=".csv" (change)="onDepartmentFileSelected($event)" [disabled]="isUploading"
                           class="hidden" />
                         </label>
@@ -319,34 +319,34 @@
                           <tr>
                             <th rowspan="2"
                               class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              User
+                              {{ 'dashboard.user' | translate:'Sync' }}
                             </th>
                             <th rowspan="2"
                               class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              Role
+                              {{ 'dashboard.role' | translate:'Sync' }}
                             </th>
                             <th rowspan="2"
                               class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              Department
+                              {{ 'labels.department' | translate:'Common' }}
                             </th>
                             <th rowspan="2"
                               class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              Function
+                              {{ 'dashboard.function' | translate:'Sync' }}
                             </th>
                             <th rowspan="2"
                               class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              Line Manager
+                              {{ 'dashboard.lineManager' | translate:'Sync' }}
                             </th>
                             <th colspan="2"
                               class="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border">
-                              Has Signed
+                              {{ 'dashboard.hasSigned' | translate:'Sync' }}
                             </th>
                             <th rowspan="2"
                               class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                               <button (click)="toggleSort('createdAt')"
                                 class="hover:text-foreground transition-colors flex items-center gap-1"
-                                title="Sort by created date">
-                                Created
+                                title="{{ 'dashboard.sortByCreated' | translate:'Sync' }}">
+                                {{ 'dashboard.created' | translate:'Sync' }}
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
                                   fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                                   stroke-linejoin="round" class="transition-transform"
@@ -360,8 +360,8 @@
                               class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                               <button (click)="toggleSort('updatedAt')"
                                 class="hover:text-foreground transition-colors flex items-center gap-1"
-                                title="Sort by updated date">
-                                Updated
+                                title="{{ 'dashboard.sortByUpdated' | translate:'Sync' }}">
+                                {{ 'dashboard.updated' | translate:'Sync' }}
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
                                   fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                                   stroke-linejoin="round" class="transition-transform"
@@ -421,8 +421,8 @@
                                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border">
                                   {{
                                   user.role === UserRole.LineManager
-                                  ? "Line Manager"
-                                  : "Employee"
+                                  ? ('dashboard.lineManager' | translate:'Sync')
+                                  : ('dashboard.employee' | translate:'Sync')
                                   }}
                                 </span>
                               </td>
@@ -430,7 +430,7 @@
                                 {{ user.departmentName }}
                               </td>
                               <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                                {{ user.function || "unknown" }}
+                                {{ user.function || ('dashboard.unknown' | translate:'Sync') }}
                               </td>
                               <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                 {{ user.assignedToName || "—" }}
@@ -439,18 +439,18 @@
                                 <span
                                   [ngClass]="user.hasSignedSsm ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-700 bg-red-50 border-red-300'"
                                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border">
-                                  {{ user.hasSignedSsm ? 'Yes' : 'No' }}
+                                  {{ user.hasSignedSsm ? ('labels.yes' | translate:'Common') : ('labels.no' | translate:'Common') }}
                                 </span>
                               </td>
                               <td class="px-4 py-4 whitespace-nowrap text-center">
                                 <span
                                   [ngClass]="user.hasSignedSu ? 'text-green-700 bg-green-50 border-green-300' : 'text-red-700 bg-red-50 border-red-300'"
                                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border">
-                                  {{ user.hasSignedSu ? 'Yes' : 'No' }}
+                                  {{ user.hasSignedSu ? ('labels.yes' | translate:'Common') : ('labels.no' | translate:'Common') }}
                                 </span>
                               </td>
                               <td class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground"
-                                [title]="'Created: ' + formatDate(user.createdAt)">
+                                [title]="'dashboard.createdTitle' | translate:'Sync':formatDate(user.createdAt)">
                                 <div class="flex flex-col">
                                   <span>{{ formatDate(user.createdAt) }}</span>
                                   <span class="text-xs opacity-60">{{
@@ -460,8 +460,8 @@
                               </td>
                 <td class="px-6 py-4 whitespace-nowrap text-xs text-muted-foreground" [title]="
                     user.updatedAt
-                      ? 'Updated: ' + formatDate(user.updatedAt)
-                      : 'Not yet updated'
+                      ? ('dashboard.updatedTitle' | translate:'Sync':formatDate(user.updatedAt))
+                      : ('dashboard.notYetUpdated' | translate:'Sync')
                   ">
                                 <div class="flex flex-col">
                                   <span>{{
@@ -487,10 +487,10 @@
                                     </path>
                                   </svg>
                                   <p class="text-muted-foreground text-sm">
-                                    Users not found.
+                                    {{ 'dashboard.usersNotFound' | translate:'Sync' }}
                                   </p>
                                   <p class="text-muted-foreground text-xs mt-1">
-                                    Try adjusting the filters or search query.
+                                    {{ 'dashboard.tryAdjustingFilters' | translate:'Sync' }}
                                   </p>
                                 </div>
                               </td>
@@ -538,7 +538,7 @@
                   <!-- Errors -->
                   @if (errorModalErrors.length > 0) {
                     <div class="space-y-2">
-                      <h4 class="font-medium text-foreground mb-3">Errors:</h4>
+                      <h4 class="font-medium text-foreground mb-3">{{ 'dashboard.errorsLabel' | translate:'Sync' }}</h4>
                       @for (error of errorModalErrors; track error) {
                         <div
                           class="flex items-start space-x-2 p-3 bg-destructive/5 border border-destructive/20 rounded-md">
@@ -554,7 +554,7 @@
                   <!-- Warnings -->
                   @if (errorModalWarnings.length > 0) {
                     <div class="mt-6 space-y-2">
-                      <h4 class="font-medium text-foreground mb-3">Warnings:</h4>
+                      <h4 class="font-medium text-foreground mb-3">{{ 'dashboard.warningsLabel' | translate:'Sync' }}</h4>
                       @for (warning of errorModalWarnings; track warning) {
                         <div
                           class="flex items-start space-x-2 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-md">
@@ -572,25 +572,25 @@
                   <!-- Stats -->
                   @if (errorModalStats.totalRows > 0) {
                     <div class="mt-6 p-4 bg-muted/50 rounded-md border border-border">
-                      <h4 class="font-medium text-foreground mb-3">Statistics:</h4>
+                      <h4 class="font-medium text-foreground mb-3">{{ 'dashboard.statisticsLabel' | translate:'Sync' }}</h4>
                       <div class="grid grid-cols-3 gap-4 text-center">
                         <div>
                           <div class="text-2xl font-bold text-foreground">
                             {{ errorModalStats.totalRows }}
                           </div>
-                          <div class="text-xs text-muted-foreground">Total Rows</div>
+                          <div class="text-xs text-muted-foreground">{{ 'dashboard.totalRows' | translate:'Sync' }}</div>
                         </div>
                         <div>
                           <div class="text-2xl font-bold text-green-600">
                             {{ errorModalStats.validRows }}
                           </div>
-                          <div class="text-xs text-muted-foreground">Valid Rows</div>
+                          <div class="text-xs text-muted-foreground">{{ 'dashboard.validRows' | translate:'Sync' }}</div>
                         </div>
                         <div>
                           <div class="text-2xl font-bold text-destructive">
                             {{ errorModalStats.invalidRows }}
                           </div>
-                          <div class="text-xs text-muted-foreground">Invalid Rows</div>
+                          <div class="text-xs text-muted-foreground">{{ 'dashboard.invalidRows' | translate:'Sync' }}</div>
                         </div>
                       </div>
                     </div>
@@ -601,19 +601,19 @@
                   @if (!canProceedWithValidRows) {
                     <button (click)="closeErrorModal()"
                       class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium">
-                      OK
+                      {{ 'buttons.ok' | translate:'Common' }}
                     </button>
                   }
                   @if (canProceedWithValidRows) {
                     <button (click)="closeErrorModal()"
                       class="px-6 py-2 bg-secondary text-secondary-foreground border border-border rounded-md hover:bg-secondary/90 transition-colors font-medium">
-                      Cancel
+                      {{ 'buttons.cancel' | translate:'Common' }}
                     </button>
                   }
                   @if (canProceedWithValidRows) {
                     <button (click)="proceedWithValidRows()"
                       class="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium">
-                      Proceed with {{ errorModalStats.validRows }} Valid Rows
+                      {{ 'dashboard.proceedWithValidRows' | translate:'Sync':errorModalStats.validRows }}
                     </button>
                   }
                 </div>
@@ -635,13 +635,13 @@
                     @if (serverTimingInfo) {
                       <div class="mt-2 text-xs text-green-700 space-y-1">
                         <div>
-                          Validation: {{ formatDuration(serverTimingInfo.validationTimeMs) }}
+                          {{ 'dashboard.validationTime' | translate:'Sync':formatDuration(serverTimingInfo.validationTimeMs) }}
                         </div>
                         <div>
-                          Comparison: {{ formatDuration(serverTimingInfo.comparisonTimeMs) }}
+                          {{ 'dashboard.comparisonTime' | translate:'Sync':formatDuration(serverTimingInfo.comparisonTimeMs) }}
                         </div>
                         <div class="font-semibold">
-                          Total Server: {{ formatDuration(serverTimingInfo.totalTimeMs) }}
+                          {{ 'dashboard.totalServerTime' | translate:'Sync':formatDuration(serverTimingInfo.totalTimeMs) }}
                         </div>
                       </div>
                     }

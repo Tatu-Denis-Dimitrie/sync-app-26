@@ -110,4 +110,511 @@
   <data name="labels.new" xml:space="preserve">
     <value>New</value>
   </data>
+  <data name="csvValidation.extension" xml:space="preserve">
+    <value>File must have .csv extension</value>
+  </data>
+  <data name="csvValidation.encoding" xml:space="preserve">
+    <value>Invalid file encoding. File must be UTF-8 encoded.</value>
+  </data>
+  <data name="csvValidation.invalidChars" xml:space="preserve">
+    <value>File contains invalid special characters: {0}</value>
+  </data>
+  <data name="csvValidation.empty" xml:space="preserve">
+    <value>CSV file is empty</value>
+  </data>
+  <data name="csvValidation.headersOnly" xml:space="preserve">
+    <value>CSV file contains only headers, no data rows</value>
+  </data>
+  <data name="csvValidation.tooManyRows" xml:space="preserve">
+    <value>CSV contains {0} rows, exceeding the maximum of {1}. Split the file into smaller batches.</value>
+  </data>
+  <data name="csvValidation.moreErrors" xml:space="preserve">
+    <value>...and {0} more errors</value>
+  </data>
+  <data name="csvValidation.readError" xml:space="preserve">
+    <value>Error reading CSV file: {0}</value>
+  </data>
+  <data name="csvValidation.missingColumn" xml:space="preserve">
+    <value>Missing required column: '{0}'. CSV must contain columns: {1}</value>
+  </data>
+  <data name="csvValidation.blankColumnNames" xml:space="preserve">
+    <value>Blank column name(s) at position(s): {0}. Every column must have a header name (a trailing comma on the header row is a common cause).</value>
+  </data>
+  <data name="csvValidation.duplicateColumns" xml:space="preserve">
+    <value>Duplicate columns found: {0}</value>
+  </data>
+  <data name="csvValidation.row.columnCount" xml:space="preserve">
+    <value>Row {0}: Expected {1} columns, found {2}</value>
+  </data>
+  <data name="csvValidation.row.required" xml:space="preserve">
+    <value>Row {0}: {1} is required and cannot be empty</value>
+  </data>
+  <data name="csvValidation.row.tooLong" xml:space="preserve">
+    <value>Row {0}: {1} is too long (max {2} characters)</value>
+  </data>
+  <data name="csvValidation.row.emailFormat" xml:space="preserve">
+    <value>Row {0}: Email '{1}' is not in valid format</value>
+  </data>
+  <data name="csvValidation.row.departmentMissing" xml:space="preserve">
+    <value>Row {0}: Department '{1}' does not exist in the database. Please create the department first.</value>
+  </data>
+  <data name="csvValidation.row.assignedFormat" xml:space="preserve">
+    <value>Row {0}: AssignedToPersonalId '{1}' is not in valid format</value>
+  </data>
+  <data name="csvValidation.row.functionTooLong" xml:space="preserve">
+    <value>Row {0}: Function is too long (max {1} characters)</value>
+  </data>
+  <data name="csvValidation.row.workSiteTooLong" xml:space="preserve">
+    <value>Row {0}: WorkSite is too long (max {1} characters)</value>
+  </data>
+  <data name="csvSync.noFileUploaded" xml:space="preserve">
+    <value>No file uploaded</value>
+  </data>
+  <data name="csvSync.fileMustBeCsv" xml:space="preserve">
+    <value>File must be a CSV file</value>
+  </data>
+  <data name="csvSync.validationFailed" xml:space="preserve">
+    <value>CSV validation failed</value>
+  </data>
+  <data name="csvSync.someInvalidRows" xml:space="preserve">
+    <value>CSV has some invalid rows</value>
+  </data>
+  <data name="csvSync.errorProcessing" xml:space="preserve">
+    <value>Error processing CSV</value>
+  </data>
+  <data name="csvSync.noSyncItems" xml:space="preserve">
+    <value>No sync items provided</value>
+  </data>
+  <data name="csvSync.errorSyncingUsers" xml:space="preserve">
+    <value>Error syncing users</value>
+  </data>
+  <data name="csvSync.errorSyncingDepartments" xml:space="preserve">
+    <value>Error syncing departments</value>
+  </data>
+  <data name="csvSync.emptyOrInvalid" xml:space="preserve">
+    <value>CSV file is empty or invalid</value>
+  </data>
+  <data name="csvSync.nameColumnRequired" xml:space="preserve">
+    <value>CSV must contain a 'name' column.</value>
+  </data>
+  <data name="csvSync.tooManyDepartmentRows" xml:space="preserve">
+    <value>CSV contains more than {0} rows. Split the file into smaller batches.</value>
+  </data>
+  <data name="csvSync.departmentRowOneColumn" xml:space="preserve">
+    <value>Row {0}: CSV must contain exactly one column (name). Found {1} columns.</value>
+  </data>
+  <data name="csvSync.invalidImportHistoryData" xml:space="preserve">
+    <value>Invalid import history data.</value>
+  </data>
+  <data name="csvSync.invalidUserChangeHistoryData" xml:space="preserve">
+    <value>Invalid user change history data.</value>
+  </data>
+  <data name="csvSync.failedProcessUser" xml:space="preserve">
+    <value>Failed to process user {0}: {1}</value>
+  </data>
+  <data name="csvSync.failedBatchOperations" xml:space="preserve">
+    <value>Failed to execute batch operations: {0}</value>
+  </data>
+  <data name="csvSync.syncSuccess" xml:space="preserve">
+    <value>Successfully synced {0} records in {1}ms</value>
+  </data>
+  <data name="csvSync.syncWithErrors" xml:space="preserve">
+    <value>Synced with errors: {0} failed</value>
+  </data>
+  <data name="csvSync.failedProcessDepartment" xml:space="preserve">
+    <value>Failed to process department {0}: {1}</value>
+  </data>
+  <data name="csvSync.deptSyncSuccess" xml:space="preserve">
+    <value>Successfully synced {0} departments</value>
+  </data>
+  <data name="csvSync.userNotFound" xml:space="preserve">
+    <value>User {0} not found</value>
+  </data>
+  <data name="csvSync.departmentInactiveCreate" xml:space="preserve">
+    <value>User {0}: Department '{1}' does not exist or is inactive. Please ensure the department exists and is active.</value>
+  </data>
+  <data name="csvSync.basicUserRoleMissing" xml:space="preserve">
+    <value>User {0}: The BasicUser role is not configured. Cannot create the account without it.</value>
+  </data>
+  <data name="csvSync.departmentInactiveUpdateField" xml:space="preserve">
+    <value>User {0}: Cannot update department to '{1}' - department does not exist or is inactive.</value>
+  </data>
+  <data name="csvSync.departmentInactiveUpdate" xml:space="preserve">
+    <value>User {0}: Department '{1}' does not exist or is inactive. Cannot update user.</value>
+  </data>
+  <data name="dashboard.analysisCompleted" xml:space="preserve">
+    <value>Analysis completed in {0}</value>
+  </data>
+  <data name="dashboard.analysisCompletedDetailed" xml:space="preserve">
+    <value>Analysis completed in {0} (Server: {1}, Network: {2})</value>
+  </data>
+  <data name="dashboard.syncCompleted" xml:space="preserve">
+    <value>Sync completed in {0}</value>
+  </data>
+  <data name="dashboard.syncCompletedDetailed" xml:space="preserve">
+    <value>Sync completed in {0} (Server: {1}, Network: {2})</value>
+  </data>
+  <data name="dashboard.invalidRowsSkipped" xml:space="preserve">
+    <value> ({0} invalid rows skipped)</value>
+  </data>
+  <data name="dashboard.validationWarningsTitle" xml:space="preserve">
+    <value>CSV Validation Warnings</value>
+  </data>
+  <data name="dashboard.hasInvalidRowsProceedTitle" xml:space="preserve">
+    <value>CSV Has Invalid Rows - Proceed with Valid Rows?</value>
+  </data>
+  <data name="dashboard.validationFailedTitle" xml:space="preserve">
+    <value>CSV Validation Failed</value>
+  </data>
+  <data name="dashboard.uploadErrorTitle" xml:space="preserve">
+    <value>Upload Error</value>
+  </data>
+  <data name="dashboard.uploadFailedTitle" xml:space="preserve">
+    <value>Upload Failed</value>
+  </data>
+  <data name="dashboard.unknownError" xml:space="preserve">
+    <value>Unknown error occurred</value>
+  </data>
+  <data name="dashboard.rowFieldMessage" xml:space="preserve">
+    <value>Row {0}: {1} - {2}</value>
+  </data>
+  <data name="dashboard.moreErrors" xml:space="preserve">
+    <value>...and {0} more errors</value>
+  </data>
+  <data name="dashboard.csvComparison" xml:space="preserve">
+    <value>CSV Comparison</value>
+  </data>
+  <data name="dashboard.synchronizing" xml:space="preserve">
+    <value>Synchronizing...</value>
+  </data>
+  <data name="dashboard.synchronizeSelectedUsers" xml:space="preserve">
+    <value>Synchronize {0} selected users</value>
+  </data>
+  <data name="dashboard.synchronizeSelectedDepartments" xml:space="preserve">
+    <value>Synchronize {0} selected departments</value>
+  </data>
+  <data name="dashboard.noNewDepartments" xml:space="preserve">
+    <value>No new departments to import</value>
+  </data>
+  <data name="dashboard.totalChanges" xml:space="preserve">
+    <value>Total Changes</value>
+  </data>
+  <data name="dashboard.selected" xml:space="preserve">
+    <value>Selected</value>
+  </data>
+  <data name="dashboard.departmentCsvComparison" xml:space="preserve">
+    <value>Department CSV Comparison</value>
+  </data>
+  <data name="dashboard.searchDepartments" xml:space="preserve">
+    <value>Search departments...</value>
+  </data>
+  <data name="dashboard.unknownDepartment" xml:space="preserve">
+    <value>Unknown Department</value>
+  </data>
+  <data name="dashboard.departmentDatabase" xml:space="preserve">
+    <value>Department (Database)</value>
+  </data>
+  <data name="dashboard.departmentCsv" xml:space="preserve">
+    <value>Department (CSV)</value>
+  </data>
+  <data name="dashboard.added" xml:space="preserve">
+    <value>+ added</value>
+  </data>
+  <data name="dashboard.totalUsers" xml:space="preserve">
+    <value>Total Users</value>
+  </data>
+  <data name="dashboard.lineManagers" xml:space="preserve">
+    <value>Line Managers</value>
+  </data>
+  <data name="dashboard.employees" xml:space="preserve">
+    <value>Employees</value>
+  </data>
+  <data name="dashboard.departments" xml:space="preserve">
+    <value>Departments</value>
+  </data>
+  <data name="dashboard.searchUsers" xml:space="preserve">
+    <value>Search users...</value>
+  </data>
+  <data name="dashboard.allDepartments" xml:space="preserve">
+    <value>All Departments</value>
+  </data>
+  <data name="dashboard.selectFunction" xml:space="preserve">
+    <value>Select Function</value>
+  </data>
+  <data name="dashboard.allRoles" xml:space="preserve">
+    <value>All Roles</value>
+  </data>
+  <data name="dashboard.importCsv" xml:space="preserve">
+    <value>Import CSV</value>
+  </data>
+  <data name="dashboard.importDepartments" xml:space="preserve">
+    <value>Import Departments</value>
+  </data>
+  <data name="dashboard.user" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="dashboard.role" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="dashboard.function" xml:space="preserve">
+    <value>Function</value>
+  </data>
+  <data name="dashboard.lineManager" xml:space="preserve">
+    <value>Line Manager</value>
+  </data>
+  <data name="dashboard.employee" xml:space="preserve">
+    <value>Employee</value>
+  </data>
+  <data name="dashboard.hasSigned" xml:space="preserve">
+    <value>Has Signed</value>
+  </data>
+  <data name="dashboard.sortByCreated" xml:space="preserve">
+    <value>Sort by created date</value>
+  </data>
+  <data name="dashboard.created" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="dashboard.sortByUpdated" xml:space="preserve">
+    <value>Sort by updated date</value>
+  </data>
+  <data name="dashboard.updated" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="dashboard.unknown" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="dashboard.createdTitle" xml:space="preserve">
+    <value>Created: {0}</value>
+  </data>
+  <data name="dashboard.updatedTitle" xml:space="preserve">
+    <value>Updated: {0}</value>
+  </data>
+  <data name="dashboard.notYetUpdated" xml:space="preserve">
+    <value>Not yet updated</value>
+  </data>
+  <data name="dashboard.usersNotFound" xml:space="preserve">
+    <value>Users not found.</value>
+  </data>
+  <data name="dashboard.tryAdjustingFilters" xml:space="preserve">
+    <value>Try adjusting the filters or search query.</value>
+  </data>
+  <data name="dashboard.errorsLabel" xml:space="preserve">
+    <value>Errors:</value>
+  </data>
+  <data name="dashboard.warningsLabel" xml:space="preserve">
+    <value>Warnings:</value>
+  </data>
+  <data name="dashboard.statisticsLabel" xml:space="preserve">
+    <value>Statistics:</value>
+  </data>
+  <data name="dashboard.totalRows" xml:space="preserve">
+    <value>Total Rows</value>
+  </data>
+  <data name="dashboard.validRows" xml:space="preserve">
+    <value>Valid Rows</value>
+  </data>
+  <data name="dashboard.invalidRows" xml:space="preserve">
+    <value>Invalid Rows</value>
+  </data>
+  <data name="dashboard.proceedWithValidRows" xml:space="preserve">
+    <value>Proceed with {0} Valid Rows</value>
+  </data>
+  <data name="dashboard.validationTime" xml:space="preserve">
+    <value>Validation: {0}</value>
+  </data>
+  <data name="dashboard.comparisonTime" xml:space="preserve">
+    <value>Comparison: {0}</value>
+  </data>
+  <data name="dashboard.totalServerTime" xml:space="preserve">
+    <value>Total Server: {0}</value>
+  </data>
+  <data name="dashboard.status.new" xml:space="preserve">
+    <value>new</value>
+  </data>
+  <data name="dashboard.status.unchanged" xml:space="preserve">
+    <value>unchanged</value>
+  </data>
+  <data name="comparison.conflicts" xml:space="preserve">
+    <value>Conflicts</value>
+  </data>
+  <data name="comparison.selectAllUsersTitle" xml:space="preserve">
+    <value>Selects all new and modified changes. Deletions are never bulk-selected - check each one individually.</value>
+  </data>
+  <data name="comparison.allUsersSelected" xml:space="preserve">
+    <value>&#x2713; All Users Selected</value>
+  </data>
+  <data name="comparison.selectAllUsers" xml:space="preserve">
+    <value>Select All Users</value>
+  </data>
+  <data name="comparison.toggleAllConflictsTitle" xml:space="preserve">
+    <value>Toggle all conflict field checkboxes</value>
+  </data>
+  <data name="comparison.allConflictsAccepted" xml:space="preserve">
+    <value>&#x2713; All Conflicts Accepted</value>
+  </data>
+  <data name="comparison.acceptAllConflicts" xml:space="preserve">
+    <value>Accept All Conflicts</value>
+  </data>
+  <data name="comparison.filterNew" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="comparison.filterModified" xml:space="preserve">
+    <value>Modified</value>
+  </data>
+  <data name="comparison.filterDeleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="comparison.searchPlaceholder" xml:space="preserve">
+    <value>Search by name, email, department...</value>
+  </data>
+  <data name="comparison.unknownUser" xml:space="preserve">
+    <value>Unknown User</value>
+  </data>
+  <data name="comparison.idLabel" xml:space="preserve">
+    <value>ID: {0}</value>
+  </data>
+  <data name="comparison.lastUpdated" xml:space="preserve">
+    <value>Last updated</value>
+  </data>
+  <data name="comparison.fieldsSelected" xml:space="preserve">
+    <value>{0} / {1} fields selected</value>
+  </data>
+  <data name="comparison.removed" xml:space="preserve">
+    <value>- removed</value>
+  </data>
+  <data name="comparison.pendingRequestPrefix" xml:space="preserve">
+    <value>&#x26A0; pending request: </value>
+  </data>
+  <data name="comparison.pendingRequestTitle" xml:space="preserve">
+    <value>A pending data change request wants this field to become a different value</value>
+  </data>
+  <data name="comparison.keepRequestPrefix" xml:space="preserve">
+    <value>Keep request: </value>
+  </data>
+  <data name="comparison.useCsvValuePrefix" xml:space="preserve">
+    <value>Use CSV value: </value>
+  </data>
+  <data name="comparison.selectToSync" xml:space="preserve">
+    <value>Select to sync this field</value>
+  </data>
+  <data name="comparison.none" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="comparison.checkBoxesHint" xml:space="preserve">
+    <value>Check the boxes in the middle column to select which fields you want to update. Only selected fields will be synced.</value>
+  </data>
+  <data name="comparison.noComparisons" xml:space="preserve">
+    <value>No comparisons available</value>
+  </data>
+  <data name="comparison.uploadToCompare" xml:space="preserve">
+    <value>Upload a CSV file to compare with database</value>
+  </data>
+  <data name="comparison.status.new" xml:space="preserve">
+    <value>new</value>
+  </data>
+  <data name="comparison.status.modified" xml:space="preserve">
+    <value>modified</value>
+  </data>
+  <data name="comparison.status.unchanged" xml:space="preserve">
+    <value>unchanged</value>
+  </data>
+  <data name="comparison.status.deleted" xml:space="preserve">
+    <value>deleted</value>
+  </data>
+  <data name="comparison.field.firstNameDb" xml:space="preserve">
+    <value>First Name (Database)</value>
+  </data>
+  <data name="comparison.field.firstNameCsv" xml:space="preserve">
+    <value>First Name (CSV)</value>
+  </data>
+  <data name="comparison.field.lastNameDb" xml:space="preserve">
+    <value>Last Name (Database)</value>
+  </data>
+  <data name="comparison.field.lastNameCsv" xml:space="preserve">
+    <value>Last Name (CSV)</value>
+  </data>
+  <data name="comparison.field.emailDb" xml:space="preserve">
+    <value>Email (Database)</value>
+  </data>
+  <data name="comparison.field.emailCsv" xml:space="preserve">
+    <value>Email (CSV)</value>
+  </data>
+  <data name="comparison.field.departmentDb" xml:space="preserve">
+    <value>Department (Database)</value>
+  </data>
+  <data name="comparison.field.departmentCsv" xml:space="preserve">
+    <value>Department (CSV)</value>
+  </data>
+  <data name="comparison.field.lineManagerDb" xml:space="preserve">
+    <value>Line Manager (Database)</value>
+  </data>
+  <data name="comparison.field.lineManagerCsv" xml:space="preserve">
+    <value>Line Manager (CSV)</value>
+  </data>
+  <data name="comparison.field.functionDb" xml:space="preserve">
+    <value>Function (Database)</value>
+  </data>
+  <data name="comparison.field.functionCsv" xml:space="preserve">
+    <value>Function (CSV)</value>
+  </data>
+  <data name="comparison.field.workSiteDb" xml:space="preserve">
+    <value>Work Site (Database)</value>
+  </data>
+  <data name="comparison.field.workSiteCsv" xml:space="preserve">
+    <value>Work Site (CSV)</value>
+  </data>
+  <data name="importHistory.searchPlaceholder" xml:space="preserve">
+    <value>Search by file name, user or day...</value>
+  </data>
+  <data name="importHistory.sortPrefix" xml:space="preserve">
+    <value>Sort: </value>
+  </data>
+  <data name="importHistory.oldest" xml:space="preserve">
+    <value>Oldest</value>
+  </data>
+  <data name="importHistory.newest" xml:space="preserve">
+    <value>Newest</value>
+  </data>
+  <data name="importHistory.loading" xml:space="preserve">
+    <value>Loading change history...</value>
+  </data>
+  <data name="importHistory.loadError" xml:space="preserve">
+    <value>Failed to load user change history.</value>
+  </data>
+  <data name="importHistory.noneAvailable" xml:space="preserve">
+    <value>No change history available.</value>
+  </data>
+  <data name="importHistory.sectionImportConflicts" xml:space="preserve">
+    <value>Import Conflicts</value>
+  </data>
+  <data name="importHistory.sectionManualChanges" xml:space="preserve">
+    <value>Manual Changes</value>
+  </data>
+  <data name="importHistory.sectionDataChangeRequests" xml:space="preserve">
+    <value>Data Change Requests</value>
+  </data>
+  <data name="importHistory.conflictsCount" xml:space="preserve">
+    <value>{0} conflicts</value>
+  </data>
+  <data name="importHistory.changesCount" xml:space="preserve">
+    <value>{0} changes</value>
+  </data>
+  <data name="importHistory.noConflictsForImport" xml:space="preserve">
+    <value>No conflicts for this import.</value>
+  </data>
+  <data name="importHistory.requested" xml:space="preserve">
+    <value>Requested</value>
+  </data>
+  <data name="importHistory.field.firstName" xml:space="preserve">
+    <value>First Name</value>
+  </data>
+  <data name="importHistory.field.lastName" xml:space="preserve">
+    <value>Last Name</value>
+  </data>
+  <data name="importHistory.field.department" xml:space="preserve">
+    <value>Department</value>
+  </data>
+  <data name="importHistory.field.lineManager" xml:space="preserve">
+    <value>Line Manager</value>
+  </data>
 </root>
