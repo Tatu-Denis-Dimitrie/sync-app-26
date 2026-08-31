@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.API.Services;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.Request.Notification;
@@ -20,6 +21,7 @@ namespace SyncApp26.API.Controllers
         private readonly IDocumentSignatureService _documentSignatureService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<NotificationController> _logger;
+        private readonly IStringLocalizer _localizer;
 
         public NotificationController(
             IUserService userService,
@@ -28,7 +30,8 @@ namespace SyncApp26.API.Controllers
             IPeriodicTrainingService periodicTrainingService,
             IDocumentSignatureService documentSignatureService,
             IConfiguration configuration,
-            ILogger<NotificationController> logger)
+            ILogger<NotificationController> logger,
+            ILocalizationService localizationService)
         {
             _userService = userService;
             _emailService = emailService;
@@ -37,6 +40,7 @@ namespace SyncApp26.API.Controllers
             _documentSignatureService = documentSignatureService;
             _configuration = configuration;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         [HttpPost("notify-user/{userId}")]
@@ -45,7 +49,7 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrWhiteSpace(request.DocumentType) ||
                 (request.DocumentType != "SSM" && request.DocumentType != "SU"))
             {
-                return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
+                return BadRequest(new { Message = _localizer["api.documentTypeMustBeSsmOrSu"].Value });
             }
 
             // Check permissions: Only Admin or the user's AssingedTo (Line Manager) can notify
@@ -57,12 +61,12 @@ namespace SyncApp26.API.Controllers
             var targetUser = await _userService.GetUserByIdAsync(userId);
             if (targetUser == null)
             {
-                return NotFound(new { Message = "User not found." });
+                return NotFound(new { Message = _localizer["api.userNotFound"].Value });
             }
 
             if (!User.IsInRole(Roles.Admin) && targetUser.AssignedToId != currentUserId)
             {
-                return Forbid("You do not have permission to notify this user.");
+                return Forbid(_localizer["notification.noPermission"].Value);
             }
 
             // Verify they actually need to sign it
@@ -72,9 +76,9 @@ namespace SyncApp26.API.Controllers
                 var signedIds = await _documentService.GetUserIdsWithDocumentTypeAsync(request.DocumentType);
                 if (signedIds.Contains(userId))
                 {
-                    return BadRequest(new { Message = $"User has already signed the {request.DocumentType} document." });
+                    return BadRequest(new { Message = _localizer["notification.alreadySignedDoc", request.DocumentType].Value });
                 }
-                return BadRequest(new { Message = $"User does not have an unsigned {request.DocumentType} document to sign." });
+                return BadRequest(new { Message = _localizer["notification.noUnsignedDoc", request.DocumentType].Value });
             }
 
             // Find training date from InitialTrainings (matching document type) or PeriodicTraining
@@ -124,7 +128,7 @@ namespace SyncApp26.API.Controllers
                 signLink
             );
 
-            return Ok(new { Message = "Notification sent successfully." });
+            return Ok(new { Message = _localizer["notification.sent"].Value });
         }
 
         [HttpPost("notify-manager/{managerId}")]
@@ -134,19 +138,19 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrWhiteSpace(request.DocumentType) ||
                 (request.DocumentType != "SSM" && request.DocumentType != "SU"))
             {
-                return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
+                return BadRequest(new { Message = _localizer["api.documentTypeMustBeSsmOrSu"].Value });
             }
 
             var manager = await _userService.GetUserByIdAsync(managerId);
             if (manager == null)
             {
-                return NotFound(new { Message = "Line Manager not found." });
+                return NotFound(new { Message = _localizer["notification.lineManagerNotFound"].Value });
             }
 
             var assignedUsers = await _userService.GetUsersAssignedToAsync(managerId);
             if (!assignedUsers.Any())
             {
-                return BadRequest(new { Message = "This line manager has no assigned users." });
+                return BadRequest(new { Message = _localizer["notification.noAssignedUsers"].Value });
             }
 
             var signedIds = await _documentService.GetUserIdsWithDocumentTypeAsync(request.DocumentType);
@@ -156,7 +160,7 @@ namespace SyncApp26.API.Controllers
 
             if (unsignedCount == 0)
             {
-                return BadRequest(new { Message = $"All users under this line manager have already signed the {request.DocumentType} document." });
+                return BadRequest(new { Message = _localizer["notification.allTeamSigned", request.DocumentType].Value });
             }
 
             await _emailService.SendMissingSignatureToManagerEmailAsync(
@@ -166,7 +170,7 @@ namespace SyncApp26.API.Controllers
                 unsignedCount
             );
 
-            return Ok(new { Message = $"Notification sent successfully for {unsignedCount} missing signatures." });
+            return Ok(new { Message = _localizer["notification.sentForMissing", unsignedCount].Value });
         }
 
         [HttpPost("notify-all-managers")]
@@ -176,13 +180,13 @@ namespace SyncApp26.API.Controllers
             if (string.IsNullOrWhiteSpace(request.DocumentType) ||
                 (request.DocumentType != "SSM" && request.DocumentType != "SU"))
             {
-                return BadRequest(new { Message = "DocumentType must be 'SSM' or 'SU'." });
+                return BadRequest(new { Message = _localizer["api.documentTypeMustBeSsmOrSu"].Value });
             }
 
             var managers = (await _userService.GetUsersInRoleAsync(Roles.LineManager)).ToList();
 
             if (!managers.Any())
-                return BadRequest(new { Message = "No active line managers found." });
+                return BadRequest(new { Message = _localizer["notification.noActiveLineManagers"].Value });
 
             var signedIds = await _documentService.GetUserIdsWithDocumentTypeAsync(request.DocumentType);
             int notifiedCount = 0;
@@ -212,9 +216,9 @@ namespace SyncApp26.API.Controllers
             }
 
             if (notifiedCount == 0)
-                return Ok(new { Message = $"All managers' teams have already signed the {request.DocumentType} document. No emails sent." });
+                return Ok(new { Message = _localizer["notification.allManagersTeamsSigned", request.DocumentType].Value });
 
-            return Ok(new { Message = $"Notifications sent to {notifiedCount} line manager(s) with unsigned {request.DocumentType} documents." });
+            return Ok(new { Message = _localizer["notification.sentToManagers", notifiedCount, request.DocumentType].Value });
         }
     }
 }

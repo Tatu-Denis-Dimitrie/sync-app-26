@@ -113,4 +113,133 @@
   <data name="messages.pleaseProvideReason" xml:space="preserve">
     <value>Please provide a reason for the change.</value>
   </data>
+  <data name="messages.requestNotFound" xml:space="preserve">
+    <value>Request not found</value>
+  </data>
+  <data name="emailChange.invalidFormat" xml:space="preserve">
+    <value>Invalid email format.</value>
+  </data>
+  <data name="emailChange.userNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+  <data name="emailChange.sameDomainRequired" xml:space="preserve">
+    <value>The new email must use the same domain as your current address (@{0}).</value>
+  </data>
+  <data name="emailChange.alreadyCurrent" xml:space="preserve">
+    <value>This is already your current email address.</value>
+  </data>
+  <data name="emailChange.alreadyInUse" xml:space="preserve">
+    <value>This email address is already in use.</value>
+  </data>
+  <data name="emailChange.alreadyPending" xml:space="preserve">
+    <value>You already have a pending email change request awaiting admin review.</value>
+  </data>
+  <data name="emailChange.defaultReason" xml:space="preserve">
+    <value>Email address change (self-service)</value>
+  </data>
+  <data name="resolve.departmentNoLongerExists" xml:space="preserve">
+    <value>Cannot approve: department '{0}' no longer exists.</value>
+  </data>
+  <data name="resolve.departmentNotActive" xml:space="preserve">
+    <value>Cannot approve: department '{0}' is no longer active.</value>
+  </data>
+  <data name="resolve.functionNoLongerExists" xml:space="preserve">
+    <value>Cannot approve: function '{0}' no longer exists.</value>
+  </data>
+  <data name="resolve.workSiteNoLongerExists" xml:space="preserve">
+    <value>Cannot approve: work site '{0}' no longer exists.</value>
+  </data>
+  <data name="resolve.workSiteNotActive" xml:space="preserve">
+    <value>Cannot approve: work site '{0}' is no longer active.</value>
+  </data>
+  <data name="resolve.emailTakenSince" xml:space="preserve">
+    <value>Cannot approve: {0} has since been taken by another account.</value>
+  </data>
+  <data name="resolve.errorProcessing" xml:space="preserve">
+    <value>Error processing data change request.</value>
+  </data>
+  <data name="api.requestedChangesJsonInvalid" xml:space="preserve">
+    <value>RequestedChangesJson must be a flat object of string values.</value>
+  </data>
+  <data name="api.fieldsCannotBeRequested" xml:space="preserve">
+    <value>These fields cannot be requested via this flow: {0}.</value>
+  </data>
+  <data name="api.emailConfirmed" xml:space="preserve">
+    <value>Email confirmed successfully. Your request is now pending admin approval.</value>
+  </data>
+  <data name="api.requestAlreadyVerified" xml:space="preserve">
+    <value>Request is already verified or processed.</value>
+  </data>
+  <data name="api.invalidOrExpiredToken" xml:space="preserve">
+    <value>Invalid or expired token.</value>
+  </data>
+  <data name="dataChangeRequests.subtitle" xml:space="preserve">
+    <value>Review and approve changes to employee profiles.</value>
+  </data>
+  <data name="dataChangeRequests.noneFound" xml:space="preserve">
+    <value>No data change requests found.</value>
+  </data>
+  <data name="dataChangeRequests.requestedOn" xml:space="preserve">
+    <value>Requested on</value>
+  </data>
+  <data name="dataChangeRequests.reject" xml:space="preserve">
+    <value>Reject</value>
+  </data>
+  <data name="dataChangeRequests.approveApply" xml:space="preserve">
+    <value>Approve &amp; Apply</value>
+  </data>
+  <data name="dataChangeRequests.resolvedViaCsvImport" xml:space="preserve">
+    <value>Resolved automatically via CSV import</value>
+  </data>
+  <data name="dataChangeRequests.resolvedOn" xml:space="preserve">
+    <value>Resolved on</value>
+  </data>
+  <data name="dataChangeRequests.failedToLoad" xml:space="preserve">
+    <value>Failed to load requests.</value>
+  </data>
+  <data name="dataChangeRequests.confirmReject" xml:space="preserve">
+    <value>Are you sure you want to reject this request?</value>
+  </data>
+  <data name="dataChangeRequests.requestApproved" xml:space="preserve">
+    <value>Request has been approved.</value>
+  </data>
+  <data name="dataChangeRequests.requestRejected" xml:space="preserve">
+    <value>Request has been rejected.</value>
+  </data>
+  <data name="dataChangeRequests.requestApprovedEmailFailed" xml:space="preserve">
+    <value>The request was approved, but the confirmation email could not be sent to the employee.</value>
+  </data>
+  <data name="dataChangeRequests.requestRejectedEmailFailed" xml:space="preserve">
+    <value>The request was rejected, but the confirmation email could not be sent to the employee.</value>
+  </data>
+  <data name="dataChangeRequests.failedToApprove" xml:space="preserve">
+    <value>Failed to approve request.</value>
+  </data>
+  <data name="dataChangeRequests.failedToReject" xml:space="preserve">
+    <value>Failed to reject request.</value>
+  </data>
+  <data name="confirmEmailChange.verifyingEmail" xml:space="preserve">
+    <value>Verifying Email...</value>
+  </data>
+  <data name="confirmEmailChange.verifyingHint" xml:space="preserve">
+    <value>Please wait while we confirm your email address.</value>
+  </data>
+  <data name="confirmEmailChange.emailVerified" xml:space="preserve">
+    <value>Email Verified!</value>
+  </data>
+  <data name="confirmEmailChange.verificationFailed" xml:space="preserve">
+    <value>Verification Failed</value>
+  </data>
+  <data name="confirmEmailChange.returnToDashboard" xml:space="preserve">
+    <value>Return to Dashboard</value>
+  </data>
+  <data name="confirmEmailChange.invalidLinkMissingParams" xml:space="preserve">
+    <value>Invalid verification link. Missing parameters.</value>
+  </data>
+  <data name="confirmEmailChange.emailSuccessfullyVerified" xml:space="preserve">
+    <value>Email successfully verified!</value>
+  </data>
+  <data name="confirmEmailChange.verificationFailedHint" xml:space="preserve">
+    <value>Verification failed. The link may have expired or is invalid.</value>
+  </data>
 </root>

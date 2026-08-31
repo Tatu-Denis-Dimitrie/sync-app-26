@@ -1,10 +1,10 @@
 <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
   <div class="sm:mx-auto sm:w-full sm:max-w-md">
     <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-      Test Signature Link
+      {{ 'testSignature.title' | translate:'Documents' }}
     </h2>
     <p class="mt-2 text-center text-sm text-gray-600">
-      Use this tool to manually trigger the signature email flow.
+      {{ 'testSignature.subtitle' | translate:'Documents' }}
     </p>
   </div>
 
@@ -50,19 +50,18 @@
           <form class="space-y-6" (ngSubmit)="generateLink()">
             <div>
               <label for="email" class="block text-sm font-medium text-gray-700">
-                Recipient Email Address
+                {{ 'testSignature.recipientEmail' | translate:'Documents' }}
               </label>
               <div class="mt-1">
                 <input id="email" name="email" type="email" autocomplete="email" required [(ngModel)]="email"
                   class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm">
                 </div>
-                <p class="mt-1 text-xs text-gray-500">Provide an email that does NOT have an account to test the
-                secure link flow. Or provide an existing email to test the login flow.</p>
+                <p class="mt-1 text-xs text-gray-500">{{ 'testSignature.emailHint' | translate:'Documents' }}</p>
               </div>
 
               <div>
                 <label for="documentName" class="block text-sm font-medium text-gray-700">
-                  Document Name (Mock)
+                  {{ 'testSignature.documentNameMock' | translate:'Documents' }}
                 </label>
                 <div class="mt-1">
                   <input id="documentName" name="documentName" type="text" required [(ngModel)]="documentName"
@@ -83,14 +82,14 @@
                         </path>
                       </svg>
                     }
-                    {{ isLoading ? 'Sending...' : 'Send Test Request' }}
+                    {{ isLoading ? ('testSignature.sendingEllipsis' | translate:'Documents') : ('testSignature.sendTestRequest' | translate:'Documents') }}
                   </button>
                 </div>
               </form>
 
               <div class="mt-6 border-t border-gray-200 pt-5 text-center">
                 <a routerLink="/dashboard" class="font-medium text-teal-600 hover:text-teal-500 text-sm">
-                  &larr; Back to Dashboard
+                  {{ 'documentSignature.backToDashboard' | translate:'Documents' }}
                 </a>
               </div>
             </div>

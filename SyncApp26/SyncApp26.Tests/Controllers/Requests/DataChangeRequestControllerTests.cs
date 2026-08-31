@@ -24,7 +24,8 @@ namespace SyncApp26.Tests.Controllers.Requests
                 _serviceMock.Object,
                 _emailServiceMock.Object,
                 _repositoryMock.Object,
-                NullLogger<DataChangeRequestController>.Instance);
+                NullLogger<DataChangeRequestController>.Instance,
+                RealLocalizerFactory.LocalizationService());
 
             controller.SetUser(callerId ?? Guid.NewGuid(), role: Roles.Admin);
             return controller;

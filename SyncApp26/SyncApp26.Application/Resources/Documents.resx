@@ -1139,4 +1139,67 @@
   <data name="documentsView.regenerationFailed" xml:space="preserve">
     <value>Regeneration failed.</value>
   </data>
+  <data name="testSignature.title" xml:space="preserve">
+    <value>Test Signature Link</value>
+  </data>
+  <data name="testSignature.subtitle" xml:space="preserve">
+    <value>Use this tool to manually trigger the signature email flow.</value>
+  </data>
+  <data name="testSignature.recipientEmail" xml:space="preserve">
+    <value>Recipient Email Address</value>
+  </data>
+  <data name="testSignature.emailHint" xml:space="preserve">
+    <value>Provide an email that does NOT have an account to test the secure link flow. Or provide an existing email to test the login flow.</value>
+  </data>
+  <data name="testSignature.documentNameMock" xml:space="preserve">
+    <value>Document Name (Mock)</value>
+  </data>
+  <data name="testSignature.sendingEllipsis" xml:space="preserve">
+    <value>Sending...</value>
+  </data>
+  <data name="testSignature.sendTestRequest" xml:space="preserve">
+    <value>Send Test Request</value>
+  </data>
+  <data name="testSignature.emailRequired" xml:space="preserve">
+    <value>Please enter an email address.</value>
+  </data>
+  <data name="testSignature.requestSent" xml:space="preserve">
+    <value>Signature request sent successfully! Check your email inbox or backend logs.</value>
+  </data>
+  <data name="testSignature.errorGenerating" xml:space="preserve">
+    <value>An error occurred while generating the link.</value>
+  </data>
+  <data name="notification.noPermission" xml:space="preserve">
+    <value>You do not have permission to notify this user.</value>
+  </data>
+  <data name="notification.alreadySignedDoc" xml:space="preserve">
+    <value>User has already signed the {0} document.</value>
+  </data>
+  <data name="notification.noUnsignedDoc" xml:space="preserve">
+    <value>User does not have an unsigned {0} document to sign.</value>
+  </data>
+  <data name="notification.sent" xml:space="preserve">
+    <value>Notification sent successfully.</value>
+  </data>
+  <data name="notification.lineManagerNotFound" xml:space="preserve">
+    <value>Line Manager not found.</value>
+  </data>
+  <data name="notification.noAssignedUsers" xml:space="preserve">
+    <value>This line manager has no assigned users.</value>
+  </data>
+  <data name="notification.allTeamSigned" xml:space="preserve">
+    <value>All users under this line manager have already signed the {0} document.</value>
+  </data>
+  <data name="notification.sentForMissing" xml:space="preserve">
+    <value>Notification sent successfully for {0} missing signatures.</value>
+  </data>
+  <data name="notification.noActiveLineManagers" xml:space="preserve">
+    <value>No active line managers found.</value>
+  </data>
+  <data name="notification.allManagersTeamsSigned" xml:space="preserve">
+    <value>All managers' teams have already signed the {0} document. No emails sent.</value>
+  </data>
+  <data name="notification.sentToManagers" xml:space="preserve">
+    <value>Notifications sent to {0} line manager(s) with unsigned {1} documents.</value>
+  </data>
 </root>
