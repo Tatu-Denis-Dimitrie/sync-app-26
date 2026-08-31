@@ -71,4 +71,25 @@
   <data name="lastName.pattern" xml:space="preserve">
     <value>Last name must contain letters only (spaces, hyphens and apostrophes allowed).</value>
   </data>
+  <data name="name.pattern" xml:space="preserve">
+    <value>Only letters, spaces, hyphens and apostrophes are allowed (max 100 characters).</value>
+  </data>
+  <data name="function.maxLength" xml:space="preserve">
+    <value>Max 100 characters.</value>
+  </data>
+  <data name="field.firstLastName" xml:space="preserve">
+    <value>First/last name</value>
+  </data>
+  <data name="field.function" xml:space="preserve">
+    <value>Function</value>
+  </data>
+  <data name="field.verifierName" xml:space="preserve">
+    <value>Verifier name</value>
+  </data>
+  <data name="field.instructorName" xml:space="preserve">
+    <value>Instructor/admitted-by name</value>
+  </data>
+  <data name="field.instructorFunction" xml:space="preserve">
+    <value>Instructor/admitted-by function</value>
+  </data>
 </root>

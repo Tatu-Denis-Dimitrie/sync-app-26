@@ -19,6 +19,3 @@ export function isValidFunction(value: string | null | undefined): boolean {
   return value.length <= FUNCTION_MAX_LENGTH;
 }
 
-export const NAME_ERROR_MESSAGE =
-  'Only letters, spaces, hyphens and apostrophes are allowed (max 100 characters).';
-export const FUNCTION_ERROR_MESSAGE = 'Max 100 characters.';

@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthenticationService, RegisterRequest } from '../../services/authentication.service';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
-import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { isValidName } from '../../shared/utils/name-validation.util';
 
 @Component({
   selector: 'app-register',
@@ -35,6 +35,10 @@ export class RegisterComponent {
     return this.translationService.translate('Auth', key);
   }
 
+  private tValidation(key: string): string {
+    return this.translationService.translate('Validation', key);
+  }
+
   onRegister(): void {
     if (this.isLoading) {
       return;
@@ -49,9 +53,7 @@ export class RegisterComponent {
     }
 
     if (!isValidName(this.firstName) || !isValidName(this.lastName)) {
-      // NAME_ERROR_MESSAGE stays untranslated for now - it's shared across several forms outside
-      // the Auth scope (see shared/utils/name-validation.util.ts), not something this page owns.
-      this.errorMessage = `First/last name: ${NAME_ERROR_MESSAGE}`;
+      this.errorMessage = `${this.tValidation('field.firstLastName')}: ${this.tValidation('name.pattern')}`;
       return;
     }
 

@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { SignatureVerificationService } from '../../services/signature-verification.service';
 import { AuthenticationService } from '../../services/authentication.service';
-import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { isValidName } from '../../shared/utils/name-validation.util';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
@@ -134,6 +134,10 @@ export class BulkTrainingModalComponent {
 
   tDocuments(key: string): string {
     return this.translationService.translate('Documents', key);
+  }
+
+  tValidation(key: string): string {
+    return this.translationService.translate('Validation', key);
   }
 
   private currentUserFullName(): string {
@@ -340,7 +344,7 @@ export class BulkTrainingModalComponent {
       return;
     }
     if (this.formData.verifierName?.trim() && !isValidName(this.formData.verifierName.trim())) {
-      this.validationMessage = `Verifier name: ${NAME_ERROR_MESSAGE}`;
+      this.validationMessage = `${this.tValidation('field.verifierName')}: ${this.tValidation('name.pattern')}`;
       return;
     }
     if (!this.formData.applyToAllUsers && this.formData.selectedUserIds.length === 0) {

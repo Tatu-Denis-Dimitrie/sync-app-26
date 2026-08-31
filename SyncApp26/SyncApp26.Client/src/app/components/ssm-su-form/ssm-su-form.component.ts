@@ -8,7 +8,7 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { AuthenticationService } from '../../services/authentication.service';
 import { SignatureVerificationService, SignatureVersionSummary, PeriodicTrainingSignatureHistory } from '../../services/signature-verification.service';
 import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
-import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { isValidName, isValidFunction } from '../../shared/utils/name-validation.util';
 import { BloodType, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
@@ -146,6 +146,10 @@ export class SsmSuFormComponent implements OnInit {
 
   tTemplate(key: string): string {
     return this.translationService.translate('DocumentTemplate', key);
+  }
+
+  tValidation(key: string): string {
+    return this.translationService.translate('Validation', key);
   }
 
   documentTypeFileLabel(type: string): string {
@@ -366,7 +370,7 @@ export class SsmSuFormComponent implements OnInit {
       this.formData.suTraining.workplaceTrainingInstructor
     ];
     if (nameFields.some(v => !this.optionalNameValid(v))) {
-      alert(`Instructor/admitted-by name: ${NAME_ERROR_MESSAGE}`);
+      alert(`${this.tValidation('field.instructorName')}: ${this.tValidation('name.pattern')}`);
       return;
     }
 
@@ -378,7 +382,7 @@ export class SsmSuFormComponent implements OnInit {
       this.formData.suTraining.workplaceTrainingInstructorFunction
     ];
     if (functionFields.some(v => !this.optionalFunctionValid(v))) {
-      alert(`Instructor/admitted-by function: ${FUNCTION_ERROR_MESSAGE}`);
+      alert(`${this.tValidation('field.instructorFunction')}: ${this.tValidation('function.maxLength')}`);
       return;
     }
 

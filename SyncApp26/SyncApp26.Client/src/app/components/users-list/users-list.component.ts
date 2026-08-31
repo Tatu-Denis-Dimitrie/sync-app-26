@@ -13,7 +13,7 @@ import { ImpersonationService } from '../../services/impersonation.service';
 import { User, UserRole, Department, WorkSite } from '../../models/csv-sync.model';
 import { WorkSiteService } from '../../services/work-site.service';
 import { PaginationComponent } from '../pagination/pagination.component';
-import { isValidName, NAME_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { isValidName } from '../../shared/utils/name-validation.util';
 import { roleNameBadgeColor } from '../../shared/utils/role.util';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
@@ -141,6 +141,10 @@ export class UsersListComponent implements OnInit {
 
   tDocuments(key: string): string {
     return this.translationService.translate('Documents', key);
+  }
+
+  tValidation(key: string): string {
+    return this.translationService.translate('Validation', key);
   }
 
   signedLabel(signed: boolean | undefined): string {
@@ -573,7 +577,7 @@ export class UsersListComponent implements OnInit {
     if (!this.selectedUser) return;
 
     if (!isValidName(this.editForm.firstName) || !isValidName(this.editForm.lastName)) {
-      this.showToast(`First/last name: ${NAME_ERROR_MESSAGE}`, 'error');
+      this.showToast(`${this.tValidation('field.firstLastName')}: ${this.tValidation('name.pattern')}`, 'error');
       return;
     }
 

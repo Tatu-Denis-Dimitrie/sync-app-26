@@ -17,7 +17,7 @@ import { UserSignatureService, UserSignature, UserSignatureHistory } from '../..
 import { NotificationService } from '../../services/notification.service';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
-import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { isValidName, isValidFunction } from '../../shared/utils/name-validation.util';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
 import { TranslationService } from '../../services/translation.service';
@@ -178,6 +178,10 @@ export class LineManagerComponent implements OnInit {
 
   tCommon(key: string): string {
     return this.translationService.translate('Common', key);
+  }
+
+  tValidation(key: string): string {
+    return this.translationService.translate('Validation', key);
   }
 
   tOrganization(key: string): string {
@@ -637,12 +641,12 @@ export class LineManagerComponent implements OnInit {
       (actualChanges['FirstName'] && !isValidName(actualChanges['FirstName'])) ||
       (actualChanges['LastName'] && !isValidName(actualChanges['LastName']))
     ) {
-      this.dataChangeError = `First/last name: ${NAME_ERROR_MESSAGE}`;
+      this.dataChangeError = `${this.tValidation('field.firstLastName')}: ${this.tValidation('name.pattern')}`;
       return;
     }
 
     if (actualChanges['Function'] && !isValidFunction(actualChanges['Function'])) {
-      this.dataChangeError = `Function: ${FUNCTION_ERROR_MESSAGE}`;
+      this.dataChangeError = `${this.tValidation('field.function')}: ${this.tValidation('function.maxLength')}`;
       return;
     }
 

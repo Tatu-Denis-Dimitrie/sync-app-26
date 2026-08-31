@@ -12,7 +12,7 @@ import { WorkSiteService } from '../../services/work-site.service';
 import { User, UserRole, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
-import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { isValidName, isValidFunction } from '../../shared/utils/name-validation.util';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { CustomSelectComponent, SelectOption } from '../../shared/components/custom-select/custom-select.component';
@@ -168,6 +168,10 @@ export class BasicUserComponent implements OnInit {
 
   tCommon(key: string): string {
     return this.translationService.translate('Common', key);
+  }
+
+  tValidation(key: string): string {
+    return this.translationService.translate('Validation', key);
   }
 
   documentTypeFileLabel(documentType: string): string {
@@ -563,12 +567,12 @@ export class BasicUserComponent implements OnInit {
       (actualChanges['FirstName'] && !isValidName(actualChanges['FirstName'])) ||
       (actualChanges['LastName'] && !isValidName(actualChanges['LastName']))
     ) {
-      this.dataChangeError = `First/last name: ${NAME_ERROR_MESSAGE}`;
+      this.dataChangeError = `${this.tValidation('field.firstLastName')}: ${this.tValidation('name.pattern')}`;
       return;
     }
 
     if (actualChanges['Function'] && !isValidFunction(actualChanges['Function'])) {
-      this.dataChangeError = `Function: ${FUNCTION_ERROR_MESSAGE}`;
+      this.dataChangeError = `${this.tValidation('field.function')}: ${this.tValidation('function.maxLength')}`;
       return;
     }
 
