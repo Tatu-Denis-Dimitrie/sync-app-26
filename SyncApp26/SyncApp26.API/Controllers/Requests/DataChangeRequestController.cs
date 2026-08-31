@@ -71,27 +71,32 @@ namespace SyncApp26.API.Controllers
             var userId = GetUserId();
             var status = "Pending";
 
+            Dictionary<string, string>? changes;
             try
             {
-                var changes = JsonSerializer.Deserialize<Dictionary<string, string>>(dto.RequestedChangesJson);
-                if (changes != null)
+                changes = JsonSerializer.Deserialize<Dictionary<string, string>>(dto.RequestedChangesJson);
+            }
+            catch (JsonException)
+            {
+                return BadRequest(new { message = "RequestedChangesJson must be a flat object of string values." });
+            }
+
+            if (changes != null)
+            {
+                // Friendlier, earlier version of the allowlist check DataChangeRequestService
+                // itself enforces before persisting anything - this just gives a clear 400
+                // instead of the request silently ending up empty.
+                var disallowed = changes.Keys.Where(k => !_service.AllowedFields.Contains(k)).ToList();
+                if (disallowed.Count > 0)
                 {
-                    // Friendlier, earlier version of the allowlist check DataChangeRequestService
-                    // itself enforces before persisting anything - this just gives a clear 400
-                    // instead of the request silently ending up empty.
-                    var disallowed = changes.Keys.Where(k => !_service.AllowedFields.Contains(k)).ToList();
-                    if (disallowed.Count > 0)
+                    foreach (var key in disallowed) changes.Remove(key);
+                    dto.RequestedChangesJson = JsonSerializer.Serialize(changes);
+                    if (changes.Count == 0)
                     {
-                        foreach (var key in disallowed) changes.Remove(key);
-                        dto.RequestedChangesJson = JsonSerializer.Serialize(changes);
-                        if (changes.Count == 0)
-                        {
-                            return BadRequest(new { message = $"These fields cannot be requested via this flow: {string.Join(", ", disallowed)}." });
-                        }
+                        return BadRequest(new { message = $"These fields cannot be requested via this flow: {string.Join(", ", disallowed)}." });
                     }
                 }
             }
-            catch { }
 
             var result = await _service.CreateRequestAsync(userId, dto, status);
             return Ok(result);

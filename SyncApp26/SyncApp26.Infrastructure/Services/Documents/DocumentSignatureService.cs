@@ -51,16 +51,12 @@ namespace SyncApp26.Infrastructure.Services
 
         public async Task<bool> ConsumeTokenAsync(string token)
         {
-            var dbToken = await _context.DocumentSignatureTokens
-                .FirstOrDefaultAsync(t => t.Token == token);
+            // Atomic conditional UPDATE prevents concurrent double-consumption.
+            var rowsAffected = await _context.DocumentSignatureTokens
+                .Where(t => t.Token == token && !t.IsUsed && t.ExpiresAt >= DateTime.UtcNow)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsUsed, true));
 
-            if (dbToken == null) return false;
-            if (dbToken.IsUsed || dbToken.ExpiresAt < DateTime.UtcNow) return false;
-
-            dbToken.IsUsed = true;
-            await _context.SaveChangesAsync();
-
-            return true;
+            return rowsAffected > 0;
         }
 
         // Signing tokens are keyed by a raw email string, not UserId - an outstanding link for an

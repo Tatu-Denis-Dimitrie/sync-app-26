@@ -46,6 +46,20 @@ namespace SyncApp26.Tests.Services.Auth
         }
 
         [Fact]
+        public async Task GenerateTokenAsync_IssuerAndAudienceConfigured_AreEmittedOnToken()
+        {
+            _configurationMock.Setup(c => c["JwtSettings:Issuer"]).Returns("SyncApp26API");
+            _configurationMock.Setup(c => c["JwtSettings:Audience"]).Returns("SyncApp26Client");
+            var service = CreateService();
+
+            var token = await service.GenerateTokenAsync(Guid.NewGuid(), "user@test.com", Array.Empty<string>());
+
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            Assert.Equal("SyncApp26API", jwt.Issuer);
+            Assert.Equal("SyncApp26Client", jwt.Audiences.Single());
+        }
+
+        [Fact]
         public async Task GenerateTokenAsync_MissingEmail_ThrowsArgumentException()
         {
             var service = CreateService();

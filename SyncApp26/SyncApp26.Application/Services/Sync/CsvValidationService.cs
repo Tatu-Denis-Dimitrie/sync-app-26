@@ -12,6 +12,9 @@ public class CsvValidationService : ICsvValidationService
     private static readonly string[] OptionalHeaders = { "AssignedToPersonalId", "Function", "WorkSite" };
     private static readonly Regex EmailRegex = new Regex(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
 
+    // Caps rows parsed/validated (the file is still fully buffered first for encoding checks).
+    private const int MaxRows = 50_000;
+
     private readonly ILogger<CsvValidationService> _logger;
 
     public CsvValidationService(ILogger<CsvValidationService> logger)
@@ -100,6 +103,14 @@ public class CsvValidationService : ICsvValidationService
 
             // Validate data rows
             result.TotalRows = lines.Count - 1; // Exclude header
+
+            if (result.TotalRows > MaxRows)
+            {
+                result.IsValid = false;
+                result.Errors.Add($"CSV contains {result.TotalRows} rows, exceeding the maximum of {MaxRows}. Split the file into smaller batches.");
+                return result;
+            }
+
             var rowNumber = 1; // Start from 1 (header is 0)
 
             for (int i = 1; i < lines.Count; i++)
