@@ -22,11 +22,12 @@ import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 @Component({
   selector: 'app-line-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent, TranslatePipe, OrgNamePipe],
   templateUrl: './line-manager.component.html',
   styleUrls: ['./line-manager.component.css']
 })

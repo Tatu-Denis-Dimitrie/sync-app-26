@@ -51,11 +51,11 @@
             </div>
             <div>
               <label class="text-sm font-medium text-muted-foreground">{{ 'profile.department' | translate:'Users' }}</label>
-              <p class="text-foreground font-medium mt-1">{{ user.departmentName }}</p>
+              <p class="text-foreground font-medium mt-1">{{ user.departmentName | orgName:'department' }}</p>
             </div>
             <div>
               <label class="text-sm font-medium text-muted-foreground">{{ 'profile.function' | translate:'Users' }}</label>
-              <p class="text-foreground font-medium mt-1">{{ user.function?.trim() || tUsers('labels.unknownLowercase') }}</p>
+              <p class="text-foreground font-medium mt-1">{{ (user.function | orgName:'function') || tUsers('labels.unknownLowercase') }}</p>
             </div>
             @if (user.assignedToName) {
               <div>
@@ -84,7 +84,7 @@
           <div>
             <h4 class="text-sm font-semibold text-foreground mb-2">{{ 'labels.summary' | translate:'Users' }}</h4>
             <p class="text-sm text-muted-foreground">
-              {{ user.role === UserRole.LineManager ? ('roles.managerShort' | translate:'Users') : ('labels.employee' | translate:'Users') }} in {{ user.departmentName }} •
+              {{ user.role === UserRole.LineManager ? ('roles.managerShort' | translate:'Users') : ('labels.employee' | translate:'Users') }} in {{ user.departmentName | orgName:'department' }} •
               {{ getRelativeTime(user.updatedAt || user.createdAt) }}
             </p>
           </div>

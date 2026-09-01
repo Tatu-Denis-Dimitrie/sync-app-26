@@ -17,6 +17,7 @@ import { isValidName } from '../../shared/utils/name-validation.util';
 import { roleNameBadgeColor } from '../../shared/utils/role.util';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 interface SignatureStats {
   total: number;
@@ -49,7 +50,7 @@ type ManagerSortKey = keyof LineManagerTeamStats;
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe, OrgNamePipe],
   templateUrl: './users-list.component.html',
   styleUrls: ['./users-list.component.css'],
   animations: [

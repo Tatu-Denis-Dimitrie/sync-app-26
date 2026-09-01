@@ -323,4 +323,58 @@
   <data name="roles.suOfficer" xml:space="preserve">
     <value>Responsabil SU</value>
   </data>
+  <data name="department.engineering" xml:space="preserve">
+    <value>Inginerie</value>
+  </data>
+  <data name="department.humanResources" xml:space="preserve">
+    <value>Resurse Umane</value>
+  </data>
+  <data name="department.sales" xml:space="preserve">
+    <value>Vânzări</value>
+  </data>
+  <data name="department.finance" xml:space="preserve">
+    <value>Finanțe</value>
+  </data>
+  <data name="function.teamLead" xml:space="preserve">
+    <value>Coordonator echipă</value>
+  </data>
+  <data name="function.softwareEngineer" xml:space="preserve">
+    <value>Inginer software</value>
+  </data>
+  <data name="function.qaEngineer" xml:space="preserve">
+    <value>Inginer QA</value>
+  </data>
+  <data name="function.hrDirector" xml:space="preserve">
+    <value>Director Resurse Umane</value>
+  </data>
+  <data name="function.hrSpecialist" xml:space="preserve">
+    <value>Specialist Resurse Umane</value>
+  </data>
+  <data name="function.recruiter" xml:space="preserve">
+    <value>Recrutor</value>
+  </data>
+  <data name="function.salesDirector" xml:space="preserve">
+    <value>Director Vânzări</value>
+  </data>
+  <data name="function.accountExecutive" xml:space="preserve">
+    <value>Responsabil clienți</value>
+  </data>
+  <data name="function.salesRepresentative" xml:space="preserve">
+    <value>Reprezentant Vânzări</value>
+  </data>
+  <data name="function.marketingDirector" xml:space="preserve">
+    <value>Director Marketing</value>
+  </data>
+  <data name="function.contentSpecialist" xml:space="preserve">
+    <value>Specialist conținut</value>
+  </data>
+  <data name="function.digitalMarketingSpecialist" xml:space="preserve">
+    <value>Specialist marketing digital</value>
+  </data>
+  <data name="function.financialAnalyst" xml:space="preserve">
+    <value>Analist financiar</value>
+  </data>
+  <data name="function.accountant" xml:space="preserve">
+    <value>Contabil</value>
+  </data>
 </root>

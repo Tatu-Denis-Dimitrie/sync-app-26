@@ -323,4 +323,58 @@
   <data name="roles.suOfficer" xml:space="preserve">
     <value>SU Officer</value>
   </data>
+  <data name="department.engineering" xml:space="preserve">
+    <value>Engineering</value>
+  </data>
+  <data name="department.humanResources" xml:space="preserve">
+    <value>Human Resources</value>
+  </data>
+  <data name="department.sales" xml:space="preserve">
+    <value>Sales</value>
+  </data>
+  <data name="department.finance" xml:space="preserve">
+    <value>Finance</value>
+  </data>
+  <data name="function.teamLead" xml:space="preserve">
+    <value>Team Lead</value>
+  </data>
+  <data name="function.softwareEngineer" xml:space="preserve">
+    <value>Software Engineer</value>
+  </data>
+  <data name="function.qaEngineer" xml:space="preserve">
+    <value>QA Engineer</value>
+  </data>
+  <data name="function.hrDirector" xml:space="preserve">
+    <value>HR Director</value>
+  </data>
+  <data name="function.hrSpecialist" xml:space="preserve">
+    <value>HR Specialist</value>
+  </data>
+  <data name="function.recruiter" xml:space="preserve">
+    <value>Recruiter</value>
+  </data>
+  <data name="function.salesDirector" xml:space="preserve">
+    <value>Sales Director</value>
+  </data>
+  <data name="function.accountExecutive" xml:space="preserve">
+    <value>Account Executive</value>
+  </data>
+  <data name="function.salesRepresentative" xml:space="preserve">
+    <value>Sales Representative</value>
+  </data>
+  <data name="function.marketingDirector" xml:space="preserve">
+    <value>Marketing Director</value>
+  </data>
+  <data name="function.contentSpecialist" xml:space="preserve">
+    <value>Content Specialist</value>
+  </data>
+  <data name="function.digitalMarketingSpecialist" xml:space="preserve">
+    <value>Digital Marketing Specialist</value>
+  </data>
+  <data name="function.financialAnalyst" xml:space="preserve">
+    <value>Financial Analyst</value>
+  </data>
+  <data name="function.accountant" xml:space="preserve">
+    <value>Accountant</value>
+  </data>
 </root>

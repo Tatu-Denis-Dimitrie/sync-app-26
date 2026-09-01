@@ -55,7 +55,7 @@
                 <option
                   [ngValue]="department.id"
                   >
-                  {{ department.name }}
+                  {{ department.name | orgName:'department' }}
                 </option>
               }
             </select>
@@ -366,7 +366,7 @@
                                                                         >{{ user.firstName }} {{ user.lastName }}</span
                                                                         >
                                                                         <span class="user-email"
-                                                                          >{{ user.email }} | {{ user.departmentName }}</span
+                                                                          >{{ user.email }} | {{ user.departmentName | orgName:'department' }}</span
                                                                           >
                                                                         </div>
                                                                       </label>

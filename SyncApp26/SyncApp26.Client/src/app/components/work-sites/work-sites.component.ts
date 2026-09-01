@@ -7,6 +7,7 @@ import { UserSyncService } from '../../services/user-sync.service';
 import { WorkSite, User } from '../../models/csv-sync.model';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 interface WorkSiteStats {
   employeeCount: number;
@@ -28,7 +29,7 @@ const EMPTY_STATS: WorkSiteStats = {
 @Component({
   selector: 'app-work-sites',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, OrgNamePipe],
   templateUrl: './work-sites.component.html',
   styleUrls: ['./work-sites.component.css']
 })

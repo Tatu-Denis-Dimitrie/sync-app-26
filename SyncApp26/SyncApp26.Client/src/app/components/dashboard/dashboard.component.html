@@ -263,7 +263,7 @@
                       <option value="all">{{ 'dashboard.allDepartments' | translate:'Sync' }}</option>
                       @for (dept of departments; track dept) {
                         <option [value]="dept.name">
-                          {{ dept.name }} ({{
+                          {{ dept.name | orgName:'department' }} ({{
                           dept.lineManagerCount + dept.employeeCount
                           }})
                         </option>
@@ -275,7 +275,7 @@
                       <option value="all">{{ 'dashboard.selectFunction' | translate:'Sync' }}</option>
                       @for (fn of availableDepartmentFunctions; track fn) {
                         <option [value]="fn">
-                          {{ fn }}
+                          {{ fn | orgName:'function' }}
                         </option>
                       }
                     </select>
@@ -427,10 +427,10 @@
                                 </span>
                               </td>
                               <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                                {{ user.departmentName }}
+                                {{ user.departmentName | orgName:'department' }}
                               </td>
                               <td class="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                                {{ user.function || ('dashboard.unknown' | translate:'Sync') }}
+                                {{ (user.function | orgName:'function') || ('dashboard.unknown' | translate:'Sync') }}
                               </td>
                               <td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                 {{ user.assignedToName || "—" }}
