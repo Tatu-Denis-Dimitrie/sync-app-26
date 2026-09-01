@@ -38,7 +38,7 @@ export class AdminSignatureComponent {
       .filter(role => role === Roles.SsmOfficer || role === Roles.SuOfficer);
 
     return officerRoles.length > 0
-      ? this.translationService.translate('Documents', 'adminSignature.roleSignatureTitle', rolesLabel(officerRoles))
+      ? this.translationService.translate('Documents', 'adminSignature.roleSignatureTitle', rolesLabel(officerRoles, (key) => this.translationService.translate('Common', key)))
       : this.translationService.translate('Documents', 'adminSignature.adminSignatureTitle');
   }
 

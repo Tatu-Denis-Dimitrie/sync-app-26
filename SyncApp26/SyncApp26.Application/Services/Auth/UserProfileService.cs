@@ -393,7 +393,7 @@ namespace SyncApp26.Application.Services
             if (!usersToUpdate.Any())
             {
                 result.NoUsersMatched = true;
-                result.Errors.Add("No users found to apply initial training data.");
+                result.Errors.Add(_localizer["bulkInitialTraining.noUsersMatched"]);
                 return result;
             }
 
@@ -471,7 +471,7 @@ namespace SyncApp26.Application.Services
                 catch (Exception ex)
                 {
                     result.FailedCount++;
-                    result.Errors.Add($"Failed for user {user.Email}: {ex.Message}");
+                    result.Errors.Add(_localizer["bulkInitialTraining.failedForUser", user.Email, ex.Message]);
                 }
             }
 

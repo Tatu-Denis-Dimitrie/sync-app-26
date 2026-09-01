@@ -9,6 +9,7 @@ using SyncApp26.API.Filters;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Controllers.Auth
 {
@@ -34,7 +35,8 @@ namespace SyncApp26.Tests.Controllers.Auth
                 _tokenServiceMock.Object,
                 _refreshTokenServiceMock.Object,
                 _antiforgeryMock.Object,
-                _authCookieOptions);
+                _authCookieOptions,
+                RealLocalizerFactory.LocalizationService());
         }
 
         private static void SetRefreshCookie(SessionController controller, string rawToken)

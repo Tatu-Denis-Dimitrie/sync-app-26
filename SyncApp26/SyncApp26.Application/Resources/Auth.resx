@@ -263,4 +263,121 @@
   <data name="resetPassword.resetFailed" xml:space="preserve">
     <value>Password reset failed. Please try again.</value>
   </data>
+  <data name="api.genericError" xml:space="preserve">
+    <value>An error occurred while processing your request.</value>
+  </data>
+  <data name="api.registrationSuccessful" xml:space="preserve">
+    <value>Registration successful. Check your email to verify your account.</value>
+  </data>
+  <data name="api.registrationEmailFailed" xml:space="preserve">
+    <value>Account created, but we could not send the verification email. Please contact an administrator.</value>
+  </data>
+  <data name="api.invalidVerificationLink" xml:space="preserve">
+    <value>Invalid verification link.</value>
+  </data>
+  <data name="api.userNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+  <data name="api.verificationTokenInvalid" xml:space="preserve">
+    <value>Verification token is invalid or expired.</value>
+  </data>
+  <data name="api.emailAndPasswordRequired" xml:space="preserve">
+    <value>Email and password are required.</value>
+  </data>
+  <data name="api.invalidCredentials" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="api.emailNotVerified" xml:space="preserve">
+    <value>Email is not verified. Please check your email for verification instructions.</value>
+  </data>
+  <data name="api.googleTokenRequired" xml:space="preserve">
+    <value>Google ID token is required.</value>
+  </data>
+  <data name="api.googleSignInInvalid" xml:space="preserve">
+    <value>Invalid or expired Google sign-in. Please try again.</value>
+  </data>
+  <data name="api.googleEmailNotVerified" xml:space="preserve">
+    <value>Your Google account email is not verified. Verify it with Google and try again.</value>
+  </data>
+  <data name="api.noAccountForGoogleEmail" xml:space="preserve">
+    <value>No SyncApp26 account exists for this Google email. Contact an administrator.</value>
+  </data>
+  <data name="api.microsoftTokenRequired" xml:space="preserve">
+    <value>Microsoft ID token is required.</value>
+  </data>
+  <data name="api.microsoftSignInInvalid" xml:space="preserve">
+    <value>Invalid or expired Microsoft sign-in. Please try again.</value>
+  </data>
+  <data name="api.noAccountForMicrosoftEmail" xml:space="preserve">
+    <value>No SyncApp26 account exists for this Microsoft email. Contact an administrator.</value>
+  </data>
+  <data name="api.emailRequired" xml:space="preserve">
+    <value>Email is required.</value>
+  </data>
+  <data name="api.resetLinkSent" xml:space="preserve">
+    <value>A reset link has been sent to your email.</value>
+  </data>
+  <data name="api.resetFieldsRequired" xml:space="preserve">
+    <value>Email, token and new password are required.</value>
+  </data>
+  <data name="api.passwordResetSuccessful" xml:space="preserve">
+    <value>Password reset successfully.</value>
+  </data>
+  <data name="api.loginSuccessful" xml:space="preserve">
+    <value>Login successful.</value>
+  </data>
+  <data name="api.loggedOut" xml:space="preserve">
+    <value>Logged out.</value>
+  </data>
+  <data name="api.noRefreshToken" xml:space="preserve">
+    <value>No refresh token present.</value>
+  </data>
+  <data name="api.refreshTokenInvalid" xml:space="preserve">
+    <value>Refresh token is invalid or expired.</value>
+  </data>
+  <data name="api.sessionRefreshed" xml:space="preserve">
+    <value>Session refreshed.</value>
+  </data>
+  <data name="api.notImpersonating" xml:space="preserve">
+    <value>Not currently impersonating.</value>
+  </data>
+  <data name="api.impersonatorSessionGone" xml:space="preserve">
+    <value>Your original session no longer exists. Please log in again.</value>
+  </data>
+  <data name="api.impersonatorNotAdmin" xml:space="preserve">
+    <value>Your original session no longer has admin access. Please log in again.</value>
+  </data>
+  <data name="api.impersonationEnded" xml:space="preserve">
+    <value>Impersonation session ended.</value>
+  </data>
+  <data name="api.impersonationStarted" xml:space="preserve">
+    <value>Impersonation session started.</value>
+  </data>
+  <data name="api.cannotViewAsAdmin" xml:space="preserve">
+    <value>You cannot view as another administrator.</value>
+  </data>
+  <data name="api.cannotViewAsSelf" xml:space="preserve">
+    <value>You cannot view as yourself.</value>
+  </data>
+  <data name="api.viewOnlyMode" xml:space="preserve">
+    <value>You are viewing as another user. Actions that change data are disabled in view-only mode.</value>
+  </data>
+  <data name="api.roleDeleted" xml:space="preserve">
+    <value>Role deleted successfully.</value>
+  </data>
+  <data name="roleService.nameRequired" xml:space="preserve">
+    <value>Role name is required.</value>
+  </data>
+  <data name="roleService.alreadyExists" xml:space="preserve">
+    <value>A role named '{0}' already exists.</value>
+  </data>
+  <data name="roleService.notFound" xml:space="preserve">
+    <value>Role not found.</value>
+  </data>
+  <data name="roleService.systemRolesCannotBeDeleted" xml:space="preserve">
+    <value>System roles cannot be deleted.</value>
+  </data>
+  <data name="roleService.roleStillAssigned" xml:space="preserve">
+    <value>Cannot delete a role that is still assigned to users. Remove it from all users first.</value>
+  </data>
 </root>

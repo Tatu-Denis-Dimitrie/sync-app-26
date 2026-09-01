@@ -31,7 +31,8 @@ namespace SyncApp26.Tests.Controllers.Auth
                 _configurationMock.Object,
                 _authCookieOptions,
                 _refreshTokenServiceMock.Object,
-                NullLogger<AuthenticationController>.Instance);
+                NullLogger<AuthenticationController>.Instance,
+                RealLocalizerFactory.LocalizationService());
 
             controller.SetAnonymousUser();
             return controller;

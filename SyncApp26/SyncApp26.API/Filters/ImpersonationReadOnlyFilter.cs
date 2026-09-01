@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
+using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.API.Filters
@@ -65,10 +67,13 @@ namespace SyncApp26.API.Filters
             // ObjectResult with an explicit StatusCode, not Forbid(): Forbid() delegates to the JWT
             // bearer handler's forbid path, which writes a bodyless 403 — the client needs a body
             // (the "code" field) to key its error handling off.
+            var localizer = context.HttpContext.RequestServices.GetRequiredService<ILocalizationService>()
+                .GetScopedLocalizer(LocalizationScopes.Auth);
+
             context.Result = new ObjectResult(new
             {
                 code = BlockedCode,
-                message = "You are viewing as another user. Actions that change data are disabled in view-only mode."
+                message = localizer["api.viewOnlyMode"].Value
             })
             {
                 StatusCode = StatusCodes.Status403Forbidden

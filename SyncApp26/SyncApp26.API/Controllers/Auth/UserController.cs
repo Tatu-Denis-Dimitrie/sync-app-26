@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -19,14 +20,16 @@ namespace SyncApp26.API.Controllers
         private readonly IDocumentService _documentService;
         private readonly IPeriodicTrainingService _periodicTrainingService;
         private readonly IUserProfileService _userProfileService;
+        private readonly IStringLocalizer _localizer;
 
-        public UserController(IUserService userService, IDepartmentService departmentService, IDocumentService documentService, IPeriodicTrainingService periodicTrainingService, IUserProfileService userProfileService)
+        public UserController(IUserService userService, IDepartmentService departmentService, IDocumentService documentService, IPeriodicTrainingService periodicTrainingService, IUserProfileService userProfileService, ILocalizationService localizationService)
         {
             _userService = userService;
             _departmentService = departmentService;
             _documentService = documentService;
             _periodicTrainingService = periodicTrainingService;
             _userProfileService = userProfileService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Users);
         }
 
         private static UserGETResponseDTO MapToUserGETResponseDTO(User user) => new UserGETResponseDTO
@@ -180,7 +183,7 @@ namespace SyncApp26.API.Controllers
                 var department = await _departmentService.GetDepartmentByIdAsync(departmentId);
                 if (department == null)
                 {
-                    return NotFound(new { message = "Department not found" });
+                    return NotFound(new { message = _localizer["api.departmentNotFound"].Value });
                 }
             }
 
@@ -195,7 +198,7 @@ namespace SyncApp26.API.Controllers
             var lineManager = await _userService.GetUserByIdAsync(assignedToId);
             if (lineManager == null)
             {
-                return NotFound(new { message = "Line manager not found" });
+                return NotFound(new { message = _localizer["api.lineManagerNotFound"].Value });
             }
 
             bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
@@ -258,7 +261,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new UserResponseDTO
                 {
                     Success = false,
-                    Message = "User not found"
+                    Message = _localizer["api.userNotFound"]
                 });
             }
 
@@ -292,7 +295,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new UserResponseDTO
                 {
                     Success = false,
-                    Message = "User not found"
+                    Message = _localizer["api.userNotFound"]
                 });
             }
 
@@ -306,7 +309,7 @@ namespace SyncApp26.API.Controllers
             return Ok(new UserResponseDTO
             {
                 Success = true,
-                Message = "User deleted successfully"
+                Message = _localizer["api.userDeleted"]
             });
         }
 
@@ -316,7 +319,7 @@ namespace SyncApp26.API.Controllers
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null)
             {
-                return NotFound(new { Message = "User not found" });
+                return NotFound(new { Message = _localizer["api.userNotFound"].Value });
             }
 
             bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
@@ -394,7 +397,7 @@ namespace SyncApp26.API.Controllers
                 return NotFound(new UserResponseDTO
                 {
                     Success = false,
-                    Message = "User not found"
+                    Message = _localizer["api.userNotFound"]
                 });
             }
 
@@ -412,7 +415,7 @@ namespace SyncApp26.API.Controllers
             return Ok(new UserResponseDTO
             {
                 Success = true,
-                Message = "SSM/SU form updated successfully"
+                Message = _localizer["api.ssmSuFormUpdated"]
             });
         }
 

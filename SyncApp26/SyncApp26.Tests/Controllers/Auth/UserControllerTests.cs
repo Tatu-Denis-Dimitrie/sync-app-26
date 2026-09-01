@@ -26,7 +26,8 @@ namespace SyncApp26.Tests.Controllers.Auth
                 _departmentServiceMock.Object,
                 _documentServiceMock.Object,
                 _periodicTrainingServiceMock.Object,
-                _userProfileServiceMock.Object);
+                _userProfileServiceMock.Object,
+                RealLocalizerFactory.LocalizationService());
 
             controller.SetUser(Guid.NewGuid(), role: Roles.Admin);
             return controller;

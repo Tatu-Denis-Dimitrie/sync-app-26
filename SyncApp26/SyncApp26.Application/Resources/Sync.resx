@@ -80,6 +80,9 @@
   <data name="changeHistory.unknownField" xml:space="preserve">
     <value>Unknown Field</value>
   </data>
+  <data name="changeHistory.loadError" xml:space="preserve">
+    <value>Failed to load conflict history.</value>
+  </data>
   <data name="labels.import" xml:space="preserve">
     <value>Import</value>
   </data>
@@ -226,6 +229,9 @@
   </data>
   <data name="csvSync.deptSyncSuccess" xml:space="preserve">
     <value>Successfully synced {0} departments</value>
+  </data>
+  <data name="csvSync.syncFailed" xml:space="preserve">
+    <value>Sync failed</value>
   </data>
   <data name="csvSync.userNotFound" xml:space="preserve">
     <value>User {0} not found</value>

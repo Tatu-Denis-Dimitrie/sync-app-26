@@ -382,7 +382,7 @@ export class LineManagerComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error fetching PDF', err);
-        alert('Could not open document. Please try again.');
+        alert(this.tDocuments('messages.couldNotOpenDocument'));
       }
     });
   }

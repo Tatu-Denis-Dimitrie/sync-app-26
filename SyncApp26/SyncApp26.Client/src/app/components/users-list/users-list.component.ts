@@ -634,7 +634,8 @@ export class UsersListComponent implements OnInit {
   }
 
   // Role management modal state and logic
-  roleLabel = roleLabel;
+  roleLabel = (name: string): string =>
+    roleLabel(name, (key) => this.translationService.translate('Common', key));
   roleNameBadgeColor = roleNameBadgeColor;
   isRolesModalOpen = false;
   rolesModalUser: User | null = null;

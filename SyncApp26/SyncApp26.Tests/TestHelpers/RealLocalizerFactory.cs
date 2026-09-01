@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -31,6 +32,13 @@ namespace SyncApp26.Tests.TestHelpers
             mock.Setup(s => s.GetScopedLocalizer(It.IsAny<string>()))
                 .Returns<string>(ForScope);
             return mock.Object;
+        }
+
+        public static IServiceProvider ServiceProvider()
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton(LocalizationService());
+            return services.BuildServiceProvider();
         }
     }
 }

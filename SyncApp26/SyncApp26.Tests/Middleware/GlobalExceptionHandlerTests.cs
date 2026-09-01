@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using SyncApp26.API.Middleware;
+using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Middleware
 {
@@ -14,11 +15,14 @@ namespace SyncApp26.Tests.Middleware
         private GlobalExceptionHandler CreateHandler() =>
             new(_loggerMock.Object, _problemDetailsServiceMock.Object);
 
+        private static DefaultHttpContext CreateHttpContext() =>
+            new() { RequestServices = RealLocalizerFactory.ServiceProvider() };
+
         [Fact]
         public async Task TryHandleAsync_LogsTheException()
         {
             var handler = CreateHandler();
-            var httpContext = new DefaultHttpContext();
+            var httpContext = CreateHttpContext();
             var exception = new InvalidOperationException("connection string is invalid: user=admin;password=hunter2");
 
             await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
@@ -37,7 +41,7 @@ namespace SyncApp26.Tests.Middleware
         public async Task TryHandleAsync_SetsInternalServerErrorStatusCode()
         {
             var handler = CreateHandler();
-            var httpContext = new DefaultHttpContext();
+            var httpContext = CreateHttpContext();
 
             await handler.TryHandleAsync(httpContext, new Exception("boom"), CancellationToken.None);
 
@@ -54,7 +58,7 @@ namespace SyncApp26.Tests.Middleware
                 .Returns(ValueTask.CompletedTask);
 
             var handler = CreateHandler();
-            var httpContext = new DefaultHttpContext();
+            var httpContext = CreateHttpContext();
             var secret = "connection string is invalid: user=admin;password=hunter2";
 
             await handler.TryHandleAsync(httpContext, new InvalidOperationException(secret), CancellationToken.None);
@@ -74,7 +78,7 @@ namespace SyncApp26.Tests.Middleware
                 .Returns(ValueTask.CompletedTask);
 
             var handler = CreateHandler();
-            var httpContext = new DefaultHttpContext();
+            var httpContext = CreateHttpContext();
 
             var handled = await handler.TryHandleAsync(httpContext, new Exception("boom"), CancellationToken.None);
 

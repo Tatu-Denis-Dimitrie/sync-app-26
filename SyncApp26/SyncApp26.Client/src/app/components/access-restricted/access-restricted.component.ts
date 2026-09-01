@@ -13,7 +13,8 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
   styleUrls: ['./access-restricted.component.css']
 })
 export class AccessRestrictedComponent implements OnInit {
-  rolesLabel = rolesLabel;
+  rolesLabel = (names: string[] | undefined | null): string =>
+    rolesLabel(names, (key) => this.tCommon(key));
   currentUser: User | null = null;
 
   constructor(

@@ -20,7 +20,8 @@ import { filter, Subscription } from 'rxjs';
   styleUrl: './header.component.css'
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-  rolesLabel = rolesLabel;
+  rolesLabel = (names: string[] | undefined | null): string =>
+    rolesLabel(names, (key) => this.tCommon(key));
   currentUser: User | null = null;
   isLoggedIn = false;
   isAdmin = false;

@@ -299,4 +299,28 @@
   <data name="languageSwitcher.ariaLabel" xml:space="preserve">
     <value>Language: {0}</value>
   </data>
+  <data name="errors.unexpectedTitle" xml:space="preserve">
+    <value>An unexpected error occurred.</value>
+  </data>
+  <data name="errors.unexpectedDetail" xml:space="preserve">
+    <value>Contact an administrator with the trace ID if the problem persists.</value>
+  </data>
+  <data name="errors.failedToReadVersion" xml:space="preserve">
+    <value>Failed to read version</value>
+  </data>
+  <data name="roles.admin" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="roles.lineManager" xml:space="preserve">
+    <value>Line Manager</value>
+  </data>
+  <data name="roles.basicUser" xml:space="preserve">
+    <value>Basic User</value>
+  </data>
+  <data name="roles.ssmOfficer" xml:space="preserve">
+    <value>SSM Officer</value>
+  </data>
+  <data name="roles.suOfficer" xml:space="preserve">
+    <value>SU Officer</value>
+  </data>
 </root>

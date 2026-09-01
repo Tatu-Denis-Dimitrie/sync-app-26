@@ -200,7 +200,7 @@ export class EmployeesDetailComponent implements OnInit {
       },
       error: () => {
         this.conflictsLoading = false;
-        this.conflictsError = 'Failed to load conflict history.';
+        this.conflictsError = this.tSync('changeHistory.loadError');
         this.conflictsPage = emptyDocumentPageState(this.conflictsPage.pageSize);
       }
     });
@@ -217,7 +217,7 @@ export class EmployeesDetailComponent implements OnInit {
       },
       error: () => {
         this.documentsLoading = false;
-        this.documentsError = 'Failed to load documents.';
+        this.documentsError = this.tDocuments('messages.failedToLoadDocuments');
         this.documentsPage = emptyDocumentPageState(this.documentsPage.pageSize);
       }
     });
@@ -482,7 +482,7 @@ navigateToDocuments(): void {
     };
 
     if (this.editForm.role === UserRole.BasicUser && !payload.assignedToId) {
-      alert('Please select a Line Manager for the Employee.');
+      alert(this.tUsers('messages.selectLineManagerForEmployee'));
       return;
     }
 

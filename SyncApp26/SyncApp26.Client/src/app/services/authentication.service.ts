@@ -40,22 +40,22 @@ export const Roles = {
   SuOfficer: 'SuOfficer'
 } as const;
 
-const KNOWN_ROLE_LABELS: Record<string, string> = {
-  [Roles.Admin]: 'Admin',
-  [Roles.LineManager]: 'Line Manager',
-  [Roles.BasicUser]: 'Basic User',
-  [Roles.SsmOfficer]: 'SSM Officer',
-  [Roles.SuOfficer]: 'SU Officer'
+const KNOWN_ROLE_LABEL_KEYS: Record<string, string> = {
+  [Roles.Admin]: 'roles.admin',
+  [Roles.LineManager]: 'roles.lineManager',
+  [Roles.BasicUser]: 'roles.basicUser',
+  [Roles.SsmOfficer]: 'roles.ssmOfficer',
+  [Roles.SuOfficer]: 'roles.suOfficer'
 };
 
-/** Falls back to the raw name for custom roles an admin created, which carry no built-in label. */
-export function roleLabel(name: string): string {
-  return KNOWN_ROLE_LABELS[name] ?? name;
+export function roleLabel(name: string, translate: (key: string) => string): string {
+  const key = KNOWN_ROLE_LABEL_KEYS[name];
+  return key ? translate(key) : name;
 }
 
-export function rolesLabel(names: string[] | undefined | null): string {
+export function rolesLabel(names: string[] | undefined | null, translate: (key: string) => string): string {
   if (!names || names.length === 0) return '';
-  return names.map(roleLabel).join(', ');
+  return names.map(n => roleLabel(n, translate)).join(', ');
 }
 
 export interface User {

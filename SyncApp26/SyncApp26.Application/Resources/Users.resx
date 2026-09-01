@@ -452,4 +452,28 @@
   <data name="messages.couldNotLoadProfileDetails" xml:space="preserve">
     <value>Could not load profile details.</value>
   </data>
+  <data name="api.departmentNotFound" xml:space="preserve">
+    <value>Department not found</value>
+  </data>
+  <data name="api.lineManagerNotFound" xml:space="preserve">
+    <value>Line manager not found</value>
+  </data>
+  <data name="api.userNotFound" xml:space="preserve">
+    <value>User not found</value>
+  </data>
+  <data name="api.userDeleted" xml:space="preserve">
+    <value>User deleted successfully</value>
+  </data>
+  <data name="api.ssmSuFormUpdated" xml:space="preserve">
+    <value>SSM/SU form updated successfully</value>
+  </data>
+  <data name="bulkInitialTraining.noUsersMatched" xml:space="preserve">
+    <value>No users found to apply initial training data.</value>
+  </data>
+  <data name="bulkInitialTraining.failedForUser" xml:space="preserve">
+    <value>Failed for user {0}: {1}</value>
+  </data>
+  <data name="messages.selectLineManagerForEmployee" xml:space="preserve">
+    <value>Please select a Line Manager for the Employee.</value>
+  </data>
 </root>

@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.Shared.DTOs.Response.User;
@@ -9,10 +11,12 @@ namespace SyncApp26.Application.Services
     public class RoleService : IRoleService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IStringLocalizer _localizer;
 
-        public RoleService(IUserRepository userRepository)
+        public RoleService(IUserRepository userRepository, ILocalizationService localizationService)
         {
             _userRepository = userRepository;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Auth);
         }
 
         public async Task<List<RoleResponseDTO>> GetAllRolesAsync()
@@ -24,12 +28,12 @@ namespace SyncApp26.Application.Services
         public async Task<RoleResponseDTO> CreateRoleAsync(CreateRoleRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.Name))
-                throw new ArgumentException("Role name is required.");
+                throw new ArgumentException(_localizer["roleService.nameRequired"]);
 
             var name = request.Name.Trim();
             var existing = await _userRepository.GetRoleByNameAsync(name);
             if (existing != null)
-                throw new ArgumentException($"A role named '{name}' already exists.");
+                throw new ArgumentException(_localizer["roleService.alreadyExists", name]);
 
             // Custom roles created here carry no built-in meaning - something in code has to check
             // for the name before this role grants any actual permission (see SyncApp26.Domain.Enums.Roles).
@@ -50,15 +54,15 @@ namespace SyncApp26.Application.Services
         {
             var role = await _userRepository.GetRoleByIdAsync(id);
             if (role == null)
-                throw new ArgumentException("Role not found.");
+                throw new ArgumentException(_localizer["roleService.notFound"]);
 
             // System roles are what [Authorize(Roles = ...)] checks by name - deleting one would
             // silently strip authorization from everyone who holds it instead of failing loudly.
             if (role.IsSystem)
-                throw new ArgumentException("System roles cannot be deleted.");
+                throw new ArgumentException(_localizer["roleService.systemRolesCannotBeDeleted"]);
 
             if (await _userRepository.RoleHasAssignmentsAsync(id))
-                throw new ArgumentException("Cannot delete a role that is still assigned to users. Remove it from all users first.");
+                throw new ArgumentException(_localizer["roleService.roleStillAssigned"]);
 
             await _userRepository.DeleteRoleAsync(role);
         }

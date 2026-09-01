@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
@@ -12,10 +13,12 @@ namespace SyncApp26.API.Controllers
     public class RolesController : ControllerBase
     {
         private readonly IRoleService _roleService;
+        private readonly IStringLocalizer _localizer;
 
-        public RolesController(IRoleService roleService)
+        public RolesController(IRoleService roleService, ILocalizationService localizationService)
         {
             _roleService = roleService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Auth);
         }
 
         [HttpGet]
@@ -45,7 +48,7 @@ namespace SyncApp26.API.Controllers
             try
             {
                 await _roleService.DeleteRoleAsync(id);
-                return Ok(new { message = "Role deleted successfully." });
+                return Ok(new { message = _localizer["api.roleDeleted"].Value });
             }
             catch (ArgumentException ex)
             {
