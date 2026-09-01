@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SyncApp26.Shared.DTOs;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.Application.Services;
 
@@ -16,10 +18,12 @@ public class CsvValidationService : ICsvValidationService
     private const int MaxRows = 50_000;
 
     private readonly ILogger<CsvValidationService> _logger;
+    private readonly IStringLocalizer _localizer;
 
-    public CsvValidationService(ILogger<CsvValidationService> logger)
+    public CsvValidationService(ILogger<CsvValidationService> logger, ILocalizationService localizationService)
     {
         _logger = logger;
+        _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Sync);
     }
 
     public async Task<CsvValidationResultDTO> ValidateCsvFile(Stream fileStream, string fileName, HashSet<string>? existingDepartments = null)
@@ -32,7 +36,7 @@ public class CsvValidationService : ICsvValidationService
             if (!fileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
             {
                 result.IsValid = false;
-                result.Errors.Add("File must have .csv extension");
+                result.Errors.Add(_localizer["csvValidation.extension"]);
                 return result;
             }
 
@@ -47,7 +51,7 @@ public class CsvValidationService : ICsvValidationService
             if (encoding == null)
             {
                 result.IsValid = false;
-                result.Errors.Add("Invalid file encoding. File must be UTF-8 encoded.");
+                result.Errors.Add(_localizer["csvValidation.encoding"]);
                 return result;
             }
 
@@ -56,7 +60,7 @@ public class CsvValidationService : ICsvValidationService
             if (HasInvalidCharacters(content, out var invalidChars))
             {
                 result.IsValid = false;
-                result.Errors.Add($"File contains invalid special characters: {string.Join(", ", invalidChars.Take(10))}");
+                result.Errors.Add(_localizer["csvValidation.invalidChars", string.Join(", ", invalidChars.Take(10))]);
                 return result;
             }
 
@@ -75,14 +79,14 @@ public class CsvValidationService : ICsvValidationService
             if (lines.Count == 0)
             {
                 result.IsValid = false;
-                result.Errors.Add("CSV file is empty");
+                result.Errors.Add(_localizer["csvValidation.empty"]);
                 return result;
             }
 
             if (lines.Count == 1)
             {
                 result.IsValid = false;
-                result.Errors.Add("CSV file contains only headers, no data rows");
+                result.Errors.Add(_localizer["csvValidation.headersOnly"]);
                 return result;
             }
 
@@ -107,7 +111,7 @@ public class CsvValidationService : ICsvValidationService
             if (result.TotalRows > MaxRows)
             {
                 result.IsValid = false;
-                result.Errors.Add($"CSV contains {result.TotalRows} rows, exceeding the maximum of {MaxRows}. Split the file into smaller batches.");
+                result.Errors.Add(_localizer["csvValidation.tooManyRows", result.TotalRows, MaxRows]);
                 return result;
             }
 
@@ -143,7 +147,7 @@ public class CsvValidationService : ICsvValidationService
             {
                 var remainingErrors = result.Errors.Count - 20;
                 result.Errors = result.Errors.Take(20).ToList();
-                result.Errors.Add($"...and {remainingErrors} more errors");
+                result.Errors.Add(_localizer["csvValidation.moreErrors", remainingErrors]);
             }
 
             if (result.InvalidRows > 0)
@@ -159,7 +163,7 @@ public class CsvValidationService : ICsvValidationService
         {
             _logger.LogError(ex, "Failed to read CSV file {FileName}.", fileName);
             result.IsValid = false;
-            result.Errors.Add($"Error reading CSV file: {ex.Message}");
+            result.Errors.Add(_localizer["csvValidation.readError", ex.Message]);
             return result;
         }
     }
@@ -258,7 +262,7 @@ public class CsvValidationService : ICsvValidationService
             var normalized = NormalizeHeaderName(required);
             if (!normalizedHeaders.Contains(normalized))
             {
-                errors.Add($"Missing required column: '{required}'. CSV must contain columns: {string.Join(", ", RequiredHeaders)}");
+                errors.Add(_localizer["csvValidation.missingColumn", required, string.Join(", ", RequiredHeaders)]);
             }
         }
 
@@ -269,14 +273,14 @@ public class CsvValidationService : ICsvValidationService
             .ToList();
         if (blankHeaderPositions.Any())
         {
-            errors.Add($"Blank column name(s) at position(s): {string.Join(", ", blankHeaderPositions)}. Every column must have a header name (a trailing comma on the header row is a common cause).");
+            errors.Add(_localizer["csvValidation.blankColumnNames", string.Join(", ", blankHeaderPositions)]);
         }
 
         // Check for duplicate headers
         var duplicates = normalizedHeaders.GroupBy(h => h).Where(g => g.Count() > 1 && !string.IsNullOrEmpty(g.Key)).Select(g => g.Key).ToList();
         if (duplicates.Any())
         {
-            errors.Add($"Duplicate columns found: {string.Join(", ", duplicates)}");
+            errors.Add(_localizer["csvValidation.duplicateColumns", string.Join(", ", duplicates)]);
         }
 
         return (errors.Count == 0, errors);
@@ -329,7 +333,7 @@ public class CsvValidationService : ICsvValidationService
         // Check column count
         if (values.Count != expectedColumnCount)
         {
-            errors.Add($"Row {rowNumber}: Expected {expectedColumnCount} columns, found {values.Count}");
+            errors.Add(_localizer["csvValidation.row.columnCount", rowNumber, expectedColumnCount, values.Count]);
             return (errors, warnings);
         }
 
@@ -338,11 +342,11 @@ public class CsvValidationService : ICsvValidationService
             var personalId = values[personalIdIdx];
             if (string.IsNullOrWhiteSpace(personalId))
             {
-                errors.Add($"Row {rowNumber}: PersonalId is required and cannot be empty");
+                errors.Add(_localizer["csvValidation.row.required", rowNumber, "PersonalId"]);
             }
             else if (personalId.Length > 50)
             {
-                errors.Add($"Row {rowNumber}: PersonalId is too long (max 50 characters)");
+                errors.Add(_localizer["csvValidation.row.tooLong", rowNumber, "PersonalId", 50]);
             }
         }
 
@@ -352,11 +356,11 @@ public class CsvValidationService : ICsvValidationService
             var firstName = values[firstNameIdx];
             if (string.IsNullOrWhiteSpace(firstName))
             {
-                errors.Add($"Row {rowNumber}: FirstName is required and cannot be empty");
+                errors.Add(_localizer["csvValidation.row.required", rowNumber, "FirstName"]);
             }
             else if (firstName.Length > 100)
             {
-                errors.Add($"Row {rowNumber}: FirstName is too long (max 100 characters)");
+                errors.Add(_localizer["csvValidation.row.tooLong", rowNumber, "FirstName", 100]);
             }
         }
 
@@ -366,11 +370,11 @@ public class CsvValidationService : ICsvValidationService
             var lastName = values[lastNameIdx];
             if (string.IsNullOrWhiteSpace(lastName))
             {
-                errors.Add($"Row {rowNumber}: LastName is required and cannot be empty");
+                errors.Add(_localizer["csvValidation.row.required", rowNumber, "LastName"]);
             }
             else if (lastName.Length > 100)
             {
-                errors.Add($"Row {rowNumber}: LastName is too long (max 100 characters)");
+                errors.Add(_localizer["csvValidation.row.tooLong", rowNumber, "LastName", 100]);
             }
         }
 
@@ -380,11 +384,11 @@ public class CsvValidationService : ICsvValidationService
             var email = values[emailIdx];
             if (string.IsNullOrWhiteSpace(email))
             {
-                errors.Add($"Row {rowNumber}: Email is required and cannot be empty");
+                errors.Add(_localizer["csvValidation.row.required", rowNumber, "Email"]);
             }
             else if (!IsValidEmail(email))
             {
-                errors.Add($"Row {rowNumber}: Email '{email}' is not in valid format");
+                errors.Add(_localizer["csvValidation.row.emailFormat", rowNumber, email]);
             }
         }
 
@@ -394,15 +398,15 @@ public class CsvValidationService : ICsvValidationService
             var department = values[deptIdx];
             if (string.IsNullOrWhiteSpace(department))
             {
-                errors.Add($"Row {rowNumber}: DepartmentName is required and cannot be empty");
+                errors.Add(_localizer["csvValidation.row.required", rowNumber, "DepartmentName"]);
             }
             else if (department.Length > 100)
             {
-                errors.Add($"Row {rowNumber}: DepartmentName is too long (max 100 characters)");
+                errors.Add(_localizer["csvValidation.row.tooLong", rowNumber, "DepartmentName", 100]);
             }
             else if (existingDepartments != null && !existingDepartments.Contains(department.Trim().ToLower()))
             {
-                errors.Add($"Row {rowNumber}: Department '{department}' does not exist in the database. Please create the department first.");
+                errors.Add(_localizer["csvValidation.row.departmentMissing", rowNumber, department]);
             }
         }
 
@@ -412,7 +416,7 @@ public class CsvValidationService : ICsvValidationService
             var assignedPersonalId = values[assignedIdx];
             if (!string.IsNullOrWhiteSpace(assignedPersonalId) && !Guid.TryParse(assignedPersonalId, out _))
             {
-                warnings.Add($"Row {rowNumber}: AssignedToPersonalId '{assignedPersonalId}' is not in valid format");
+                warnings.Add(_localizer["csvValidation.row.assignedFormat", rowNumber, assignedPersonalId]);
             }
         }
 
@@ -422,7 +426,7 @@ public class CsvValidationService : ICsvValidationService
             var function = values[functionIdx];
             if (!string.IsNullOrWhiteSpace(function) && function.Length > 100)
             {
-                warnings.Add($"Row {rowNumber}: Function is too long (max 100 characters)");
+                warnings.Add(_localizer["csvValidation.row.functionTooLong", rowNumber, 100]);
             }
         }
 
@@ -432,7 +436,7 @@ public class CsvValidationService : ICsvValidationService
             var workSite = values[workSiteIdx];
             if (!string.IsNullOrWhiteSpace(workSite) && workSite.Length > 100)
             {
-                warnings.Add($"Row {rowNumber}: WorkSite is too long (max 100 characters)");
+                warnings.Add(_localizer["csvValidation.row.workSiteTooLong", rowNumber, 100]);
             }
         }
 

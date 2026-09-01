@@ -35,7 +35,8 @@ namespace SyncApp26.Tests.Services.Sync
                 new ImportHistoryRepository(_dbFixture.Context),
                 new UserChangeHistoryRepository(_dbFixture.Context),
                 new DataChangeRequestRepository(_dbFixture.Context),
-                NullLogger<CsvSyncService>.Instance);
+                NullLogger<CsvSyncService>.Instance,
+                RealLocalizerFactory.LocalizationService());
         }
 
         private Department SeedDepartment(string name = "Engineering", bool isActive = true)
@@ -1304,7 +1305,8 @@ namespace SyncApp26.Tests.Services.Sync
                 new ImportHistoryRepository(_dbFixture.Context),
                 new UserChangeHistoryRepository(_dbFixture.Context),
                 new DataChangeRequestRepository(_dbFixture.Context),
-                NullLogger<CsvSyncService>.Instance);
+                NullLogger<CsvSyncService>.Instance,
+                RealLocalizerFactory.LocalizationService());
 
             SeedDepartment("Engineering");
             var request = new SyncRequestDTO { Items = { MakeNewItem(MakeCsvUser("P1", departmentName: "Engineering")) } };

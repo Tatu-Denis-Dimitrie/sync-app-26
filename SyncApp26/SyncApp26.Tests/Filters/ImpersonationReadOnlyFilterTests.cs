@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using SyncApp26.API.Filters;
 using SyncApp26.Domain.Enums;
+using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Filters
 {
@@ -16,7 +17,11 @@ namespace SyncApp26.Tests.Filters
         private static AuthorizationFilterContext CreateContext(
             string method, ClaimsPrincipal user, IList<object>? endpointMetadata = null)
         {
-            var httpContext = new DefaultHttpContext { User = user };
+            var httpContext = new DefaultHttpContext
+            {
+                User = user,
+                RequestServices = RealLocalizerFactory.ServiceProvider()
+            };
             httpContext.Request.Method = method;
 
             var actionDescriptor = new ControllerActionDescriptor

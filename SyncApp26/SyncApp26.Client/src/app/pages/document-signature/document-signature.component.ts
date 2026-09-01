@@ -9,11 +9,13 @@ import { FormsModule } from '@angular/forms';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserSignatureService, UserSignature } from '../../services/user-signature.service';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-document-signature',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe],
   templateUrl: './document-signature.component.html',
   styleUrls: ['./document-signature.component.css']
 })
@@ -51,8 +53,13 @@ export class DocumentSignatureComponent implements OnInit {
     private http: HttpClient,
     private authService: AuthenticationService,
     private userSignatureService: UserSignatureService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private translationService: TranslationService
   ) { }
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
 
   ngOnInit(): void {
     this.isLoggedIn = this.authService.isLoggedIn();
@@ -60,7 +67,7 @@ export class DocumentSignatureComponent implements OnInit {
     this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
 
     if (!this.token) {
-      this.errorMessage = 'Invalid link. No token provided.';
+      this.errorMessage = this.tDocuments('documentSignature.invalidLinkNoToken');
       this.isValidating = false;
       this.isLoading = false;
       return;
@@ -98,7 +105,7 @@ export class DocumentSignatureComponent implements OnInit {
           this.isLoading = false;
         }),
         catchError(error => {
-          this.errorMessage = error.error?.message || 'The secure link is invalid or has expired.';
+          this.errorMessage = error.error?.message || this.tDocuments('documentSignature.linkInvalidOrExpired');
           return of(null);
         })
       )
@@ -169,17 +176,17 @@ export class DocumentSignatureComponent implements OnInit {
 
   signDocument(): void {
     if (this.signatureMethod === 'type' && !this.typedSignature.trim()) {
-      this.errorMessage = 'Please type your full name as your signature.';
+      this.errorMessage = this.tDocuments('documentSignature.pleaseTypeFullName');
       return;
     }
     if (this.signatureMethod === 'saved') {
       if (!this.savedSignature || !this.savedSignature.isActive) {
-        this.errorMessage = 'No active saved signature found.';
+        this.errorMessage = this.tDocuments('documentSignature.noActiveSavedSignature');
         return;
       }
     }
     if (!this.signatureConfirmed) {
-      this.errorMessage = 'You must confirm your signature before signing.';
+      this.errorMessage = this.tDocuments('documentSignature.mustConfirmBeforeSigning');
       return;
     }
 
@@ -206,11 +213,11 @@ export class DocumentSignatureComponent implements OnInit {
             this.pollBulkProgress(res.jobId);
           } else {
             this.isLoading = false;
-            this.errorMessage = res?.message || 'No documents to sign.';
+            this.errorMessage = res?.message || this.tDocuments('api.noDocumentsToSign');
           }
         }, err => {
           this.isLoading = false;
-          this.errorMessage = err.error?.message || 'Failed to start bulk signing.';
+          this.errorMessage = err.error?.message || this.tDocuments('documentSignature.failedToStartBulk');
         });
       return;
     }
@@ -229,7 +236,7 @@ export class DocumentSignatureComponent implements OnInit {
       .pipe(
         finalize(() => this.isLoading = false),
         catchError(error => {
-          this.errorMessage = error.error?.message || 'Failed to sign the document. Please try again.';
+          this.errorMessage = error.error?.message || this.tDocuments('documentSignature.failedToSign');
           return of(null);
         })
       )
@@ -239,9 +246,9 @@ export class DocumentSignatureComponent implements OnInit {
           if (this.isBulkMode && typeof res.count === 'number' && res.count > 1) {
             this.bulkTotal = res.count;
             this.bulkSigned = res.count;
-            this.successMessage = `Successfully signed ${res.count} document(s).`;
+            this.successMessage = this.translationService.translate('Documents', 'api.successfullySignedCount', res.count);
           } else {
-            this.successMessage = res.message || 'Document successfully signed!';
+            this.successMessage = res.message || this.tDocuments('documentSignature.documentSignedSuccess');
           }
         }
       });
@@ -257,9 +264,9 @@ export class DocumentSignatureComponent implements OnInit {
             if (res.completed) {
               this.isLoading = false;
               if (res.error) {
-                this.errorMessage = 'Bulk signing error: ' + res.error;
+                this.errorMessage = this.translationService.translate('Documents', 'documentSignature.bulkSigningError', res.error);
               } else {
-                this.successMessage = `Successfully signed ${res.signed} document(s).`;
+                this.successMessage = this.translationService.translate('Documents', 'api.successfullySignedCount', res.signed);
                 this.documentData = null;
               }
             } else {
@@ -267,11 +274,11 @@ export class DocumentSignatureComponent implements OnInit {
             }
           } else {
             this.isLoading = false;
-            this.errorMessage = 'Bulk signing status error.';
+            this.errorMessage = this.tDocuments('documentSignature.bulkStatusError');
           }
         }, err => {
           this.isLoading = false;
-          this.errorMessage = 'Bulk signing status error.';
+          this.errorMessage = this.tDocuments('documentSignature.bulkStatusError');
         });
     };
     poll();

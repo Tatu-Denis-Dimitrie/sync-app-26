@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { CSVDepartmentComparisonDTO } from '../models/csv-department-sync.model';
 import { DepartmentSyncRequestDTO } from '../models/csv-department-sync.model';
 import { SyncResult } from '../models/csv-sync.model';
+import { TranslationService } from './translation.service';
 
 @Injectable({
   providedIn: 'root'
@@ -18,7 +19,7 @@ export class DepartmentsSyncService {
   currentComparison$ = this.currentComparisonSubject.asObservable();
   departmentsSynced$ = this.departmentsSyncedSubject.asObservable();
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private translationService: TranslationService) { }
 
   uploadAndCompareDepartments(file: File): Observable<CSVDepartmentComparisonDTO[]> {
     const formData = new FormData();
@@ -61,7 +62,7 @@ export class DepartmentsSyncService {
           recordsProcessed: 0,
           recordsFailed: 0,
           recordsSkipped: 0,
-          message: error.error?.error || 'Sync failed',
+          message: error.error?.error || this.translationService.translate('Sync', 'csvSync.syncFailed'),
           errors: [error.message]
         });
       })

@@ -83,6 +83,42 @@
   <data name="login.signInWithMicrosoft" xml:space="preserve">
     <value>Sign in with Microsoft</value>
   </data>
+  <data name="login.emailPlaceholder" xml:space="preserve">
+    <value>Enter your email</value>
+  </data>
+  <data name="login.passwordPlaceholder" xml:space="preserve">
+    <value>Enter your password</value>
+  </data>
+  <data name="login.hidePassword" xml:space="preserve">
+    <value>Hide password</value>
+  </data>
+  <data name="login.showPassword" xml:space="preserve">
+    <value>Show password</value>
+  </data>
+  <data name="login.or" xml:space="preserve">
+    <value>or</value>
+  </data>
+  <data name="login.footerText" xml:space="preserve">
+    <value>SyncApp26 - User Management System</value>
+  </data>
+  <data name="login.noAccount" xml:space="preserve">
+    <value>Don't have an account?</value>
+  </data>
+  <data name="login.microsoftUnavailable" xml:space="preserve">
+    <value>Microsoft sign-in is unavailable right now. Please sign in with your email and password.</value>
+  </data>
+  <data name="login.microsoftSignInFailed" xml:space="preserve">
+    <value>Microsoft sign-in failed. Please try again.</value>
+  </data>
+  <data name="login.googleSignInFailed" xml:space="preserve">
+    <value>Google sign-in failed. Please try again.</value>
+  </data>
+  <data name="login.pleaseEnterCredentials" xml:space="preserve">
+    <value>Please enter email and password</value>
+  </data>
+  <data name="login.loginFailed" xml:space="preserve">
+    <value>Login failed. Please try again.</value>
+  </data>
   <data name="register.title" xml:space="preserve">
     <value>Create your account</value>
   </data>
@@ -104,6 +140,30 @@
   <data name="register.signInPrompt" xml:space="preserve">
     <value>Sign in here</value>
   </data>
+  <data name="register.firstNamePlaceholder" xml:space="preserve">
+    <value>Enter your first name</value>
+  </data>
+  <data name="register.lastNamePlaceholder" xml:space="preserve">
+    <value>Enter your last name</value>
+  </data>
+  <data name="register.confirmPasswordPlaceholder" xml:space="preserve">
+    <value>Confirm your password</value>
+  </data>
+  <data name="register.alreadyHaveAccount" xml:space="preserve">
+    <value>Already have an account?</value>
+  </data>
+  <data name="register.pleaseFillAllFields" xml:space="preserve">
+    <value>Please fill in all fields</value>
+  </data>
+  <data name="register.passwordsDoNotMatch" xml:space="preserve">
+    <value>Passwords do not match</value>
+  </data>
+  <data name="register.registrationSuccessful" xml:space="preserve">
+    <value>Registration successful!</value>
+  </data>
+  <data name="register.registrationFailed" xml:space="preserve">
+    <value>Registration failed. Please try again.</value>
+  </data>
   <data name="forgotPassword.title" xml:space="preserve">
     <value>Forgot Password</value>
   </data>
@@ -113,11 +173,35 @@
   <data name="forgotPassword.backToLogin" xml:space="preserve">
     <value>Back to Login</value>
   </data>
+  <data name="forgotPassword.subtitle" xml:space="preserve">
+    <value>Enter your email address and we'll send you a secure reset link</value>
+  </data>
+  <data name="forgotPassword.sending" xml:space="preserve">
+    <value>Sending...</value>
+  </data>
+  <data name="forgotPassword.sendResetLink" xml:space="preserve">
+    <value>Send Reset Link</value>
+  </data>
+  <data name="forgotPassword.pleaseEnterEmail" xml:space="preserve">
+    <value>Please enter your email address</value>
+  </data>
+  <data name="forgotPassword.invalidEmail" xml:space="preserve">
+    <value>Please enter a valid email address</value>
+  </data>
+  <data name="forgotPassword.resetLinkSent" xml:space="preserve">
+    <value>Password reset link sent to your email!</value>
+  </data>
+  <data name="forgotPassword.sendFailed" xml:space="preserve">
+    <value>Could not send password reset link. Please try again.</value>
+  </data>
   <data name="validation.allFieldsRequired" xml:space="preserve">
     <value>All fields are required.</value>
   </data>
   <data name="validation.invalidEmailFormat" xml:space="preserve">
     <value>Invalid email format.</value>
+  </data>
+  <data name="validation.passwordMinLength" xml:space="preserve">
+    <value>Password must be at least 8 characters long.</value>
   </data>
   <data name="validation.passwordUppercase" xml:space="preserve">
     <value>Password must contain at least one uppercase letter.</value>
@@ -139,5 +223,161 @@
   </data>
   <data name="validation.passwordSameAsOld" xml:space="preserve">
     <value>New password cannot be the same as the old password.</value>
+  </data>
+  <data name="resetPassword.title" xml:space="preserve">
+    <value>Reset Password</value>
+  </data>
+  <data name="resetPassword.subtitle" xml:space="preserve">
+    <value>Set a new password for</value>
+  </data>
+  <data name="resetPassword.newPassword" xml:space="preserve">
+    <value>New Password</value>
+  </data>
+  <data name="resetPassword.newPasswordPlaceholder" xml:space="preserve">
+    <value>Enter new password</value>
+  </data>
+  <data name="resetPassword.confirmNewPassword" xml:space="preserve">
+    <value>Confirm New Password</value>
+  </data>
+  <data name="resetPassword.confirmNewPasswordPlaceholder" xml:space="preserve">
+    <value>Re-enter new password</value>
+  </data>
+  <data name="resetPassword.resetting" xml:space="preserve">
+    <value>Resetting...</value>
+  </data>
+  <data name="resetPassword.sendNewResetLink" xml:space="preserve">
+    <value>Send New Reset Link</value>
+  </data>
+  <data name="resetPassword.emailRequired" xml:space="preserve">
+    <value>Email is required.</value>
+  </data>
+  <data name="resetPassword.invalidToken" xml:space="preserve">
+    <value>Invalid or missing reset token.</value>
+  </data>
+  <data name="resetPassword.passwordMinLength" xml:space="preserve">
+    <value>Password must be at least 6 characters long</value>
+  </data>
+  <data name="resetPassword.passwordResetSuccessfully" xml:space="preserve">
+    <value>Password reset successfully!</value>
+  </data>
+  <data name="resetPassword.resetFailed" xml:space="preserve">
+    <value>Password reset failed. Please try again.</value>
+  </data>
+  <data name="api.genericError" xml:space="preserve">
+    <value>An error occurred while processing your request.</value>
+  </data>
+  <data name="api.registrationSuccessful" xml:space="preserve">
+    <value>Registration successful. Check your email to verify your account.</value>
+  </data>
+  <data name="api.registrationEmailFailed" xml:space="preserve">
+    <value>Account created, but we could not send the verification email. Please contact an administrator.</value>
+  </data>
+  <data name="api.invalidVerificationLink" xml:space="preserve">
+    <value>Invalid verification link.</value>
+  </data>
+  <data name="api.userNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+  <data name="api.verificationTokenInvalid" xml:space="preserve">
+    <value>Verification token is invalid or expired.</value>
+  </data>
+  <data name="api.emailAndPasswordRequired" xml:space="preserve">
+    <value>Email and password are required.</value>
+  </data>
+  <data name="api.invalidCredentials" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="api.emailNotVerified" xml:space="preserve">
+    <value>Email is not verified. Please check your email for verification instructions.</value>
+  </data>
+  <data name="api.googleTokenRequired" xml:space="preserve">
+    <value>Google ID token is required.</value>
+  </data>
+  <data name="api.googleSignInInvalid" xml:space="preserve">
+    <value>Invalid or expired Google sign-in. Please try again.</value>
+  </data>
+  <data name="api.googleEmailNotVerified" xml:space="preserve">
+    <value>Your Google account email is not verified. Verify it with Google and try again.</value>
+  </data>
+  <data name="api.noAccountForGoogleEmail" xml:space="preserve">
+    <value>No SyncApp26 account exists for this Google email. Contact an administrator.</value>
+  </data>
+  <data name="api.microsoftTokenRequired" xml:space="preserve">
+    <value>Microsoft ID token is required.</value>
+  </data>
+  <data name="api.microsoftSignInInvalid" xml:space="preserve">
+    <value>Invalid or expired Microsoft sign-in. Please try again.</value>
+  </data>
+  <data name="api.noAccountForMicrosoftEmail" xml:space="preserve">
+    <value>No SyncApp26 account exists for this Microsoft email. Contact an administrator.</value>
+  </data>
+  <data name="api.emailRequired" xml:space="preserve">
+    <value>Email is required.</value>
+  </data>
+  <data name="api.resetLinkSent" xml:space="preserve">
+    <value>A reset link has been sent to your email.</value>
+  </data>
+  <data name="api.resetFieldsRequired" xml:space="preserve">
+    <value>Email, token and new password are required.</value>
+  </data>
+  <data name="api.passwordResetSuccessful" xml:space="preserve">
+    <value>Password reset successfully.</value>
+  </data>
+  <data name="api.loginSuccessful" xml:space="preserve">
+    <value>Login successful.</value>
+  </data>
+  <data name="api.loggedOut" xml:space="preserve">
+    <value>Logged out.</value>
+  </data>
+  <data name="api.noRefreshToken" xml:space="preserve">
+    <value>No refresh token present.</value>
+  </data>
+  <data name="api.refreshTokenInvalid" xml:space="preserve">
+    <value>Refresh token is invalid or expired.</value>
+  </data>
+  <data name="api.sessionRefreshed" xml:space="preserve">
+    <value>Session refreshed.</value>
+  </data>
+  <data name="api.notImpersonating" xml:space="preserve">
+    <value>Not currently impersonating.</value>
+  </data>
+  <data name="api.impersonatorSessionGone" xml:space="preserve">
+    <value>Your original session no longer exists. Please log in again.</value>
+  </data>
+  <data name="api.impersonatorNotAdmin" xml:space="preserve">
+    <value>Your original session no longer has admin access. Please log in again.</value>
+  </data>
+  <data name="api.impersonationEnded" xml:space="preserve">
+    <value>Impersonation session ended.</value>
+  </data>
+  <data name="api.impersonationStarted" xml:space="preserve">
+    <value>Impersonation session started.</value>
+  </data>
+  <data name="api.cannotViewAsAdmin" xml:space="preserve">
+    <value>You cannot view as another administrator.</value>
+  </data>
+  <data name="api.cannotViewAsSelf" xml:space="preserve">
+    <value>You cannot view as yourself.</value>
+  </data>
+  <data name="api.viewOnlyMode" xml:space="preserve">
+    <value>You are viewing as another user. Actions that change data are disabled in view-only mode.</value>
+  </data>
+  <data name="api.roleDeleted" xml:space="preserve">
+    <value>Role deleted successfully.</value>
+  </data>
+  <data name="roleService.nameRequired" xml:space="preserve">
+    <value>Role name is required.</value>
+  </data>
+  <data name="roleService.alreadyExists" xml:space="preserve">
+    <value>A role named '{0}' already exists.</value>
+  </data>
+  <data name="roleService.notFound" xml:space="preserve">
+    <value>Role not found.</value>
+  </data>
+  <data name="roleService.systemRolesCannotBeDeleted" xml:space="preserve">
+    <value>System roles cannot be deleted.</value>
+  </data>
+  <data name="roleService.roleStillAssigned" xml:space="preserve">
+    <value>Cannot delete a role that is still assigned to users. Remove it from all users first.</value>
   </data>
 </root>

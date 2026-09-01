@@ -20,7 +20,7 @@ namespace SyncApp26.Tests.Controllers.Documents
         {
             _documentServiceMock.Setup(s => s.GetDocumentTypesByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
                 .ReturnsAsync(new Dictionary<Guid, string>());
-            var controller = new SignatureVerificationController(_verificationServiceMock.Object, _userServiceMock.Object, _documentServiceMock.Object);
+            var controller = new SignatureVerificationController(_verificationServiceMock.Object, _userServiceMock.Object, _documentServiceMock.Object, RealLocalizerFactory.LocalizationService());
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Shared.DTOs.DataChange;
 using System;
@@ -23,17 +24,22 @@ namespace SyncApp26.API.Controllers
         private readonly IEmailService _emailService;
         private readonly IDataChangeRequestRepository _repository;
         private readonly ILogger<DataChangeRequestController> _logger;
+        private readonly IStringLocalizer _localizer;
+        private readonly IStringLocalizer _emailLocalizer;
 
         public DataChangeRequestController(
             IDataChangeRequestService service,
             IEmailService emailService,
             IDataChangeRequestRepository repository,
-            ILogger<DataChangeRequestController> logger)
+            ILogger<DataChangeRequestController> logger,
+            ILocalizationService localizationService)
         {
             _service = service;
             _emailService = emailService;
             _repository = repository;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Requests);
+            _emailLocalizer = localizationService.GetScopedLocalizer(LocalizationScopes.Emails);
         }
 
         private Guid GetUserId()
@@ -78,7 +84,7 @@ namespace SyncApp26.API.Controllers
             }
             catch (JsonException)
             {
-                return BadRequest(new { message = "RequestedChangesJson must be a flat object of string values." });
+                return BadRequest(new { message = _localizer["api.requestedChangesJsonInvalid"].Value });
             }
 
             if (changes != null)
@@ -93,7 +99,7 @@ namespace SyncApp26.API.Controllers
                     dto.RequestedChangesJson = JsonSerializer.Serialize(changes);
                     if (changes.Count == 0)
                     {
-                        return BadRequest(new { message = $"These fields cannot be requested via this flow: {string.Join(", ", disallowed)}." });
+                        return BadRequest(new { message = _localizer["api.fieldsCannotBeRequested", string.Join(", ", disallowed)].Value });
                     }
                 }
             }
@@ -125,12 +131,12 @@ namespace SyncApp26.API.Controllers
         public async Task<IActionResult> ConfirmEmailChange([FromQuery] Guid reqId, [FromQuery] string token)
         {
             var req = await _service.GetRequestByIdAsync(reqId);
-            if (req == null) return BadRequest(new { message = "Request not found" });
-            if (req.Status != "Awaiting Verification") return BadRequest(new { message = "Request is already verified or processed." });
+            if (req == null) return BadRequest(new { message = _localizer["messages.requestNotFound"].Value });
+            if (req.Status != "Awaiting Verification") return BadRequest(new { message = _localizer["api.requestAlreadyVerified"].Value });
 
             var user = await _repository.GetUserByIdAsync(req.UserId);
             if (user == null || user.EmailVerificationToken != token || user.EmailVerificationTokenExpiresAt < DateTime.UtcNow)
-                return BadRequest(new { message = "Invalid or expired token." });
+                return BadRequest(new { message = _localizer["api.invalidOrExpiredToken"].Value });
 
             user.EmailVerificationToken = null;
             user.EmailVerificationTokenExpiresAt = null;
@@ -138,7 +144,7 @@ namespace SyncApp26.API.Controllers
 
             await _service.ChangeStatusAsync(reqId, "Pending");
 
-            return Ok(new { message = "Email confirmed successfully. Your request is now pending admin approval." });
+            return Ok(new { message = _localizer["api.emailConfirmed"].Value });
         }
 
         [HttpPut("{id}/resolve")]
@@ -165,8 +171,8 @@ namespace SyncApp26.API.Controllers
                     var user = await _repository.GetUserByIdAsync(result.UserId);
                     if (user != null && !string.IsNullOrWhiteSpace(user.Email))
                     {
-                        var emailHtml = $"<p>Hello {user.FirstName},</p><p>Your data change request submitted on {result.CreatedAt:d} has been approved and applied to your profile by our administrators.</p>";
-                        await _emailService.SendEmailAsync(user.Email, "Data Change Request Approved", emailHtml);
+                        var emailHtml = _emailLocalizer["dataChangeApproved.body", user.FirstName, $"{result.CreatedAt:d}"].Value;
+                        await _emailService.SendEmailAsync(user.Email, _emailLocalizer["dataChangeApproved.subject"].Value, emailHtml);
                     }
                 }
                 catch (Exception ex)

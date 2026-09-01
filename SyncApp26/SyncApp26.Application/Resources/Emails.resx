@@ -77,4 +77,151 @@
   <data name="securityAlert.subject" xml:space="preserve">
     <value>SyncApp26 Security Alert</value>
   </data>
+  <data name="common.footerUserManagement" xml:space="preserve">
+    <value>SyncApp26 - User Management System</value>
+  </data>
+  <data name="common.footerSsmSu" xml:space="preserve">
+    <value>SyncApp26 - SSM and SU Digitalization Platform</value>
+  </data>
+  <data name="common.greetingNamed" xml:space="preserve">
+    <value>Hello {0},</value>
+  </data>
+  <data name="common.greetingNoName" xml:space="preserve">
+    <value>Hello,</value>
+  </data>
+  <data name="common.buttonFallbackIntro" xml:space="preserve">
+    <value>If the button doesn't work, copy and paste this URL into your browser:</value>
+  </data>
+  <data name="verify.headerTag" xml:space="preserve">
+    <value>Account Verification</value>
+  </data>
+  <data name="verify.title" xml:space="preserve">
+    <value>Verify your email</value>
+  </data>
+  <data name="verify.intro" xml:space="preserve">
+    <value>Thanks for registering in SyncApp26. Please verify your email address to activate your account.</value>
+  </data>
+  <data name="verify.button" xml:space="preserve">
+    <value>Verify Email Address</value>
+  </data>
+  <data name="verify.expiry" xml:space="preserve">
+    <value>This link expires in &lt;strong&gt;24 hours&lt;/strong&gt;.</value>
+  </data>
+  <data name="reset.headerTag" xml:space="preserve">
+    <value>Password Reset</value>
+  </data>
+  <data name="reset.title" xml:space="preserve">
+    <value>Password reset</value>
+  </data>
+  <data name="reset.intro" xml:space="preserve">
+    <value>Click the button below to reset your password:</value>
+  </data>
+  <data name="reset.button" xml:space="preserve">
+    <value>Reset Password</value>
+  </data>
+  <data name="reset.expiry" xml:space="preserve">
+    <value>This link expires in &lt;strong&gt;{0} minutes&lt;/strong&gt;.</value>
+  </data>
+  <data name="docSign.headerTag" xml:space="preserve">
+    <value>Document Signature Required</value>
+  </data>
+  <data name="docSign.title" xml:space="preserve">
+    <value>Document Signature Required</value>
+  </data>
+  <data name="docSign.newDocument" xml:space="preserve">
+    <value>You have a new document (&lt;strong&gt;{0}&lt;/strong&gt;) that requires your signature.</value>
+  </data>
+  <data name="docSign.noAccountInstructions" xml:space="preserve">
+    <value>Since you don't have an account, you can sign it securely using the link below, or you can create an account after clicking the link.</value>
+  </data>
+  <data name="docSign.loginInstructions" xml:space="preserve">
+    <value>Please log in to your account to review and sign the document.</value>
+  </data>
+  <data name="docSign.buttonReviewAndSign" xml:space="preserve">
+    <value>Review and Sign Document</value>
+  </data>
+  <data name="docSign.buttonLogIn" xml:space="preserve">
+    <value>Log In to Sign</value>
+  </data>
+  <data name="docSign.secureOneTimeLink" xml:space="preserve">
+    <value>This link is a secure, one-time-use link.</value>
+  </data>
+  <data name="missingSigUser.headerTag" xml:space="preserve">
+    <value>Action Required: Missing Signature</value>
+  </data>
+  <data name="missingSigUser.title" xml:space="preserve">
+    <value>Missing Signature</value>
+  </data>
+  <data name="missingSigUser.body" xml:space="preserve">
+    <value>You have not signed the &lt;strong&gt;{0}&lt;/strong&gt; document that happened on &lt;strong&gt;{1}&lt;/strong&gt;.</value>
+  </data>
+  <data name="missingSigUser.noAccountInstructions" xml:space="preserve">
+    <value>Since you don't have an account yet, you can sign the document directly using the secure link below:</value>
+  </data>
+  <data name="missingSigUser.personalLink" xml:space="preserve">
+    <value>This is a secure, personal link for this document only.</value>
+  </data>
+  <data name="missingSigUser.loginInstructions" xml:space="preserve">
+    <value>Please log in to your account and sign this document as soon as possible.</value>
+  </data>
+  <data name="missingSigUser.dateRecently" xml:space="preserve">
+    <value>recently</value>
+  </data>
+  <data name="missingSigManager.headerTag" xml:space="preserve">
+    <value>Action Required: Missing Signatures</value>
+  </data>
+  <data name="missingSigManager.title" xml:space="preserve">
+    <value>Missing Signatures Overview</value>
+  </data>
+  <data name="missingSigManager.body" xml:space="preserve">
+    <value>You have &lt;strong&gt;{0}&lt;/strong&gt; user(s) who didn't sign the &lt;strong&gt;{1}&lt;/strong&gt; document.</value>
+  </data>
+  <data name="missingSigManager.callToAction" xml:space="preserve">
+    <value>Please solve this issue and talk to them to ensure all necessary documents are signed.</value>
+  </data>
+  <data name="securityAlert.subjectOne" xml:space="preserve">
+    <value>SyncApp26 Security Alert — 1 signature anomaly needs review</value>
+  </data>
+  <data name="securityAlert.subjectMany" xml:space="preserve">
+    <value>SyncApp26 Security Alert — {0} signature anomalies need review</value>
+  </data>
+  <data name="securityAlert.title" xml:space="preserve">
+    <value>Signature Verification Alert</value>
+  </data>
+  <data name="securityAlert.headline" xml:space="preserve">
+    <value>Signature integrity issue detected</value>
+  </data>
+  <data name="securityAlert.subhead" xml:space="preserve">
+    <value>Automated verification sweep</value>
+  </data>
+  <data name="securityAlert.intro" xml:space="preserve">
+    <value>Our scheduled signature-integrity sweep just finished its pass across the system. Most records checked out clean, but a few no longer match their original cryptographic record:</value>
+  </data>
+  <data name="securityAlert.statChecked" xml:space="preserve">
+    <value>Checked</value>
+  </data>
+  <data name="securityAlert.statFlagged" xml:space="preserve">
+    <value>Flagged</value>
+  </data>
+  <data name="securityAlert.colSignatureId" xml:space="preserve">
+    <value>Signature ID</value>
+  </data>
+  <data name="securityAlert.colSignerUserId" xml:space="preserve">
+    <value>Signer User ID</value>
+  </data>
+  <data name="securityAlert.colStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="securityAlert.showingFirst" xml:space="preserve">
+    <value>Showing the first {0} of {1} anomalies. Check the server logs for the full list.</value>
+  </data>
+  <data name="securityAlert.footerNote" xml:space="preserve">
+    <value>These signatures no longer match their original cryptographic record — treat them as unverified until someone confirms what happened.</value>
+  </data>
+  <data name="dataChangeApproved.subject" xml:space="preserve">
+    <value>Data Change Request Approved</value>
+  </data>
+  <data name="dataChangeApproved.body" xml:space="preserve">
+    <value>&lt;p&gt;Hello {0},&lt;/p&gt;&lt;p&gt;Your data change request submitted on {1} has been approved and applied to your profile by our administrators.&lt;/p&gt;</value>
+  </data>
 </root>

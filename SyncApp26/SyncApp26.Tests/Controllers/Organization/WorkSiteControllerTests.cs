@@ -17,7 +17,7 @@ namespace SyncApp26.Tests.Controllers.Organization
 
         private WorkSiteController CreateController(string role = Roles.Admin)
         {
-            var controller = new WorkSiteController(_workSiteServiceMock.Object);
+            var controller = new WorkSiteController(_workSiteServiceMock.Object, RealLocalizerFactory.LocalizationService());
             controller.SetUser(Guid.NewGuid(), role: role);
             return controller;
         }

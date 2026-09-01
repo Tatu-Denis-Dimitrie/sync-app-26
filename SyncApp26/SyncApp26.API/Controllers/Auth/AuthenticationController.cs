@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
 using SyncApp26.API.Services;
 using SyncApp26.API.Extensions;
@@ -23,6 +25,7 @@ namespace SyncApp26.API.Controllers
         private readonly AuthCookieOptions _authCookieOptions;
         private readonly IRefreshTokenService _refreshTokenService;
         private readonly ILogger<AuthenticationController> _logger;
+        private readonly IStringLocalizer _localizer;
 
         public AuthenticationController(
             IAccountService accountService,
@@ -30,7 +33,8 @@ namespace SyncApp26.API.Controllers
             IConfiguration configuration,
             AuthCookieOptions authCookieOptions,
             IRefreshTokenService refreshTokenService,
-            ILogger<AuthenticationController> logger)
+            ILogger<AuthenticationController> logger,
+            ILocalizationService localizationService)
         {
             _accountService = accountService;
             _emailService = emailService;
@@ -38,6 +42,7 @@ namespace SyncApp26.API.Controllers
             _authCookieOptions = authCookieOptions;
             _refreshTokenService = refreshTokenService;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Auth);
         }
 
         [HttpPost("register")]
@@ -55,7 +60,7 @@ namespace SyncApp26.API.Controllers
                 var registered = result.Data!;
                 if (registered.AlreadyRegistered)
                 {
-                    return Ok(new { message = "Registration successful. Check your email to verify your account." });
+                    return Ok(new { message = _localizer["api.registrationSuccessful"].Value });
                 }
 
                 var apiBaseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -69,15 +74,15 @@ namespace SyncApp26.API.Controllers
                 {
                     // User is saved; just warn that email delivery failed.
                     _logger.LogWarning(emailEx, "Registration succeeded for {Email} but the verification email failed to send.", registered.Email);
-                    return StatusCode(202, new { message = "Account created, but we could not send the verification email. Please contact an administrator.", error = emailEx.Message });
+                    return StatusCode(202, new { message = _localizer["api.registrationEmailFailed"].Value, error = emailEx.Message });
                 }
 
-                return Ok(new { message = "Registration successful. Check your email to verify your account." });
+                return Ok(new { message = _localizer["api.registrationSuccessful"].Value });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Registration failed for {Email}.", request?.Email);
-                return StatusCode(500, new { message = "An error occurred while processing your request." });
+                return StatusCode(500, new { message = _localizer["api.genericError"].Value });
             }
         }
 
@@ -87,15 +92,15 @@ namespace SyncApp26.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
             {
-                return BadRequest(new { message = "Invalid verification link." });
+                return BadRequest(new { message = _localizer["api.invalidVerificationLink"].Value });
             }
 
             var result = await _accountService.VerifyEmailAsync(email, token);
 
             return result.Status switch
             {
-                EmailVerificationStatus.NotFound => NotFound(new { message = "User not found." }),
-                EmailVerificationStatus.InvalidToken => BadRequest(new { message = "Verification token is invalid or expired." }),
+                EmailVerificationStatus.NotFound => NotFound(new { message = _localizer["api.userNotFound"].Value }),
+                EmailVerificationStatus.InvalidToken => BadRequest(new { message = _localizer["api.verificationTokenInvalid"].Value }),
                 _ => Redirect(GetLoginRedirectUrl())
             };
         }
@@ -110,22 +115,22 @@ namespace SyncApp26.API.Controllers
                     string.IsNullOrWhiteSpace(request.Email) ||
                     string.IsNullOrWhiteSpace(request.Password))
                 {
-                    return BadRequest(new { message = "Email and password are required." });
+                    return BadRequest(new { message = _localizer["api.emailAndPasswordRequired"].Value });
                 }
 
                 var result = await _accountService.AuthenticateAsync(request.Email, request.Password);
 
                 return result.Status switch
                 {
-                    LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid email or password." }),
-                    LoginStatus.EmailNotVerified => Unauthorized(new { message = "Email is not verified. Please check your email for verification instructions." }),
+                    LoginStatus.InvalidCredentials => Unauthorized(new { message = _localizer["api.invalidCredentials"].Value }),
+                    LoginStatus.EmailNotVerified => Unauthorized(new { message = _localizer["api.emailNotVerified"].Value }),
                     _ => await LoginSuccess(result)
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Login failed for {Email}.", request?.Email);
-                return StatusCode(500, new { message = "An error occurred while processing your request." });
+                return StatusCode(500, new { message = _localizer["api.genericError"].Value });
             }
         }
 
@@ -137,25 +142,25 @@ namespace SyncApp26.API.Controllers
             {
                 if (request == null || string.IsNullOrWhiteSpace(request.IdToken))
                 {
-                    return BadRequest(new { message = "Google ID token is required." });
+                    return BadRequest(new { message = _localizer["api.googleTokenRequired"].Value });
                 }
 
                 var result = await _accountService.AuthenticateWithGoogleAsync(request.IdToken);
 
                 return result.Status switch
                 {
-                    LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Google sign-in. Please try again." }),
-                    LoginStatus.GoogleEmailNotVerified => Unauthorized(new { message = "Your Google account email is not verified. Verify it with Google and try again." }),
-                    LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Google email. Contact an administrator." }),
+                    LoginStatus.InvalidCredentials => Unauthorized(new { message = _localizer["api.googleSignInInvalid"].Value }),
+                    LoginStatus.GoogleEmailNotVerified => Unauthorized(new { message = _localizer["api.googleEmailNotVerified"].Value }),
+                    LoginStatus.NoAccountForEmail => Unauthorized(new { message = _localizer["api.noAccountForGoogleEmail"].Value }),
                     LoginStatus.Success => await LoginSuccess(result),
                     // Explicit Success so a new status can't fall through as a 200 with no token.
-                    _ => StatusCode(500, new { message = "An error occurred while processing your request." })
+                    _ => StatusCode(500, new { message = _localizer["api.genericError"].Value })
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Google login failed.");
-                return StatusCode(500, new { message = "An error occurred while processing your request." });
+                return StatusCode(500, new { message = _localizer["api.genericError"].Value });
             }
         }
 
@@ -167,24 +172,24 @@ namespace SyncApp26.API.Controllers
             {
                 if (request == null || string.IsNullOrWhiteSpace(request.IdToken))
                 {
-                    return BadRequest(new { message = "Microsoft ID token is required." });
+                    return BadRequest(new { message = _localizer["api.microsoftTokenRequired"].Value });
                 }
 
                 var result = await _accountService.AuthenticateWithMicrosoftAsync(request.IdToken);
 
                 return result.Status switch
                 {
-                    LoginStatus.InvalidCredentials => Unauthorized(new { message = "Invalid or expired Microsoft sign-in. Please try again." }),
-                    LoginStatus.NoAccountForEmail => Unauthorized(new { message = "No SyncApp26 account exists for this Microsoft email. Contact an administrator." }),
+                    LoginStatus.InvalidCredentials => Unauthorized(new { message = _localizer["api.microsoftSignInInvalid"].Value }),
+                    LoginStatus.NoAccountForEmail => Unauthorized(new { message = _localizer["api.noAccountForMicrosoftEmail"].Value }),
                     LoginStatus.Success => await LoginSuccess(result),
                     // Explicit Success so a new status can't fall through as a 200 with no token.
-                    _ => StatusCode(500, new { message = "An error occurred while processing your request." })
+                    _ => StatusCode(500, new { message = _localizer["api.genericError"].Value })
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Microsoft login failed.");
-                return StatusCode(500, new { message = "An error occurred while processing your request." });
+                return StatusCode(500, new { message = _localizer["api.genericError"].Value });
             }
         }
 
@@ -194,7 +199,7 @@ namespace SyncApp26.API.Controllers
         {
             if (request == null || string.IsNullOrWhiteSpace(request.Email))
             {
-                return BadRequest(new { message = "Email is required." });
+                return BadRequest(new { message = _localizer["api.emailRequired"].Value });
             }
 
             var result = await _accountService.RequestPasswordResetAsync(request.Email);
@@ -211,7 +216,7 @@ namespace SyncApp26.API.Controllers
             }
 
             // Same response whether or not the account exists, so the caller can't tell.
-            return Ok(new { message = "A reset link has been sent to your email." });
+            return Ok(new { message = _localizer["api.resetLinkSent"].Value });
         }
 
         [HttpPost("reset-password")]
@@ -223,7 +228,7 @@ namespace SyncApp26.API.Controllers
                 string.IsNullOrWhiteSpace(request.Token) ||
                 string.IsNullOrWhiteSpace(request.NewPassword))
             {
-                return BadRequest(new { message = "Email, token and new password are required." });
+                return BadRequest(new { message = _localizer["api.resetFieldsRequired"].Value });
             }
 
             var result = await _accountService.ResetPasswordAsync(request.Email, request.Token, request.NewPassword);
@@ -232,7 +237,7 @@ namespace SyncApp26.API.Controllers
                 return BadRequest(new { message = result.ErrorMessage });
             }
 
-            return Ok(new { message = "Password reset successfully." });
+            return Ok(new { message = _localizer["api.passwordResetSuccessful"].Value });
         }
 
         // Shared by login/google-login/microsoft-login. No XSRF-TOKEN cookie here - User is still
@@ -247,7 +252,7 @@ namespace SyncApp26.API.Controllers
 
             return Ok(new
             {
-                message = "Login successful.",
+                message = _localizer["api.loginSuccessful"].Value,
                 user = new
                 {
                     id = result.UserId,

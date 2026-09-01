@@ -26,7 +26,7 @@
               [class.text-base]="isScrolled">SyncApp 26</span>
               @if (isLoggedIn && !isAdmin) {
                 <span
-                class="hidden text-[11px] font-medium text-muted-foreground sm:block">Access Verified</span>
+                class="hidden text-[11px] font-medium text-muted-foreground sm:block">{{ 'header.accessVerified' | translate:'Common' }}</span>
               }
             </div>
           </a>
@@ -36,24 +36,24 @@
           @if (isLoggedIn) {
             @if (isAdmin) {
               <a routerLink="/dashboard" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Dashboard</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.dashboard' | translate:'Common' }}</a>
               <a routerLink="/departments" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Departments</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.departments' | translate:'Common' }}</a>
               <a routerLink="/work-sites" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Work Sites</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.workSites' | translate:'Common' }}</a>
               <a routerLink="/users" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Users</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.users' | translate:'Common' }}</a>
               <a routerLink="/employees" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Employees</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.employees' | translate:'Common' }}</a>
               <a routerLink="/documents" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Documents</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.documents' | translate:'Common' }}</a>
               <a routerLink="/admin-signature" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
                 class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">
-                Signature
+                {{ 'nav.signature' | translate:'Common' }}
               </a>
               <a routerLink="/data-requests" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
                 class="relative rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">
-                Requests
+                {{ 'nav.requests' | translate:'Common' }}
                 @if (pendingRequestCount > 0) {
                   <span
                     class="signature-badge absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
@@ -62,17 +62,16 @@
                 }
               </a>
               <a routerLink="/import-history" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">User History</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">{{ 'nav.userHistory' | translate:'Common' }}</a>
             }
             @if (!isAdmin && isLineManager) {
               <a routerLink="/line-manager" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-                class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Manager
-              Console</a>
+                class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.managerConsole' | translate:'Common' }}</a>
               <a routerLink="/employees" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Employees</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.employees' | translate:'Common' }}</a>
               <a routerLink="/documents" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
                 class="relative rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">
-                Documents
+                {{ 'nav.documents' | translate:'Common' }}
                 @if (pendingSignatureCount > 0) {
                   <span
                     class="signature-badge absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
@@ -82,17 +81,17 @@
               </a>
               @if (isOfficer) {
                 <a routerLink="/admin-signature" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-                class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Signature</a>
+                class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.signature' | translate:'Common' }}</a>
               }
             }
             @if (!isAdmin && !isLineManager && isOfficer) {
               <a routerLink="/basic-user" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Home</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.home' | translate:'Common' }}</a>
               <a routerLink="/employees" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Employees</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.employees' | translate:'Common' }}</a>
               <a routerLink="/documents" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
                 class="relative rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">
-                Documents
+                {{ 'nav.documents' | translate:'Common' }}
                 @if (pendingSignatureCount > 0) {
                   <span
                     class="signature-badge absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
@@ -101,12 +100,11 @@
                 }
               </a>
               <a routerLink="/admin-signature" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">Signature</a>
+              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.signature' | translate:'Common' }}</a>
             }
             @if (!isAdmin && !isLineManager && !isOfficer) {
               <a routerLink="/basic-user" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-                class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">My
-              Profile</a>
+                class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.myProfile' | translate:'Common' }}</a>
             }
           }
         </div>
@@ -122,8 +120,8 @@
                      the accessible name regardless of hover state, and the sm:hidden "Exit" label
                      below gives touch users (no hover) a permanent, not discovered-on-hover, cue. -->
                 <button type="button" (click)="exitImpersonation()"
-                  [title]="'Unimpersonate ' + currentUser?.firstName"
-                  [attr.aria-label]="'Exit impersonation of ' + currentUser?.firstName + ' ' + currentUser?.lastName"
+                  [title]="tCommon('header.unimpersonateName', currentUser?.firstName || '')"
+                  [attr.aria-label]="tCommon('header.exitImpersonationOf', (currentUser?.firstName || '') + ' ' + (currentUser?.lastName || ''))"
                   class="impersonation-exit group flex items-center gap-2 rounded-full bg-secondary/80 py-1 pl-1 pr-3 transition-colors duration-300 hover:bg-secondary active:scale-[0.97] sm:pr-3.5">
                   <span class="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-tr from-primary/80 to-primary"
                     [title]="currentUser ? rolesLabel(currentUser.roles) : ''">
@@ -137,15 +135,15 @@
                       </svg>
                     </span>
                   </span>
-                  <span aria-hidden="true" class="text-xs font-medium text-muted-foreground sm:hidden">Exit</span>
+                  <span aria-hidden="true" class="text-xs font-medium text-muted-foreground sm:hidden">{{ 'header.exit' | translate:'Common' }}</span>
                   <span aria-hidden="true" class="relative hidden text-xs sm:block">
                     <!-- Invisible sizer: keeps the pill's width stable across both swap states. -->
-                    <span class="invisible whitespace-nowrap font-semibold">Viewing as {{ currentUser?.firstName }} {{ currentUser?.lastName }}</span>
+                    <span class="invisible whitespace-nowrap font-semibold">{{ 'header.viewingAs' | translate:'Common' }} {{ currentUser?.firstName }} {{ currentUser?.lastName }}</span>
                     <span class="absolute inset-0 flex items-center whitespace-nowrap text-muted-foreground transition-all duration-300 ease-out group-hover:-translate-y-3 group-hover:opacity-0">
-                      Viewing as&nbsp;<span class="font-semibold text-foreground">{{ currentUser?.firstName }} {{ currentUser?.lastName }}</span>
+                      {{ 'header.viewingAs' | translate:'Common' }}&nbsp;<span class="font-semibold text-foreground">{{ currentUser?.firstName }} {{ currentUser?.lastName }}</span>
                     </span>
                     <span class="absolute inset-0 flex translate-y-3 items-center whitespace-nowrap font-semibold text-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100">
-                      Unimpersonate
+                      {{ 'header.unimpersonate' | translate:'Common' }}
                     </span>
                   </span>
                 </button>
@@ -175,13 +173,13 @@
                 @if (isAnomalyPopoverOpen) {
                   <div
                     class="absolute left-1/2 -ml-36 mt-2 w-72 origin-top rounded-2xl border border-white/10 bg-background/95 p-4 shadow-xl backdrop-blur-2xl animate-in fade-in zoom-in duration-200">
-                    <p class="text-sm font-semibold tracking-tight mb-1">Signature integrity alert</p>
+                    <p class="text-sm font-semibold tracking-tight mb-1">{{ 'header.signatureIntegrityAlert' | translate:'Common' }}</p>
                     <p class="text-xs leading-relaxed text-muted-foreground mb-3">
-                      {{ anomalyAlert.anomaliesFound }} of {{ anomalyAlert.recordsChecked }} checked signatures were flagged. Full breakdown sent to your inbox.
+                      {{ 'header.anomalyBreakdown' | translate:'Common':anomalyAlert.anomaliesFound:anomalyAlert.recordsChecked }}
                     </p>
                     <button (click)="dismissAnomalyAlert()"
                       class="w-full rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-foreground transition-all hover:bg-white/10">
-                      Got it
+                      {{ 'header.gotIt' | translate:'Common' }}
                     </button>
                   </div>
                 }
@@ -223,7 +221,7 @@
                           d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 016 6v3" />
                       </svg>
                       <span class="min-w-0">
-                        Stop viewing as
+                        {{ 'header.stopViewingAs' | translate:'Common' }}
                         <span class="block truncate text-xs font-normal text-muted-foreground">
                           {{ currentUser?.firstName }} {{ currentUser?.lastName }}
                         </span>
@@ -236,7 +234,7 @@
                         <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                       </svg>
-                      Profile Settings
+                      {{ 'header.profileSettings' | translate:'Common' }}
                     </a>
                   }
                   <button (click)="logout()"
@@ -245,7 +243,7 @@
                       <path
                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
-                    Logout
+                    {{ 'buttons.logout' | translate:'Common' }}
                   </button>
                 </div>
               }
@@ -268,7 +266,7 @@
             </button>
           } @else {
             <a routerLink="/login"
-            class="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 active:scale-95">Sign In</a>
+            class="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 active:scale-95">{{ 'buttons.signIn' | translate:'Common' }}</a>
           }
 
         </div>
@@ -281,24 +279,24 @@
         <div class="space-y-0.5 px-4 py-4 sm:px-6">
           @if (isAdmin) {
             <a routerLink="/dashboard" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Dashboard</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.dashboard' | translate:'Common' }}</a>
             <a routerLink="/departments" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Departments</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.departments' | translate:'Common' }}</a>
             <a routerLink="/work-sites" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Work Sites</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.workSites' | translate:'Common' }}</a>
             <a routerLink="/users" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Users</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.users' | translate:'Common' }}</a>
             <a routerLink="/employees" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Employees</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.employees' | translate:'Common' }}</a>
             <a routerLink="/documents" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Documents</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.documents' | translate:'Common' }}</a>
             <a routerLink="/admin-signature" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
               class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">
-              Signature
+              {{ 'nav.signature' | translate:'Common' }}
             </a>
             <a routerLink="/data-requests" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
               class="relative flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">
-              Data Requests
+              {{ 'nav.dataRequests' | translate:'Common' }}
               @if (pendingRequestCount > 0) {
                 <span
                   class="signature-badge ml-auto flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
@@ -307,16 +305,16 @@
               }
             </a>
             <a routerLink="/import-history" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">User History</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.userHistory' | translate:'Common' }}</a>
           }
           @if (!isAdmin && isLineManager) {
             <a routerLink="/line-manager" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Manager Console</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.managerConsole' | translate:'Common' }}</a>
             <a routerLink="/employees" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Employees</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.employees' | translate:'Common' }}</a>
             <a routerLink="/documents" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
               class="relative flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">
-              Documents
+              {{ 'nav.documents' | translate:'Common' }}
               @if (pendingSignatureCount > 0) {
                 <span
                   class="signature-badge ml-auto flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
@@ -326,17 +324,17 @@
             </a>
             @if (isOfficer) {
               <a routerLink="/admin-signature" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-              class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Signature</a>
+              class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.signature' | translate:'Common' }}</a>
             }
           }
           @if (!isAdmin && !isLineManager && isOfficer) {
             <a routerLink="/basic-user" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Home</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.home' | translate:'Common' }}</a>
             <a routerLink="/employees" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Employees</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.employees' | translate:'Common' }}</a>
             <a routerLink="/documents" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
               class="relative flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">
-              Documents
+              {{ 'nav.documents' | translate:'Common' }}
               @if (pendingSignatureCount > 0) {
                 <span
                   class="signature-badge ml-auto flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full">
@@ -345,11 +343,11 @@
               }
             </a>
             <a routerLink="/admin-signature" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">Signature</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.signature' | translate:'Common' }}</a>
           }
           @if (!isAdmin && !isLineManager && !isOfficer) {
             <a routerLink="/basic-user" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">My Profile</a>
+            class="flex items-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5">{{ 'nav.myProfile' | translate:'Common' }}</a>
           }
           <div class="mt-2 border-t border-white/5 pt-2">
             <button (click)="logout()"
@@ -357,7 +355,7 @@
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              Logout
+              {{ 'buttons.logout' | translate:'Common' }}
             </button>
           </div>
         </div>

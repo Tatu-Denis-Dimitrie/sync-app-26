@@ -3,6 +3,7 @@ using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Shared.DTOs.Request.User;
+using SyncApp26.Tests.TestHelpers;
 
 namespace SyncApp26.Tests.Services.Auth
 {
@@ -10,7 +11,7 @@ namespace SyncApp26.Tests.Services.Auth
     {
         private readonly Mock<IUserRepository> _userRepositoryMock = new();
 
-        private RoleService CreateService() => new(_userRepositoryMock.Object);
+        private RoleService CreateService() => new(_userRepositoryMock.Object, RealLocalizerFactory.LocalizationService());
 
         // ───────────────────────── GetAllRolesAsync ─────────────────────────
 

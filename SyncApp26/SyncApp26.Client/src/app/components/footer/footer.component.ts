@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 
 import { VersionService } from '../../services/version.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-footer',
   standalone: true,
-  imports: [],
+  imports: [TranslatePipe],
   templateUrl: './footer.component.html',
   styleUrl: './footer.component.css'
 })

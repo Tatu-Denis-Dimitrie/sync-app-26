@@ -16,7 +16,7 @@ namespace SyncApp26.Shared.DTOs.Request.PeriodicTraining
         public string? MaterialTaught { get; set; }
 
         [StringLength(NameValidationConstants.NameMaxLength)]
-        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Verifier name must contain letters only (spaces, hyphens and apostrophes allowed).")]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "verifierName.pattern")]
         public string? VerifierName { get; set; }
 
         public string DocumentType { get; set; } = "Both"; // "SSM", "SU", or "Both"

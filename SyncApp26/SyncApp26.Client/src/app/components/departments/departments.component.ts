@@ -9,6 +9,8 @@ import { DepartmentsSyncService } from '../../services/departments-sync.service'
 import { AuthenticationService } from '../../services/authentication.service';
 import { Department, User } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 interface DepartmentSignatureStats {
   ssmSigned: number;
@@ -22,7 +24,7 @@ type SignatureFilter = 'all' | 'ssm-signed' | 'su-signed' | 'both-signed' | 'uns
 @Component({
   selector: 'app-departments',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe],
   templateUrl: './departments.component.html',
   styleUrls: ['./departments.component.css']
 })
@@ -58,8 +60,17 @@ export class DepartmentsComponent implements OnInit {
     private userSyncService: UserSyncService,
     private departmentsSyncService: DepartmentsSyncService,
     private authService: AuthenticationService,
-    private router: Router
+    private router: Router,
+    private translationService: TranslationService
   ) { }
+
+  private tOrg(key: string): string {
+    return this.translationService.translate('Organization', key);
+  }
+
+  permanentlyDeletingLabel(deletedAt: string | Date | undefined): string {
+    return this.translationService.translate('Organization', 'departments.permanentlyDeletingIn', this.getDaysRemaining(deletedAt));
+  }
 
   logout(): void {
     this.authService.logout();
@@ -276,7 +287,7 @@ navigateToDocuments(): void {
         },
         error: (err) => {
           console.error('Error updating department:', err);
-          alert(err.error?.message || 'Error updating department');
+          alert(err.error?.message || this.tOrg('departments.errorUpdating'));
         }
       });
   }
@@ -304,7 +315,7 @@ navigateToDocuments(): void {
 
     const hasUsers = (this.selectedDept.employeeCount + this.selectedDept.lineManagerCount) > 0;
     if (hasUsers && !this.transferToDeptId) {
-      alert('Please select a department to transfer the existing users to.');
+      alert(this.tOrg('departments.pleaseSelectTransfer'));
       return;
     }
 
@@ -316,7 +327,7 @@ navigateToDocuments(): void {
         },
         error: (err) => {
           console.error('Error deleting department:', err);
-          alert(err.error?.message || 'Error deleting department');
+          alert(err.error?.message || this.tOrg('departments.errorDeleting'));
         }
       });
   }
@@ -346,7 +357,7 @@ navigateToDocuments(): void {
       },
       error: (err) => {
         console.error('Error restoring department:', err);
-        alert(err.error?.message || 'Error restoring department');
+        alert(err.error?.message || this.tOrg('departments.errorRestoring'));
         this.closeRestoreModal();
       }
     });

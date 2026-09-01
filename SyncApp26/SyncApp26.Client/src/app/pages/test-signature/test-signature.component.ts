@@ -4,11 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { RouterModule } from '@angular/router';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-test-signature',
   standalone: true,
-  imports: [FormsModule, RouterModule],
+  imports: [FormsModule, RouterModule, TranslatePipe],
   templateUrl: './test-signature.component.html',
   styleUrls: ['./test-signature.component.css']
 })
@@ -20,11 +22,15 @@ export class TestSignatureComponent {
   successMessage: string = '';
   errorMessage: string = '';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private translationService: TranslationService) { }
+
+  private tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
 
   generateLink(): void {
     if (!this.email) {
-      this.errorMessage = 'Please enter an email address.';
+      this.errorMessage = this.tDocuments('testSignature.emailRequired');
       return;
     }
 
@@ -42,12 +48,12 @@ export class TestSignatureComponent {
       .subscribe({
         next: (response) => {
           this.isLoading = false;
-          this.successMessage = response.message || 'Signature request sent successfully! Check your email inbox or backend logs.';
+          this.successMessage = response.message || this.tDocuments('testSignature.requestSent');
           this.email = ''; // Reset
         },
         error: (error) => {
           this.isLoading = false;
-          this.errorMessage = error.error?.message || error.message || 'An error occurred while generating the link.';
+          this.errorMessage = error.error?.message || error.message || this.tDocuments('testSignature.errorGenerating');
         }
       });
   }

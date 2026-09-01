@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
@@ -18,8 +19,16 @@ namespace SyncApp26.Application.Services
         private readonly IGoogleTokenValidator _googleTokenValidator;
         private readonly IMicrosoftTokenValidator _microsoftTokenValidator;
         private readonly ILogger<AccountService> _logger;
+        private readonly IStringLocalizer _localizer;
 
-        public AccountService(IUserService userService, IAuthenticationService authenticationService, ITokenService tokenService, IGoogleTokenValidator googleTokenValidator, IMicrosoftTokenValidator microsoftTokenValidator, ILogger<AccountService> logger)
+        public AccountService(
+            IUserService userService,
+            IAuthenticationService authenticationService,
+            ITokenService tokenService,
+            IGoogleTokenValidator googleTokenValidator,
+            IMicrosoftTokenValidator microsoftTokenValidator,
+            ILogger<AccountService> logger,
+            ILocalizationService localizationService)
         {
             _userService = userService;
             _authenticationService = authenticationService;
@@ -27,33 +36,34 @@ namespace SyncApp26.Application.Services
             _googleTokenValidator = googleTokenValidator;
             _microsoftTokenValidator = microsoftTokenValidator;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Auth);
         }
 
-        private static string? ValidatePasswordFormat(string password)
+        private static string? ValidatePasswordFormat(string password, IStringLocalizer localizer)
         {
             if (password.Length < 8)
             {
-                return "Password must be at least 8 characters long.";
+                return localizer["validation.passwordMinLength"];
             }
 
             if (!Regex.IsMatch(password, @"[A-Z]"))
             {
-                return "Password must contain at least one uppercase letter.";
+                return localizer["validation.passwordUppercase"];
             }
 
             if (!Regex.IsMatch(password, @"[a-z]"))
             {
-                return "Password must contain at least one lowercase letter.";
+                return localizer["validation.passwordLowercase"];
             }
 
             if (!Regex.IsMatch(password, @"[0-9]"))
             {
-                return "Password must contain at least one digit.";
+                return localizer["validation.passwordDigit"];
             }
 
             if (!Regex.IsMatch(password, @"[!#$%&*^<>.,/?;_\-@]"))
             {
-                return "Password must contain at least one special character.";
+                return localizer["validation.passwordSpecialChar"];
             }
 
             return null;
@@ -67,17 +77,17 @@ namespace SyncApp26.Application.Services
                 string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password))
             {
-                return AccountActionResult<RegisteredAccountDTO>.Fail("All fields are required.");
+                return AccountActionResult<RegisteredAccountDTO>.Fail(_localizer["validation.allFieldsRequired"]);
             }
 
             var normalizedEmail = request.Email.ToLowerInvariant().Trim();
 
             if (!Regex.IsMatch(normalizedEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
-                return AccountActionResult<RegisteredAccountDTO>.Fail("Invalid email format.");
+                return AccountActionResult<RegisteredAccountDTO>.Fail(_localizer["validation.invalidEmailFormat"]);
             }
 
-            var passwordError = ValidatePasswordFormat(request.Password);
+            var passwordError = ValidatePasswordFormat(request.Password, _localizer);
             if (passwordError != null)
             {
                 return AccountActionResult<RegisteredAccountDTO>.Fail(passwordError);
@@ -284,7 +294,7 @@ namespace SyncApp26.Application.Services
             if (user == null)
             {
                 _logger.LogWarning("Password reset requested for unknown email {Email}.", normalizedEmail);
-                return AccountActionResult<PasswordResetRequestedDTO>.Fail("This email doesn't have an account.");
+                return AccountActionResult<PasswordResetRequestedDTO>.Fail(_localizer["validation.emailNotRegistered"]);
             }
 
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
@@ -305,7 +315,7 @@ namespace SyncApp26.Application.Services
 
         public async Task<AccountActionResult<bool>> ResetPasswordAsync(string email, string token, string newPassword)
         {
-            var passwordError = ValidatePasswordFormat(newPassword);
+            var passwordError = ValidatePasswordFormat(newPassword, _localizer);
             if (passwordError != null)
             {
                 return AccountActionResult<bool>.Fail(passwordError);
@@ -318,13 +328,13 @@ namespace SyncApp26.Application.Services
                 // Server log keeps the real reason distinct from the deliberately generic client
                 // message above, which never reveals whether the email has an account.
                 _logger.LogWarning("Password reset failed: unknown email {Email}.", normalizedEmail);
-                return AccountActionResult<bool>.Fail("Invalid or expired token.");
+                return AccountActionResult<bool>.Fail(_localizer["validation.invalidOrExpiredToken"]);
             }
 
             var verifyPassword = user.PasswordHash != null && await _authenticationService.VerifyPasswordAsync(newPassword, user.PasswordHash);
             if (verifyPassword)
             {
-                return AccountActionResult<bool>.Fail("New password cannot be the same as the old password.");
+                return AccountActionResult<bool>.Fail(_localizer["validation.passwordSameAsOld"]);
             }
 
             var providedToken = token.Trim();
@@ -334,7 +344,7 @@ namespace SyncApp26.Application.Services
                 !string.Equals(user.PasswordResetToken, providedToken, StringComparison.Ordinal))
             {
                 _logger.LogWarning("Password reset failed for {Email}: invalid or expired token.", normalizedEmail);
-                return AccountActionResult<bool>.Fail("Invalid or expired token.");
+                return AccountActionResult<bool>.Fail(_localizer["validation.invalidOrExpiredToken"]);
             }
 
             user.PasswordHash = await _authenticationService.HashPasswordAsync(newPassword);

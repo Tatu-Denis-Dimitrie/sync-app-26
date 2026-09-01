@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using SyncApp26.Application.IServices;
+using SyncApp26.Domain.Enums;
 
 namespace SyncApp26.API.Middleware
 {
@@ -27,6 +30,9 @@ namespace SyncApp26.API.Middleware
 
             httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
+            var localizer = httpContext.RequestServices.GetRequiredService<ILocalizationService>()
+                .GetScopedLocalizer(LocalizationScopes.Common);
+
             await _problemDetailsService.WriteAsync(new ProblemDetailsContext
             {
                 HttpContext = httpContext,
@@ -34,8 +40,8 @@ namespace SyncApp26.API.Middleware
                 ProblemDetails = new ProblemDetails
                 {
                     Status = StatusCodes.Status500InternalServerError,
-                    Title = "An unexpected error occurred.",
-                    Detail = "Contact an administrator with the trace ID if the problem persists.",
+                    Title = localizer["errors.unexpectedTitle"],
+                    Detail = localizer["errors.unexpectedDetail"],
                     Extensions = { ["traceId"] = traceId }
                 }
             });

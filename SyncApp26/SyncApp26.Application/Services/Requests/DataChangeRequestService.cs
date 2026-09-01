@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Shared.DTOs.DataChange;
 using System;
@@ -69,6 +71,7 @@ namespace SyncApp26.Application.Services
         private readonly IDepartmentRepository _departmentRepository;
         private readonly IFunctionRepository _functionRepository;
         private readonly ILogger<DataChangeRequestService> _logger;
+        private readonly IStringLocalizer _localizer;
 
         public DataChangeRequestService(
             IDataChangeRequestRepository repository,
@@ -78,7 +81,8 @@ namespace SyncApp26.Application.Services
             IWorkSiteRepository workSiteRepository,
             IDepartmentRepository departmentRepository,
             IFunctionRepository functionRepository,
-            ILogger<DataChangeRequestService> logger)
+            ILogger<DataChangeRequestService> logger,
+            ILocalizationService localizationService)
         {
             _repository = repository;
             _userChangeHistoryRepository = userChangeHistoryRepository;
@@ -88,6 +92,7 @@ namespace SyncApp26.Application.Services
             _departmentRepository = departmentRepository;
             _functionRepository = functionRepository;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Requests);
         }
 
         private static string GetNavigationFieldCurrentName(string fieldKey, User user)
@@ -110,11 +115,11 @@ namespace SyncApp26.Application.Services
                 var department = await _departmentRepository.GetByNameAsync(requestedName);
                 if (department == null)
                 {
-                    throw new Exception($"Cannot approve: department '{requestedName}' no longer exists.");
+                    throw new Exception(_localizer["resolve.departmentNoLongerExists", requestedName]);
                 }
                 if (!department.IsActive)
                 {
-                    throw new Exception($"Cannot approve: department '{department.Name}' is no longer active.");
+                    throw new Exception(_localizer["resolve.departmentNotActive", department.Name]);
                 }
                 return (department.Id, department.Name, department);
             }
@@ -124,7 +129,7 @@ namespace SyncApp26.Application.Services
                 var function = await _functionRepository.GetByNameAsync(requestedName);
                 if (function == null)
                 {
-                    throw new Exception($"Cannot approve: function '{requestedName}' no longer exists.");
+                    throw new Exception(_localizer["resolve.functionNoLongerExists", requestedName]);
                 }
                 return (function.Id, function.Name, function);
             }
@@ -132,11 +137,11 @@ namespace SyncApp26.Application.Services
             var workSite = await _workSiteRepository.GetByNameAsync(requestedName);
             if (workSite == null)
             {
-                throw new Exception($"Cannot approve: work site '{requestedName}' no longer exists.");
+                throw new Exception(_localizer["resolve.workSiteNoLongerExists", requestedName]);
             }
             if (!workSite.IsActive)
             {
-                throw new Exception($"Cannot approve: work site '{workSite.Name}' is no longer active.");
+                throw new Exception(_localizer["resolve.workSiteNotActive", workSite.Name]);
             }
             return (workSite.Id, workSite.Name, workSite);
         }
@@ -266,45 +271,45 @@ namespace SyncApp26.Application.Services
             var normalizedNewEmail = dto.NewEmail?.Trim().ToLowerInvariant() ?? string.Empty;
             if (!Regex.IsMatch(normalizedNewEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
-                return AccountActionResult<DataChangeRequestDTO>.Fail("Invalid email format.");
+                return AccountActionResult<DataChangeRequestDTO>.Fail(_localizer["emailChange.invalidFormat"]);
             }
 
             var user = await _repository.GetUserByIdAsync(userId);
             if (user == null)
             {
-                return AccountActionResult<DataChangeRequestDTO>.Fail("User not found.");
+                return AccountActionResult<DataChangeRequestDTO>.Fail(_localizer["emailChange.userNotFound"]);
             }
 
             var currentDomain = user.Email.Split('@').Last();
             var newDomain = normalizedNewEmail.Split('@').Last();
             if (!string.Equals(currentDomain, newDomain, StringComparison.OrdinalIgnoreCase))
             {
-                return AccountActionResult<DataChangeRequestDTO>.Fail($"The new email must use the same domain as your current address (@{currentDomain}).");
+                return AccountActionResult<DataChangeRequestDTO>.Fail(_localizer["emailChange.sameDomainRequired", currentDomain]);
             }
 
             if (string.Equals(normalizedNewEmail, user.Email, StringComparison.OrdinalIgnoreCase))
             {
-                return AccountActionResult<DataChangeRequestDTO>.Fail("This is already your current email address.");
+                return AccountActionResult<DataChangeRequestDTO>.Fail(_localizer["emailChange.alreadyCurrent"]);
             }
 
             var existingUser = await _userService.GetUserByEmailAsync(normalizedNewEmail);
             if (existingUser != null)
             {
-                return AccountActionResult<DataChangeRequestDTO>.Fail("This email address is already in use.");
+                return AccountActionResult<DataChangeRequestDTO>.Fail(_localizer["emailChange.alreadyInUse"]);
             }
 
             var existingRequests = await _repository.GetByUserWithUserAsync(userId);
             var hasPendingEmailChange = existingRequests.Any(r => r.Status == "Pending" && TryGetRequestedEmail(r.RequestedChangesJson) != null);
             if (hasPendingEmailChange)
             {
-                return AccountActionResult<DataChangeRequestDTO>.Fail("You already have a pending email change request awaiting admin review.");
+                return AccountActionResult<DataChangeRequestDTO>.Fail(_localizer["emailChange.alreadyPending"]);
             }
 
             var changesJson = JsonSerializer.Serialize(new Dictionary<string, string> { ["Email"] = normalizedNewEmail });
             var created = await CreateRequestCoreAsync(userId, new CreateDataChangeRequestDTO
             {
                 RequestedChangesJson = changesJson,
-                Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Email address change (self-service)" : dto.Reason!
+                Reason = string.IsNullOrWhiteSpace(dto.Reason) ? _localizer["emailChange.defaultReason"].Value : dto.Reason!
             }, "Pending", WritableFieldNames);
 
             return AccountActionResult<DataChangeRequestDTO>.Ok(created);
@@ -401,8 +406,8 @@ namespace SyncApp26.Application.Services
         public async Task<DataChangeRequestDTO> ChangeStatusAsync(Guid id, string status)
         {
             var req = await _repository.GetByIdWithUserAsync(id);
-            if (req == null) throw new Exception("Request not found");
-            
+            if (req == null) throw new Exception(_localizer["messages.requestNotFound"]);
+
             req.Status = status;
             await _repository.UpdateAsync(req);
             return MapToDTO(req);
@@ -412,8 +417,8 @@ namespace SyncApp26.Application.Services
         {
             var req = await _repository.GetByIdWithUserAsync(id);
 
-            if (req == null) throw new Exception("Request not found");
-            if (req.Status != "Pending") throw new Exception("Request is already resolved");
+            if (req == null) throw new Exception(_localizer["messages.requestNotFound"]);
+            if (req.Status != "Pending") throw new Exception(_localizer["messages.alreadyResolved"]);
 
             // Re-check email uniqueness right before applying: the address could've been claimed by
             // someone else in the time between the request being made and an admin approving it.
@@ -426,7 +431,7 @@ namespace SyncApp26.Application.Services
                     var conflictUser = await _userService.GetUserByEmailAsync(requestedEmail);
                     if (conflictUser != null && conflictUser.Id != req.UserId)
                     {
-                        throw new Exception($"Cannot approve: {requestedEmail} has since been taken by another account.");
+                        throw new Exception(_localizer["resolve.emailTakenSince", requestedEmail]);
                     }
                     oldEmailForCleanup = req.User.Email;
                 }
@@ -588,7 +593,7 @@ namespace SyncApp26.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error applying resolved changes for data change request {RequestId}.", req.Id);
-                throw new Exception("Error processing data change request.");
+                throw new Exception(_localizer["resolve.errorProcessing"]);
             }
 
             await _repository.UpdateAsync(req);

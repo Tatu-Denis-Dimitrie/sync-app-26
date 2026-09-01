@@ -17,7 +17,7 @@ namespace SyncApp26.Tests.Controllers.Documents
 
         private PeriodicTrainingController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
-            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object, _userServiceMock.Object, NullLogger<PeriodicTrainingController>.Instance);
+            var controller = new PeriodicTrainingController(_periodicTrainingServiceMock.Object, _userServiceMock.Object, NullLogger<PeriodicTrainingController>.Instance, RealLocalizerFactory.LocalizationService());
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }

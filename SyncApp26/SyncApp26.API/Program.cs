@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Infrastructure.Context;
 using SyncApp26.Infrastructure.Repositories;
@@ -50,7 +51,10 @@ try
             options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
             options.JsonSerializerOptions.MaxDepth = 64;
-        });
+        })
+        .AddDataAnnotationsLocalization(options =>
+            options.DataAnnotationLocalizerProvider = (_, factory) =>
+                factory.Create(LocalizationScopes.Validation, typeof(LocalizationService).Assembly.GetName().Name!));
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 

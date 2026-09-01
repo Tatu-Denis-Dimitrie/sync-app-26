@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
@@ -14,10 +15,12 @@ namespace SyncApp26.API.Controllers
     public class DepartmentController : ControllerBase
     {
         private readonly IDepartmentService _departmentService;
+        private readonly IStringLocalizer _localizer;
 
-        public DepartmentController(IDepartmentService departmentService)
+        public DepartmentController(IDepartmentService departmentService, ILocalizationService localizationService)
         {
             _departmentService = departmentService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Organization);
         }
 
         [HttpGet("{id}")]
@@ -72,7 +75,7 @@ namespace SyncApp26.API.Controllers
                 return new DepartmentResponseDTO
                 {
                     Success = false,
-                    Message = "Scheduled for deletion department not found",
+                    Message = _localizer["department.scheduledForDeletionNotFound"].Value,
                 };
             }
 
@@ -85,7 +88,7 @@ namespace SyncApp26.API.Controllers
             return new DepartmentResponseDTO
             {
                 Success = true,
-                Message = "Department successfully restored"
+                Message = _localizer["department.restored"].Value
             };
         }
 
@@ -106,7 +109,7 @@ namespace SyncApp26.API.Controllers
             return new DepartmentResponseDTO
             {
                 Success = true,
-                Message = "Department created successfully",
+                Message = _localizer["department.created"].Value,
             };
         }
 
@@ -119,7 +122,7 @@ namespace SyncApp26.API.Controllers
                 return new DepartmentResponseDTO
                 {
                     Success = false,
-                    Message = "Department name is required",
+                    Message = _localizer["department.nameRequired"].Value,
                 };
             }
 
@@ -135,7 +138,7 @@ namespace SyncApp26.API.Controllers
             return new DepartmentResponseDTO
             {
                 Success = true,
-                Message = "Department updated successfully",
+                Message = _localizer["department.updated"].Value,
             };
         }
 
@@ -149,7 +152,7 @@ namespace SyncApp26.API.Controllers
                 return new DepartmentResponseDTO
                 {
                     Success = false,
-                    Message = "Department not found",
+                    Message = _localizer["department.notFound"].Value,
                 };
             }
 
@@ -161,7 +164,7 @@ namespace SyncApp26.API.Controllers
                     return BadRequest(new DepartmentResponseDTO
                     {
                         Success = false,
-                        Message = "Department has assigned users. Please provide a transfer department ID."
+                        Message = _localizer["department.hasAssignedUsers"].Value
                     });
                 }
 
@@ -171,7 +174,7 @@ namespace SyncApp26.API.Controllers
                     return BadRequest(new DepartmentResponseDTO
                     {
                         Success = false,
-                        Message = "Transfer department not found."
+                        Message = _localizer["department.transferNotFound"].Value
                     });
                 }
 
@@ -180,7 +183,7 @@ namespace SyncApp26.API.Controllers
                     return BadRequest(new DepartmentResponseDTO
                     {
                         Success = false,
-                        Message = "Cannot transfer users to the same department being deleted."
+                        Message = _localizer["department.cannotTransferToSame"].Value
                     });
                 }
 
@@ -198,7 +201,7 @@ namespace SyncApp26.API.Controllers
             return new DepartmentResponseDTO
             {
                 Success = true,
-                Message = "Department deleted/deactivated successfully",
+                Message = _localizer["department.deleted"].Value,
             };
         }
     }

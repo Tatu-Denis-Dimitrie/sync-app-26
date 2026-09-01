@@ -19,6 +19,10 @@ export class LanguageSwitcherComponent {
     return this.translationService.language();
   }
 
+  ariaLabel(): string {
+    return this.translationService.translate('Common', 'languageSwitcher.ariaLabel', this.labels[this.currentLanguage]);
+  }
+
   toggle(): void {
     this.isOpen = !this.isOpen;
   }

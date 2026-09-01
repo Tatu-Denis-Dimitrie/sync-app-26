@@ -6,11 +6,13 @@ import { DataChangeRequest } from '../../models/data-change-request.model';
 import { Router } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
 import { BloodType, BLOOD_TYPE_LABELS } from '../../models/csv-sync.model';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-data-change-requests',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './data-change-requests.component.html',
   styleUrls: ['./data-change-requests.component.css']
 })
@@ -24,8 +26,22 @@ export class DataChangeRequestsComponent implements OnInit {
   constructor(
     private service: DataChangeRequestService,
     private router: Router,
-    private authService: AuthenticationService
+    private authService: AuthenticationService,
+    private translationService: TranslationService
   ) { }
+
+  private tRequests(key: string): string {
+    return this.translationService.translate('Requests', key);
+  }
+
+  statusLabel(status: string): string {
+    const keys: Record<string, string> = {
+      Pending: 'status.pending',
+      Approved: 'status.approved',
+      Rejected: 'status.rejected'
+    };
+    return keys[status] ? this.tRequests(keys[status]) : status;
+  }
 
   ngOnInit(): void {
     this.loadRequests();
@@ -39,7 +55,7 @@ export class DataChangeRequestsComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err) => {
-        this.error = 'Failed to load requests.';
+        this.error = this.tRequests('dataChangeRequests.failedToLoad');
         this.isLoading = false;
       }
     });
@@ -83,7 +99,7 @@ export class DataChangeRequestsComponent implements OnInit {
     this.warning = '';
 
     if (status === 'Rejected') {
-      const confirmReject = confirm('Are you sure you want to reject this request?');
+      const confirmReject = confirm(this.tRequests('dataChangeRequests.confirmReject'));
       if (!confirmReject) return;
     }
 
@@ -94,14 +110,20 @@ export class DataChangeRequestsComponent implements OnInit {
           this.requests[index] = res.request;
         }
         if (res.emailError) {
-          this.warning = `The request was ${status.toLowerCase()}, but the confirmation email could not be sent to the employee.`;
+          this.warning = this.tRequests(status === 'Approved'
+            ? 'dataChangeRequests.requestApprovedEmailFailed'
+            : 'dataChangeRequests.requestRejectedEmailFailed');
         } else {
-          this.success = `Request has been ${status.toLowerCase()}.`;
+          this.success = this.tRequests(status === 'Approved'
+            ? 'dataChangeRequests.requestApproved'
+            : 'dataChangeRequests.requestRejected');
         }
         this.service.loadPendingCount();
       },
       error: (err) => {
-        this.error = err.error?.message || `Failed to ${status.toLowerCase()} request.`;
+        this.error = err.error?.message || this.tRequests(status === 'Approved'
+          ? 'dataChangeRequests.failedToApprove'
+          : 'dataChangeRequests.failedToReject');
       }
     });
   }

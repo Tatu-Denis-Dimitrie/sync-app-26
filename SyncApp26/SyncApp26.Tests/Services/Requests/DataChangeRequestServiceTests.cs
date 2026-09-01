@@ -25,7 +25,8 @@ namespace SyncApp26.Tests.Services.Requests
                 new WorkSiteRepository(_dbFixture.Context),
                 new DepartmentRepository(_dbFixture.Context),
                 new FunctionRepository(_dbFixture.Context),
-                NullLogger<DataChangeRequestService>.Instance);
+                NullLogger<DataChangeRequestService>.Instance,
+                RealLocalizerFactory.LocalizationService());
 
         private WorkSite SeedWorkSite(string name, bool isActive = true)
         {

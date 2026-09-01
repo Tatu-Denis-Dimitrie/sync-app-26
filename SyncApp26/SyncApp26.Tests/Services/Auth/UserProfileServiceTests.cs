@@ -16,18 +16,25 @@ namespace SyncApp26.Tests.Services.Auth
         private readonly Mock<IDepartmentService> _departmentServiceMock = new();
         private readonly Mock<IFunctionService> _functionServiceMock = new();
         private readonly Mock<IUserChangeHistoryService> _userChangeHistoryServiceMock = new();
+        private readonly Mock<ILocalizationService> _localizationServiceMock = new();
         private readonly SqliteContextFixture _dbFixture = new();
 
         public void Dispose() => _dbFixture.Dispose();
 
-        private UserProfileService CreateService() =>
-            new(
+        private UserProfileService CreateService()
+        {
+            _localizationServiceMock.Setup(s => s.GetScopedLocalizer(LocalizationScopes.Users))
+                .Returns(RealLocalizerFactory.ForScope(LocalizationScopes.Users));
+
+            return new(
                 _userServiceMock.Object,
                 _departmentServiceMock.Object,
                 _functionServiceMock.Object,
                 _userChangeHistoryServiceMock.Object,
                 new UserInitialTrainingService(new UserInitialTrainingRepository(_dbFixture.Context)),
-                NullLogger<UserProfileService>.Instance);
+                NullLogger<UserProfileService>.Instance,
+                _localizationServiceMock.Object);
+        }
 
         private static User MakeUser(Guid? id = null, Guid? departmentId = null, Guid? assignedToId = null, string roleName = Roles.BasicUser)
         {

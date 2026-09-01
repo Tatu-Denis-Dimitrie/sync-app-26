@@ -3,7 +3,7 @@
     class="flex h-10 items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-all hover:bg-white/10 hover:text-foreground focus:outline-none backdrop-blur-sm"
     [class.ring-2]="isOpen" [class.ring-primary]="isOpen"
     aria-haspopup="true" [attr.aria-expanded]="isOpen"
-    [attr.aria-label]="'Language: ' + labels[currentLanguage]">
+    [attr.aria-label]="ariaLabel()">
     {{ currentLanguage }}
     <svg class="h-3.5 w-3.5 transition-transform" [class.rotate-180]="isOpen" fill="none" stroke="currentColor"
       stroke-width="2" viewBox="0 0 24 24">

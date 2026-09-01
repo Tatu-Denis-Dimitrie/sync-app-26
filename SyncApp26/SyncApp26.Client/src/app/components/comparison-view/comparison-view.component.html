@@ -3,19 +3,19 @@
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center space-x-6">
         <div>
-          <p class="text-sm text-muted-foreground">Total Changes</p>
+          <p class="text-sm text-muted-foreground">{{ 'dashboard.totalChanges' | translate:'Sync' }}</p>
           <p class="text-2xl font-bold text-foreground">
             {{ getFilteredComparisons().length }}
           </p>
         </div>
         <div>
-          <p class="text-sm text-muted-foreground">Conflicts</p>
+          <p class="text-sm text-muted-foreground">{{ 'comparison.conflicts' | translate:'Sync' }}</p>
           <p class="text-2xl font-bold text-yellow-600">
             {{ getConflictCount() }}
           </p>
         </div>
         <div>
-          <p class="text-sm text-muted-foreground">Selected</p>
+          <p class="text-sm text-muted-foreground">{{ 'dashboard.selected' | translate:'Sync' }}</p>
           <p class="text-2xl font-bold text-blue-600">
             {{ getSelectedCount() }}
           </p>
@@ -29,10 +29,10 @@
               ? 'px-4 py-2 border border-blue-500 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors shadow-md'
               : 'px-4 py-2 border border-border rounded-md text-sm font-medium hover:bg-accent transition-colors'
           "
-          title="Selects all new and modified changes. Deletions are never bulk-selected - check each one individually."
+          title="{{ 'comparison.selectAllUsersTitle' | translate:'Sync' }}"
           >
           {{
-          allUsersSelected ? "\u2713 All Users Selected" : "Select All Users"
+          allUsersSelected ? ('comparison.allUsersSelected' | translate:'Sync') : ('comparison.selectAllUsers' | translate:'Sync')
           }}
         </button>
         <button
@@ -42,12 +42,12 @@
               ? 'px-4 py-2 border border-yellow-500 bg-yellow-500 text-white rounded-md text-sm font-medium hover:bg-yellow-600 transition-colors shadow-md flex items-center gap-1'
               : 'px-4 py-2 border border-yellow-500 bg-yellow-500/10 rounded-md text-sm font-medium text-yellow-700 hover:bg-yellow-500/20 transition-colors flex items-center gap-1'
           "
-          title="Toggle all conflict field checkboxes"
+          title="{{ 'comparison.toggleAllConflictsTitle' | translate:'Sync' }}"
           >
           {{
           allConflictsSelected
-          ? "\u2713 All Conflicts Accepted"
-          : "Accept All Conflicts"
+          ? ('comparison.allConflictsAccepted' | translate:'Sync')
+          : ('comparison.acceptAllConflicts' | translate:'Sync')
           }}
         </button>
       </div>
@@ -60,7 +60,7 @@
         class="filter-button"
         >
         <span>➕</span>
-        <span>New</span>
+        <span>{{ 'comparison.filterNew' | translate:'Sync' }}</span>
       </button>
 
       <button
@@ -69,7 +69,7 @@
         class="filter-button"
         >
         <span>✏️</span>
-        <span>Modified</span>
+        <span>{{ 'comparison.filterModified' | translate:'Sync' }}</span>
       </button>
 
       <button
@@ -78,7 +78,7 @@
         class="filter-button"
         >
         <span>🗑️</span>
-        <span>Deleted</span>
+        <span>{{ 'comparison.filterDeleted' | translate:'Sync' }}</span>
       </button>
 
       <div class="flex gap-2">
@@ -87,18 +87,18 @@
           class="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-accent hover:text-foreground transition-colors flex items-center gap-1"
           [class.bg-primary]="sortField === 'createdAt'"
           [class.text-primary-foreground]="sortField === 'createdAt'"
-          title="Sort by created date"
+          title="{{ 'dashboard.sortByCreated' | translate:'Sync' }}"
           >
-          Created {{ getSortIcon("createdAt") }}
+          {{ 'dashboard.created' | translate:'Sync' }} {{ getSortIcon("createdAt") }}
         </button>
         <button
           (click)="toggleSort('updatedAt')"
           class="px-3 py-1.5 border border-border rounded-md text-xs font-medium hover:bg-accent hover:text-foreground transition-colors flex items-center gap-1"
           [class.bg-primary]="sortField === 'updatedAt'"
           [class.text-primary-foreground]="sortField === 'updatedAt'"
-          title="Sort by updated date"
+          title="{{ 'dashboard.sortByUpdated' | translate:'Sync' }}"
           >
-          Updated {{ getSortIcon("updatedAt") }}
+          {{ 'dashboard.updated' | translate:'Sync' }} {{ getSortIcon("updatedAt") }}
         </button>
       </div>
 
@@ -107,7 +107,7 @@
           type="text"
           [(ngModel)]="searchQuery"
           (ngModelChange)="onFilterChange()"
-          placeholder="Search by name, email, department..."
+          placeholder="{{ 'comparison.searchPlaceholder' | translate:'Sync' }}"
           class="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
           />
           <svg
@@ -149,17 +149,17 @@
                         comparison.dbUser?.firstName) +
                         " " +
                         (comparison.csvUser?.lastName ||
-                        comparison.dbUser?.lastName) || "Unknown User"
+                        comparison.dbUser?.lastName) || ('comparison.unknownUser' | translate:'Sync')
                         }}
                       </h3>
                       <p class="text-sm text-muted-foreground">
-                        ID: {{ comparison.id }}
+                        {{ 'comparison.idLabel' | translate:'Sync':comparison.id }}
                       </p>
                       <div class="mt-1 flex gap-4 text-xs text-muted-foreground">
                         @if (comparison.dbUser) {
                           <span
                     [title]="
-                      comparison.dbUser.updatedAt ? 'Last updated' : 'Created'
+                      comparison.dbUser.updatedAt ? ('comparison.lastUpdated' | translate:'Sync') : ('dashboard.created' | translate:'Sync')
                     "
                             >
                             <svg
@@ -175,7 +175,7 @@
                                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                               ></path>
                             </svg>
-                            {{ comparison.dbUser.updatedAt ? "Updated" : "Created" }}:
+                            {{ comparison.dbUser.updatedAt ? ('dashboard.updated' | translate:'Sync') : ('dashboard.created' | translate:'Sync') }}:
                             {{
                             formatDate(
                             comparison.dbUser.updatedAt ||
@@ -193,14 +193,13 @@
                       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border"
                       >
                       <span class="mr-1">{{ getStatusIcon(comparison.status) }}</span>
-                      {{ comparison.status }}
+                      {{ statusLabel(comparison.status) }}
                     </span>
                     @if (hasConflicts(comparison)) {
                       <span
                         class="text-sm text-muted-foreground"
                         >
-                        {{ getSelectedFieldsCount(comparison) }} /
-                        {{ comparison.conflicts.length }} fields selected
+                        {{ 'comparison.fieldsSelected' | translate:'Sync':getSelectedFieldsCount(comparison):comparison.conflicts.length }}
                       </span>
                     }
                   </div>
@@ -232,19 +231,19 @@
                       <div class="flex items-center gap-3 mb-2">
                         <span
                           class="text-xs font-medium text-muted-foreground uppercase"
-                          >First Name (Database)</span
+                          >{{ 'comparison.field.firstNameDb' | translate:'Sync' }}</span
                           >
                           @if (hasFieldConflict(comparison, 'firstName')) {
                             <span
                               class="text-xs text-red-600"
-                              >- removed</span
+                              >{{ 'comparison.removed' | translate:'Sync' }}</span
                               >
                           }
                           @if (fieldHasPendingRequest(comparison, 'firstName')) {
                             <span
                               class="text-xs text-amber-600"
-                              title="A pending data change request wants this field to become a different value"
-                              >⚠ pending request: {{ getPendingRequestValue(comparison, 'firstName') }}</span
+                              title="{{ 'comparison.pendingRequestTitle' | translate:'Sync' }}"
+                              >{{ 'comparison.pendingRequestPrefix' | translate:'Sync' }}{{ getPendingRequestValue(comparison, 'firstName') }}</span
                               >
                           }
                         </div>
@@ -255,7 +254,7 @@
                   hasFieldConflict(comparison, 'firstName')
                 "
                           >
-                          {{ comparison.dbUser?.firstName || "N/A" }}
+                          {{ comparison.dbUser?.firstName || ('labels.notAvailable' | translate:'Common') }}
                         </p>
                       </div>
                       <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
@@ -270,7 +269,7 @@
                                   (change)="resolvePendingConflict(comparison.id, 'firstName', option.value)"
                                   class="w-3.5 h-3.5"
                                   />
-                                  <span class="text-amber-900">Keep request: {{ option.value }}</span>
+                                  <span class="text-amber-900">{{ 'comparison.keepRequestPrefix' | translate:'Sync' }}{{ option.value }}</span>
                               </label>
                             }
                             <label class="flex items-center gap-1.5 cursor-pointer">
@@ -281,7 +280,7 @@
                                 (change)="resolveConflict(comparison.id, 'firstName', 'csv')"
                                 class="w-3.5 h-3.5"
                                 />
-                                <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'firstName') }}</span>
+                                <span class="text-green-700">{{ 'comparison.useCsvValuePrefix' | translate:'Sync' }}{{ getCsvConflictValue(comparison, 'firstName') }}</span>
                             </label>
                           </div>
                         }
@@ -294,7 +293,7 @@
                               [checked]="isFieldSelected(comparison, 'firstName')"
                               (change)="toggleFieldSelection(comparison.id, 'firstName')"
                               class="w-4 h-4 rounded border-border"
-                              title="Select to sync this field"
+                              title="{{ 'comparison.selectToSync' | translate:'Sync' }}"
                               />
                               <svg
                                 class="w-4 h-4 text-muted-foreground"
@@ -322,12 +321,12 @@
                           <div class="flex items-center gap-3 mb-2">
                             <span
                               class="text-xs font-medium text-muted-foreground uppercase"
-                              >First Name (CSV)</span
+                              >{{ 'comparison.field.firstNameCsv' | translate:'Sync' }}</span
                               >
                               @if (hasFieldConflict(comparison, 'firstName')) {
                                 <span
                                   class="text-xs text-green-600"
-                                  >+ added</span
+                                  >{{ 'dashboard.added' | translate:'Sync' }}</span
                                   >
                                 }
                               </div>
@@ -340,7 +339,7 @@
                   hasFieldConflict(comparison, 'firstName')
                 "
                                 >
-                                {{ comparison.csvUser?.firstName || "N/A" }}
+                                {{ comparison.csvUser?.firstName || ('labels.notAvailable' | translate:'Common') }}
                               </p>
                             </div>
                           </div>
@@ -354,19 +353,19 @@
                               <div class="flex items-center gap-3 mb-2">
                                 <span
                                   class="text-xs font-medium text-muted-foreground uppercase"
-                                  >Last Name (Database)</span
+                                  >{{ 'comparison.field.lastNameDb' | translate:'Sync' }}</span
                                   >
                                   @if (hasFieldConflict(comparison, 'lastName')) {
                                     <span
                                       class="text-xs text-red-600"
-                                      >- removed</span
+                                      >{{ 'comparison.removed' | translate:'Sync' }}</span
                                       >
                                     }
                                     @if (fieldHasPendingRequest(comparison, 'lastName')) {
                                       <span
                                         class="text-xs text-amber-600"
-                                        title="A pending data change request wants this field to become a different value"
-                                        >⚠ pending request: {{ getPendingRequestValue(comparison, 'lastName') }}</span
+                                        title="{{ 'comparison.pendingRequestTitle' | translate:'Sync' }}"
+                                        >{{ 'comparison.pendingRequestPrefix' | translate:'Sync' }}{{ getPendingRequestValue(comparison, 'lastName') }}</span
                                         >
                                     }
                                   </div>
@@ -377,7 +376,7 @@
                   hasFieldConflict(comparison, 'lastName')
                 "
                                     >
-                                    {{ comparison.dbUser?.lastName || "N/A" }}
+                                    {{ comparison.dbUser?.lastName || ('labels.notAvailable' | translate:'Common') }}
                                   </p>
                                 </div>
                                 <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
@@ -392,7 +391,7 @@
                                             (change)="resolvePendingConflict(comparison.id, 'lastName', option.value)"
                                             class="w-3.5 h-3.5"
                                             />
-                                            <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                            <span class="text-amber-700">{{ 'comparison.keepRequestPrefix' | translate:'Sync' }}{{ option.value }}</span>
                                         </label>
                                       }
                                       <label class="flex items-center gap-1.5 cursor-pointer">
@@ -403,7 +402,7 @@
                                           (change)="resolveConflict(comparison.id, 'lastName', 'csv')"
                                           class="w-3.5 h-3.5"
                                           />
-                                          <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'lastName') }}</span>
+                                          <span class="text-green-700">{{ 'comparison.useCsvValuePrefix' | translate:'Sync' }}{{ getCsvConflictValue(comparison, 'lastName') }}</span>
                                       </label>
                                     </div>
                                   }
@@ -416,7 +415,7 @@
                                         [checked]="isFieldSelected(comparison, 'lastName')"
                                         (change)="toggleFieldSelection(comparison.id, 'lastName')"
                                         class="w-4 h-4 rounded border-border"
-                                        title="Select to sync this field"
+                                        title="{{ 'comparison.selectToSync' | translate:'Sync' }}"
                                         />
                                         <svg
                                           class="w-4 h-4 text-muted-foreground"
@@ -444,12 +443,12 @@
                                     <div class="flex items-center gap-3 mb-2">
                                       <span
                                         class="text-xs font-medium text-muted-foreground uppercase"
-                                        >Last Name (CSV)</span
+                                        >{{ 'comparison.field.lastNameCsv' | translate:'Sync' }}</span
                                         >
                                         @if (hasFieldConflict(comparison, 'lastName')) {
                                           <span
                                             class="text-xs text-green-600"
-                                            >+ added</span
+                                            >{{ 'dashboard.added' | translate:'Sync' }}</span
                                             >
                                           }
                                         </div>
@@ -460,7 +459,7 @@
                   hasFieldConflict(comparison, 'lastName')
                 "
                                           >
-                                          {{ comparison.csvUser?.lastName || "N/A" }}
+                                          {{ comparison.csvUser?.lastName || ('labels.notAvailable' | translate:'Common') }}
                                         </p>
                                       </div>
                                     </div>
@@ -474,19 +473,19 @@
                                         <div class="flex items-center gap-3 mb-2">
                                           <span
                                             class="text-xs font-medium text-muted-foreground uppercase"
-                                            >Email (Database)</span
+                                            >{{ 'comparison.field.emailDb' | translate:'Sync' }}</span
                                             >
                                             @if (hasFieldConflict(comparison, 'email')) {
                                               <span
                                                 class="text-xs text-red-600"
-                                                >- removed</span
+                                                >{{ 'comparison.removed' | translate:'Sync' }}</span
                                                 >
                                               }
                                             @if (fieldHasPendingRequest(comparison, 'email')) {
                                               <span
                                                 class="text-xs text-amber-600"
-                                                title="A pending data change request wants this field to become a different value"
-                                                >⚠ pending request: {{ getPendingRequestValue(comparison, 'email') }}</span
+                                                title="{{ 'comparison.pendingRequestTitle' | translate:'Sync' }}"
+                                                >{{ 'comparison.pendingRequestPrefix' | translate:'Sync' }}{{ getPendingRequestValue(comparison, 'email') }}</span
                                                 >
                                             }
                                             </div>
@@ -497,7 +496,7 @@
                   hasFieldConflict(comparison, 'email')
                 "
                                               >
-                                              {{ comparison.dbUser?.email || "N/A" }}
+                                              {{ comparison.dbUser?.email || ('labels.notAvailable' | translate:'Common') }}
                                             </p>
                                           </div>
                                           <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
@@ -512,7 +511,7 @@
                                                         (change)="resolvePendingConflict(comparison.id, 'email', option.value)"
                                                         class="w-3.5 h-3.5"
                                                         />
-                                                        <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                                        <span class="text-amber-700">{{ 'comparison.keepRequestPrefix' | translate:'Sync' }}{{ option.value }}</span>
                                                     </label>
                                                   }
                                                   <label class="flex items-center gap-1.5 cursor-pointer">
@@ -523,7 +522,7 @@
                                                       (change)="resolveConflict(comparison.id, 'email', 'csv')"
                                                       class="w-3.5 h-3.5"
                                                       />
-                                                      <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'email') }}</span>
+                                                      <span class="text-green-700">{{ 'comparison.useCsvValuePrefix' | translate:'Sync' }}{{ getCsvConflictValue(comparison, 'email') }}</span>
                                                   </label>
                                                 </div>
                                               }
@@ -536,7 +535,7 @@
                                                   [checked]="isFieldSelected(comparison, 'email')"
                                                   (change)="toggleFieldSelection(comparison.id, 'email')"
                                                   class="w-4 h-4 rounded border-border"
-                                                  title="Select to sync this field"
+                                                  title="{{ 'comparison.selectToSync' | translate:'Sync' }}"
                                                   />
                                                   <svg
                                                     class="w-4 h-4 text-muted-foreground"
@@ -564,12 +563,12 @@
                                               <div class="flex items-center gap-3 mb-2">
                                                 <span
                                                   class="text-xs font-medium text-muted-foreground uppercase"
-                                                  >Email (CSV)</span
+                                                  >{{ 'comparison.field.emailCsv' | translate:'Sync' }}</span
                                                   >
                                                   @if (hasFieldConflict(comparison, 'email')) {
                                                     <span
                                                       class="text-xs text-green-600"
-                                                      >+ added</span
+                                                      >{{ 'dashboard.added' | translate:'Sync' }}</span
                                                       >
                                                     }
                                                   </div>
@@ -578,7 +577,7 @@
                                                     [class.font-semibold]="hasFieldConflict(comparison, 'email')"
                                                     [class.text-green-700]="hasFieldConflict(comparison, 'email')"
                                                     >
-                                                    {{ comparison.csvUser?.email || "N/A" }}
+                                                    {{ comparison.csvUser?.email || ('labels.notAvailable' | translate:'Common') }}
                                                   </p>
                                                 </div>
                                               </div>
@@ -590,16 +589,16 @@
                                                   <div class="flex items-center gap-3 mb-2">
                                                     <span
                                                       class="text-xs font-medium text-muted-foreground uppercase"
-                                                      >Department (Database)</span
+                                                      >{{ 'comparison.field.departmentDb' | translate:'Sync' }}</span
                                                       >
                                                     @if (hasFieldConflict(comparison, 'departmentName')) {
-                                                      <span class="text-xs text-red-600">- removed</span>
+                                                      <span class="text-xs text-red-600">{{ 'comparison.removed' | translate:'Sync' }}</span>
                                                     }
                                                     @if (fieldHasPendingRequest(comparison, 'departmentName')) {
                                                       <span
                                                         class="text-xs text-amber-600"
-                                                        title="A pending data change request wants this field to become a different value"
-                                                        >⚠ pending request: {{ getPendingRequestValue(comparison, 'departmentName') }}</span
+                                                        title="{{ 'comparison.pendingRequestTitle' | translate:'Sync' }}"
+                                                        >{{ 'comparison.pendingRequestPrefix' | translate:'Sync' }}{{ getPendingRequestValue(comparison, 'departmentName') }}</span
                                                         >
                                                     }
                                                   </div>
@@ -608,7 +607,7 @@
                                                     [class.line-through]="hasFieldConflict(comparison, 'departmentName')"
                                                     [class.text-muted-foreground]="hasFieldConflict(comparison, 'departmentName')"
                                                     >
-                                                    {{ comparison.dbUser?.departmentName || "N/A" }}
+                                                    {{ comparison.dbUser?.departmentName || ('labels.notAvailable' | translate:'Common') }}
                                                   </p>
                                                 </div>
                                                 <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
@@ -623,7 +622,7 @@
                                                             (change)="resolvePendingConflict(comparison.id, 'departmentName', option.value)"
                                                             class="w-3.5 h-3.5"
                                                             />
-                                                            <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                                            <span class="text-amber-700">{{ 'comparison.keepRequestPrefix' | translate:'Sync' }}{{ option.value }}</span>
                                                         </label>
                                                       }
                                                       <label class="flex items-center gap-1.5 cursor-pointer">
@@ -634,7 +633,7 @@
                                                           (change)="resolveConflict(comparison.id, 'departmentName', 'csv')"
                                                           class="w-3.5 h-3.5"
                                                           />
-                                                          <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'departmentName') }}</span>
+                                                          <span class="text-green-700">{{ 'comparison.useCsvValuePrefix' | translate:'Sync' }}{{ getCsvConflictValue(comparison, 'departmentName') }}</span>
                                                       </label>
                                                     </div>
                                                   }
@@ -645,7 +644,7 @@
                                                         [checked]="isFieldSelected(comparison, 'departmentName')"
                                                         (change)="toggleFieldSelection(comparison.id, 'departmentName')"
                                                         class="w-4 h-4 rounded border-border"
-                                                        title="Select to sync this field"
+                                                        title="{{ 'comparison.selectToSync' | translate:'Sync' }}"
                                                         />
                                                         <svg
                                                           class="w-4 h-4 text-muted-foreground"
@@ -670,10 +669,10 @@
                                                   <div class="flex items-center gap-3 mb-2">
                                                     <span
                                                       class="text-xs font-medium text-muted-foreground uppercase"
-                                                      >Department (CSV)</span
+                                                      >{{ 'comparison.field.departmentCsv' | translate:'Sync' }}</span
                                                       >
                                                     @if (hasFieldConflict(comparison, 'departmentName')) {
-                                                      <span class="text-xs text-green-600">+ added</span>
+                                                      <span class="text-xs text-green-600">{{ 'dashboard.added' | translate:'Sync' }}</span>
                                                     }
                                                   </div>
                                                   <p
@@ -681,7 +680,7 @@
                                                     [class.font-semibold]="hasFieldConflict(comparison, 'departmentName')"
                                                     [class.text-green-700]="hasFieldConflict(comparison, 'departmentName')"
                                                     >
-                                                    {{ comparison.csvUser?.departmentName || "N/A" }}
+                                                    {{ comparison.csvUser?.departmentName || ('labels.notAvailable' | translate:'Common') }}
                                                   </p>
                                                 </div>
                                               </div>
@@ -695,12 +694,12 @@
                                                                       <div class="flex items-center gap-3 mb-2">
                                                                         <span
                                                                           class="text-xs font-medium text-muted-foreground uppercase"
-                                                                          >Line Manager (Database)</span
+                                                                          >{{ 'comparison.field.lineManagerDb' | translate:'Sync' }}</span
                                                                           >
                                                                           @if (hasFieldConflict(comparison, 'assignedToName')) {
                                                                             <span
                                                                               class="text-xs text-red-600"
-                                                                              >- removed</span
+                                                                              >{{ 'comparison.removed' | translate:'Sync' }}</span
                                                                               >
                                                                             }
                                                                           </div>
@@ -713,7 +712,7 @@
                   hasFieldConflict(comparison, 'assignedToName')
                 "
                                                                             >
-                                                                            {{ comparison.dbUser?.assignedToName || "None" }}
+                                                                            {{ comparison.dbUser?.assignedToName || ('comparison.none' | translate:'Sync') }}
                                                                           </p>
                                                                         </div>
                                                                         <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
@@ -728,7 +727,7 @@
                     toggleFieldSelection(comparison.id, 'assignedToName')
                   "
                                                                                 class="w-4 h-4 rounded border-border"
-                                                                                title="Select to sync this field"
+                                                                                title="{{ 'comparison.selectToSync' | translate:'Sync' }}"
                                                                                 />
                                                                                 <svg
                                                                                   class="w-4 h-4 text-muted-foreground"
@@ -756,12 +755,12 @@
                                                                             <div class="flex items-center gap-3 mb-2">
                                                                               <span
                                                                                 class="text-xs font-medium text-muted-foreground uppercase"
-                                                                                >Line Manager (CSV)</span
+                                                                                >{{ 'comparison.field.lineManagerCsv' | translate:'Sync' }}</span
                                                                                 >
                                                                                 @if (hasFieldConflict(comparison, 'assignedToName')) {
                                                                                   <span
                                                                                     class="text-xs text-green-600"
-                                                                                    >+ added</span
+                                                                                    >{{ 'dashboard.added' | translate:'Sync' }}</span
                                                                                     >
                                                                                   }
                                                                                 </div>
@@ -774,7 +773,7 @@
                   hasFieldConflict(comparison, 'assignedToName')
                 "
                                                                                   >
-                                                                                  {{ comparison.csvUser?.assignedToName || "None" }}
+                                                                                  {{ comparison.csvUser?.assignedToName || ('comparison.none' | translate:'Sync') }}
                                                                                 </p>
                                                                               </div>
                                                                             </div>
@@ -787,16 +786,16 @@
                                               <div class="flex items-center gap-3 mb-2">
                                                 <span
                                                   class="text-xs font-medium text-muted-foreground uppercase"
-                                                  >Function (Database)</span
+                                                  >{{ 'comparison.field.functionDb' | translate:'Sync' }}</span
                                                   >
                                                 @if (hasFieldConflict(comparison, 'function')) {
-                                                  <span class="text-xs text-red-600">- removed</span>
+                                                  <span class="text-xs text-red-600">{{ 'comparison.removed' | translate:'Sync' }}</span>
                                                 }
                                                 @if (fieldHasPendingRequest(comparison, 'function')) {
                                                   <span
                                                     class="text-xs text-amber-600"
-                                                    title="A pending data change request wants this field to become a different value"
-                                                    >⚠ pending request: {{ getPendingRequestValue(comparison, 'function') }}</span
+                                                    title="{{ 'comparison.pendingRequestTitle' | translate:'Sync' }}"
+                                                    >{{ 'comparison.pendingRequestPrefix' | translate:'Sync' }}{{ getPendingRequestValue(comparison, 'function') }}</span
                                                     >
                                                 }
                                               </div>
@@ -805,7 +804,7 @@
                                                 [class.line-through]="hasFieldConflict(comparison, 'function')"
                                                 [class.text-muted-foreground]="hasFieldConflict(comparison, 'function')"
                                                 >
-                                                {{ comparison.dbUser?.function || "N/A" }}
+                                                {{ comparison.dbUser?.function || ('labels.notAvailable' | translate:'Common') }}
                                               </p>
                                             </div>
                                             <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
@@ -820,7 +819,7 @@
                                                         (change)="resolvePendingConflict(comparison.id, 'function', option.value)"
                                                         class="w-3.5 h-3.5"
                                                         />
-                                                        <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                                        <span class="text-amber-700">{{ 'comparison.keepRequestPrefix' | translate:'Sync' }}{{ option.value }}</span>
                                                     </label>
                                                   }
                                                   <label class="flex items-center gap-1.5 cursor-pointer">
@@ -831,7 +830,7 @@
                                                       (change)="resolveConflict(comparison.id, 'function', 'csv')"
                                                       class="w-3.5 h-3.5"
                                                       />
-                                                      <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'function') }}</span>
+                                                      <span class="text-green-700">{{ 'comparison.useCsvValuePrefix' | translate:'Sync' }}{{ getCsvConflictValue(comparison, 'function') }}</span>
                                                   </label>
                                                 </div>
                                               }
@@ -842,7 +841,7 @@
                                                     [checked]="isFieldSelected(comparison, 'function')"
                                                     (change)="toggleFieldSelection(comparison.id, 'function')"
                                                     class="w-4 h-4 rounded border-border"
-                                                    title="Select to sync this field"
+                                                    title="{{ 'comparison.selectToSync' | translate:'Sync' }}"
                                                     />
                                                     <svg
                                                       class="w-4 h-4 text-muted-foreground"
@@ -867,10 +866,10 @@
                                               <div class="flex items-center gap-3 mb-2">
                                                 <span
                                                   class="text-xs font-medium text-muted-foreground uppercase"
-                                                  >Function (CSV)</span
+                                                  >{{ 'comparison.field.functionCsv' | translate:'Sync' }}</span
                                                   >
                                                 @if (hasFieldConflict(comparison, 'function')) {
-                                                  <span class="text-xs text-green-600">+ added</span>
+                                                  <span class="text-xs text-green-600">{{ 'dashboard.added' | translate:'Sync' }}</span>
                                                 }
                                               </div>
                                               <p
@@ -878,7 +877,7 @@
                                                 [class.font-semibold]="hasFieldConflict(comparison, 'function')"
                                                 [class.text-green-700]="hasFieldConflict(comparison, 'function')"
                                                 >
-                                                {{ comparison.csvUser?.function || "N/A" }}
+                                                {{ comparison.csvUser?.function || ('labels.notAvailable' | translate:'Common') }}
                                               </p>
                                             </div>
                                           </div>
@@ -890,16 +889,16 @@
                                         <div class="flex items-center gap-3 mb-2">
                                           <span
                                             class="text-xs font-medium text-muted-foreground uppercase"
-                                            >Work Site (Database)</span
+                                            >{{ 'comparison.field.workSiteDb' | translate:'Sync' }}</span
                                             >
                                           @if (hasFieldConflict(comparison, 'workSite')) {
-                                            <span class="text-xs text-red-600">- removed</span>
+                                            <span class="text-xs text-red-600">{{ 'comparison.removed' | translate:'Sync' }}</span>
                                           }
                                           @if (fieldHasPendingRequest(comparison, 'workSite')) {
                                             <span
                                               class="text-xs text-amber-600"
-                                              title="A pending data change request wants this field to become a different value"
-                                              >⚠ pending request: {{ getPendingRequestValue(comparison, 'workSite') }}</span
+                                              title="{{ 'comparison.pendingRequestTitle' | translate:'Sync' }}"
+                                              >{{ 'comparison.pendingRequestPrefix' | translate:'Sync' }}{{ getPendingRequestValue(comparison, 'workSite') }}</span
                                               >
                                           }
                                         </div>
@@ -908,7 +907,7 @@
                                           [class.line-through]="hasFieldConflict(comparison, 'workSite')"
                                           [class.text-muted-foreground]="hasFieldConflict(comparison, 'workSite')"
                                           >
-                                          {{ comparison.dbUser?.workSite || "N/A" }}
+                                          {{ comparison.dbUser?.workSite || ('labels.notAvailable' | translate:'Common') }}
                                         </p>
                                       </div>
                                       <div class="relative flex w-10 items-center justify-center bg-muted/20 px-2">
@@ -923,7 +922,7 @@
                                                   (change)="resolvePendingConflict(comparison.id, 'workSite', option.value)"
                                                   class="w-3.5 h-3.5"
                                                   />
-                                                  <span class="text-amber-700">Keep request: {{ option.value }}</span>
+                                                  <span class="text-amber-700">{{ 'comparison.keepRequestPrefix' | translate:'Sync' }}{{ option.value }}</span>
                                               </label>
                                             }
                                             <label class="flex items-center gap-1.5 cursor-pointer">
@@ -934,7 +933,7 @@
                                                 (change)="resolveConflict(comparison.id, 'workSite', 'csv')"
                                                 class="w-3.5 h-3.5"
                                                 />
-                                                <span class="text-green-700">Use CSV value: {{ getCsvConflictValue(comparison, 'workSite') }}</span>
+                                                <span class="text-green-700">{{ 'comparison.useCsvValuePrefix' | translate:'Sync' }}{{ getCsvConflictValue(comparison, 'workSite') }}</span>
                                             </label>
                                           </div>
                                         }
@@ -945,7 +944,7 @@
                                               [checked]="isFieldSelected(comparison, 'workSite')"
                                               (change)="toggleFieldSelection(comparison.id, 'workSite')"
                                               class="w-4 h-4 rounded border-border"
-                                              title="Select to sync this field"
+                                              title="{{ 'comparison.selectToSync' | translate:'Sync' }}"
                                               />
                                               <svg
                                                 class="w-4 h-4 text-muted-foreground"
@@ -970,10 +969,10 @@
                                         <div class="flex items-center gap-3 mb-2">
                                           <span
                                             class="text-xs font-medium text-muted-foreground uppercase"
-                                            >Work Site (CSV)</span
+                                            >{{ 'comparison.field.workSiteCsv' | translate:'Sync' }}</span
                                             >
                                           @if (hasFieldConflict(comparison, 'workSite')) {
-                                            <span class="text-xs text-green-600">+ added</span>
+                                            <span class="text-xs text-green-600">{{ 'dashboard.added' | translate:'Sync' }}</span>
                                           }
                                         </div>
                                         <p
@@ -981,7 +980,7 @@
                                           [class.font-semibold]="hasFieldConflict(comparison, 'workSite')"
                                           [class.text-green-700]="hasFieldConflict(comparison, 'workSite')"
                                           >
-                                          {{ comparison.csvUser?.workSite || "N/A" }}
+                                          {{ comparison.csvUser?.workSite || ('labels.notAvailable' | translate:'Common') }}
                                         </p>
                                       </div>
                                     </div>
@@ -991,8 +990,7 @@
                                                                                       class="px-6 py-3 bg-blue-50/30 border-t border-border"
                                                                                       >
                                                                                       <p class="text-xs text-blue-700">
-                                                                                        Check the boxes in the middle column to select which fields you want
-                                                                                        to update. Only selected fields will be synced.
+                                                                                        {{ 'comparison.checkBoxesHint' | translate:'Sync' }}
                                                                                       </p>
                                                                                     </div>
                                                                                   }
@@ -1017,9 +1015,9 @@
                                                                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                                                                   ></path>
                                                                                 </svg>
-                                                                                <p class="text-muted-foreground text-lg">No comparisons available</p>
+                                                                                <p class="text-muted-foreground text-lg">{{ 'comparison.noComparisons' | translate:'Sync' }}</p>
                                                                                 <p class="text-muted-foreground text-sm mt-2">
-                                                                                  Upload a CSV file to compare with database
+                                                                                  {{ 'comparison.uploadToCompare' | translate:'Sync' }}
                                                                                 </p>
                                                                               </div>
                                                                             }

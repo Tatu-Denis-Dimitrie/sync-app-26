@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Entities;
@@ -26,12 +27,16 @@ namespace SyncApp26.Infrastructure.Services
         private readonly ApplicationDbContext _context;
         private readonly ICryptographyService _cryptographyService;
         private readonly IHmacSignatureService _hmacSignatureService;
+        private readonly IStringLocalizer _localizer;
+        private readonly IStringLocalizer _template;
 
-        public DocumentService(ApplicationDbContext context, ICryptographyService cryptographyService, IHmacSignatureService hmacSignatureService)
+        public DocumentService(ApplicationDbContext context, ICryptographyService cryptographyService, IHmacSignatureService hmacSignatureService, ILocalizationService localizationService)
         {
             _context = context;
             _cryptographyService = cryptographyService;
             _hmacSignatureService = hmacSignatureService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
+            _template = localizationService.GetScopedLocalizer(LocalizationScopes.DocumentTemplate);
         }
 
         // Returnează numărul de documente de tipul dat ce trebuie semnate de responsabilul SSM/SU.
@@ -83,7 +88,7 @@ namespace SyncApp26.Infrastructure.Services
             await _context.SaveChangesAsync();
 
             var user = await LoadUserWithDocumentDataAsync(userId)
-                ?? throw new ArgumentException("User not found.");
+                ?? throw new ArgumentException(_localizer["generation.userNotFound"]);
 
             var pdfPath = await GeneratePdfSnapshotAsync(user, doc);
             doc.PdfFilePath = pdfPath;
@@ -97,7 +102,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             bool isAdmin = await _context.Users.Where(u => u.Id == userId).WithRole(Roles.Admin).AnyAsync();
             if (isAdmin)
-                throw new InvalidOperationException("Cannot generate documents for admin users.");
+                throw new InvalidOperationException(_localizer["generation.cannotGenerateForAdmin"]);
         }
 
         private async Task<UserDocument> CreateUserDocumentAsync(Guid userId, string documentType)
@@ -254,13 +259,13 @@ namespace SyncApp26.Infrastructure.Services
             // unauthorized signature actually being written. Wrong state and lack of authorization are
             // deliberately different exception types so callers can tell them apart.
             if (doc.Status != DocumentStatuses.PendingInstructor)
-                throw new InvalidOperationException("Document is not pending an officer signature.");
+                throw new InvalidOperationException(_localizer["generation.documentNotPendingOfficer"]);
 
             // Separation of duties. The officer queues already exclude the signer's own document, so
             // reaching this is a bug rather than a user action — fail loudly instead of writing a
             // signature the rule forbids.
             if (doc.UserId == signerUserId)
-                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
+                throw new DocumentSigningAuthorizationException(_localizer["generation.signerCannotCountersignOwn"]);
 
             var docType = DocumentTypes.Normalize(doc.DocumentType);
             var requiredOfficerRole = docType switch
@@ -272,7 +277,7 @@ namespace SyncApp26.Infrastructure.Services
             bool isOfficerForType = requiredOfficerRole != null &&
                 await _context.Users.Where(u => u.Id == signerUserId).WithRole(requiredOfficerRole).AnyAsync();
             if (!isOfficerForType)
-                throw new DocumentSigningAuthorizationException("Signer does not hold the officer role for this document's type.");
+                throw new DocumentSigningAuthorizationException(_localizer["generation.signerNotOfficerForType"]);
 
             var timestamp = DateTime.UtcNow;
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
@@ -456,27 +461,27 @@ namespace SyncApp26.Infrastructure.Services
             col.Item().PaddingTop(6).Row(row =>
             {
                 row.RelativeItem().Column(c => RenderSignatureBlock(c,
-                    isSsm ? "Semnătura celui instruit:" : "Semnătura persoanei instruite:",
+                    isSsm ? ctx.T["signature.trainee.ssm"] : ctx.T["signature.trainee.su"],
                     new SignatureBlockData(
                         userRecord?.SignerFullNameSnapshot ?? $"{user.FirstName} {user.LastName}",
                         userRecord?.SignerPositionSnapshot ?? user.Function?.Name,
-                        userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime)));
+                        userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime), ctx.T));
 
                 row.ConstantItem(10);
                 row.RelativeItem().Column(c => RenderSignatureBlock(c,
-                    "Semnătura celui care a efectuat instruirea:",
+                    ctx.T["signature.trainer"],
                     new SignatureBlockData(
                         renderedInstructorName, renderedInstructorPosition,
-                        renderedInstructorSigMethod, renderedInstructorSigData, renderedInstructorSignedAt)));
+                        renderedInstructorSigMethod, renderedInstructorSigData, renderedInstructorSignedAt), ctx.T));
 
                 if (isSsm)
                 {
                     row.ConstantItem(10);
                     row.RelativeItem().Column(c => RenderSignatureBlock(c,
-                        "Semnătura celui care a verificat:",
+                        ctx.T["signature.verifier"],
                         new SignatureBlockData(
                             renderedVerifierName, renderedVerifierPosition,
-                            renderedVerifierSigMethod, renderedVerifierSigData, renderedVerifierSignedAt)));
+                            renderedVerifierSigMethod, renderedVerifierSigData, renderedVerifierSignedAt), ctx.T));
                 }
             });
         }
@@ -580,7 +585,7 @@ namespace SyncApp26.Infrastructure.Services
         // Adobe-Sign-style signature block (matches Acrobat's certificate-of-completion
         // layout): the drawn/typed signature alongside "Digitally signed by <name>" +
         // "Date: <timestamp>"
-        private static void RenderSignatureBlock(ColumnDescriptor col, string label, SignatureBlockData data, bool stacked = false)
+        private static void RenderSignatureBlock(ColumnDescriptor col, string label, SignatureBlockData data, IStringLocalizer t, bool stacked = false)
         {
             if (!string.IsNullOrEmpty(label))
                 col.Item().Text(label).FontSize(8);
@@ -595,14 +600,16 @@ namespace SyncApp26.Infrastructure.Services
             string dateText = data.SignedAtUtc.HasValue
                 ? data.SignedAtUtc.Value.ToString("yyyy.MM.dd HH:mm:ss")
                 : "-";
+            string signedBy = t["signature.digitallySignedBy", F(data.FullName)];
+            string dateLine = t["signature.dateLabel", dateText];
 
             if (stacked)
             {
                 col.Item().PaddingTop(3).Border(0.5f).Padding(4).Column(inner =>
                 {
                     inner.Item().Height(50).AlignMiddle().Column(sigCol => RenderSignature(sigCol, data.SignatureMethod, data.SignatureData));
-                    inner.Item().PaddingTop(3).Text($"Digitally signed by {F(data.FullName)}").FontSize(8.5f);
-                    inner.Item().Text($"Date: {dateText}").FontSize(8.5f);
+                    inner.Item().PaddingTop(3).Text(signedBy).FontSize(8.5f);
+                    inner.Item().Text(dateLine).FontSize(8.5f);
                 });
                 return;
             }
@@ -615,8 +622,8 @@ namespace SyncApp26.Infrastructure.Services
 
                 row.RelativeItem(1.0f).AlignMiddle().Column(inner =>
                 {
-                    inner.Item().Text($"Digitally signed by {F(data.FullName)}").FontSize(8.5f);
-                    inner.Item().Text($"Date: {dateText}").FontSize(8.5f);
+                    inner.Item().Text(signedBy).FontSize(8.5f);
+                    inner.Item().Text(dateLine).FontSize(8.5f);
                 });
             });
         }
@@ -636,7 +643,8 @@ namespace SyncApp26.Infrastructure.Services
             string ManagerName,
             string ManagerFunction,
             Dictionary<(Guid TrainingId, string Role), SignatureRecord> PeriodicSignatures,
-            Dictionary<string, SignatureRecord> InitialTrainingSignatures);
+            Dictionary<string, SignatureRecord> InitialTrainingSignatures,
+            IStringLocalizer T);
 
         private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document,
             Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures,
@@ -645,7 +653,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             QuestPDF.Settings.License = LicenseType.Community;
 
-            var ctx = CreateRenderContext(user, document, periodicSignatures, initialTrainingSignatures);
+            var ctx = CreateRenderContext(user, document, periodicSignatures, initialTrainingSignatures, _template);
 
             return QuestPDF.Fluent.Document.Create(container =>
             {
@@ -657,12 +665,13 @@ namespace SyncApp26.Infrastructure.Services
 
         private static DocumentRenderContext CreateRenderContext(User user, UserDocument document,
             Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures,
-            Dictionary<string, SignatureRecord> initialTrainingSignatures)
+            Dictionary<string, SignatureRecord> initialTrainingSignatures,
+            IStringLocalizer template)
         {
             bool isSsm = DocumentTypes.IsSsm(document.DocumentType);
             string formTitle = isSsm
-                ? "FIȘA DE SECURITATE ȘI SĂNĂTATE ÎN MUNCĂ"
-                : "FIȘA DE INSTRUCTAJ PRIVIND SECURITATEA LA INCENDII (SU)";
+                ? template["formTitle.ssm"]
+                : template["formTitle.su"];
             string accentColor = isSsm ? Colors.Blue.Lighten3 : Colors.Red.Lighten3;
             string headerColor = isSsm ? Colors.Blue.Darken2 : Colors.Red.Darken2;
             string coverBg = isSsm ? Colors.White : "#fff5f5";
@@ -673,7 +682,7 @@ namespace SyncApp26.Infrastructure.Services
             string managerFunction = user.AssignedTo?.Function?.Name ?? F(user.AdmittedByFunction);
 
             return new DocumentRenderContext(isSsm, formTitle, accentColor, headerColor, coverBg, managerName, managerFunction,
-                periodicSignatures, initialTrainingSignatures);
+                periodicSignatures, initialTrainingSignatures, template);
         }
 
         // One SignatureRecord per (training, role) — keyed by the same PeriodicTrainingId/SignerRole
@@ -737,11 +746,11 @@ namespace SyncApp26.Infrastructure.Services
             return result;
         }
 
-        private static void PageFooter(PageDescriptor page)
+        private static void PageFooter(PageDescriptor page, DocumentRenderContext ctx)
         {
             page.Footer().AlignCenter().Text(x =>
             {
-                x.Span("Pag. "); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
+                x.Span(ctx.T["footer.pagePrefix"]); x.CurrentPageNumber(); x.Span(" / "); x.TotalPages();
             });
         }
 
@@ -777,30 +786,30 @@ namespace SyncApp26.Infrastructure.Services
                             info.Item().Height(8);
                         }
 
-                        Row("Unitatea:", F(user.WorkSite?.Name));
-                        Row("Numele și prenumele:", $"{user.FirstName} {user.LastName}");
+                        Row(ctx.T["cover.unit"], F(user.WorkSite?.Name));
+                        Row(ctx.T["cover.fullName"], $"{user.FirstName} {user.LastName}");
 
                         if (ctx.IsSsm)
                         {
-                            Row("Domiciliul:", F(user.Address));
-                            Row("Grupa sanguină:", F(user.BloodType?.ToDisplayString()));
-                            Row("Legitimația / Marca:", F(user.BadgeNumber));
+                            Row(ctx.T["cover.address"], F(user.Address));
+                            Row(ctx.T["cover.bloodType"], F(user.BloodType?.ToDisplayString()));
+                            Row(ctx.T["cover.badge"], F(user.BadgeNumber));
                         }
                         else
                         {
-                            Row("Locul de muncă:", F(user.WorkSite?.Name));
-                            Row("Marca:", F(user.BadgeNumber));
-                            Row("Domiciliul:", F(user.Address));
+                            Row(ctx.T["cover.workplace"], F(user.WorkSite?.Name));
+                            Row(ctx.T["cover.badgeShort"], F(user.BadgeNumber));
+                            Row(ctx.T["cover.address"], F(user.Address));
                         }
                     });
 
                     col.Item().Height(20);
 
-                    col.Item().AlignCenter().Text($"Document generat: {document.GeneratedAt:dd.MM.yyyy}")
+                    col.Item().AlignCenter().Text(ctx.T["cover.generatedOn", document.GeneratedAt.ToString("dd.MM.yyyy")])
                         .FontSize(9).FontColor(Colors.Grey.Darken1);
                 });
 
-                PageFooter(page);
+                PageFooter(page, ctx);
             });
         }
 
@@ -823,13 +832,13 @@ namespace SyncApp26.Infrastructure.Services
                     BuildInitialTrainingSection(col, user, document, ctx);
                 });
 
-                PageFooter(page);
+                PageFooter(page, ctx);
             });
         }
 
         private static void BuildGeneralDataSection(ColumnDescriptor col, User user, DocumentRenderContext ctx)
         {
-            SectionHeader(col, "DATE GENERALE", ctx.AccentColor);
+            SectionHeader(col, ctx.T["section.generalData"], ctx.AccentColor);
 
             col.Item().Column(data =>
             {
@@ -843,25 +852,25 @@ namespace SyncApp26.Infrastructure.Services
                     data.Item().Height(5);
                 }
 
-                DataRow("Nume, prenume:", $"{user.FirstName} {user.LastName}");
-                DataRow("Data și locul nașterii:", $"{FDate(user.DateOfBirth)}, {F(user.PlaceOfBirth)}");
+                DataRow(ctx.T["general.nameSurname"], $"{user.FirstName} {user.LastName}");
+                DataRow(ctx.T["general.birthDatePlace"], $"{FDate(user.DateOfBirth)}, {F(user.PlaceOfBirth)}");
 
                 if (ctx.IsSsm)
-                    DataRow("Calificarea:", F(user.Education));
+                    DataRow(ctx.T["general.qualification"], F(user.Education));
                 else
                 {
-                    DataRow("Studii:", F(user.Education));
-                    DataRow("Calificarea (specialitatea, meseria):", F(user.Function?.Name));
+                    DataRow(ctx.T["general.education"], F(user.Education));
+                    DataRow(ctx.T["general.qualificationTrade"], F(user.Function?.Name));
                 }
 
-                DataRow("Funcția:", F(user.Function?.Name));
-                DataRow("Locul de muncă:", F(user.WorkSite?.Name));
+                DataRow(ctx.T["general.position"], F(user.Function?.Name));
+                DataRow(ctx.T["general.workplace"], F(user.WorkSite?.Name));
 
                 if (ctx.IsSsm)
                 {
-                    DataRow("Autorizații (ISCIR etc.):", F(user.Qualifications));
-                    DataRow("Traseul și durata deplasare la/de la serviciu:",
-                        $"{F(user.CommuteRoute)}{(user.CommuteDurationMinutes.HasValue ? $" ({user.CommuteDurationMinutes} min)" : "")}");
+                    DataRow(ctx.T["general.authorizations"], F(user.Qualifications));
+                    DataRow(ctx.T["general.commute"],
+                        $"{F(user.CommuteRoute)}{(user.CommuteDurationMinutes.HasValue ? ctx.T["general.commuteMinutes", user.CommuteDurationMinutes] : "")}");
                 }
             });
         }
@@ -870,7 +879,7 @@ namespace SyncApp26.Infrastructure.Services
         {
             bool isSsm = ctx.IsSsm;
             var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == (isSsm ? DocumentTypes.Ssm : DocumentTypes.Su));
-            string sectionTitle = isSsm ? "INSTRUIRE LA ANGAJARE" : "INSTRUCTAJUL LA ANGAJARE";
+            string sectionTitle = isSsm ? ctx.T["section.trainingAtHiring.ssm"] : ctx.T["section.trainingAtHiring.su"];
             SectionHeader(col, sectionTitle, ctx.AccentColor);
 
             RenderIntroductoryTrainingItem(col, user, document, ctx, it);
@@ -884,23 +893,22 @@ namespace SyncApp26.Infrastructure.Services
         private static void RenderIntroductoryTrainingItem(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx, UserInitialTraining? it)
         {
             bool isSsm = ctx.IsSsm;
-            string t1 = isSsm ? "1. Instruirea introductiv generală" : "1. Instructajul introductiv general";
+            string t1 = isSsm ? ctx.T["initial.item1.ssm"] : ctx.T["initial.item1.su"];
             col.Item().Text(t1).Bold();
             col.Item().Height(3);
             col.Item().Text(text =>
             {
-                string verb = isSsm ? "efectuată" : "efectuat";
-                text.Span($"a fost {verb} la data ").FontSize(10);
+                text.Span(ctx.T["initial.performedOn"]).FontSize(10);
                 text.Span(FUnderline(it?.IntroductoryTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
-                text.Span(" timp de ").FontSize(10);
+                text.Span(ctx.T["initial.forDuration"]).FontSize(10);
                 text.Span(FUnderline(it?.IntroductoryTrainingHours?.ToString())).Underline().FontSize(10);
-                text.Span(" ore de către ").FontSize(10);
+                text.Span(ctx.T["initial.hoursBy"]).FontSize(10);
                 text.Span(FUnderline(it?.IntroductoryTrainingInstructor ?? ctx.ManagerName)).Underline().FontSize(10);
-                text.Span(" având funcția de ").FontSize(10);
+                text.Span(ctx.T["initial.holdingPosition"]).FontSize(10);
                 text.Span(FUnderline(it?.IntroductoryTrainingInstructorFunction ?? ctx.ManagerFunction)).Underline().FontSize(10);
             });
             col.Item().Height(3);
-            col.Item().Text("Conținutul instruirii:").Bold();
+            col.Item().Text(ctx.T["initial.trainingContent"]).Bold();
             var introContent = it?.IntroductoryTrainingContent;
             col.Item().Border(0.5f).Padding(6)
                 .Text(string.IsNullOrWhiteSpace(introContent) ? " " : introContent).FontSize(10);
@@ -917,25 +925,24 @@ namespace SyncApp26.Infrastructure.Services
         private static void RenderWorkplaceTrainingItem(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx, UserInitialTraining? it)
         {
             bool isSsm = ctx.IsSsm;
-            string t2 = isSsm ? "2. Instruirea la locul de muncă" : "2. Instructajul la locul de muncă";
+            string t2 = isSsm ? ctx.T["initial.item2.ssm"] : ctx.T["initial.item2.su"];
             col.Item().Text(t2).Bold();
             col.Item().Height(3);
             col.Item().Text(text =>
             {
-                string verb = isSsm ? "efectuată" : "efectuat";
-                text.Span($"a fost {verb} la data ").FontSize(10);
+                text.Span(ctx.T["initial.performedOn"]).FontSize(10);
                 text.Span(FUnderline(it?.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
-                text.Span(" loc de muncă/post de lucru ").FontSize(10);
+                text.Span(ctx.T["initial.atWorkstation"]).FontSize(10);
                 text.Span(FUnderline(it?.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
-                text.Span(" timp de ").FontSize(10);
+                text.Span(ctx.T["initial.forDuration"]).FontSize(10);
                 text.Span(FUnderline(it?.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
-                text.Span(" ore, de către ").FontSize(10);
+                text.Span(ctx.T["initial.hoursByComma"]).FontSize(10);
                 text.Span(FUnderline(it?.WorkplaceTrainingInstructor ?? ctx.ManagerName)).Underline().FontSize(10);
-                text.Span(" având funcția de ").FontSize(10);
+                text.Span(ctx.T["initial.holdingPosition"]).FontSize(10);
                 text.Span(FUnderline(it?.WorkplaceTrainingInstructorFunction ?? ctx.ManagerFunction)).Underline().FontSize(10);
             });
             col.Item().Height(3);
-            col.Item().Text("Conținutul instruirii:").Bold();
+            col.Item().Text(ctx.T["initial.trainingContent"]).Bold();
             var workContent = it?.WorkplaceTrainingContent;
             col.Item().Border(0.5f).Padding(6)
                 .Text(string.IsNullOrWhiteSpace(workContent) ? " " : workContent).FontSize(10);
@@ -958,17 +965,17 @@ namespace SyncApp26.Infrastructure.Services
             // later periodic-training revision forces onto the document's Manager* columns.
             var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
 
-            col.Item().Text("3. Admis la lucru").Bold();
+            col.Item().Text(ctx.T["initial.admittedToWork"]).Bold();
             col.Item().Height(3);
             col.Item().Row(r =>
             {
-                r.ConstantItem(160).Text("Numele și prenumele:").Bold();
+                r.ConstantItem(160).Text(ctx.T["admitted.fullName"]).Bold();
                 r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByName ?? ctx.ManagerName));
             });
             col.Item().Height(4);
             col.Item().Row(r =>
             {
-                r.ConstantItem(160).Text("Funcția (șef secție, atelier, șantier):").Bold();
+                r.ConstantItem(160).Text(ctx.T["admitted.function"]).Bold();
                 r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByFunction ?? ctx.ManagerFunction));
             });
             col.Item().Height(4);
@@ -980,18 +987,18 @@ namespace SyncApp26.Infrastructure.Services
                 var admittedOn = user.AdmittedDate
                     ?? managerRecord?.SignedAt.UtcDateTime
                     ?? document.ManagerSignedAt;
-                r.ConstantItem(160).Text("Data:").Bold();
+                r.ConstantItem(160).Text(ctx.T["admitted.date"]).Bold();
                 r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admittedOn?.ToString("dd.MM.yyyy")));
             });
             col.Item().Height(6);
 
-            col.Item().Width(220).Column(c => RenderSignatureBlock(c, "Semnătura:",
+            col.Item().Width(220).Column(c => RenderSignatureBlock(c, ctx.T["signature.label"],
                 new SignatureBlockData(
                     managerRecord?.SignerFullNameSnapshot ?? user.AdmittedByName ?? ctx.ManagerName,
                     managerRecord?.SignerPositionSnapshot ?? user.AdmittedByFunction ?? ctx.ManagerFunction,
                     managerRecord?.SignatureMethod ?? document.ManagerSignatureMethod,
                     managerRecord?.SignatureData ?? document.ManagerSignatureData,
-                    managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt)));
+                    managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt), ctx.T));
         }
 
         // ══════════════════════════════════════════════════════
@@ -1008,13 +1015,13 @@ namespace SyncApp26.Infrastructure.Services
 
                 page.Content().Column(col =>
                 {
-                    string periodicTitle = ctx.IsSsm ? "3. INSTRUIRE PERIODICĂ" : "INSTRUCTAJUL PERIODIC";
+                    string periodicTitle = ctx.IsSsm ? ctx.T["section.periodicTraining.ssm"] : ctx.T["section.periodicTraining.su"];
                     SectionHeader(col, periodicTitle, ctx.AccentColor);
 
                     col.Item().Table(table => BuildPeriodicTrainingTable(table, user, document, ctx, viewerIsAdmin));
                 });
 
-                PageFooter(page);
+                PageFooter(page, ctx);
             });
         }
 
@@ -1045,15 +1052,15 @@ namespace SyncApp26.Infrastructure.Services
 
             table.Header(header =>
             {
-                header.Cell().Element(PeriodicHeaderCell).Text("Nr. crt.").Bold().FontSize(7);
-                header.Cell().Element(PeriodicHeaderCell).Text("Data instruirii").Bold().FontSize(7);
-                header.Cell().Element(PeriodicHeaderCell).Text("Durata (h)").Bold().FontSize(7);
-                header.Cell().Element(PeriodicHeaderCell).Text(isSsm ? "Ocupația" : "Specialitatea").Bold().FontSize(7);
-                header.Cell().Element(PeriodicHeaderCell).Text("Materialul predat").Bold().FontSize(7);
-                header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\ninstruit").Bold().FontSize(7);
-                header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\ninstructor").Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(ctx.T["periodic.nr"]).Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(ctx.T["periodic.date"]).Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(ctx.T["periodic.duration"]).Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(isSsm ? ctx.T["periodic.occupation"] : ctx.T["periodic.specialty"]).Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(ctx.T["periodic.material"]).Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(ctx.T["periodic.sigTrainee"]).Bold().FontSize(7);
+                header.Cell().Element(PeriodicHeaderCell).Text(ctx.T["periodic.sigTrainer"]).Bold().FontSize(7);
                 if (isSsm)
-                    header.Cell().Element(PeriodicHeaderCell).Text("Semnătura\nverificator").Bold().FontSize(7);
+                    header.Cell().Element(PeriodicHeaderCell).Text(ctx.T["periodic.sigVerifier"]).Bold().FontSize(7);
             });
 
             // Each document is self-contained: show only its own PT rows.
@@ -1183,13 +1190,13 @@ namespace SyncApp26.Infrastructure.Services
                 new SignatureBlockData(
                     userRecord?.SignerFullNameSnapshot ?? employeeFullName,
                     userRecord?.SignerPositionSnapshot ?? occupation,
-                    userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime), stacked: true));
+                    userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime), ctx.T, stacked: true));
             table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
-                new SignatureBlockData(instructorName, instructorPosition, instructorSigMethod, instructorSigData, instructorSignedAt), stacked: true));
+                new SignatureBlockData(instructorName, instructorPosition, instructorSigMethod, instructorSigData, instructorSignedAt), ctx.T, stacked: true));
 
             if (isSsm)
                 table.Cell().Element(rowCell).Column(c => RenderSignatureBlock(c, "",
-                    new SignatureBlockData(verifierName, verifierPosition, verifierSigMethod, verifierSigData, verifierSignedAt), stacked: true));
+                    new SignatureBlockData(verifierName, verifierPosition, verifierSigMethod, verifierSigData, verifierSignedAt), ctx.T, stacked: true));
         }
 
         private static void RenderEmptyPeriodicTrainingRow(TableDescriptor table, UserDocument document, string occupation, bool isSsm, bool viewerIsAdmin)
@@ -1926,7 +1933,7 @@ namespace SyncApp26.Infrastructure.Services
             // Same defence in depth as SignSingleDocumentAsOfficerAsync: the loader above already
             // filters these out, so this only fires if that filter is ever loosened.
             if (doc.UserId == signerUserId)
-                throw new DocumentSigningAuthorizationException("A signer cannot countersign their own document.");
+                throw new DocumentSigningAuthorizationException(_localizer["generation.signerCannotCountersignOwn"]);
 
             var cryptoSignature = await _cryptographyService.SignDataAsync($"{doc.Id}|{doc.DocumentHash}|{ipAddress}|{timestamp:O}");
             var signerRole = doc.Status == DocumentStatuses.PendingManager ? "Manager" : "Instructor";

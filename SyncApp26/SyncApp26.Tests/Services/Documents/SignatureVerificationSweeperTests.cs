@@ -30,7 +30,7 @@ namespace SyncApp26.Tests.Services.Documents
         public void Dispose() => _dbFixture.Dispose();
 
         private DocumentService CreateDocumentService() =>
-            new(_dbFixture.Context, _cryptographyServiceMock.Object, _hmacService);
+            new(_dbFixture.Context, _cryptographyServiceMock.Object, _hmacService, RealLocalizerFactory.LocalizationService());
 
         private SignatureVerificationService CreateVerificationService() =>
             new(_dbFixture.Context, _hmacService);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.API.Extensions;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Enums;
@@ -21,13 +22,16 @@ namespace SyncApp26.API.Controllers
         private readonly IImpersonationService _impersonationService;
         private readonly IRefreshTokenService _refreshTokenService;
         private readonly AuthCookieOptions _authCookieOptions;
+        private readonly IStringLocalizer _localizer;
 
         public ImpersonationController(
-            IImpersonationService impersonationService, IRefreshTokenService refreshTokenService, AuthCookieOptions authCookieOptions)
+            IImpersonationService impersonationService, IRefreshTokenService refreshTokenService, AuthCookieOptions authCookieOptions,
+            ILocalizationService localizationService)
         {
             _impersonationService = impersonationService;
             _refreshTokenService = refreshTokenService;
             _authCookieOptions = authCookieOptions;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Auth);
         }
 
         [HttpPost("impersonate/{userId:guid}")]
@@ -43,11 +47,11 @@ namespace SyncApp26.API.Controllers
 
             return result.Status switch
             {
-                ImpersonationStatus.TargetNotFound => NotFound(new { message = "User not found." }),
-                ImpersonationStatus.TargetIsAdmin => StatusCode(403, new { message = "You cannot view as another administrator." }),
-                ImpersonationStatus.SelfImpersonation => BadRequest(new { message = "You cannot view as yourself." }),
+                ImpersonationStatus.TargetNotFound => NotFound(new { message = _localizer["api.userNotFound"].Value }),
+                ImpersonationStatus.TargetIsAdmin => StatusCode(403, new { message = _localizer["api.cannotViewAsAdmin"].Value }),
+                ImpersonationStatus.SelfImpersonation => BadRequest(new { message = _localizer["api.cannotViewAsSelf"].Value }),
                 ImpersonationStatus.Success => await ImpersonationSuccess(result, adminId),
-                _ => StatusCode(500, new { message = "An error occurred while processing your request." })
+                _ => StatusCode(500, new { message = _localizer["api.genericError"].Value })
             };
         }
 
@@ -62,7 +66,7 @@ namespace SyncApp26.API.Controllers
 
             return Ok(new
             {
-                message = "Impersonation session started.",
+                message = _localizer["api.impersonationStarted"].Value,
                 user = new
                 {
                     id = result.UserId,

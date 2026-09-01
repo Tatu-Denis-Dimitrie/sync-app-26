@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
@@ -16,6 +17,7 @@ namespace SyncApp26.Application.Services
         private readonly IUserChangeHistoryService _userChangeHistoryService;
         private readonly IUserInitialTrainingService _userInitialTrainingService;
         private readonly ILogger<UserProfileService> _logger;
+        private readonly IStringLocalizer _localizer;
 
         public UserProfileService(
             IUserService userService,
@@ -23,7 +25,8 @@ namespace SyncApp26.Application.Services
             IFunctionService functionService,
             IUserChangeHistoryService userChangeHistoryService,
             IUserInitialTrainingService userInitialTrainingService,
-            ILogger<UserProfileService> logger)
+            ILogger<UserProfileService> logger,
+            ILocalizationService localizationService)
         {
             _userService = userService;
             _departmentService = departmentService;
@@ -31,6 +34,7 @@ namespace SyncApp26.Application.Services
             _userChangeHistoryService = userChangeHistoryService;
             _userInitialTrainingService = userInitialTrainingService;
             _logger = logger;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Users);
         }
 
         private async Task<Guid?> ResolveFunctionIdAsync(string? requestedFunction)
@@ -54,18 +58,18 @@ namespace SyncApp26.Application.Services
                 string.IsNullOrEmpty(request.LastName) ||
                 string.IsNullOrEmpty(request.Email))
             {
-                return new UserResponseDTO { Success = false, Message = "FirstName, LastName, and Email are required" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.firstLastEmailRequired"] };
             }
 
             if (!new EmailAddressAttribute().IsValid(request.Email))
             {
-                return new UserResponseDTO { Success = false, Message = "Invalid email format" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.invalidEmailFormat"] };
             }
 
             var department = await _departmentService.GetDepartmentByIdAsync(request.DepartmentId);
             if (department == null)
             {
-                return new UserResponseDTO { Success = false, Message = "Department not found" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.departmentNotFound"] };
             }
 
             if (request.AssignedToId != null)
@@ -73,7 +77,7 @@ namespace SyncApp26.Application.Services
                 var assignedTo = await _userService.GetUserByIdAsync(request.AssignedToId.Value);
                 if (assignedTo == null)
                 {
-                    return new UserResponseDTO { Success = false, Message = "Assigned to user not found" };
+                    return new UserResponseDTO { Success = false, Message = _localizer["messages.assignedToNotFound"] };
                 }
             }
 
@@ -116,7 +120,7 @@ namespace SyncApp26.Application.Services
                 }
             }
 
-            return new UserResponseDTO { Success = true, Message = "User created successfully" };
+            return new UserResponseDTO { Success = true, Message = _localizer["messages.userCreated"] };
         }
 
         private async Task<bool> ReportsToAsync(User candidateManager, Guid userId)
@@ -143,23 +147,23 @@ namespace SyncApp26.Application.Services
                 string.IsNullOrEmpty(request.LastName) ||
                 string.IsNullOrEmpty(request.Email))
             {
-                return new UserResponseDTO { Success = false, Message = "FirstName, LastName, and Email are required" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.firstLastEmailRequired"] };
             }
 
             if (!new EmailAddressAttribute().IsValid(request.Email))
             {
-                return new UserResponseDTO { Success = false, Message = "Invalid email format" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.invalidEmailFormat"] };
             }
 
             if (request.AssignedToId != null && request.AssignedToId == existingUser.Id)
             {
-                return new UserResponseDTO { Success = false, Message = "User cannot be assigned to themselves" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.cannotAssignSelf"] };
             }
 
             var department = await _departmentService.GetDepartmentByIdAsync(request.DepartmentId);
             if (department == null)
             {
-                return new UserResponseDTO { Success = false, Message = "Department not found" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.departmentNotFound"] };
             }
 
             var oldFirstName = existingUser.FirstName;
@@ -182,14 +186,14 @@ namespace SyncApp26.Application.Services
                 var assignedTo = await _userService.GetUserByIdAsync(request.AssignedToId.Value);
                 if (assignedTo == null)
                 {
-                    return new UserResponseDTO { Success = false, Message = "Assigned to user not found" };
+                    return new UserResponseDTO { Success = false, Message = _localizer["messages.assignedToNotFound"] };
                 }
 
                 assignedToUser = assignedTo;
 
                 if (await ReportsToAsync(assignedTo, existingUser.Id))
                 {
-                    return new UserResponseDTO { Success = false, Message = "Circular assignment detected: Cannot assign a user to someone who reports to them" };
+                    return new UserResponseDTO { Success = false, Message = _localizer["messages.circularAssignment"] };
                 }
             }
 
@@ -310,7 +314,7 @@ namespace SyncApp26.Application.Services
                 await _userChangeHistoryService.AddUserChangeHistoryAsync(change);
             }
 
-            return new UserResponseDTO { Success = true, Message = "User updated successfully" };
+            return new UserResponseDTO { Success = true, Message = _localizer["messages.userUpdated"] };
         }
 
         public async Task UpdateSsmSuFormAsync(User user, UpdateUserSSMSUFormDTO dto)
@@ -389,7 +393,7 @@ namespace SyncApp26.Application.Services
             if (!usersToUpdate.Any())
             {
                 result.NoUsersMatched = true;
-                result.Errors.Add("No users found to apply initial training data.");
+                result.Errors.Add(_localizer["bulkInitialTraining.noUsersMatched"]);
                 return result;
             }
 
@@ -467,7 +471,7 @@ namespace SyncApp26.Application.Services
                 catch (Exception ex)
                 {
                     result.FailedCount++;
-                    result.Errors.Add($"Failed for user {user.Email}: {ex.Message}");
+                    result.Errors.Add(_localizer["bulkInitialTraining.failedForUser", user.Email, ex.Message]);
                 }
             }
 
@@ -490,7 +494,7 @@ namespace SyncApp26.Application.Services
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null)
             {
-                return new UserResponseDTO { Success = false, Message = "User not found" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.userNotFound"] };
             }
 
             var requestedNames = roleNames
@@ -505,7 +509,7 @@ namespace SyncApp26.Application.Services
                 var role = await _userService.GetRoleByNameAsync(name);
                 if (role == null)
                 {
-                    return new UserResponseDTO { Success = false, Message = $"Role '{name}' does not exist." };
+                    return new UserResponseDTO { Success = false, Message = _localizer["messages.roleDoesNotExist", name] };
                 }
                 resolvedRoles.Add(role);
             }
@@ -518,7 +522,7 @@ namespace SyncApp26.Application.Services
                 var remainingAdmins = (await _userService.GetUsersInRoleAsync(Roles.Admin)).Count();
                 if (remainingAdmins <= 1)
                 {
-                    return new UserResponseDTO { Success = false, Message = "Cannot remove the Admin role from the last remaining administrator." };
+                    return new UserResponseDTO { Success = false, Message = _localizer["messages.cannotRemoveLastAdmin"] };
                 }
             }
 
@@ -542,20 +546,20 @@ namespace SyncApp26.Application.Services
 
             await _userService.UpdateUserAsync(user);
 
-            return new UserResponseDTO { Success = true, Message = "Roles updated successfully" };
+            return new UserResponseDTO { Success = true, Message = _localizer["messages.rolesUpdated"] };
         }
 
         public async Task<UserResponseDTO> UpdatePreferredLanguageAsync(Guid userId, Language language)
         {
             if (!Enum.IsDefined(language))
             {
-                return new UserResponseDTO { Success = false, Message = "Unsupported language." };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.unsupportedLanguage"] };
             }
 
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null)
             {
-                return new UserResponseDTO { Success = false, Message = "User not found" };
+                return new UserResponseDTO { Success = false, Message = _localizer["messages.userNotFound"] };
             }
 
             user.PreferredLanguage = language;
@@ -563,7 +567,7 @@ namespace SyncApp26.Application.Services
 
             await _userService.UpdateUserAsync(user);
 
-            return new UserResponseDTO { Success = true, Message = "Language preference updated successfully" };
+            return new UserResponseDTO { Success = true, Message = _localizer["messages.languagePreferenceUpdated"] };
         }
     }
 }

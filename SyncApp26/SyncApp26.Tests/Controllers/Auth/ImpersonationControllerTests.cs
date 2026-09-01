@@ -16,7 +16,7 @@ namespace SyncApp26.Tests.Controllers.Auth
 
         private ImpersonationController CreateController(Guid? callerId = null, string role = Roles.Admin)
         {
-            var controller = new ImpersonationController(_impersonationServiceMock.Object, _refreshTokenServiceMock.Object, _authCookieOptions);
+            var controller = new ImpersonationController(_impersonationServiceMock.Object, _refreshTokenServiceMock.Object, _authCookieOptions, RealLocalizerFactory.LocalizationService());
             controller.SetUser(callerId ?? Guid.NewGuid(), role: role);
             return controller;
         }

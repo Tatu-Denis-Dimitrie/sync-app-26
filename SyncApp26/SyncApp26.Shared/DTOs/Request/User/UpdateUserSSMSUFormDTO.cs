@@ -22,7 +22,7 @@ namespace SyncApp26.Shared.DTOs.Request.User
         public int? CommuteDurationMinutes { get; set; }
 
         [StringLength(NameValidationConstants.NameMaxLength)]
-        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Name must contain letters only (spaces, hyphens and apostrophes allowed).")]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "name.patternLettersOnly")]
         public string? AdmittedByName { get; set; }
 
         [StringLength(NameValidationConstants.FunctionMaxLength)]
@@ -43,7 +43,7 @@ namespace SyncApp26.Shared.DTOs.Request.User
         public int? IntroductoryTrainingHours { get; set; }
 
         [StringLength(NameValidationConstants.NameMaxLength)]
-        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Instructor name must contain letters only (spaces, hyphens and apostrophes allowed).")]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "instructorName.pattern")]
         public string? IntroductoryTrainingInstructor { get; set; }
 
         [StringLength(NameValidationConstants.FunctionMaxLength)]
@@ -56,7 +56,7 @@ namespace SyncApp26.Shared.DTOs.Request.User
         public int? WorkplaceTrainingHours { get; set; }
 
         [StringLength(NameValidationConstants.NameMaxLength)]
-        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "Instructor name must contain letters only (spaces, hyphens and apostrophes allowed).")]
+        [RegularExpression(NameValidationConstants.NamePattern, ErrorMessage = "instructorName.pattern")]
         public string? WorkplaceTrainingInstructor { get; set; }
 
         [StringLength(NameValidationConstants.FunctionMaxLength)]

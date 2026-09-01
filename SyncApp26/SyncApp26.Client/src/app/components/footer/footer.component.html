@@ -5,8 +5,8 @@
         <span class="text-gray-500">© {{ currentYear }} SyncApp</span>
       </div>
       <div class="flex items-center space-x-2">
-        <span class="text-gray-500">Version:</span>
-        <span class="text-blue-400 font-mono">{{ version || 'Loading...' }}</span>
+        <span class="text-gray-500">{{ 'footer.version' | translate:'Common' }}</span>
+        <span class="text-blue-400 font-mono">{{ version || ('status.loading' | translate:'Common') }}</span>
       </div>
     </div>
   </div>

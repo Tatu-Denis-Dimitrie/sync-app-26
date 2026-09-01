@@ -4,6 +4,8 @@ import { BrowserAuthError, BrowserAuthErrorCodes, PublicClientApplication } from
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthenticationService, LoginRequest } from '../../services/authentication.service';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { environment } from '../../../environments/environment';
 import { MSAL_REDIRECT_PATH } from '../../auth/msal-redirect-path';
 
@@ -29,7 +31,7 @@ function loadGoogleScript(): Promise<void> {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TranslatePipe],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
@@ -48,8 +50,14 @@ export class LoginComponent implements AfterViewInit {
   constructor(
     private router: Router,
     private authService: AuthenticationService,
+    private translationService: TranslationService,
     private ngZone: NgZone
   ) {}
+
+  /** Shorthand for the Auth scope - every message on this page comes from it. */
+  private t(key: string): string {
+    return this.translationService.translate('Auth', key);
+  }
 
   async ngAfterViewInit(): Promise<void> {
     await Promise.all([
@@ -114,14 +122,14 @@ export class LoginComponent implements AfterViewInit {
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Google sign-in failed. Please try again.';
+        this.errorMessage = error.error?.message || this.t('login.googleSignInFailed');
       }
     });
   }
 
   async onMicrosoftLogin(): Promise<void> {
     if (!this.msalInstance) {
-      this.errorMessage = 'Microsoft sign-in is unavailable right now. Please sign in with your email and password.';
+      this.errorMessage = this.t('login.microsoftUnavailable');
       return;
     }
 
@@ -137,7 +145,7 @@ export class LoginComponent implements AfterViewInit {
         },
         error: (error) => {
           this.isLoading = false;
-          this.errorMessage = error.error?.message || 'Microsoft sign-in failed. Please try again.';
+          this.errorMessage = error.error?.message || this.t('login.microsoftSignInFailed');
         }
       });
     } catch (error: unknown) {
@@ -146,7 +154,7 @@ export class LoginComponent implements AfterViewInit {
       const isUserCancelled =
         error instanceof BrowserAuthError && error.errorCode === BrowserAuthErrorCodes.userCancelled;
       if (!isUserCancelled) {
-        this.errorMessage = 'Microsoft sign-in failed. Please try again.';
+        this.errorMessage = this.t('login.microsoftSignInFailed');
       }
     }
   }
@@ -159,7 +167,7 @@ export class LoginComponent implements AfterViewInit {
     this.errorMessage = '';
 
     if (!this.email || !this.password) {
-      this.errorMessage = 'Please enter email and password';
+      this.errorMessage = this.t('login.pleaseEnterCredentials');
       return;
     }
 
@@ -177,7 +185,7 @@ export class LoginComponent implements AfterViewInit {
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Login failed. Please try again.';
+        this.errorMessage = error.error?.message || this.t('login.loginFailed');
       }
     });
   }

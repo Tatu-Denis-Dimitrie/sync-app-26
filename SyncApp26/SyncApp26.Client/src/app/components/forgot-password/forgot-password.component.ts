@@ -3,11 +3,13 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthenticationService } from '../../services/authentication.service';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
-  imports: [FormsModule, RouterModule],
+  imports: [FormsModule, RouterModule, TranslatePipe],
   templateUrl: './forgot-password.component.html',
   styleUrls: ['./forgot-password.component.css']
 })
@@ -19,8 +21,13 @@ export class ForgotPasswordComponent {
 
   constructor(
     private router: Router,
-    private authService: AuthenticationService
+    private authService: AuthenticationService,
+    private translationService: TranslationService
   ) {}
+
+  private t(key: string): string {
+    return this.translationService.translate('Auth', key);
+  }
 
   onSubmit(): void {
     if (this.isLoading) {
@@ -28,14 +35,14 @@ export class ForgotPasswordComponent {
     }
 
     if (!this.email) {
-      this.errorMessage = 'Please enter your email address';
+      this.errorMessage = this.t('forgotPassword.pleaseEnterEmail');
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(this.email)) {
-      this.errorMessage = 'Please enter a valid email address';
+      this.errorMessage = this.t('forgotPassword.invalidEmail');
       return;
     }
 
@@ -46,11 +53,11 @@ export class ForgotPasswordComponent {
     this.authService.forgotPassword({ email: this.email.trim() }).subscribe({
       next: (response) => {
         this.isLoading = false;
-        this.successMessage = response.message || 'Password reset link sent to your email!';
+        this.successMessage = response.message || this.t('forgotPassword.resetLinkSent');
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Could not send password reset link. Please try again.';
+        this.errorMessage = error.error?.message || this.t('forgotPassword.sendFailed');
       }
     });
   }

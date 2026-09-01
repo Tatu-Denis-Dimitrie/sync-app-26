@@ -6,6 +6,7 @@ import { User, UserRole, BloodType, UserComparison, FieldConflict, CsvImport, Sy
 import { Roles } from './authentication.service';
 import { environment } from '../../environments/environment';
 import { UserSyncSignalrService, UploadProgress } from './user-sync.signalr.service';
+import { TranslationService } from './translation.service';
 import { from, combineLatest } from 'rxjs';
 
 interface BackendUser {
@@ -57,7 +58,8 @@ export class UserSyncService {
 
   constructor(
     private http: HttpClient,
-    private signalrService: UserSyncSignalrService
+    private signalrService: UserSyncSignalrService,
+    private translationService: TranslationService
   ) {
     this.uploadProgress$ = this.signalrService.uploadProgress$;
     this.loadUsers();
@@ -509,7 +511,7 @@ export class UserSyncService {
           recordsProcessed: 0,
           recordsFailed: 0,
           recordsSkipped: 0,
-          message: error.error?.error || 'Sync failed',
+          message: error.error?.error || this.translationService.translate('Sync', 'csvSync.syncFailed'),
           errors: [error.message]
         } as SyncResult);
       })

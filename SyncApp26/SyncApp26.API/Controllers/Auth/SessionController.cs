@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SyncApp26.API.Extensions;
 using SyncApp26.API.Filters;
 using SyncApp26.Application.IServices;
@@ -27,6 +28,7 @@ namespace SyncApp26.API.Controllers
         private readonly IRefreshTokenService _refreshTokenService;
         private readonly IAntiforgery _antiforgery;
         private readonly AuthCookieOptions _authCookieOptions;
+        private readonly IStringLocalizer _localizer;
 
         public SessionController(
             IUserService userService,
@@ -34,7 +36,8 @@ namespace SyncApp26.API.Controllers
             ITokenService tokenService,
             IRefreshTokenService refreshTokenService,
             IAntiforgery antiforgery,
-            AuthCookieOptions authCookieOptions)
+            AuthCookieOptions authCookieOptions,
+            ILocalizationService localizationService)
         {
             _userService = userService;
             _impersonationService = impersonationService;
@@ -42,6 +45,7 @@ namespace SyncApp26.API.Controllers
             _refreshTokenService = refreshTokenService;
             _antiforgery = antiforgery;
             _authCookieOptions = authCookieOptions;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Auth);
         }
 
         // Always 200, even with no session - a 401 here would loop the client's error interceptor
@@ -115,7 +119,7 @@ namespace SyncApp26.API.Controllers
 
             Response.DeleteAuthCookie(_authCookieOptions);
             Response.DeleteRefreshCookie(_authCookieOptions);
-            return Ok(new { message = "Logged out." });
+            return Ok(new { message = _localizer["api.loggedOut"].Value });
         }
 
         // Rotates the refresh token and mints a fresh access token from it.
@@ -127,7 +131,7 @@ namespace SyncApp26.API.Controllers
             if (!Request.Cookies.TryGetValue(AuthCookieExtensions.RefreshCookieName, out var rawToken) ||
                 string.IsNullOrEmpty(rawToken))
             {
-                return Unauthorized(new { message = "No refresh token present." });
+                return Unauthorized(new { message = _localizer["api.noRefreshToken"].Value });
             }
 
             var result = await _refreshTokenService.RotateAsync(rawToken);
@@ -135,14 +139,14 @@ namespace SyncApp26.API.Controllers
             {
                 // Whatever the caller presented is no longer valid - the cookie must go with it.
                 Response.DeleteRefreshCookie(_authCookieOptions);
-                return Unauthorized(new { message = "Refresh token is invalid or expired." });
+                return Unauthorized(new { message = _localizer["api.refreshTokenInvalid"].Value });
             }
 
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null)
             {
                 Response.DeleteRefreshCookie(_authCookieOptions);
-                return Unauthorized(new { message = "Refresh token is invalid or expired." });
+                return Unauthorized(new { message = _localizer["api.refreshTokenInvalid"].Value });
             }
 
             var roleNames = user.RoleAssignments.Select(a => a.Role.Name).ToList();
@@ -151,7 +155,7 @@ namespace SyncApp26.API.Controllers
             Response.AppendAuthCookie(_authCookieOptions, newAccessToken, AccessTokenCookieLifetime);
             Response.AppendRefreshCookie(_authCookieOptions, newRefreshToken.RawToken, newRefreshToken.ExpiresAt);
 
-            return Ok(new { message = "Session refreshed." });
+            return Ok(new { message = _localizer["api.sessionRefreshed"].Value });
         }
 
         [HttpPost("stop-impersonation")]
@@ -162,17 +166,17 @@ namespace SyncApp26.API.Controllers
             if (User.FindFirst(CustomClaimTypes.ImpersonatorId)?.Value is not string raw ||
                 !Guid.TryParse(raw, out var impersonatorId))
             {
-                return BadRequest(new { message = "Not currently impersonating." });
+                return BadRequest(new { message = _localizer["api.notImpersonating"].Value });
             }
 
             var result = await _impersonationService.StopAsync(impersonatorId);
 
             return result.Status switch
             {
-                ImpersonationStatus.ImpersonatorNotFound => Unauthorized(new { message = "Your original session no longer exists. Please log in again." }),
-                ImpersonationStatus.ImpersonatorNotAdmin => Unauthorized(new { message = "Your original session no longer has admin access. Please log in again." }),
+                ImpersonationStatus.ImpersonatorNotFound => Unauthorized(new { message = _localizer["api.impersonatorSessionGone"].Value }),
+                ImpersonationStatus.ImpersonatorNotAdmin => Unauthorized(new { message = _localizer["api.impersonatorNotAdmin"].Value }),
                 ImpersonationStatus.Success => await StopImpersonationSuccess(result),
-                _ => StatusCode(500, new { message = "An error occurred while processing your request." })
+                _ => StatusCode(500, new { message = _localizer["api.genericError"].Value })
             };
         }
 
@@ -186,7 +190,7 @@ namespace SyncApp26.API.Controllers
 
             return Ok(new
             {
-                message = "Impersonation session ended.",
+                message = _localizer["api.impersonationEnded"].Value,
                 user = new
                 {
                     id = result.UserId,

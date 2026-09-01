@@ -17,14 +17,16 @@ import { UserSignatureService, UserSignature, UserSignatureHistory } from '../..
 import { NotificationService } from '../../services/notification.service';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
-import { isValidName, isValidFunction, NAME_ERROR_MESSAGE, FUNCTION_ERROR_MESSAGE } from '../../shared/utils/name-validation.util';
+import { isValidName, isValidFunction } from '../../shared/utils/name-validation.util';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
+import { TranslationService } from '../../services/translation.service';
+import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-line-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent],
+  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent, TranslatePipe],
   templateUrl: './line-manager.component.html',
   styleUrls: ['./line-manager.component.css']
 })
@@ -122,20 +124,9 @@ export class LineManagerComponent implements OnInit {
   availableWorkSites: string[] = [];
   registeredFunctions: string[] = [];
 
-  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [
-    { key: 'LastName', label: 'Last Name', type: 'text' },
-    { key: 'FirstName', label: 'First Name', type: 'text' },
-    { key: 'DateOfBirth', label: 'Date of Birth', type: 'date' },
-    { key: 'PlaceOfBirth', label: 'Place of Birth', type: 'text' },
-    { key: 'Department', label: 'Department (Name)', type: 'select' },
-    { key: 'Function', label: 'Function (Name)', type: 'select' },
-    { key: 'WorkSite', label: 'Work Site (Name)', type: 'select' },
-    { key: 'Address', label: 'Address', type: 'text' },
-    { key: 'BadgeNumber', label: 'Badge Number', type: 'text' },
-    { key: 'BloodType', label: 'Blood Type', type: 'select', options: BLOOD_TYPE_OPTIONS },
-    { key: 'CommuteRoute', label: 'Commute Route', type: 'text' },
-    { key: 'CommuteDurationMinutes', label: 'Commute Duration (minutes)', type: 'text' }
-  ];
+  // Populated in the constructor body, not here - a field initializer can run before the
+  // translationService parameter property is assigned, and these labels need it.
+  availableFields: { key: string, label: string, type: 'text' | 'date' | 'email' | 'select', options?: { value: string, label: string }[] }[] = [];
   selectedFieldKey = '';
   newFieldValue = '';
   requestedChanges: { [key: string]: string } = {};
@@ -154,13 +145,81 @@ export class LineManagerComponent implements OnInit {
     private http: HttpClient,
     private router: Router,
     private userSignatureService: UserSignatureService,
-    private notificationService: NotificationService
-  ) { }
+    private notificationService: NotificationService,
+    private translationService: TranslationService
+  ) {
+    this.availableFields = [
+      { key: 'LastName', label: this.tUsers('profile.lastName'), type: 'text' },
+      { key: 'FirstName', label: this.tUsers('profile.firstName'), type: 'text' },
+      { key: 'DateOfBirth', label: this.tUsers('profile.dateOfBirth'), type: 'date' },
+      { key: 'PlaceOfBirth', label: this.tUsers('fields.placeOfBirth'), type: 'text' },
+      { key: 'Department', label: this.tUsers('fields.departmentName'), type: 'select' },
+      { key: 'Function', label: this.tUsers('fields.functionName'), type: 'select' },
+      { key: 'WorkSite', label: this.tUsers('fields.workSiteName'), type: 'select' },
+      { key: 'Address', label: this.tUsers('profile.address'), type: 'text' },
+      { key: 'BadgeNumber', label: this.tUsers('profile.badgeNumber'), type: 'text' },
+      { key: 'BloodType', label: this.tUsers('profile.bloodType'), type: 'select', options: BLOOD_TYPE_OPTIONS },
+      { key: 'CommuteRoute', label: this.tUsers('fields.commuteRoute'), type: 'text' },
+      { key: 'CommuteDurationMinutes', label: this.tUsers('fields.commuteDurationMinutes'), type: 'text' }
+    ];
+  }
+
+  tUsers(key: string): string {
+    return this.translationService.translate('Users', key);
+  }
+
+  tDocuments(key: string): string {
+    return this.translationService.translate('Documents', key);
+  }
+
+  tRequests(key: string): string {
+    return this.translationService.translate('Requests', key);
+  }
+
+  tCommon(key: string): string {
+    return this.translationService.translate('Common', key);
+  }
+
+  tValidation(key: string): string {
+    return this.translationService.translate('Validation', key);
+  }
+
+  tOrganization(key: string): string {
+    return this.translationService.translate('Organization', key);
+  }
+
+  documentTypeFileLabel(documentType: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeFile', documentType);
+  }
+
+  documentTypeFileSubordinateLabel(documentType: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeFileSubordinate', documentType);
+  }
+
+  documentTypeFileTrainingLabel(documentType: string): string {
+    return this.translationService.translate('Documents', 'labels.documentTypeFileTraining', documentType);
+  }
+
+  signedByYouOnLabel(date: string): string {
+    return this.translationService.translate('Documents', 'messages.signedByYouOn', date);
+  }
+
+  countersignedByYouOnLabel(date: string): string {
+    return this.translationService.translate('Documents', 'messages.countersignedByYouOn', date);
+  }
+
+  signedAsInstructorOnLabel(date: string): string {
+    return this.translationService.translate('Documents', 'messages.signedAsInstructorOn', date);
+  }
+
+  signAllPendingLabel(count: number): string {
+    return this.translationService.translate('Documents', 'actions.signAllPending', count);
+  }
 
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser?.id) {
-      this.errorMessage = 'User session not found.';
+      this.errorMessage = this.tUsers('messages.userSessionNotFound');
       this.isLoading = false;
       return;
     }
@@ -169,7 +228,7 @@ export class LineManagerComponent implements OnInit {
       next: (user) => {
         this.user = user;
         if (!user) {
-          this.errorMessage = 'Could not load profile details.';
+          this.errorMessage = this.tUsers('messages.couldNotLoadProfileDetails');
           this.isLoading = false;
           return;
         }
@@ -179,7 +238,7 @@ export class LineManagerComponent implements OnInit {
         this.isLoading = false;
       },
       error: () => {
-        this.errorMessage = 'Could not load profile details.';
+        this.errorMessage = this.tUsers('messages.couldNotLoadProfileDetails');
         this.isLoading = false;
       }
     });
@@ -308,7 +367,7 @@ export class LineManagerComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error generating token', err);
-        alert(err.error?.message || 'Could not initiate signature block.');
+        alert(err.error?.message || this.tDocuments('messages.couldNotInitiateSignatureBlock'));
       }
     });
   }
@@ -323,7 +382,7 @@ export class LineManagerComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error fetching PDF', err);
-        alert('Could not open document. Please try again.');
+        alert(this.tDocuments('messages.couldNotOpenDocument'));
       }
     });
   }
@@ -426,7 +485,7 @@ export class LineManagerComponent implements OnInit {
 
   saveSignature(): void {
     if (this.sigMode === 'type' && !this.typedSig.trim()) {
-      this.sigErrorMessage = 'Please type your name as your signature.';
+      this.sigErrorMessage = this.tDocuments('messages.pleaseTypeYourName');
       return;
     }
     const data = this.sigMode === 'draw'
@@ -440,20 +499,20 @@ export class LineManagerComponent implements OnInit {
       next: (res) => {
         this.isSigLoading = false;
         this.savedSignature = res.signature;
-        this.sigSuccessMessage = 'Signature saved successfully!';
+        this.sigSuccessMessage = this.tDocuments('messages.signatureSavedSuccessfully');
         this.isSigConfirmed = false;
         this.typedSig = '';
         if (this.sigMode === 'draw') this.clearSigCanvas();
       },
       error: (err) => {
         this.isSigLoading = false;
-        this.sigErrorMessage = err.error?.message || 'Failed to save signature. Please try again.';
+        this.sigErrorMessage = err.error?.message || this.tDocuments('messages.failedToSaveSignature');
       }
     });
   }
 
   revokeSignature(): void {
-    if (!confirm('Are you sure you want to remove your saved signature? This will be recorded in the audit log.')) return;
+    if (!confirm(this.tDocuments('messages.confirmRevokeSignature'))) return;
     this.isSigLoading = true;
     this.sigErrorMessage = '';
     this.sigSuccessMessage = '';
@@ -465,7 +524,7 @@ export class LineManagerComponent implements OnInit {
       },
       error: (err) => {
         this.isSigLoading = false;
-        this.sigErrorMessage = err.error?.message || 'Failed to revoke signature.';
+        this.sigErrorMessage = err.error?.message || this.tDocuments('messages.failedToRevokeSignature');
       }
     });
   }
@@ -501,7 +560,7 @@ export class LineManagerComponent implements OnInit {
   submitEmailChangeRequest(): void {
     const localPart = this.emailChangeLocalPart.trim();
     if (!localPart || /[\s@]/.test(localPart)) {
-      this.emailChangeError = 'Please enter a valid email name (no spaces or @).';
+      this.emailChangeError = this.tUsers('messages.invalidEmailLocalPart');
       return;
     }
 
@@ -515,14 +574,14 @@ export class LineManagerComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.isSubmittingEmailChange = false;
-        this.emailChangeSuccess = 'Your email change request has been submitted. It is now pending admin approval.';
+        this.emailChangeSuccess = this.tUsers('messages.emailChangeSubmitted');
         this.emailChangeLocalPart = '';
         this.emailChangeReason = '';
         setTimeout(() => this.closeEmailChangeModal(), 3000);
       },
       error: (err) => {
         this.isSubmittingEmailChange = false;
-        this.emailChangeError = err.error?.message || 'Failed to submit request.';
+        this.emailChangeError = err.error?.message || this.tCommon('messages.failedToSubmitRequest');
       }
     });
   }
@@ -557,14 +616,14 @@ export class LineManagerComponent implements OnInit {
 
     // Validation checks
     if (Object.keys(actualChanges).length === 0) {
-      this.dataChangeError = 'Please fill in at least one field to change.';
+      this.dataChangeError = this.tRequests('messages.pleaseFillOneField');
       return;
     }
 
     if (actualChanges['Email']) {
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailPattern.test(actualChanges['Email'])) {
-        this.dataChangeError = 'Please enter a valid email address.';
+        this.dataChangeError = this.tRequests('messages.pleaseEnterValidEmail');
         return;
       }
     }
@@ -573,7 +632,7 @@ export class LineManagerComponent implements OnInit {
       const dob = new Date(actualChanges['DateOfBirth']);
       const today = new Date();
       if (dob > today) {
-        this.dataChangeError = 'Date of Birth cannot be in the future.';
+        this.dataChangeError = this.tRequests('messages.dobCannotBeFuture');
         return;
       }
     }
@@ -582,17 +641,17 @@ export class LineManagerComponent implements OnInit {
       (actualChanges['FirstName'] && !isValidName(actualChanges['FirstName'])) ||
       (actualChanges['LastName'] && !isValidName(actualChanges['LastName']))
     ) {
-      this.dataChangeError = `First/last name: ${NAME_ERROR_MESSAGE}`;
+      this.dataChangeError = `${this.tValidation('field.firstLastName')}: ${this.tValidation('name.pattern')}`;
       return;
     }
 
     if (actualChanges['Function'] && !isValidFunction(actualChanges['Function'])) {
-      this.dataChangeError = `Function: ${FUNCTION_ERROR_MESSAGE}`;
+      this.dataChangeError = `${this.tValidation('field.function')}: ${this.tValidation('function.maxLength')}`;
       return;
     }
 
     if (!this.dataChangeReason.trim()) {
-      this.dataChangeError = 'Please provide a reason for the change.';
+      this.dataChangeError = this.tRequests('messages.pleaseProvideReason');
       return;
     }
 
@@ -607,14 +666,14 @@ export class LineManagerComponent implements OnInit {
     this.dataChangeRequestService.createRequest(payload).subscribe({
       next: (res) => {
         this.isSubmittingDataChange = false;
-        this.dataChangeSuccess = 'Data change request submitted successfully. It is now pending admin approval.';
+        this.dataChangeSuccess = this.tRequests('messages.dataChangeSubmitted');
         this.requestedChanges = {};
         this.dataChangeReason = '';
         setTimeout(() => this.closeDataChangeModal(), 3000);
       },
       error: (err) => {
         this.isSubmittingDataChange = false;
-        this.dataChangeError = err.error?.message || 'Failed to submit request.';
+        this.dataChangeError = err.error?.message || this.tCommon('messages.failedToSubmitRequest');
       }
     });
   }
@@ -650,16 +709,16 @@ export class LineManagerComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error generating token for bulk sign', err);
-        alert(err.error?.message || 'Could not initiate bulk signing.');
+        alert(err.error?.message || this.tDocuments('messages.couldNotInitiateBulkSigning'));
       }
     });
   }
 
   notifyUser(user: User, documentType: 'SSM' | 'SU'): void {
-    if (confirm(`Are you sure you want to notify ${user.firstName} ${user.lastName} about the missing ${documentType} document?`)) {
+    if (confirm(this.translationService.translate('Documents', 'messages.confirmNotifyUser', user.firstName, user.lastName, documentType))) {
       this.notificationService.notifyUser(user.id, documentType).subscribe({
-        next: (res) => alert(res.message || 'Notification sent!'),
-        error: (err) => alert(err.error?.message || 'Failed to send notification.')
+        next: (res) => alert(res.message || this.tDocuments('messages.notificationSent')),
+        error: (err) => alert(err.error?.message || this.tDocuments('messages.failedToSendNotification'))
       });
     }
   }

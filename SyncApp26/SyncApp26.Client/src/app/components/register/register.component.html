@@ -1,73 +1,73 @@
 <div class="register-container">
   <div class="register-card">
     <div class="register-header">
-      <h1 class="register-title">SyncApp26</h1>
-      <p class="register-subtitle">Create your account</p>
+      <h1 class="register-title">{{ 'appName' | translate:'Common' }}</h1>
+      <p class="register-subtitle">{{ 'register.title' | translate:'Auth' }}</p>
     </div>
 
     <form class="register-form" (ngSubmit)="onRegister()">
       <div class="form-group">
-        <label for="firstName" class="form-label">First Name</label>
+        <label for="firstName" class="form-label">{{ 'register.firstName' | translate:'Auth' }}</label>
         <input
           type="text"
           id="firstName"
           name="firstName"
           [(ngModel)]="firstName"          class="form-input"
-          placeholder="Enter your first name"
+          [placeholder]="'register.firstNamePlaceholder' | translate:'Auth'"
           autocomplete="given-name"
           maxlength="100"
           />
         </div>
 
         <div class="form-group">
-          <label for="lastName" class="form-label">Last Name</label>
+          <label for="lastName" class="form-label">{{ 'register.lastName' | translate:'Auth' }}</label>
           <input
             type="text"
             id="lastName"
             name="lastName"
             [(ngModel)]="lastName"
             class="form-input"
-            placeholder="Enter your last name"
+            [placeholder]="'register.lastNamePlaceholder' | translate:'Auth'"
             autocomplete="family-name"
             maxlength="100"
             />
           </div>
 
           <div class="form-group">
-            <label for="email" class="form-label">Email</label>
+            <label for="email" class="form-label">{{ 'login.email' | translate:'Auth' }}</label>
             <input
               type="email"
               id="email"
               name="email"
               [(ngModel)]="email"
               class="form-input"
-              placeholder="Enter your email"
+              [placeholder]="'login.emailPlaceholder' | translate:'Auth'"
               autocomplete="email"
               />
             </div>
 
             <div class="form-group">
-              <label for="password" class="form-label">Password</label>
+              <label for="password" class="form-label">{{ 'login.password' | translate:'Auth' }}</label>
               <input
                 type="password"
                 id="password"
                 name="password"
                 [(ngModel)]="password"
                 class="form-input"
-                placeholder="Enter your password"
+                [placeholder]="'login.passwordPlaceholder' | translate:'Auth'"
                 autocomplete="new-password"
                 />
               </div>
 
               <div class="form-group">
-                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <label for="confirmPassword" class="form-label">{{ 'register.confirmPassword' | translate:'Auth' }}</label>
                 <input
                   type="password"
                   id="confirmPassword"
                   name="confirmPassword"
                   [(ngModel)]="confirmPassword"
                   class="form-input"
-                  placeholder="Confirm your password"
+                  [placeholder]="'register.confirmPasswordPlaceholder' | translate:'Auth'"
                   autocomplete="new-password"
                   />
                 </div>
@@ -86,17 +86,17 @@
 
                 <button type="submit" class="register-button" [disabled]="isLoading">
                   @if (!isLoading) {
-                    <span>Register</span>
+                    <span>{{ 'register.submit' | translate:'Auth' }}</span>
                   }
                   @if (isLoading) {
-                    <span>Registering...</span>
+                    <span>{{ 'register.submitting' | translate:'Auth' }}</span>
                   }
                 </button>
               </form>
 
               <div class="register-footer">
-                <p class="footer-text">SyncApp26 - User Management System</p>
+                <p class="footer-text">{{ 'login.footerText' | translate:'Auth' }}</p>
                 <p class="footer-link">
-                  Already have an account? <a routerLink="/login" class="link">Sign in here</a>
+                  {{ 'register.alreadyHaveAccount' | translate:'Auth' }} <a routerLink="/login" class="link">{{ 'register.signInPrompt' | translate:'Auth' }}</a>
                 </p>
               </div>

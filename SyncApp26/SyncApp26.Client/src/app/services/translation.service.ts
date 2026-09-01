@@ -91,7 +91,10 @@ export class TranslationService {
     );
   }
 
-  translate(scope: string, key: string): string {
-    return this.catalogueSignal()[scope]?.[key] ?? key;
+  translate(scope: string, key: string, ...args: (string | number)[]): string {
+    const template = this.catalogueSignal()[scope]?.[key] ?? key;
+    return args.length === 0
+      ? template
+      : template.replace(/\{(\d+)\}/g, (match, index) => args[+index] !== undefined ? String(args[+index]) : match);
   }
 }

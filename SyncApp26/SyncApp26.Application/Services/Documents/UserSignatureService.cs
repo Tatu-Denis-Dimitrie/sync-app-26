@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Localization;
 using SyncApp26.Application.IServices;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Domain.Enums;
 using SyncApp26.Domain.IRepositories;
 
 namespace SyncApp26.Application.Services
@@ -10,11 +12,13 @@ namespace SyncApp26.Application.Services
     {
         private readonly IUserSignatureRepository _repository;
         private readonly ICryptographyService _cryptographyService;
+        private readonly IStringLocalizer _localizer;
 
-        public UserSignatureService(IUserSignatureRepository repository, ICryptographyService cryptographyService)
+        public UserSignatureService(IUserSignatureRepository repository, ICryptographyService cryptographyService, ILocalizationService localizationService)
         {
             _repository = repository;
             _cryptographyService = cryptographyService;
+            _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Documents);
         }
 
         public Task<UserSignature?> GetUserSignatureAsync(Guid userId)
@@ -29,10 +33,10 @@ namespace SyncApp26.Application.Services
             string performedByEmail)
         {
             if (string.IsNullOrWhiteSpace(signatureData))
-                throw new ArgumentException("Signature data must not be empty.", nameof(signatureData));
+                throw new ArgumentException(_localizer["userSignature.dataMustNotBeEmpty"], nameof(signatureData));
 
             if (string.IsNullOrWhiteSpace(signatureMethod))
-                throw new ArgumentException("Signature method must not be empty.", nameof(signatureMethod));
+                throw new ArgumentException(_localizer["userSignature.methodMustNotBeEmpty"], nameof(signatureMethod));
 
             // Integrity: SHA-256 of the raw signature payload
             var hash = ComputeHash(signatureData);
@@ -96,7 +100,7 @@ namespace SyncApp26.Application.Services
         {
             var existing = await _repository.GetByUserIdAsync(userId);
             if (existing == null)
-                throw new InvalidOperationException("No active signature found for this user.");
+                throw new InvalidOperationException(_localizer["userSignature.noActiveSignature"]);
 
             existing.RevokedAt = DateTime.UtcNow;
             existing.UpdatedAt = DateTime.UtcNow;
