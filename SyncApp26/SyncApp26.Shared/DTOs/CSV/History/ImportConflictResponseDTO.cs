@@ -7,9 +7,9 @@ namespace SyncApp26.Shared.DTOs.CSV.History
         public DateTime? ImportDate { get; set; }
         public string? ImportFileName { get; set; }
         public Guid UserId { get; set; }
-        public string FieldName { get; set; } //department, line manager
-        public string OldValue { get; set; }
-        public string NewValue { get; set; }
+        public string FieldName { get; set; } = string.Empty; //department, line manager
+        public string OldValue { get; set; } = string.Empty;
+        public string NewValue { get; set; } = string.Empty;
         public string? Status { get; set; } //accepted, rejected
         public DateTime CreatedAt { get; set; }
     }

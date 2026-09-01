@@ -7,7 +7,7 @@ namespace SyncApp26.Shared.DTOs.DataChange
         [Required]
         [EmailAddress]
         [MaxLength(255)]
-        public string NewEmail { get; set; }
+        public string NewEmail { get; set; } = string.Empty;
 
         [MaxLength(1000)]
         public string? Reason { get; set; }

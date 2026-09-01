@@ -178,8 +178,8 @@ namespace SyncApp26.Application.Services
             {
                 Id = req.Id,
                 UserId = req.UserId,
-                UserEmail = req.User?.Email,
-                UserFullName = req.User != null ? $"{req.User.FirstName} {req.User.LastName}" : null,
+                UserEmail = req.User?.Email ?? string.Empty,
+                UserFullName = req.User != null ? $"{req.User.FirstName} {req.User.LastName}" : string.Empty,
                 RequestedChangesJson = req.RequestedChangesJson,
                 OriginalValuesJson = req.OriginalValuesJson,
                 Reason = req.Reason,
@@ -209,7 +209,7 @@ namespace SyncApp26.Application.Services
             return requests.Select(MapToDTO);
         }
 
-        public async Task<DataChangeRequestDTO> GetRequestByIdAsync(Guid id)
+        public async Task<DataChangeRequestDTO?> GetRequestByIdAsync(Guid id)
         {
             var req = await _repository.GetByIdWithUserAsync(id);
             return req == null ? null : MapToDTO(req);
@@ -236,7 +236,7 @@ namespace SyncApp26.Application.Services
             };
 
             await _repository.AddAsync(req);
-            req.User = user;
+            req.User = user!; // userId is always the authenticated caller's own id, so this always resolves
             return MapToDTO(req);
         }
 

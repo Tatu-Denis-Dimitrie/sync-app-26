@@ -401,16 +401,24 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
-            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
-            if (!seesEverything && User.GetUserId() is { } currentUserId)
+            // Fail closed on a missing caller id: a null would otherwise match a null AssignedToId
+            // below and hand out manager-level attestation rights.
+            if (User.GetUserId() is not { } currentUserId)
             {
-                if (user.AssignedToId != currentUserId && user.Id != currentUserId)
-                {
-                    return Forbid();
-                }
+                return Unauthorized();
             }
 
-            await _userProfileService.UpdateSsmSuFormAsync(user, dto);
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything && user.AssignedToId != currentUserId && user.Id != currentUserId)
+            {
+                return Forbid();
+            }
+
+            // Attestation fields (who trained them, when) stay officer/admin/manager territory -
+            // an employee editing their own record keeps write access to the bio fields only.
+            bool canEditAttestation = seesEverything || user.AssignedToId == currentUserId;
+
+            await _userProfileService.UpdateSsmSuFormAsync(user, dto, canEditAttestation);
 
             return Ok(new UserResponseDTO
             {

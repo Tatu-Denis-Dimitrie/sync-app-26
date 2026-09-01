@@ -244,17 +244,17 @@ namespace SyncApp26.API.Controllers
                     progress.EmailsAborted = emailOutcome.AbortedEarly;
 
                     if (emailOutcome.Failed > 0)
-                        logger.LogWarning(
+                        logger?.LogWarning(
                             "Bulk generate job {JobId}: {Sent} signature email(s) sent, {Failed} failed{Aborted}. First error: {Error}",
                             jobId, emailOutcome.Sent, emailOutcome.Failed,
                             emailOutcome.AbortedEarly ? " (remaining skipped after repeated failures)" : string.Empty,
                             emailOutcome.FirstError);
                     else
-                        logger.LogInformation("Bulk generate job {JobId}: {Sent} signature email(s) sent.", jobId, emailOutcome.Sent);
+                        logger?.LogInformation("Bulk generate job {JobId}: {Sent} signature email(s) sent.", jobId, emailOutcome.Sent);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Bulk generate job {JobId}: signature email dispatch failed.", jobId);
+                    logger?.LogError(ex, "Bulk generate job {JobId}: signature email dispatch failed.", jobId);
                 }
             });
 
