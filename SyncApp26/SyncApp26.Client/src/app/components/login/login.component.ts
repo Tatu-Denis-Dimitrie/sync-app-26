@@ -1,6 +1,8 @@
 import { AfterViewInit, Component, ElementRef, NgZone, ViewChild } from '@angular/core';
 import { BrowserAuthError, BrowserAuthErrorCodes, PublicClientApplication } from '@azure/msal-browser';
 
+import { switchMap } from 'rxjs';
+
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthenticationService, LoginRequest } from '../../services/authentication.service';
@@ -115,7 +117,9 @@ export class LoginComponent implements AfterViewInit {
     this.errorMessage = '';
     this.isLoading = true;
 
-    this.authService.googleLogin(response.credential).subscribe({
+    this.authService.googleLogin(response.credential).pipe(
+      switchMap(() => this.translationService.applyPreferredLanguage())
+    ).subscribe({
       next: () => {
         this.isLoading = false;
         this.router.navigate(['/loading']);
@@ -138,7 +142,9 @@ export class LoginComponent implements AfterViewInit {
 
     try {
       const result = await this.msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email'] });
-      this.authService.microsoftLogin(result.idToken).subscribe({
+      this.authService.microsoftLogin(result.idToken).pipe(
+        switchMap(() => this.translationService.applyPreferredLanguage())
+      ).subscribe({
         next: () => {
           this.isLoading = false;
           this.router.navigate(['/loading']);
@@ -178,8 +184,10 @@ export class LoginComponent implements AfterViewInit {
       password: this.password
     };
 
-    this.authService.login(loginRequest).subscribe({
-      next: (response) => {
+    this.authService.login(loginRequest).pipe(
+      switchMap(() => this.translationService.applyPreferredLanguage())
+    ).subscribe({
+      next: () => {
         this.isLoading = false;
         this.router.navigate(['/loading']);
       },

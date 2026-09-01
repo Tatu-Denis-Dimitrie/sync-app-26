@@ -259,7 +259,8 @@ namespace SyncApp26.API.Controllers
                     email = result.Email,
                     firstName = result.FirstName,
                     lastName = result.LastName,
-                    roles = result.Roles
+                    roles = result.Roles,
+                    preferredLanguage = result.PreferredLanguage
                 }
             });
         }

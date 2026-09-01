@@ -37,6 +37,10 @@ export class TranslationService {
     return this.loadLanguage(this.resolveInitialLanguage());
   }
 
+  applyPreferredLanguage(): Observable<void> {
+    return this.loadLanguage(this.resolveInitialLanguage());
+  }
+
   private resolveInitialLanguage(): Language {
     const stored = this.authService.getCurrentUser()?.preferredLanguage;
     if (stored && isSupportedLanguage(stored)) {
