@@ -247,8 +247,8 @@
             <!-- Actions Bar -->
             <div class="bg-card border border-border rounded-lg p-4 mb-6">
               <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div class="flex flex-col sm:flex-row sm:min-w-0 gap-3">
-                  <div class="relative sm:w-64 sm:min-w-0">
+                <div class="flex flex-col sm:flex-row sm:flex-wrap sm:min-w-0 gap-3">
+                  <div class="relative sm:w-64 sm:min-w-[10rem]">
                     <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
                       placeholder="{{ 'dashboard.searchUsers' | translate:'Sync' }}"
                       class="pl-10 pr-4 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all w-full" />
@@ -259,7 +259,7 @@
                       </svg>
                     </div>
                     <select [(ngModel)]="selectedDepartment" (ngModelChange)="onDepartmentFilterChange()"
-                      class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all truncate sm:min-w-0">
+                      class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all truncate sm:min-w-[7rem]">
                       <option value="all">{{ 'dashboard.allDepartments' | translate:'Sync' }}</option>
                       @for (dept of departments; track dept) {
                         <option [value]="dept.name">
@@ -271,7 +271,7 @@
                     </select>
                     <select [(ngModel)]="selectedFunction" (ngModelChange)="onFunctionFilterChange()"
                       [disabled]="selectedDepartment === 'all'"
-                      class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed truncate sm:min-w-0">
+                      class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed truncate sm:min-w-[7rem]">
                       <option value="all">{{ 'dashboard.selectFunction' | translate:'Sync' }}</option>
                       @for (fn of availableDepartmentFunctions; track fn) {
                         <option [value]="fn">
@@ -280,7 +280,7 @@
                       }
                     </select>
                     <select [(ngModel)]="selectedRole" (ngModelChange)="onRoleFilterChange()"
-                      class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all truncate sm:min-w-0">
+                      class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all truncate sm:min-w-[7rem]">
                       <option value="all">{{ 'dashboard.allRoles' | translate:'Sync' }}</option>
                       <option [value]="UserRole.LineManager">{{ 'dashboard.lineManagers' | translate:'Sync' }}</option>
                       <option [value]="UserRole.BasicUser">{{ 'dashboard.employees' | translate:'Sync' }}</option>
