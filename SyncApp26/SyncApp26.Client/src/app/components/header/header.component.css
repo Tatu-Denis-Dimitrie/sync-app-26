@@ -56,7 +56,7 @@ a.router-link-active {
   position: relative;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   a.router-link-active::after {
     content: '';
     position: absolute;

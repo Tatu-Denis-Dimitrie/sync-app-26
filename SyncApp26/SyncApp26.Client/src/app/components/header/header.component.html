@@ -32,7 +32,7 @@
           </a>
         </div>
 
-        <div class="hidden lg:flex lg:items-center lg:gap-1">
+        <div class="hidden xl:flex xl:items-center xl:gap-1">
           @if (isLoggedIn) {
             @if (isAdmin) {
               <a routerLink="/dashboard" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
@@ -109,7 +109,7 @@
           }
         </div>
 
-        <div class="flex items-center gap-2 sm:gap-4">
+        <div class="flex shrink-0 items-center gap-2 sm:gap-4">
           <app-language-switcher />
           @if (isLoggedIn) {
             @if (isImpersonating) {
@@ -249,7 +249,7 @@
               }
             </div>
             <button (click)="toggleMenu()"
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 transition-all hover:bg-white/10 lg:hidden"
+              class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/5 transition-all hover:bg-white/10 xl:hidden"
               [ngClass]="{'h-8 w-8': isScrolled}">
               @if (!isMenuOpen) {
                 <svg class="h-6 w-6 transition-all" [ngClass]="{'h-5 w-5': isScrolled}" fill="none"
@@ -275,7 +275,7 @@
 
     @if (isMenuOpen) {
       <div
-        class="lg:hidden border-t border-white/5 bg-background/95 backdrop-blur-2xl animate-in slide-in-from-top duration-300">
+        class="xl:hidden border-t border-white/5 bg-background/95 backdrop-blur-2xl animate-in slide-in-from-top duration-300">
         <div class="space-y-0.5 px-4 py-4 sm:px-6">
           @if (isAdmin) {
             <a routerLink="/dashboard" routerLinkActive="text-primary bg-primary/10" [routerLinkActiveOptions]="{ exact: true }"
