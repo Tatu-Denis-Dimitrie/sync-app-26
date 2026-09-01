@@ -1,4 +1,4 @@
-<div [ngClass]="{'fixed top-0 left-0 right-0': isScrolled, 'static': !isScrolled}" class="z-[100] px-0 transition-all duration-500 pointer-events-none"
+<div [ngClass]="{'fixed top-0 left-0 right-0': isScrolled, 'relative': !isScrolled}" class="z-[100] px-0 transition-all duration-500 pointer-events-none"
   [class.pt-4]="isScrolled" [class.pt-0]="!isScrolled">
 
   <nav class="w-full transition-all duration-500 pointer-events-auto overflow-visible shadow-sm" [ngClass]="{
@@ -32,15 +32,17 @@
           </a>
         </div>
 
-        <div class="hidden xl:flex xl:items-center xl:gap-1">
+        <div class="hidden lg:flex lg:items-center lg:gap-1">
           @if (isLoggedIn) {
             @if (isAdmin) {
               <a routerLink="/dashboard" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
               class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.dashboard' | translate:'Common' }}</a>
+              <!-- Secondary admin destinations: hidden between lg and xl so the primary ones fit;
+                   still reachable from the hamburger menu, which stays visible until xl. -->
               <a routerLink="/departments" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.departments' | translate:'Common' }}</a>
+              class="hidden xl:block rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.departments' | translate:'Common' }}</a>
               <a routerLink="/work-sites" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.workSites' | translate:'Common' }}</a>
+              class="hidden xl:block rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.workSites' | translate:'Common' }}</a>
               <a routerLink="/users" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
               class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.users' | translate:'Common' }}</a>
               <a routerLink="/employees" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
@@ -48,7 +50,7 @@
               <a routerLink="/documents" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
               class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">{{ 'nav.documents' | translate:'Common' }}</a>
               <a routerLink="/admin-signature" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-                class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">
+                class="hidden xl:block rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200">
                 {{ 'nav.signature' | translate:'Common' }}
               </a>
               <a routerLink="/data-requests" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
@@ -62,7 +64,7 @@
                 }
               </a>
               <a routerLink="/import-history" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
-              class="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">{{ 'nav.userHistory' | translate:'Common' }}</a>
+              class="hidden xl:block rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 text-nowrap">{{ 'nav.userHistory' | translate:'Common' }}</a>
             }
             @if (!isAdmin && isLineManager) {
               <a routerLink="/line-manager" routerLinkActive="text-foreground router-link-active" [routerLinkActiveOptions]="{ exact: true }"
