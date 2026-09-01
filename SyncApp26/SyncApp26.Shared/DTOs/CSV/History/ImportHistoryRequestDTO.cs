@@ -2,6 +2,6 @@ namespace SyncApp26.Shared.DTOs.CSV.History
 {
     public class ImportHistoryRequestDTO
     {
-        public string FileName { get; set; }
+        public string FileName { get; set; } = string.Empty;
     }
 }

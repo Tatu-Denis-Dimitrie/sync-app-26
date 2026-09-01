@@ -12,15 +12,15 @@ namespace SyncApp26.Domain.Entities
         public Guid UserId { get; set; }
         
         [ForeignKey("UserId")]
-        public virtual User User { get; set; }
+        public virtual User User { get; set; } = null!;
 
         [Required]
         [MaxLength(50)]
-        public string DocumentType { get; set; } // e.g., "SSM", "SU"
+        public string DocumentType { get; set; } = string.Empty; // e.g., "SSM", "SU"
 
         [Required]
         [MaxLength(50)]
-        public string Status { get; set; } // "PendingUser", "PendingManager", "Completed"
+        public string Status { get; set; } = string.Empty; // "PendingUser", "PendingManager", "Completed"
 
         public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
 

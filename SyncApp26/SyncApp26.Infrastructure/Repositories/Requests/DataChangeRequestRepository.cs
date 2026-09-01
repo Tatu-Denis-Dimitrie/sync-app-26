@@ -37,7 +37,7 @@ namespace SyncApp26.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<DataChangeRequest> GetByIdWithUserAsync(Guid id)
+        public async Task<DataChangeRequest?> GetByIdWithUserAsync(Guid id)
         {
             return await _context.DataChangeRequests
                 .Include(x => x.User)
@@ -65,7 +65,7 @@ namespace SyncApp26.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<User> GetUserByIdAsync(Guid userId)
+        public async Task<User?> GetUserByIdAsync(Guid userId)
         {
             return await _context.Users
                 .Include(u => u.WorkSite)

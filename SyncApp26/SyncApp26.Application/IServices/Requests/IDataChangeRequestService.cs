@@ -13,7 +13,7 @@ namespace SyncApp26.Application.IServices
         Task<IEnumerable<DataChangeRequestDTO>> GetAllRequestsAsync();
         Task<int> GetPendingCountAsync();
         Task<IEnumerable<DataChangeRequestDTO>> GetRequestsByUserAsync(Guid userId);
-        Task<DataChangeRequestDTO> GetRequestByIdAsync(Guid id);
+        Task<DataChangeRequestDTO?> GetRequestByIdAsync(Guid id);
         Task<DataChangeRequestDTO> CreateRequestAsync(Guid userId, CreateDataChangeRequestDTO dto, string initialStatus = "Pending");
         Task<DataChangeRequestDTO> ChangeStatusAsync(Guid id, string status);
         Task<DataChangeRequestDTO> ResolveRequestAsync(Guid id, Guid adminId, ResolveDataChangeRequestDTO dto);

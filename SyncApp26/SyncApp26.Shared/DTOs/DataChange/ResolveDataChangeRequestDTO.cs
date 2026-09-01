@@ -6,6 +6,6 @@ namespace SyncApp26.Shared.DTOs.DataChange
     {
         [Required]
         [RegularExpression("^(Approved|Rejected)$", ErrorMessage = "status.approvedOrRejected")]
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 }
