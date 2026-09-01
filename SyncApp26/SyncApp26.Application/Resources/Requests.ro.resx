@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="title" xml:space="preserve">
+    <value>Cereri de modificare a datelor</value>
+  </data>
+  <data name="loading" xml:space="preserve">
+    <value>Se încarcă cererile...</value>
+  </data>
+  <data name="reasonForChange" xml:space="preserve">
+    <value>Motivul modificării</value>
+  </data>
+  <data name="requestedChanges" xml:space="preserve">
+    <value>Modificări solicitate</value>
+  </data>
+  <data name="status.pending" xml:space="preserve">
+    <value>În așteptare</value>
+  </data>
+  <data name="status.approved" xml:space="preserve">
+    <value>Aprobat</value>
+  </data>
+  <data name="status.rejected" xml:space="preserve">
+    <value>Respins</value>
+  </data>
+  <data name="messages.alreadyResolved" xml:space="preserve">
+    <value>Cererea a fost deja soluționată</value>
+  </data>
+  <data name="actions.requestDataChange" xml:space="preserve">
+    <value>Solicită modificarea datelor</value>
+  </data>
+  <data name="messages.fillFieldsToChange" xml:space="preserve">
+    <value>Completați câmpurile pe care doriți să le modificați</value>
+  </data>
+  <data name="labels.currentValueOkayPlaceholder" xml:space="preserve">
+    <value>Valoarea actuală este în regulă (lăsați necompletat)</value>
+  </data>
+  <data name="labels.explainReasonPlaceholder" xml:space="preserve">
+    <value>Vă rugăm să explicați de ce aveți nevoie de aceste modificări...</value>
+  </data>
+  <data name="actions.submitRequest" xml:space="preserve">
+    <value>Trimite cererea</value>
+  </data>
+  <data name="messages.dataChangeSubmitted" xml:space="preserve">
+    <value>Cererea de modificare a datelor a fost trimisă cu succes. Acum așteaptă aprobarea administratorului.</value>
+  </data>
+  <data name="messages.pleaseFillOneField" xml:space="preserve">
+    <value>Vă rugăm să completați cel puțin un câmp pentru modificare.</value>
+  </data>
+  <data name="messages.pleaseEnterValidEmail" xml:space="preserve">
+    <value>Vă rugăm să introduceți o adresă de e-mail validă.</value>
+  </data>
+  <data name="messages.dobCannotBeFuture" xml:space="preserve">
+    <value>Data nașterii nu poate fi în viitor.</value>
+  </data>
+  <data name="messages.pleaseProvideReason" xml:space="preserve">
+    <value>Vă rugăm să indicați un motiv pentru modificare.</value>
+  </data>
+  <data name="messages.requestNotFound" xml:space="preserve">
+    <value>Cererea nu a fost găsită</value>
+  </data>
+  <data name="emailChange.invalidFormat" xml:space="preserve">
+    <value>Format de e-mail invalid.</value>
+  </data>
+  <data name="emailChange.userNotFound" xml:space="preserve">
+    <value>Utilizatorul nu a fost găsit.</value>
+  </data>
+  <data name="emailChange.sameDomainRequired" xml:space="preserve">
+    <value>Noua adresă de e-mail trebuie să folosească același domeniu ca adresa dumneavoastră actuală (@{0}).</value>
+  </data>
+  <data name="emailChange.alreadyCurrent" xml:space="preserve">
+    <value>Aceasta este deja adresa dumneavoastră de e-mail actuală.</value>
+  </data>
+  <data name="emailChange.alreadyInUse" xml:space="preserve">
+    <value>Această adresă de e-mail este deja utilizată.</value>
+  </data>
+  <data name="emailChange.alreadyPending" xml:space="preserve">
+    <value>Aveți deja o cerere de modificare a adresei de e-mail în așteptarea verificării administratorului.</value>
+  </data>
+  <data name="emailChange.defaultReason" xml:space="preserve">
+    <value>Modificarea adresei de e-mail (autoservire)</value>
+  </data>
+  <data name="resolve.departmentNoLongerExists" xml:space="preserve">
+    <value>Nu se poate aproba: departamentul „{0}” nu mai există.</value>
+  </data>
+  <data name="resolve.departmentNotActive" xml:space="preserve">
+    <value>Nu se poate aproba: departamentul „{0}” nu mai este activ.</value>
+  </data>
+  <data name="resolve.functionNoLongerExists" xml:space="preserve">
+    <value>Nu se poate aproba: funcția „{0}” nu mai există.</value>
+  </data>
+  <data name="resolve.workSiteNoLongerExists" xml:space="preserve">
+    <value>Nu se poate aproba: punctul de lucru „{0}” nu mai există.</value>
+  </data>
+  <data name="resolve.workSiteNotActive" xml:space="preserve">
+    <value>Nu se poate aproba: punctul de lucru „{0}” nu mai este activ.</value>
+  </data>
+  <data name="resolve.emailTakenSince" xml:space="preserve">
+    <value>Nu se poate aproba: {0} a fost între timp preluat de un alt cont.</value>
+  </data>
+  <data name="resolve.errorProcessing" xml:space="preserve">
+    <value>Eroare la procesarea cererii de modificare a datelor.</value>
+  </data>
+  <data name="api.requestedChangesJsonInvalid" xml:space="preserve">
+    <value>RequestedChangesJson trebuie să fie un obiect simplu cu valori de tip șir de caractere.</value>
+  </data>
+  <data name="api.fieldsCannotBeRequested" xml:space="preserve">
+    <value>Aceste câmpuri nu pot fi solicitate prin acest flux: {0}.</value>
+  </data>
+  <data name="api.emailConfirmed" xml:space="preserve">
+    <value>Adresa de e-mail a fost confirmată cu succes. Cererea dumneavoastră așteaptă acum aprobarea administratorului.</value>
+  </data>
+  <data name="api.requestAlreadyVerified" xml:space="preserve">
+    <value>Cererea este deja verificată sau procesată.</value>
+  </data>
+  <data name="api.invalidOrExpiredToken" xml:space="preserve">
+    <value>Token invalid sau expirat.</value>
+  </data>
+  <data name="dataChangeRequests.subtitle" xml:space="preserve">
+    <value>Examinați și aprobați modificările profilurilor angajaților.</value>
+  </data>
+  <data name="dataChangeRequests.noneFound" xml:space="preserve">
+    <value>Nu au fost găsite cereri de modificare a datelor.</value>
+  </data>
+  <data name="dataChangeRequests.requestedOn" xml:space="preserve">
+    <value>Solicitat la</value>
+  </data>
+  <data name="dataChangeRequests.reject" xml:space="preserve">
+    <value>Respinge</value>
+  </data>
+  <data name="dataChangeRequests.approveApply" xml:space="preserve">
+    <value>Aprobă &amp; aplică</value>
+  </data>
+  <data name="dataChangeRequests.resolvedViaCsvImport" xml:space="preserve">
+    <value>Soluționată automat prin importul CSV</value>
+  </data>
+  <data name="dataChangeRequests.resolvedOn" xml:space="preserve">
+    <value>Soluționată la</value>
+  </data>
+  <data name="dataChangeRequests.failedToLoad" xml:space="preserve">
+    <value>Încărcarea cererilor a eșuat.</value>
+  </data>
+  <data name="dataChangeRequests.confirmReject" xml:space="preserve">
+    <value>Sigur doriți să respingeți această cerere?</value>
+  </data>
+  <data name="dataChangeRequests.requestApproved" xml:space="preserve">
+    <value>Cererea a fost aprobată.</value>
+  </data>
+  <data name="dataChangeRequests.requestRejected" xml:space="preserve">
+    <value>Cererea a fost respinsă.</value>
+  </data>
+  <data name="dataChangeRequests.requestApprovedEmailFailed" xml:space="preserve">
+    <value>Cererea a fost aprobată, dar e-mailul de confirmare nu a putut fi trimis angajatului.</value>
+  </data>
+  <data name="dataChangeRequests.requestRejectedEmailFailed" xml:space="preserve">
+    <value>Cererea a fost respinsă, dar e-mailul de confirmare nu a putut fi trimis angajatului.</value>
+  </data>
+  <data name="dataChangeRequests.failedToApprove" xml:space="preserve">
+    <value>Aprobarea cererii a eșuat.</value>
+  </data>
+  <data name="dataChangeRequests.failedToReject" xml:space="preserve">
+    <value>Respingerea cererii a eșuat.</value>
+  </data>
+  <data name="confirmEmailChange.verifyingEmail" xml:space="preserve">
+    <value>Se verifică adresa de e-mail...</value>
+  </data>
+  <data name="confirmEmailChange.verifyingHint" xml:space="preserve">
+    <value>Vă rugăm să așteptați cât timp confirmăm adresa dumneavoastră de e-mail.</value>
+  </data>
+  <data name="confirmEmailChange.emailVerified" xml:space="preserve">
+    <value>Adresă de e-mail verificată!</value>
+  </data>
+  <data name="confirmEmailChange.verificationFailed" xml:space="preserve">
+    <value>Verificarea a eșuat</value>
+  </data>
+  <data name="confirmEmailChange.returnToDashboard" xml:space="preserve">
+    <value>Înapoi la panoul de control</value>
+  </data>
+  <data name="confirmEmailChange.invalidLinkMissingParams" xml:space="preserve">
+    <value>Link de verificare invalid. Parametri lipsă.</value>
+  </data>
+  <data name="confirmEmailChange.emailSuccessfullyVerified" xml:space="preserve">
+    <value>Adresa de e-mail a fost verificată cu succes!</value>
+  </data>
+  <data name="confirmEmailChange.verificationFailedHint" xml:space="preserve">
+    <value>Verificarea a eșuat. Este posibil ca linkul să fi expirat sau să fie invalid.</value>
+  </data>
+</root>

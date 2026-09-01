@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="appName" xml:space="preserve">
+    <value>SyncApp26</value>
+  </data>
+  <data name="buttons.save" xml:space="preserve">
+    <value>Salvează</value>
+  </data>
+  <data name="buttons.cancel" xml:space="preserve">
+    <value>Anulează</value>
+  </data>
+  <data name="buttons.yes" xml:space="preserve">
+    <value>Da</value>
+  </data>
+  <data name="buttons.add" xml:space="preserve">
+    <value>Adaugă</value>
+  </data>
+  <data name="buttons.saving" xml:space="preserve">
+    <value>Se salvează...</value>
+  </data>
+  <data name="labels.status" xml:space="preserve">
+    <value>Stare</value>
+  </data>
+  <data name="status.active" xml:space="preserve">
+    <value>Activ</value>
+  </data>
+  <data name="status.inactive" xml:space="preserve">
+    <value>Inactiv</value>
+  </data>
+  <data name="labels.notAvailable" xml:space="preserve">
+    <value>N/A</value>
+  </data>
+  <data name="messages.submitting" xml:space="preserve">
+    <value>Se trimite...</value>
+  </data>
+  <data name="messages.failedToSubmitRequest" xml:space="preserve">
+    <value>Trimiterea cererii a eșuat.</value>
+  </data>
+  <data name="labels.none" xml:space="preserve">
+    <value>Niciunul</value>
+  </data>
+  <data name="buttons.delete" xml:space="preserve">
+    <value>Șterge</value>
+  </data>
+  <data name="buttons.edit" xml:space="preserve">
+    <value>Editează</value>
+  </data>
+  <data name="buttons.close" xml:space="preserve">
+    <value>Închide</value>
+  </data>
+  <data name="buttons.confirm" xml:space="preserve">
+    <value>Confirmă</value>
+  </data>
+  <data name="buttons.restore" xml:space="preserve">
+    <value>Restabilește</value>
+  </data>
+  <data name="pagination.next" xml:space="preserve">
+    <value>Următorul</value>
+  </data>
+  <data name="pagination.previous" xml:space="preserve">
+    <value>Anteriorul</value>
+  </data>
+  <data name="status.loading" xml:space="preserve">
+    <value>Se încarcă...</value>
+  </data>
+  <data name="buttons.print" xml:space="preserve">
+    <value>Printează</value>
+  </data>
+  <data name="buttons.back" xml:space="preserve">
+    <value>Înapoi</value>
+  </data>
+  <data name="buttons.hide" xml:space="preserve">
+    <value>Ascunde</value>
+  </data>
+  <data name="buttons.skip" xml:space="preserve">
+    <value>Omite</value>
+  </data>
+  <data name="buttons.done" xml:space="preserve">
+    <value>Gata</value>
+  </data>
+  <data name="labels.department" xml:space="preserve">
+    <value>Departament</value>
+  </data>
+  <data name="status.loadingUsers" xml:space="preserve">
+    <value>Se încarcă utilizatorii...</value>
+  </data>
+  <data name="status.loadingDepartments" xml:space="preserve">
+    <value>Se încarcă departamentele...</value>
+  </data>
+  <data name="buttons.ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="buttons.selectAll" xml:space="preserve">
+    <value>Selectează tot</value>
+  </data>
+  <data name="buttons.deselectAll" xml:space="preserve">
+    <value>Deselectează tot</value>
+  </data>
+  <data name="labels.yes" xml:space="preserve">
+    <value>Da</value>
+  </data>
+  <data name="labels.no" xml:space="preserve">
+    <value>Nu</value>
+  </data>
+  <data name="buttons.logout" xml:space="preserve">
+    <value>Deconectare</value>
+  </data>
+  <data name="buttons.signIn" xml:space="preserve">
+    <value>Autentificare</value>
+  </data>
+  <data name="nav.dashboard" xml:space="preserve">
+    <value>Panou de control</value>
+  </data>
+  <data name="nav.departments" xml:space="preserve">
+    <value>Departamente</value>
+  </data>
+  <data name="nav.workSites" xml:space="preserve">
+    <value>Puncte de lucru</value>
+  </data>
+  <data name="nav.users" xml:space="preserve">
+    <value>Utilizatori</value>
+  </data>
+  <data name="nav.employees" xml:space="preserve">
+    <value>Angajați</value>
+  </data>
+  <data name="nav.documents" xml:space="preserve">
+    <value>Documente</value>
+  </data>
+  <data name="nav.signature" xml:space="preserve">
+    <value>Semnătură</value>
+  </data>
+  <data name="nav.requests" xml:space="preserve">
+    <value>Cereri</value>
+  </data>
+  <data name="nav.dataRequests" xml:space="preserve">
+    <value>Cereri de date</value>
+  </data>
+  <data name="nav.userHistory" xml:space="preserve">
+    <value>Istoric utilizatori</value>
+  </data>
+  <data name="nav.managerConsole" xml:space="preserve">
+    <value>Consolă manager</value>
+  </data>
+  <data name="nav.home" xml:space="preserve">
+    <value>Acasă</value>
+  </data>
+  <data name="nav.myProfile" xml:space="preserve">
+    <value>Profilul meu</value>
+  </data>
+  <data name="header.accessVerified" xml:space="preserve">
+    <value>Acces verificat</value>
+  </data>
+  <data name="header.exit" xml:space="preserve">
+    <value>Ieșire</value>
+  </data>
+  <data name="header.viewingAs" xml:space="preserve">
+    <value>Vizualizare ca</value>
+  </data>
+  <data name="header.unimpersonate" xml:space="preserve">
+    <value>Oprește impersonarea</value>
+  </data>
+  <data name="header.unimpersonateName" xml:space="preserve">
+    <value>Oprește impersonarea {0}</value>
+  </data>
+  <data name="header.exitImpersonationOf" xml:space="preserve">
+    <value>Ieși din impersonarea {0}</value>
+  </data>
+  <data name="header.stopViewingAs" xml:space="preserve">
+    <value>Oprește vizualizarea ca</value>
+  </data>
+  <data name="header.signatureIntegrityAlert" xml:space="preserve">
+    <value>Alertă de integritate a semnăturii</value>
+  </data>
+  <data name="header.anomalyBreakdown" xml:space="preserve">
+    <value>{0} din {1} semnături verificate au fost semnalate. Detalierea completă a fost trimisă în căsuța dumneavoastră de e-mail.</value>
+  </data>
+  <data name="header.gotIt" xml:space="preserve">
+    <value>Am înțeles</value>
+  </data>
+  <data name="header.profileSettings" xml:space="preserve">
+    <value>Setările profilului</value>
+  </data>
+  <data name="footer.version" xml:space="preserve">
+    <value>Versiune:</value>
+  </data>
+  <data name="accessRestricted.title" xml:space="preserve">
+    <value>Acces restricționat</value>
+  </data>
+  <data name="accessRestricted.greeting" xml:space="preserve">
+    <value>Bună ziua,</value>
+  </data>
+  <data name="accessRestricted.message" xml:space="preserve">
+    <value>Toate funcționalitățile aplicației sunt disponibile în prezent doar pentru utilizatorii &lt;strong&gt;Administrator&lt;/strong&gt;.</value>
+  </data>
+  <data name="accessRestricted.devInProgressTitle" xml:space="preserve">
+    <value>Dezvoltare în curs</value>
+  </data>
+  <data name="accessRestricted.devInProgressDescription" xml:space="preserve">
+    <value>În prezent dezvoltăm funcționalități pentru &lt;strong&gt;Utilizatorii standard&lt;/strong&gt; și &lt;strong&gt;Managerii de linie&lt;/strong&gt;. Acestea vor fi disponibile în curând!</value>
+  </data>
+  <data name="pagination.showing" xml:space="preserve">
+    <value>Se afișează</value>
+  </data>
+  <data name="pagination.to" xml:space="preserve">
+    <value>–</value>
+  </data>
+  <data name="pagination.of" xml:space="preserve">
+    <value>din</value>
+  </data>
+  <data name="pagination.results" xml:space="preserve">
+    <value>rezultate</value>
+  </data>
+  <data name="pagination.perPage" xml:space="preserve">
+    <value>Pe pagină:</value>
+  </data>
+  <data name="pagination.custom" xml:space="preserve">
+    <value>Personalizat…</value>
+  </data>
+  <data name="pagination.label" xml:space="preserve">
+    <value>Paginare</value>
+  </data>
+  <data name="loadingScreen.initialization" xml:space="preserve">
+    <value>Inițializare...</value>
+  </data>
+  <data name="loadingScreen.resourcesLoading" xml:space="preserve">
+    <value>Se încarcă resursele...</value>
+  </data>
+  <data name="loadingScreen.connectingToServer" xml:space="preserve">
+    <value>Se conectează la server...</value>
+  </data>
+  <data name="loadingScreen.synchronizingData" xml:space="preserve">
+    <value>Se sincronizează datele...</value>
+  </data>
+  <data name="loadingScreen.preparingInterface" xml:space="preserve">
+    <value>Se pregătește interfața...</value>
+  </data>
+  <data name="loadingScreen.done" xml:space="preserve">
+    <value>Gata!</value>
+  </data>
+  <data name="languageSwitcher.ariaLabel" xml:space="preserve">
+    <value>Limbă: {0}</value>
+  </data>
+  <data name="errors.unexpectedTitle" xml:space="preserve">
+    <value>A apărut o eroare neașteptată.</value>
+  </data>
+  <data name="errors.unexpectedDetail" xml:space="preserve">
+    <value>Contactați un administrator și indicați ID-ul de urmărire dacă problema persistă.</value>
+  </data>
+  <data name="errors.failedToReadVersion" xml:space="preserve">
+    <value>Citirea versiunii a eșuat</value>
+  </data>
+  <data name="roles.admin" xml:space="preserve">
+    <value>Administrator</value>
+  </data>
+  <data name="roles.lineManager" xml:space="preserve">
+    <value>Manager de linie</value>
+  </data>
+  <data name="roles.basicUser" xml:space="preserve">
+    <value>Utilizator standard</value>
+  </data>
+  <data name="roles.ssmOfficer" xml:space="preserve">
+    <value>Responsabil SSM</value>
+  </data>
+  <data name="roles.suOfficer" xml:space="preserve">
+    <value>Responsabil SU</value>
+  </data>
+</root>

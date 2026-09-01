@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="departments.name" xml:space="preserve">
+    <value>Numele departamentului</value>
+  </data>
+  <data name="departments.rename" xml:space="preserve">
+    <value>Redenumește departamentul</value>
+  </data>
+  <data name="departments.delete" xml:space="preserve">
+    <value>Șterge departamentul</value>
+  </data>
+  <data name="departments.transferUsersTo" xml:space="preserve">
+    <value>Transferă utilizatorii către</value>
+  </data>
+  <data name="departments.selectTarget" xml:space="preserve">
+    <value>Selectați departamentul de destinație</value>
+  </data>
+  <data name="departments.totalPersonnel" xml:space="preserve">
+    <value>Total personal</value>
+  </data>
+  <data name="departments.hasNotSignedUsers" xml:space="preserve">
+    <value>Are utilizatori care nu au semnat</value>
+  </data>
+  <data name="filters.allSizes" xml:space="preserve">
+    <value>Toate dimensiunile</value>
+  </data>
+  <data name="filters.allSignatureStatus" xml:space="preserve">
+    <value>Toate stările semnăturii</value>
+  </data>
+  <data name="workSite.label" xml:space="preserve">
+    <value>Punct de lucru</value>
+  </data>
+  <data name="function.label" xml:space="preserve">
+    <value>Funcție</value>
+  </data>
+  <data name="filters.allFunctions" xml:space="preserve">
+    <value>Toate funcțiile</value>
+  </data>
+  <data name="department.scheduledForDeletionNotFound" xml:space="preserve">
+    <value>Departamentul programat pentru ștergere nu a fost găsit</value>
+  </data>
+  <data name="department.restored" xml:space="preserve">
+    <value>Departamentul a fost restabilit cu succes</value>
+  </data>
+  <data name="department.created" xml:space="preserve">
+    <value>Departamentul a fost creat cu succes</value>
+  </data>
+  <data name="department.nameRequired" xml:space="preserve">
+    <value>Numele departamentului este obligatoriu</value>
+  </data>
+  <data name="department.updated" xml:space="preserve">
+    <value>Departamentul a fost actualizat cu succes</value>
+  </data>
+  <data name="department.notFound" xml:space="preserve">
+    <value>Departamentul nu a fost găsit</value>
+  </data>
+  <data name="department.hasAssignedUsers" xml:space="preserve">
+    <value>Departamentul are utilizatori atribuiți. Vă rugăm să indicați ID-ul unui departament pentru transfer.</value>
+  </data>
+  <data name="department.transferNotFound" xml:space="preserve">
+    <value>Departamentul pentru transfer nu a fost găsit.</value>
+  </data>
+  <data name="department.cannotTransferToSame" xml:space="preserve">
+    <value>Nu se pot transfera utilizatorii către același departament care este șters.</value>
+  </data>
+  <data name="department.deleted" xml:space="preserve">
+    <value>Departamentul a fost șters/dezactivat cu succes</value>
+  </data>
+  <data name="workSite.scheduledForDeletionNotFound" xml:space="preserve">
+    <value>Punctul de lucru programat pentru ștergere nu a fost găsit</value>
+  </data>
+  <data name="workSite.restored" xml:space="preserve">
+    <value>Punctul de lucru a fost restabilit cu succes</value>
+  </data>
+  <data name="workSite.created" xml:space="preserve">
+    <value>Punctul de lucru a fost creat cu succes</value>
+  </data>
+  <data name="workSite.nameRequired" xml:space="preserve">
+    <value>Numele punctului de lucru este obligatoriu</value>
+  </data>
+  <data name="workSite.updated" xml:space="preserve">
+    <value>Punctul de lucru a fost actualizat cu succes</value>
+  </data>
+  <data name="workSite.notFound" xml:space="preserve">
+    <value>Punctul de lucru nu a fost găsit</value>
+  </data>
+  <data name="workSite.deleted" xml:space="preserve">
+    <value>Punctul de lucru a fost șters/dezactivat cu succes</value>
+  </data>
+  <data name="departments.totalDepartments" xml:space="preserve">
+    <value>Total departamente</value>
+  </data>
+  <data name="departments.totalManagers" xml:space="preserve">
+    <value>Total manageri</value>
+  </data>
+  <data name="departments.totalEmployees" xml:space="preserve">
+    <value>Total angajați</value>
+  </data>
+  <data name="departments.searchPlaceholder" xml:space="preserve">
+    <value>Căutați departamente...</value>
+  </data>
+  <data name="filters.sizeSmall" xml:space="preserve">
+    <value>Mic (≤10 persoane)</value>
+  </data>
+  <data name="filters.sizeMedium" xml:space="preserve">
+    <value>Mediu (11-50 persoane)</value>
+  </data>
+  <data name="filters.sizeLarge" xml:space="preserve">
+    <value>Mare (&gt;50 persoane)</value>
+  </data>
+  <data name="filters.hasSsmSigned" xml:space="preserve">
+    <value>Are SSM semnat</value>
+  </data>
+  <data name="filters.hasSuSigned" xml:space="preserve">
+    <value>Are SU semnat</value>
+  </data>
+  <data name="filters.hasBothSigned" xml:space="preserve">
+    <value>Are ambele semnate</value>
+  </data>
+  <data name="departments.deactivateTitle" xml:space="preserve">
+    <value>Dezactivează departamentul</value>
+  </data>
+  <data name="departments.activateTitle" xml:space="preserve">
+    <value>Activează departamentul</value>
+  </data>
+  <data name="departments.deactivate" xml:space="preserve">
+    <value>Dezactivează</value>
+  </data>
+  <data name="departments.activate" xml:space="preserve">
+    <value>Activează</value>
+  </data>
+  <data name="departments.lineManagers" xml:space="preserve">
+    <value>Manageri de linie</value>
+  </data>
+  <data name="departments.employees" xml:space="preserve">
+    <value>Angajați</value>
+  </data>
+  <data name="departments.documentSignatures" xml:space="preserve">
+    <value>Semnături pe documente</value>
+  </data>
+  <data name="departments.ssmSignedLabel" xml:space="preserve">
+    <value>SSM semnat:</value>
+  </data>
+  <data name="departments.suSignedLabel" xml:space="preserve">
+    <value>SU semnat:</value>
+  </data>
+  <data name="departments.bothSignedLabel" xml:space="preserve">
+    <value>Ambele semnate:</value>
+  </data>
+  <data name="departments.notSignedLabel" xml:space="preserve">
+    <value>Nesemnat:</value>
+  </data>
+  <data name="departments.viewNotSignedTitle" xml:space="preserve">
+    <value>Vizualizați utilizatorii care nu au semnat SSM și SU</value>
+  </data>
+  <data name="departments.noneFound" xml:space="preserve">
+    <value>Nu au fost găsite departamente</value>
+  </data>
+  <data name="departments.tryAdjustingSearch" xml:space="preserve">
+    <value>Încercați să ajustați căutarea sau filtrele.</value>
+  </data>
+  <data name="departments.noneInSystem" xml:space="preserve">
+    <value>În acest moment nu există niciun departament în sistem.</value>
+  </data>
+  <data name="departments.scheduledForDeletion" xml:space="preserve">
+    <value>Programat pentru ștergere</value>
+  </data>
+  <data name="departments.restore" xml:space="preserve">
+    <value>Restabilește departamentul</value>
+  </data>
+  <data name="departments.permanentlyDeletingIn" xml:space="preserve">
+    <value>Ștergere definitivă în {0} zile</value>
+  </data>
+  <data name="departments.deactivatedOn" xml:space="preserve">
+    <value>Dezactivat la</value>
+  </data>
+  <data name="departments.saveChanges" xml:space="preserve">
+    <value>Salvează modificările</value>
+  </data>
+  <data name="departments.restoreConfirmPrefix" xml:space="preserve">
+    <value>Sigur doriți să restabiliți</value>
+  </data>
+  <data name="departments.restoreConfirmSuffix" xml:space="preserve">
+    <value>? Departamentul va fi mutat înapoi în lista de departamente active (dar va rămâne inactiv până când îl activați).</value>
+  </data>
+  <data name="departments.confirmRestore" xml:space="preserve">
+    <value>Confirmă restabilirea</value>
+  </data>
+  <data name="departments.deleteConfirmPrefix" xml:space="preserve">
+    <value>Sigur doriți să ștergeți</value>
+  </data>
+  <data name="departments.deleteConfirmSuffix" xml:space="preserve">
+    <value>? Departamentul va fi dezactivat imediat și programat pentru ștergere definitivă în 90 de zile.</value>
+  </data>
+  <data name="departments.hasActiveUsersPrefix" xml:space="preserve">
+    <value>Acest departament are</value>
+  </data>
+  <data name="departments.hasActiveUsersSuffix" xml:space="preserve">
+    <value>utilizatori activi. Trebuie să îi transferați în alt departament înainte de ștergere.</value>
+  </data>
+  <data name="departments.confirmDelete" xml:space="preserve">
+    <value>Confirmă ștergerea</value>
+  </data>
+  <data name="departments.errorUpdating" xml:space="preserve">
+    <value>Eroare la actualizarea departamentului</value>
+  </data>
+  <data name="departments.errorDeleting" xml:space="preserve">
+    <value>Eroare la ștergerea departamentului</value>
+  </data>
+  <data name="departments.errorRestoring" xml:space="preserve">
+    <value>Eroare la restabilirea departamentului</value>
+  </data>
+  <data name="departments.pleaseSelectTransfer" xml:space="preserve">
+    <value>Vă rugăm să selectați un departament către care să transferați utilizatorii existenți.</value>
+  </data>
+  <data name="workSites.title" xml:space="preserve">
+    <value>Puncte de lucru</value>
+  </data>
+  <data name="workSites.headerOf" xml:space="preserve">
+    <value>din</value>
+  </data>
+  <data name="workSites.headerAcross" xml:space="preserve">
+    <value>angajați atribuiți în</value>
+  </data>
+  <data name="workSites.headerActive" xml:space="preserve">
+    <value>active</value>
+  </data>
+  <data name="workSites.headerSite" xml:space="preserve">
+    <value>punct de lucru</value>
+  </data>
+  <data name="workSites.headerSites" xml:space="preserve">
+    <value>puncte de lucru</value>
+  </data>
+  <data name="workSites.headerCompleted" xml:space="preserve">
+    <value>au finalizat semnarea atât pentru SSM, cât și pentru SU.</value>
+  </data>
+  <data name="workSites.emptyHeaderHint" xml:space="preserve">
+    <value>Locațiile fizice la care sunt atribuiți angajații. Gradul de acoperire a semnării apare aici după ce sunt atribuite persoane.</value>
+  </data>
+  <data name="workSites.addWorkSite" xml:space="preserve">
+    <value>Adaugă punct de lucru</value>
+  </data>
+  <data name="workSites.fullyCovered" xml:space="preserve">
+    <value>Acoperit integral</value>
+  </data>
+  <data name="workSites.searchPlaceholder" xml:space="preserve">
+    <value>Căutați puncte de lucru</value>
+  </data>
+  <data name="workSites.employee" xml:space="preserve">
+    <value>angajat</value>
+  </data>
+  <data name="workSites.employees" xml:space="preserve">
+    <value>angajați</value>
+  </data>
+  <data name="workSites.unsigned" xml:space="preserve">
+    <value>nesemnat</value>
+  </data>
+  <data name="workSites.noEmployeesYet" xml:space="preserve">
+    <value>Niciun angajat atribuit încă.</value>
+  </data>
+  <data name="workSites.rename" xml:space="preserve">
+    <value>Redenumește</value>
+  </data>
+  <data name="workSites.renameAria" xml:space="preserve">
+    <value>Redenumește {0}</value>
+  </data>
+  <data name="workSites.deleteAria" xml:space="preserve">
+    <value>Șterge {0}</value>
+  </data>
+  <data name="workSites.noneYet" xml:space="preserve">
+    <value>Niciun punct de lucru încă</value>
+  </data>
+  <data name="workSites.emptyStateHint" xml:space="preserve">
+    <value>Adăugați locațiile din care lucrează angajații dumneavoastră. După ce un punct de lucru există, îl puteți atribui angajaților, iar această pagină începe să monitorizeze acoperirea SSM și SU per locație.</value>
+  </data>
+  <data name="workSites.noMatch" xml:space="preserve">
+    <value>Niciun punct de lucru nu corespunde cu „{0}”.</value>
+  </data>
+  <data name="workSites.scheduledForDeletion" xml:space="preserve">
+    <value>Programat pentru ștergere</value>
+  </data>
+  <data name="workSites.newWorkSite" xml:space="preserve">
+    <value>Punct de lucru nou</value>
+  </data>
+  <data name="workSites.name" xml:space="preserve">
+    <value>Nume</value>
+  </data>
+  <data name="workSites.namePlaceholder" xml:space="preserve">
+    <value>ex. Timișoara</value>
+  </data>
+  <data name="workSites.createSite" xml:space="preserve">
+    <value>Creează punctul de lucru</value>
+  </data>
+  <data name="workSites.renameWorkSite" xml:space="preserve">
+    <value>Redenumește punctul de lucru</value>
+  </data>
+  <data name="workSites.saveChanges" xml:space="preserve">
+    <value>Salvează modificările</value>
+  </data>
+  <data name="workSites.deleteWorkSite" xml:space="preserve">
+    <value>Șterge punctul de lucru</value>
+  </data>
+  <data name="workSites.deleteConfirmPrefix" xml:space="preserve">
+    <value>Ștergeți</value>
+  </data>
+  <data name="workSites.deleteConfirmSuffix" xml:space="preserve">
+    <value>? Angajații atribuiți acestuia rămân fără un punct de lucru. Departamentul, managerul și semnăturile existente ale acestora nu sunt afectate.</value>
+  </data>
+  <data name="workSites.deleteSite" xml:space="preserve">
+    <value>Șterge punctul de lucru</value>
+  </data>
+  <data name="workSites.restoreWorkSite" xml:space="preserve">
+    <value>Restabilește punctul de lucru</value>
+  </data>
+  <data name="workSites.restoreConfirmPrefix" xml:space="preserve">
+    <value>Restabiliți</value>
+  </data>
+  <data name="workSites.restoreConfirmSuffix" xml:space="preserve">
+    <value>? Revine în listă ca inactiv, așa că nimeni nu poate fi atribuit acestuia până când îl activați din nou.</value>
+  </data>
+  <data name="workSites.restoreSite" xml:space="preserve">
+    <value>Restabilește punctul de lucru</value>
+  </data>
+  <data name="workSites.employeesAt" xml:space="preserve">
+    <value>Angajați la {0}</value>
+  </data>
+  <data name="workSites.errorLoading" xml:space="preserve">
+    <value>Încărcarea punctelor de lucru a eșuat.</value>
+  </data>
+  <data name="workSites.errorUpdating" xml:space="preserve">
+    <value>Actualizarea punctului de lucru a eșuat.</value>
+  </data>
+  <data name="workSites.errorCreating" xml:space="preserve">
+    <value>Crearea punctului de lucru a eșuat.</value>
+  </data>
+  <data name="workSites.errorDeleting" xml:space="preserve">
+    <value>Ștergerea punctului de lucru a eșuat.</value>
+  </data>
+  <data name="workSites.errorRestoring" xml:space="preserve">
+    <value>Restabilirea punctului de lucru a eșuat.</value>
+  </data>
+</root>

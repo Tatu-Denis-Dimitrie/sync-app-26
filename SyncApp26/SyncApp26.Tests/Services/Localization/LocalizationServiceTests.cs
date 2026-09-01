@@ -147,20 +147,27 @@ namespace SyncApp26.Tests.Services.Localization
         }
 
         [Fact]
-        public void GetTranslations_RealResxFilesOnDisk_NonEnglishLanguageStillReturnsEveryScopeWithEnglishFallback()
+        public void GetTranslations_RealResxFilesOnDisk_RomanianCatalogueHasTheSameKeysAsEnglishForEveryScope()
         {
             var factory = new ResourceManagerStringLocalizerFactory(
                 Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
                 NullLoggerFactory.Instance);
             var service = new LocalizationService(factory, BuildConfiguration(new[] { "En", "Ro" }, "En"));
 
-            var result = service.GetTranslations(Language.Ro);
+            var english = service.GetTranslations(Language.En);
+            var romanian = service.GetTranslations(Language.Ro);
 
-            // Every scope is present, and any key without a language-specific value falls back to English
-            // so shipping a language one scope at a time never leaves the caller with raw keys.
-            Assert.Equal(LocalizationScopes.All.Count, result.Count);
-            Assert.Equal("Sign In", result[LocalizationScopes.Auth]["login.submit"]);
-            Assert.Equal("Save", result[LocalizationScopes.Common]["buttons.save"]);
+
+            Assert.Equal(LocalizationScopes.All.Count, romanian.Count);
+            foreach (var scope in LocalizationScopes.All)
+            {
+                Assert.Equal(
+                    english[scope].Keys.OrderBy(k => k, StringComparer.Ordinal),
+                    romanian[scope].Keys.OrderBy(k => k, StringComparer.Ordinal));
+            }
+
+            // Spot-check that a translated scope actually comes back in Romanian, not English.
+            Assert.Equal("Salvează", romanian[LocalizationScopes.Common]["buttons.save"]);
         }
     }
 }

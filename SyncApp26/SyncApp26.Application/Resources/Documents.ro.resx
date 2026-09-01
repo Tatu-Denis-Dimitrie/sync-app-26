@@ -1,0 +1,1211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="status.pendingUser" xml:space="preserve">
+    <value>În așteptarea utilizatorului</value>
+  </data>
+  <data name="status.pendingManager" xml:space="preserve">
+    <value>În așteptarea managerului</value>
+  </data>
+  <data name="status.pendingInstructor" xml:space="preserve">
+    <value>În așteptarea instructorului</value>
+  </data>
+  <data name="status.pendingAdmin" xml:space="preserve">
+    <value>În așteptarea administratorului</value>
+  </data>
+  <data name="status.completed" xml:space="preserve">
+    <value>Finalizat</value>
+  </data>
+  <data name="filters.allStatuses" xml:space="preserve">
+    <value>Toate stările</value>
+  </data>
+  <data name="filters.allSignatures" xml:space="preserve">
+    <value>Toate semnăturile</value>
+  </data>
+  <data name="filters.employeeSignedOnly" xml:space="preserve">
+    <value>Semnat doar de angajat</value>
+  </data>
+  <data name="filters.managerSigned" xml:space="preserve">
+    <value>Semnat de manager</value>
+  </data>
+  <data name="filters.fullySigned" xml:space="preserve">
+    <value>Semnat integral</value>
+  </data>
+  <data name="documentType.label" xml:space="preserve">
+    <value>Tip document</value>
+  </data>
+  <data name="actions.regenerateDocuments" xml:space="preserve">
+    <value>Regenerează documentele</value>
+  </data>
+  <data name="status.bothSigned" xml:space="preserve">
+    <value>Ambele semnate</value>
+  </data>
+  <data name="status.ssmSigned" xml:space="preserve">
+    <value>SSM semnat</value>
+  </data>
+  <data name="status.suSigned" xml:space="preserve">
+    <value>SU semnat</value>
+  </data>
+  <data name="status.notSigned" xml:space="preserve">
+    <value>Nesemnat</value>
+  </data>
+  <data name="status.signed" xml:space="preserve">
+    <value>Semnat</value>
+  </data>
+  <data name="messages.viewPendingUsersFor" xml:space="preserve">
+    <value>Vizualizați utilizatorii în așteptare pentru {0} ({1} în așteptare)</value>
+  </data>
+  <data name="messages.allSubordinatesFullySignedFor" xml:space="preserve">
+    <value>Toți subordonații au semnat integral pentru {0}</value>
+  </data>
+  <data name="messages.allSubordinatesFullySigned" xml:space="preserve">
+    <value>Toți subordonații au semnat integral.</value>
+  </data>
+  <data name="actions.viewSsmSuForm" xml:space="preserve">
+    <value>Vizualizează fișa SSM/SU</value>
+  </data>
+  <data name="sections.documentsAndSignatures" xml:space="preserve">
+    <value>Documente &amp; semnături</value>
+  </data>
+  <data name="labels.itemsCount" xml:space="preserve">
+    <value>{0} elemente</value>
+  </data>
+  <data name="messages.loadingDocuments" xml:space="preserve">
+    <value>Se încarcă documentele...</value>
+  </data>
+  <data name="messages.noDocumentsGenerated" xml:space="preserve">
+    <value>Niciun document generat pentru acest angajat.</value>
+  </data>
+  <data name="labels.documentTypeForm" xml:space="preserve">
+    <value>Fișa {0}</value>
+  </data>
+  <data name="labels.generatedPrefix" xml:space="preserve">
+    <value>Generat:</value>
+  </data>
+  <data name="labels.userSignedShort" xml:space="preserve">
+    <value>Utiliz.</value>
+  </data>
+  <data name="labels.managerSignedShort" xml:space="preserve">
+    <value>Mgr.</value>
+  </data>
+  <data name="sections.documentsPendingSignature" xml:space="preserve">
+    <value>Documente în așteptarea semnării</value>
+  </data>
+  <data name="labels.myDocuments" xml:space="preserve">
+    <value>Documentele mele</value>
+  </data>
+  <data name="labels.documentTypeFile" xml:space="preserve">
+    <value>Fișa {0}</value>
+  </data>
+  <data name="labels.typeDocument" xml:space="preserve">
+    <value>Document {0}</value>
+  </data>
+  <data name="messages.requiresSignatureAsEmployee" xml:space="preserve">
+    <value>Necesită semnătura dumneavoastră în calitate de angajat</value>
+  </data>
+  <data name="actions.sign" xml:space="preserve">
+    <value>Semnează</value>
+  </data>
+  <data name="actions.countersign" xml:space="preserve">
+    <value>Contrasemnează</value>
+  </data>
+  <data name="labels.awaitingCountersignature" xml:space="preserve">
+    <value>În așteptarea contrasemnăturii dumneavoastră</value>
+  </data>
+  <data name="labels.documentTypeFileSubordinate" xml:space="preserve">
+    <value>Fișa {0} (angajat subordonat)</value>
+  </data>
+  <data name="messages.requiresCountersignatureAsManager" xml:space="preserve">
+    <value>Necesită contrasemnătura dumneavoastră în calitate de manager</value>
+  </data>
+  <data name="labels.employeeSignedPrefix" xml:space="preserve">
+    <value>Angajat semnat:</value>
+  </data>
+  <data name="labels.awaitingInstructorSignature" xml:space="preserve">
+    <value>În așteptarea semnăturii dumneavoastră de instructor</value>
+  </data>
+  <data name="labels.documentTypeFileTraining" xml:space="preserve">
+    <value>Fișa {0} (instruire)</value>
+  </data>
+  <data name="messages.requiresSignatureAsInstructor" xml:space="preserve">
+    <value>Necesită semnătura dumneavoastră în calitate de instructor</value>
+  </data>
+  <data name="labels.managerSignedPrefix" xml:space="preserve">
+    <value>Manager semnat:</value>
+  </data>
+  <data name="sections.signedDocuments" xml:space="preserve">
+    <value>Documente semnate</value>
+  </data>
+  <data name="messages.signedByYouOn" xml:space="preserve">
+    <value>Semnat de dumneavoastră la {0}</value>
+  </data>
+  <data name="labels.securedAndVerified" xml:space="preserve">
+    <value>Securizat &amp; verificat</value>
+  </data>
+  <data name="actions.viewPdf" xml:space="preserve">
+    <value>Vizualizează PDF</value>
+  </data>
+  <data name="status.awaitingManager" xml:space="preserve">
+    <value>În așteptarea managerului</value>
+  </data>
+  <data name="labels.countersignedByYou" xml:space="preserve">
+    <value>Contrasemnat de dumneavoastră</value>
+  </data>
+  <data name="messages.countersignedByYouOn" xml:space="preserve">
+    <value>Contrasemnat de dumneavoastră la {0}</value>
+  </data>
+  <data name="labels.signedAsInstructor" xml:space="preserve">
+    <value>Semnat în calitate de instructor</value>
+  </data>
+  <data name="messages.signedAsInstructorOn" xml:space="preserve">
+    <value>Semnat în calitate de instructor la {0}</value>
+  </data>
+  <data name="sections.mySignature" xml:space="preserve">
+    <value>Semnătura mea</value>
+  </data>
+  <data name="labels.audited" xml:space="preserve">
+    <value>Auditat</value>
+  </data>
+  <data name="messages.noSavedSignatureYet" xml:space="preserve">
+    <value>Nu aveți încă o semnătură salvată. Creați una mai jos și va fi disponibilă ca opțiune cu un singur clic la semnarea documentelor.</value>
+  </data>
+  <data name="labels.savedSignature" xml:space="preserve">
+    <value>Semnătură salvată</value>
+  </data>
+  <data name="labels.yourSavedSignatureAlt" xml:space="preserve">
+    <value>Semnătura dumneavoastră salvată</value>
+  </data>
+  <data name="labels.savedPrefix" xml:space="preserve">
+    <value>Salvată</value>
+  </data>
+  <data name="labels.methodPrefix" xml:space="preserve">
+    <value>Metodă:</value>
+  </data>
+  <data name="actions.revoke" xml:space="preserve">
+    <value>Revocă</value>
+  </data>
+  <data name="labels.updateSignature" xml:space="preserve">
+    <value>Actualizează semnătura</value>
+  </data>
+  <data name="labels.createSignature" xml:space="preserve">
+    <value>Creează semnătura</value>
+  </data>
+  <data name="tabs.draw" xml:space="preserve">
+    <value>Desenează</value>
+  </data>
+  <data name="tabs.type" xml:space="preserve">
+    <value>Tastează</value>
+  </data>
+  <data name="messages.drawSignatureInstructions" xml:space="preserve">
+    <value>Desenați-vă semnătura mai jos folosind mouse-ul sau ecranul tactil.</value>
+  </data>
+  <data name="actions.clear" xml:space="preserve">
+    <value>Șterge</value>
+  </data>
+  <data name="messages.typeSignatureInstructions" xml:space="preserve">
+    <value>Tastați-vă numele complet drept semnătura dumneavoastră cu valoare juridică.</value>
+  </data>
+  <data name="labels.yourFullNamePlaceholder" xml:space="preserve">
+    <value>Numele dumneavoastră complet</value>
+  </data>
+  <data name="messages.signatureConfirmation" xml:space="preserve">
+    <value>Confirm că aceasta este semnătura mea și autorizez utilizarea ei pe documente.</value>
+  </data>
+  <data name="messages.savingEllipsis" xml:space="preserve">
+    <value>Se salvează…</value>
+  </data>
+  <data name="labels.saveSignature" xml:space="preserve">
+    <value>Salvează semnătura</value>
+  </data>
+  <data name="actions.signatureHistory" xml:space="preserve">
+    <value>Istoricul semnăturilor</value>
+  </data>
+  <data name="messages.noHistoryFound" xml:space="preserve">
+    <value>Niciun istoric găsit.</value>
+  </data>
+  <data name="table.date" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="table.action" xml:space="preserve">
+    <value>Acțiune</value>
+  </data>
+  <data name="table.method" xml:space="preserve">
+    <value>Metodă</value>
+  </data>
+  <data name="table.by" xml:space="preserve">
+    <value>De către</value>
+  </data>
+  <data name="messages.couldNotInitiateSignatureBlock" xml:space="preserve">
+    <value>Blocul de semnătură nu a putut fi inițiat.</value>
+  </data>
+  <data name="messages.couldNotOpenDocument" xml:space="preserve">
+    <value>Documentul nu a putut fi deschis. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="messages.pleaseTypeYourName" xml:space="preserve">
+    <value>Vă rugăm să tastați numele dumneavoastră drept semnătură.</value>
+  </data>
+  <data name="messages.pleaseDrawYourSignature" xml:space="preserve">
+    <value>Vă rugăm să vă desenați semnătura pe suprafața de semnare.</value>
+  </data>
+  <data name="messages.signatureSavedSuccessfully" xml:space="preserve">
+    <value>Semnătura a fost salvată cu succes!</value>
+  </data>
+  <data name="messages.failedToSaveSignature" xml:space="preserve">
+    <value>Salvarea semnăturii a eșuat. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="messages.failedToRevokeSignature" xml:space="preserve">
+    <value>Revocarea semnăturii a eșuat.</value>
+  </data>
+  <data name="messages.confirmRevokeSignature" xml:space="preserve">
+    <value>Sigur doriți să eliminați semnătura salvată? Acest lucru va fi înregistrat în jurnalul de audit.</value>
+  </data>
+  <data name="actions.ssmSuFormShort" xml:space="preserve">
+    <value>Fișa SSM/SU</value>
+  </data>
+  <data name="table.missingSignaturesActions" xml:space="preserve">
+    <value>Semnături lipsă / acțiuni</value>
+  </data>
+  <data name="actions.notifyMissingSsmTitle" xml:space="preserve">
+    <value>Notifică SSM lipsă</value>
+  </data>
+  <data name="actions.notifyMissingSuTitle" xml:space="preserve">
+    <value>Notifică SU lipsă</value>
+  </data>
+  <data name="actions.signAllPending" xml:space="preserve">
+    <value>Semnează toate cele în așteptare ({0})</value>
+  </data>
+  <data name="messages.couldNotInitiateBulkSigning" xml:space="preserve">
+    <value>Semnarea în bloc nu a putut fi inițiată.</value>
+  </data>
+  <data name="messages.confirmNotifyUser" xml:space="preserve">
+    <value>Sigur doriți să notificați {0} {1} cu privire la documentul {2} lipsă?</value>
+  </data>
+  <data name="messages.notificationSent" xml:space="preserve">
+    <value>Notificare trimisă!</value>
+  </data>
+  <data name="messages.failedToSendNotification" xml:space="preserve">
+    <value>Trimiterea notificării a eșuat.</value>
+  </data>
+  <data name="documentType.ssm" xml:space="preserve">
+    <value>SSM</value>
+  </data>
+  <data name="documentType.su" xml:space="preserve">
+    <value>SU</value>
+  </data>
+  <data name="actions.notifySsm" xml:space="preserve">
+    <value>Notifică SSM</value>
+  </data>
+  <data name="actions.notifySu" xml:space="preserve">
+    <value>Notifică SU</value>
+  </data>
+  <data name="actions.sendSsmReminders" xml:space="preserve">
+    <value>Trimiteți mementouri SSM?</value>
+  </data>
+  <data name="actions.sendSuReminders" xml:space="preserve">
+    <value>Trimiteți mementouri SU?</value>
+  </data>
+  <data name="actions.sendSsmRemindersTitle" xml:space="preserve">
+    <value>Trimite un e-mail de memento tuturor managerilor de linie cu documente SSM nesemnate</value>
+  </data>
+  <data name="actions.sendSuRemindersTitle" xml:space="preserve">
+    <value>Trimite un e-mail de memento tuturor managerilor de linie cu documente SU nesemnate</value>
+  </data>
+  <data name="messages.notificationsSent" xml:space="preserve">
+    <value>Notificări trimise!</value>
+  </data>
+  <data name="messages.notificationsFailed" xml:space="preserve">
+    <value>Trimiterea notificărilor a eșuat.</value>
+  </data>
+  <data name="messages.pendingSignaturesFor" xml:space="preserve">
+    <value>Utilizatori cu semnături în așteptare pentru {0}</value>
+  </data>
+  <data name="signing.selfCountersign" xml:space="preserve">
+    <value>Nu vă puteți contrasemna propriul document — un alt responsabil {0} trebuie să semneze acest pas.</value>
+  </data>
+  <data name="signing.userAlreadySigned" xml:space="preserve">
+    <value>Utilizatorul a semnat deja acest document.</value>
+  </data>
+  <data name="signing.userSignatureNotRequired" xml:space="preserve">
+    <value>Semnătura utilizatorului nu este necesară în acest moment.</value>
+  </data>
+  <data name="signing.managerSignatureNotRequired" xml:space="preserve">
+    <value>Semnătura managerului nu este necesară în acest moment.</value>
+  </data>
+  <data name="signing.managerAlreadySigned" xml:space="preserve">
+    <value>Managerul a semnat deja acest document.</value>
+  </data>
+  <data name="signing.instructorSignatureNotRequired" xml:space="preserve">
+    <value>Semnătura instructorului nu este necesară în acest moment.</value>
+  </data>
+  <data name="signing.documentNotAwaitingSignature" xml:space="preserve">
+    <value>Acest document nu necesită o semnătură în acest moment.</value>
+  </data>
+  <data name="signing.tokenRequired" xml:space="preserve">
+    <value>Tokenul este obligatoriu.</value>
+  </data>
+  <data name="signing.invalidOrExpiredToken" xml:space="preserve">
+    <value>Token invalid sau expirat.</value>
+  </data>
+  <data name="signing.tokenInvalidOrExpired" xml:space="preserve">
+    <value>Tokenul este invalid sau expirat.</value>
+  </data>
+  <data name="signing.documentNotFound" xml:space="preserve">
+    <value>Documentul nu a fost găsit.</value>
+  </data>
+  <data name="signing.signerAccountNotFound" xml:space="preserve">
+    <value>Contul semnatarului nu a fost găsit.</value>
+  </data>
+  <data name="signing.notAwaitingYourSignature" xml:space="preserve">
+    <value>Acest document nu așteaptă semnătura dumneavoastră în acest moment.</value>
+  </data>
+  <data name="signing.tokenCouldNotBeConsumed" xml:space="preserve">
+    <value>Tokenul nu a putut fi consumat.</value>
+  </data>
+  <data name="periodicTraining.selfInstructor" xml:space="preserve">
+    <value>Un angajat nu poate fi propriul său instructor.</value>
+  </data>
+  <data name="periodicTraining.instructorNotFound" xml:space="preserve">
+    <value>Instructorul nu a fost găsit.</value>
+  </data>
+  <data name="periodicTraining.notFound" xml:space="preserve">
+    <value>Instruirea periodică nu a fost găsită</value>
+  </data>
+  <data name="periodicTraining.noUsersToApply" xml:space="preserve">
+    <value>Nu au fost găsiți utilizatori cărora să li se aplice instruirea</value>
+  </data>
+  <data name="userSignature.dataMustNotBeEmpty" xml:space="preserve">
+    <value>Datele semnăturii nu trebuie să fie goale.</value>
+  </data>
+  <data name="userSignature.methodMustNotBeEmpty" xml:space="preserve">
+    <value>Metoda de semnare nu trebuie să fie goală.</value>
+  </data>
+  <data name="userSignature.noActiveSignature" xml:space="preserve">
+    <value>Nu a fost găsită nicio semnătură activă pentru acest utilizator.</value>
+  </data>
+  <data name="generation.userNotFound" xml:space="preserve">
+    <value>Utilizatorul nu a fost găsit.</value>
+  </data>
+  <data name="generation.cannotGenerateForAdmin" xml:space="preserve">
+    <value>Nu se pot genera documente pentru utilizatorii administratori.</value>
+  </data>
+  <data name="generation.documentNotPendingOfficer" xml:space="preserve">
+    <value>Documentul nu este în așteptarea semnăturii unui responsabil.</value>
+  </data>
+  <data name="generation.signerCannotCountersignOwn" xml:space="preserve">
+    <value>Un semnatar nu își poate contrasemna propriul document.</value>
+  </data>
+  <data name="generation.signerNotOfficerForType" xml:space="preserve">
+    <value>Semnatarul nu deține rolul de responsabil pentru tipul acestui document.</value>
+  </data>
+  <data name="api.documentTypeRequiredWithBoth" xml:space="preserve">
+    <value>DocumentType este obligatoriu (SSM, SU sau Both).</value>
+  </data>
+  <data name="api.noDocumentsToGenerate" xml:space="preserve">
+    <value>Niciun document de generat.</value>
+  </data>
+  <data name="api.jobNotFound" xml:space="preserve">
+    <value>Sarcina nu a fost găsită</value>
+  </data>
+  <data name="api.userNotFound" xml:space="preserve">
+    <value>Utilizatorul nu a fost găsit.</value>
+  </data>
+  <data name="api.documentGeneratedAndSignatureRequested" xml:space="preserve">
+    <value>Documentul a fost generat cu succes și a fost solicitată semnătura.</value>
+  </data>
+  <data name="api.associatedUserNotFound" xml:space="preserve">
+    <value>Utilizatorul asociat nu a fost găsit.</value>
+  </data>
+  <data name="api.regenerateDocumentsResult" xml:space="preserve">
+    <value>{0} document(e) au fost regenerate în folderul GeneratedDocuments.</value>
+  </data>
+  <data name="api.backfillSignatureVersionsResult" xml:space="preserve">
+    <value>{0} versiune (versiuni) de semnătură au fost recalculate.</value>
+  </data>
+  <data name="api.bulkGenerate.complete" xml:space="preserve">
+    <value>Generarea în bloc s-a finalizat. {0} document(e) generate{1}, {2} ignorate.</value>
+  </data>
+  <data name="api.bulkGenerate.emailsBackground" xml:space="preserve">
+    <value> E-mailurile cu cererile de semnătură sunt trimise în fundal.</value>
+  </data>
+  <data name="api.bulkGenerate.emailsAllSent" xml:space="preserve">
+    <value> {0} cerere (cereri) de semnătură au fost trimise angajaților.</value>
+  </data>
+  <data name="api.bulkGenerate.emailsPartial" xml:space="preserve">
+    <value> {0} cerere (cereri) de semnătură trimise, {1} eșuate</value>
+  </data>
+  <data name="api.bulkGenerate.emailsAbortedSuffix" xml:space="preserve">
+    <value> — notificările rămase au fost ignorate deoarece livrarea e-mailurilor eșuează în mod repetat</value>
+  </data>
+  <data name="api.bulkGenerate.firstErrorSuffix" xml:space="preserve">
+    <value>. Prima eroare: {0}</value>
+  </data>
+  <data name="api.emailRequired" xml:space="preserve">
+    <value>Adresa de e-mail este obligatorie.</value>
+  </data>
+  <data name="api.signatureRequestProcessed" xml:space="preserve">
+    <value>Cererea de semnătură a fost procesată cu succes.</value>
+  </data>
+  <data name="api.successfullySignedCount" xml:space="preserve">
+    <value>{0} document(e) au fost semnate cu succes.</value>
+  </data>
+  <data name="api.documentSignedViaSecureLink" xml:space="preserve">
+    <value>Documentul a fost semnat cu succes folosind linkul securizat.</value>
+  </data>
+  <data name="api.signatureDataRequired" xml:space="preserve">
+    <value>Datele semnăturii sunt obligatorii.</value>
+  </data>
+  <data name="api.documentTypeMustBeSsmOrSu" xml:space="preserve">
+    <value>DocumentType trebuie să fie 'SSM' sau 'SU'.</value>
+  </data>
+  <data name="api.noDocumentsToSign" xml:space="preserve">
+    <value>Niciun document de semnat.</value>
+  </data>
+  <data name="api.periodicTrainingDeleted" xml:space="preserve">
+    <value>Instruirea periodică a fost ștearsă cu succes</value>
+  </data>
+  <data name="api.allBulkCreationsFailed" xml:space="preserve">
+    <value>Toate creările în bloc au eșuat</value>
+  </data>
+  <data name="api.noSignatureRecordWithId" xml:space="preserve">
+    <value>Nu a fost găsită nicio înregistrare de semnătură cu acest id.</value>
+  </data>
+  <data name="api.signatureIdsAtLeastOne" xml:space="preserve">
+    <value>SignatureIds trebuie să conțină cel puțin un id.</value>
+  </data>
+  <data name="api.signatureIdsMax" xml:space="preserve">
+    <value>SignatureIds nu trebuie să conțină mai mult de {0} id-uri.</value>
+  </data>
+  <data name="api.noPeriodicTrainingWithId" xml:space="preserve">
+    <value>Nu a fost găsită nicio instruire periodică cu acest id.</value>
+  </data>
+  <data name="api.userIdsAtLeastOne" xml:space="preserve">
+    <value>UserIds trebuie să conțină cel puțin un id.</value>
+  </data>
+  <data name="api.userIdsMax" xml:space="preserve">
+    <value>UserIds nu trebuie să conțină mai mult de {0} id-uri.</value>
+  </data>
+  <data name="api.signatureMethodMustBeDrawOrType" xml:space="preserve">
+    <value>SignatureMethod trebuie să fie 'Draw' sau 'Type'.</value>
+  </data>
+  <data name="api.signatureSaved" xml:space="preserve">
+    <value>Semnătura a fost salvată cu succes.</value>
+  </data>
+  <data name="api.signatureRevokedAuditPreserved" xml:space="preserve">
+    <value>Semnătura a fost revocată. Pista de audit a fost păstrată.</value>
+  </data>
+  <data name="actions.generateDocument" xml:space="preserve">
+    <value>Generează documentul</value>
+  </data>
+  <data name="messages.generatingEllipsis" xml:space="preserve">
+    <value>Se generează...</value>
+  </data>
+  <data name="history.title" xml:space="preserve">
+    <value>Istoric</value>
+  </data>
+  <data name="history.loading" xml:space="preserve">
+    <value>Se încarcă istoricul semnăturilor...</value>
+  </data>
+  <data name="history.loadError" xml:space="preserve">
+    <value>Încărcarea istoricului semnăturilor pentru această sesiune a eșuat.</value>
+  </data>
+  <data name="history.noneRecorded" xml:space="preserve">
+    <value>Nicio semnătură înregistrată pentru această sesiune.</value>
+  </data>
+  <data name="history.table.role" xml:space="preserve">
+    <value>Rol</value>
+  </data>
+  <data name="history.table.signer" xml:space="preserve">
+    <value>Semnatar</value>
+  </data>
+  <data name="history.table.signedAt" xml:space="preserve">
+    <value>Semnat la</value>
+  </data>
+  <data name="history.table.schema" xml:space="preserve">
+    <value>Schemă</value>
+  </data>
+  <data name="history.mostRecent" xml:space="preserve">
+    <value>cea mai recentă</value>
+  </data>
+  <data name="messages.noPeriodicTrainingsRecorded" xml:space="preserve">
+    <value>Nicio instruire periodică înregistrată.</value>
+  </data>
+  <data name="printExclusion.excludedTag" xml:space="preserve">
+    <value>Exclus de la printare</value>
+  </data>
+  <data name="printExclusion.exclude" xml:space="preserve">
+    <value>Exclude de la printare</value>
+  </data>
+  <data name="printExclusion.include" xml:space="preserve">
+    <value>Include la printare</value>
+  </data>
+  <data name="printExclusion.confirmExclude" xml:space="preserve">
+    <value>Excludeți acest rând de instruire din fiecare document printat? Va rămâne în sistem, dar va dispărea din fișierele PDF și din materialele printate.</value>
+  </data>
+  <data name="printExclusion.confirmInclude" xml:space="preserve">
+    <value>Includeți din nou acest rând de instruire în documentele printate?</value>
+  </data>
+  <data name="printExclusion.updateFailed" xml:space="preserve">
+    <value>Actualizarea excluderii de la printare a eșuat.</value>
+  </data>
+  <data name="form.savedSuccessfully" xml:space="preserve">
+    <value>Fișa a fost salvată cu succes!</value>
+  </data>
+  <data name="form.saveError" xml:space="preserve">
+    <value>Eroare la salvarea fișei. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="form.generateConfirm" xml:space="preserve">
+    <value>Sigur doriți să generați documentul {0} și să solicitați semnături? Asigurați-vă mai întâi că toate datele sunt salvate.</value>
+  </data>
+  <data name="form.generateSuccess" xml:space="preserve">
+    <value>Documentul {0} a fost generat cu succes! O cerere de semnătură prin e-mail a fost trimisă utilizatorului.</value>
+  </data>
+  <data name="form.generateError" xml:space="preserve">
+    <value>Eroare la generarea documentului. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="bulkTraining.title" xml:space="preserve">
+    <value>Adaugă instruire periodică în bloc</value>
+  </data>
+  <data name="bulkTraining.descriptionBefore" xml:space="preserve">
+    <value>Adăugați înregistrări de instruire periodică cu aceleași date pentru utilizatorii dintr-un departament selectat. Aceasta va crea o nouă intrare de instruire în fișa</value>
+  </data>
+  <data name="bulkTraining.descriptionAfter" xml:space="preserve">
+    <value>fiecărui utilizator.</value>
+  </data>
+  <data name="bulkTraining.optionBoth" xml:space="preserve">
+    <value>SSM &amp; SU</value>
+  </data>
+  <data name="bulkTraining.trainingDate" xml:space="preserve">
+    <value>Data instruirii</value>
+  </data>
+  <data name="bulkTraining.pastDateWarning" xml:space="preserve">
+    <value>Această dată este în trecut. Continuarea poate cauza erori la generarea documentelor.</value>
+  </data>
+  <data name="bulkTraining.durationHours" xml:space="preserve">
+    <value>Durata (ore)</value>
+  </data>
+  <data name="bulkTraining.durationPlaceholder" xml:space="preserve">
+    <value>ex.: 2,5</value>
+  </data>
+  <data name="bulkTraining.allUsersAllDepartments" xml:space="preserve">
+    <value>Toți utilizatorii (toate departamentele)</value>
+  </data>
+  <data name="bulkTraining.departmentHint" xml:space="preserve">
+    <value>Lăsați pe „Toți utilizatorii” pentru a aplica global sau alegeți un departament pentru a viza doar acea echipă.</value>
+  </data>
+  <data name="bulkTraining.materialTaught" xml:space="preserve">
+    <value>Materialul predat</value>
+  </data>
+  <data name="bulkTraining.materialPlaceholder" xml:space="preserve">
+    <value>Introduceți materialul de instruire parcurs...</value>
+  </data>
+  <data name="bulkTraining.verifierName" xml:space="preserve">
+    <value>Numele verificatorului (SSM)</value>
+  </data>
+  <data name="bulkTraining.verifierPlaceholder" xml:space="preserve">
+    <value>Numele verificatorului</value>
+  </data>
+  <data name="bulkTraining.applyToAllUsers" xml:space="preserve">
+    <value>Aplică tuturor utilizatorilor activi</value>
+  </data>
+  <data name="bulkTraining.customUserSelection" xml:space="preserve">
+    <value>Selecție personalizată a utilizatorilor</value>
+  </data>
+  <data name="bulkTraining.selectUsers" xml:space="preserve">
+    <value>Selectați utilizatorii</value>
+  </data>
+  <data name="bulkTraining.selectedUsersCount" xml:space="preserve">
+    <value>Utilizatori selectați: {0}</value>
+  </data>
+  <data name="bulkTraining.selectUsersForTraining" xml:space="preserve">
+    <value>Selectați utilizatorii pentru instruire</value>
+  </data>
+  <data name="bulkTraining.searchByNameEmail" xml:space="preserve">
+    <value>Căutați după nume sau e-mail...</value>
+  </data>
+  <data name="bulkTraining.allDepartments" xml:space="preserve">
+    <value>Toate departamentele</value>
+  </data>
+  <data name="bulkTraining.showSelectedOnly" xml:space="preserve">
+    <value>Afișează doar cei selectați ({0})</value>
+  </data>
+  <data name="bulkTraining.selectAllShown" xml:space="preserve">
+    <value>Selectează tot ce este afișat</value>
+  </data>
+  <data name="bulkTraining.deselectAllShown" xml:space="preserve">
+    <value>Deselectează tot ce este afișat</value>
+  </data>
+  <data name="bulkTraining.noUsersForFilter" xml:space="preserve">
+    <value>Nu au fost găsiți utilizatori pentru acest filtru.</value>
+  </data>
+  <data name="bulkTraining.addingEllipsis" xml:space="preserve">
+    <value>Se adaugă...</value>
+  </data>
+  <data name="bulkTraining.addTrainingRecords" xml:space="preserve">
+    <value>Adaugă înregistrări de instruire</value>
+  </data>
+  <data name="bulkTraining.generatingDocuments" xml:space="preserve">
+    <value>Se generează documentele</value>
+  </data>
+  <data name="bulkTraining.generateDocumentsButton" xml:space="preserve">
+    <value>Generează documentele</value>
+  </data>
+  <data name="bulkTraining.progressOf" xml:space="preserve">
+    <value>din</value>
+  </data>
+  <data name="bulkTraining.progressDocsGenerated" xml:space="preserve">
+    <value>documente generate</value>
+  </data>
+  <data name="bulkTraining.skippedCount" xml:space="preserve">
+    <value>{0} ignorate</value>
+  </data>
+  <data name="bulkTraining.emailsBackground" xml:space="preserve">
+    <value>E-mailurile cu cererile de semnătură sunt trimise în fundal.</value>
+  </data>
+  <data name="bulkTraining.recordsAddedForPrefix" xml:space="preserve">
+    <value>Înregistrări de instruire adăugate pentru</value>
+  </data>
+  <data name="bulkTraining.recordsAddedForSuffix" xml:space="preserve">
+    <value>utilizator(i).</value>
+  </data>
+  <data name="bulkTraining.wouldYouGenerate" xml:space="preserve">
+    <value>Doriți să generați acum documente pentru aceștia?</value>
+  </data>
+  <data name="bulkTraining.checkingSignatures" xml:space="preserve">
+    <value>Se verifică semnăturile existente pentru angajații afectați...</value>
+  </data>
+  <data name="bulkTraining.noPriorSignatures" xml:space="preserve">
+    <value>Nu au fost găsite semnături anterioare pentru angajații afectați — nimic de invalidat.</value>
+  </data>
+  <data name="bulkTraining.allSignaturesValid" xml:space="preserve">
+    <value>Toate cele {0} semnături existente pentru angajații afectați sunt încă valide.</value>
+  </data>
+  <data name="bulkTraining.someSignaturesInvalid" xml:space="preserve">
+    <value>{0} semnături invalide și {1} semnături cu lanț întrerupt din {2} pentru angajații afectați.</value>
+  </data>
+  <data name="bulkTraining.onlyFirstChecked" xml:space="preserve">
+    <value>Au fost verificați doar primii {0} angajați afectați.</value>
+  </data>
+  <data name="bulkTraining.validation.trainingDateRequired" xml:space="preserve">
+    <value>Vă rugăm să selectați o dată a instruirii.</value>
+  </data>
+  <data name="bulkTraining.validation.durationRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți o durată validă în ore.</value>
+  </data>
+  <data name="bulkTraining.validation.materialRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți materialul predat.</value>
+  </data>
+  <data name="bulkTraining.validation.verifierRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți numele verificatorului (obligatoriu pentru documentele SSM).</value>
+  </data>
+  <data name="bulkTraining.validation.selectAtLeastOneUser" xml:space="preserve">
+    <value>Vă rugăm să selectați cel puțin un utilizator pentru această instruire.</value>
+  </data>
+  <data name="bulkTraining.errorCreating" xml:space="preserve">
+    <value>Eroare la crearea înregistrărilor de instruire în bloc. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="bulkTraining.errorVerifyingSignatures" xml:space="preserve">
+    <value>Semnăturile existente ale angajaților afectați nu au putut fi verificate.</value>
+  </data>
+  <data name="bulkTraining.errorGenerating" xml:space="preserve">
+    <value>Eroare la generarea documentelor. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="bulkTraining.errorGeneratingDetail" xml:space="preserve">
+    <value>Eroare la generarea documentelor: {0}</value>
+  </data>
+  <data name="bulkTraining.lostJob" xml:space="preserve">
+    <value>S-a pierdut evidența sarcinii de generare. Reîmprospătați pentru a vedea documentele generate.</value>
+  </data>
+  <data name="bulkInitialTraining.title" xml:space="preserve">
+    <value>Adaugă instruire inițială în bloc</value>
+  </data>
+  <data name="bulkInitialTraining.descriptionBefore" xml:space="preserve">
+    <value>Completați câmpurile de instruire la prima angajare pentru mai mulți utilizatori în fișa</value>
+  </data>
+  <data name="bulkInitialTraining.descriptionAfter" xml:space="preserve">
+    <value>fiecărui utilizator. Valorile existente sunt păstrate și nu vor fi suprascrise.</value>
+  </data>
+  <data name="bulkInitialTraining.applyToAllInScope" xml:space="preserve">
+    <value>Aplică tuturor utilizatorilor din intervalul selectat</value>
+  </data>
+  <data name="bulkInitialTraining.selectUsersTitle" xml:space="preserve">
+    <value>Selectați utilizatorii pentru instruirea inițială</value>
+  </data>
+  <data name="bulkInitialTraining.introductoryTraining" xml:space="preserve">
+    <value>Instruirea introductivă</value>
+  </data>
+  <data name="bulkInitialTraining.workplaceTraining" xml:space="preserve">
+    <value>Instruirea la locul de muncă</value>
+  </data>
+  <data name="bulkInitialTraining.date" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="bulkInitialTraining.hours" xml:space="preserve">
+    <value>Ore</value>
+  </data>
+  <data name="bulkInitialTraining.instructor" xml:space="preserve">
+    <value>Instructor</value>
+  </data>
+  <data name="bulkInitialTraining.instructorFunction" xml:space="preserve">
+    <value>Funcția instructorului</value>
+  </data>
+  <data name="bulkInitialTraining.content" xml:space="preserve">
+    <value>Conținut</value>
+  </data>
+  <data name="bulkInitialTraining.jobTitle" xml:space="preserve">
+    <value>Denumirea postului</value>
+  </data>
+  <data name="bulkInitialTraining.appliedSuccessfully" xml:space="preserve">
+    <value>Datele de instruire inițială au fost aplicate cu succes.</value>
+  </data>
+  <data name="bulkInitialTraining.updatedPrefix" xml:space="preserve">
+    <value>Actualizate</value>
+  </data>
+  <data name="bulkInitialTraining.updatedSuffix" xml:space="preserve">
+    <value>înregistrare (înregistrări) de utilizator.</value>
+  </data>
+  <data name="bulkInitialTraining.existingNotOverwritten" xml:space="preserve">
+    <value>Valorile existente nu au fost suprascrise.</value>
+  </data>
+  <data name="bulkInitialTraining.applyingEllipsis" xml:space="preserve">
+    <value>Se aplică...</value>
+  </data>
+  <data name="bulkInitialTraining.applyButton" xml:space="preserve">
+    <value>Aplică instruirea inițială</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introDateRequired" xml:space="preserve">
+    <value>Vă rugăm să indicați data instruirii introductive.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introHoursRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți numărul de ore ale instruirii introductive.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introInstructorRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți numele instructorului instruirii introductive.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.introInstructorFunctionRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți funcția instructorului instruirii introductive.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workDateRequired" xml:space="preserve">
+    <value>Vă rugăm să indicați data instruirii la locul de muncă.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workHoursRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți numărul de ore ale instruirii la locul de muncă.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.jobTitleRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți denumirea postului / locația locului de muncă.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workInstructorRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți numele instructorului instruirii la locul de muncă.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.workInstructorFunctionRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți funcția instructorului instruirii la locul de muncă.</value>
+  </data>
+  <data name="bulkInitialTraining.validation.selectAtLeastOneUser" xml:space="preserve">
+    <value>Vă rugăm să selectați cel puțin un utilizator pentru această operațiune.</value>
+  </data>
+  <data name="bulkInitialTraining.errorApplying" xml:space="preserve">
+    <value>Eroare la aplicarea instruirii inițiale în bloc. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="signatureStatus.valid" xml:space="preserve">
+    <value>Validă</value>
+  </data>
+  <data name="signatureStatus.invalid" xml:space="preserve">
+    <value>Invalidă</value>
+  </data>
+  <data name="signatureStatus.chainBroken" xml:space="preserve">
+    <value>Lanț întrerupt</value>
+  </data>
+  <data name="signatureStatus.legacy" xml:space="preserve">
+    <value>Moștenită</value>
+  </data>
+  <data name="signatureStatus.notFound" xml:space="preserve">
+    <value>Negăsită</value>
+  </data>
+  <data name="signatureStatus.unknown" xml:space="preserve">
+    <value>Necunoscută</value>
+  </data>
+  <data name="documentSignature.signDocument" xml:space="preserve">
+    <value>Semnează documentul</value>
+  </data>
+  <data name="documentSignature.subtitle" xml:space="preserve">
+    <value>Semnătură digitală securizată &amp; cu valoare juridică</value>
+  </data>
+  <data name="documentSignature.validatingLink" xml:space="preserve">
+    <value>Se validează linkul securizat...</value>
+  </data>
+  <data name="documentSignature.linkError" xml:space="preserve">
+    <value>Eroare de link</value>
+  </data>
+  <data name="documentSignature.goToDashboard" xml:space="preserve">
+    <value>Mergi la panoul de control</value>
+  </data>
+  <data name="documentSignature.logInToAccount" xml:space="preserve">
+    <value>Autentificați-vă în cont</value>
+  </data>
+  <data name="documentSignature.logIn" xml:space="preserve">
+    <value>Autentificare</value>
+  </data>
+  <data name="documentSignature.bulkProgress" xml:space="preserve">
+    <value>Progresul semnării în bloc</value>
+  </data>
+  <data name="documentSignature.pleaseWaitSigning" xml:space="preserve">
+    <value>Vă rugăm să așteptați, documentele sunt în curs de semnare...</value>
+  </data>
+  <data name="documentSignature.signatureComplete" xml:space="preserve">
+    <value>Semnătură finalizată</value>
+  </data>
+  <data name="documentSignature.securedAndRecorded" xml:space="preserve">
+    <value>Semnătura dumneavoastră a fost securizată criptografic și înregistrată permanent.</value>
+  </data>
+  <data name="documentSignature.trackByLoggingIn" xml:space="preserve">
+    <value>Urmăriți documentele semnate autentificându-vă în cont.</value>
+  </data>
+  <data name="documentSignature.documentInformation" xml:space="preserve">
+    <value>Informații despre document</value>
+  </data>
+  <data name="documentSignature.pendingSignature" xml:space="preserve">
+    <value>Semnătură în așteptare</value>
+  </data>
+  <data name="documentSignature.recipient" xml:space="preserve">
+    <value>Destinatar</value>
+  </data>
+  <data name="documentSignature.ssmSuAcknowledgement" xml:space="preserve">
+    <value>Confirmare SSM / SU</value>
+  </data>
+  <data name="documentSignature.documentName" xml:space="preserve">
+    <value>Numele documentului</value>
+  </data>
+  <data name="documentSignature.cryptographicallySecured" xml:space="preserve">
+    <value>Securizat criptografic</value>
+  </data>
+  <data name="documentSignature.protectedWithPrefix" xml:space="preserve">
+    <value>Protejat cu</value>
+  </data>
+  <data name="documentSignature.protectedWithMid" xml:space="preserve">
+    <value>amprentare și o</value>
+  </data>
+  <data name="documentSignature.protectedWithSuffix" xml:space="preserve">
+    <value>ștampilă de server. Adresa dumneavoastră IP și marca temporală sunt înregistrate permanent.</value>
+  </data>
+  <data name="documentSignature.employeeSignature" xml:space="preserve">
+    <value>Semnătura angajatului</value>
+  </data>
+  <data name="documentSignature.managerSignature" xml:space="preserve">
+    <value>Semnătura managerului</value>
+  </data>
+  <data name="documentSignature.instructorSignature" xml:space="preserve">
+    <value>Semnătura instructorului</value>
+  </data>
+  <data name="documentSignature.verifierAdminSignature" xml:space="preserve">
+    <value>Semnătura verificatorului (administrator)</value>
+  </data>
+  <data name="documentSignature.admin" xml:space="preserve">
+    <value>Administrator</value>
+  </data>
+  <data name="documentSignature.awaitingEmployee" xml:space="preserve">
+    <value>În așteptarea angajatului</value>
+  </data>
+  <data name="documentSignature.awaitingInstructor" xml:space="preserve">
+    <value>În așteptarea instructorului</value>
+  </data>
+  <data name="documentSignature.yourSignatureGoesHere" xml:space="preserve">
+    <value>Semnătura dumneavoastră se pune aici</value>
+  </data>
+  <data name="documentSignature.yourSignature" xml:space="preserve">
+    <value>Semnătura dumneavoastră</value>
+  </data>
+  <data name="documentSignature.usingSavedProfileSignature" xml:space="preserve">
+    <value>Se folosește semnătura salvată din profilul dumneavoastră</value>
+  </data>
+  <data name="documentSignature.typeYourFullName" xml:space="preserve">
+    <value>Tastați-vă numele complet</value>
+  </data>
+  <data name="documentSignature.acknowledgeAndSign" xml:space="preserve">
+    <value>Iau la cunoștință și semnez acest document</value>
+  </data>
+  <data name="documentSignature.consentText" xml:space="preserve">
+    <value>Prin bifarea acestei căsuțe, confirm că semnătura mea constituie o semnătură electronică cu valoare juridică. Adresa mea IP, metoda și marca temporală vor fi înregistrate permanent.</value>
+  </data>
+  <data name="documentSignature.backToDashboard" xml:space="preserve">
+    <value>← Înapoi la panoul de control</value>
+  </data>
+  <data name="documentSignature.signingEllipsis" xml:space="preserve">
+    <value>Se semnează...</value>
+  </data>
+  <data name="documentSignature.invalidLinkNoToken" xml:space="preserve">
+    <value>Link invalid. Niciun token furnizat.</value>
+  </data>
+  <data name="documentSignature.linkInvalidOrExpired" xml:space="preserve">
+    <value>Linkul securizat este invalid sau a expirat.</value>
+  </data>
+  <data name="documentSignature.pleaseTypeFullName" xml:space="preserve">
+    <value>Vă rugăm să tastați numele dumneavoastră complet drept semnătură.</value>
+  </data>
+  <data name="documentSignature.noActiveSavedSignature" xml:space="preserve">
+    <value>Nu a fost găsită nicio semnătură salvată activă.</value>
+  </data>
+  <data name="documentSignature.mustConfirmBeforeSigning" xml:space="preserve">
+    <value>Trebuie să vă confirmați semnătura înainte de a semna.</value>
+  </data>
+  <data name="documentSignature.failedToStartBulk" xml:space="preserve">
+    <value>Pornirea semnării în bloc a eșuat.</value>
+  </data>
+  <data name="documentSignature.failedToSign" xml:space="preserve">
+    <value>Semnarea documentului a eșuat. Vă rugăm să încercați din nou.</value>
+  </data>
+  <data name="documentSignature.documentSignedSuccess" xml:space="preserve">
+    <value>Documentul a fost semnat cu succes!</value>
+  </data>
+  <data name="documentSignature.bulkSigningError" xml:space="preserve">
+    <value>Eroare la semnarea în bloc: {0}</value>
+  </data>
+  <data name="documentSignature.bulkStatusError" xml:space="preserve">
+    <value>Eroare la starea semnării în bloc.</value>
+  </data>
+  <data name="adminSignature.roleSignatureTitle" xml:space="preserve">
+    <value>Semnătura {0}</value>
+  </data>
+  <data name="adminSignature.adminSignatureTitle" xml:space="preserve">
+    <value>Semnătura administratorului</value>
+  </data>
+  <data name="adminSignature.errorSaving" xml:space="preserve">
+    <value>Eroare la salvarea semnăturii!</value>
+  </data>
+  <data name="status.superseded" xml:space="preserve">
+    <value>Înlocuit</value>
+  </data>
+  <data name="documentsView.searchPlaceholder" xml:space="preserve">
+    <value>Căutați după numele angajatului, e-mail, departament...</value>
+  </data>
+  <data name="documentsView.bulkPeriodicTraining" xml:space="preserve">
+    <value>Instruire periodică în bloc</value>
+  </data>
+  <data name="documentsView.bulkInitialTraining" xml:space="preserve">
+    <value>Instruire inițială în bloc</value>
+  </data>
+  <data name="documentsView.signAllAsVerifier" xml:space="preserve">
+    <value>Semnează toate ca verificator ({0})</value>
+  </data>
+  <data name="documentsView.validateAllThisPage" xml:space="preserve">
+    <value>Validează toate (această pagină)</value>
+  </data>
+  <data name="documentsView.generateAllDocuments" xml:space="preserve">
+    <value>Generează toate documentele</value>
+  </data>
+  <data name="documentsView.generateAllHint" xml:space="preserve">
+    <value>Generați documente pentru toți utilizatorii pentru tipul selectat.</value>
+  </data>
+  <data name="documentsView.generatingPleaseWait" xml:space="preserve">
+    <value>Se generează documentele, vă rugăm să așteptați...</value>
+  </data>
+  <data name="documentsView.bothSsmSu" xml:space="preserve">
+    <value>Ambele (SSM + SU)</value>
+  </data>
+  <data name="documentsView.generatedSkipped" xml:space="preserve">
+    <value>Generate: {0} | Ignorate: {1}</value>
+  </data>
+  <data name="documentsView.generate" xml:space="preserve">
+    <value>Generează</value>
+  </data>
+  <data name="documentsView.regenerateHintPrefix" xml:space="preserve">
+    <value>Regenerează fișierele PDF</value>
+  </data>
+  <data name="documentsView.regenerateHintSuffix" xml:space="preserve">
+    <value>pentru toate documentele existente. Folosiți această opțiune dacă folderul a fost golit accidental.</value>
+  </data>
+  <data name="documentsView.regeneratingPleaseWait" xml:space="preserve">
+    <value>Se regenerează documentele, vă rugăm să așteptați...</value>
+  </data>
+  <data name="documentsView.regenerate" xml:space="preserve">
+    <value>Regenerează</value>
+  </data>
+  <data name="documentsView.documentsFound" xml:space="preserve">
+    <value>{0} document(e) găsite</value>
+  </data>
+  <data name="documentsView.employee" xml:space="preserve">
+    <value>Angajat</value>
+  </data>
+  <data name="documentsView.type" xml:space="preserve">
+    <value>Tip</value>
+  </data>
+  <data name="documentsView.generated" xml:space="preserve">
+    <value>Generat</value>
+  </data>
+  <data name="documentsView.signedByEmployee" xml:space="preserve">
+    <value>Semnat de angajat</value>
+  </data>
+  <data name="documentsView.signedByManager" xml:space="preserve">
+    <value>Semnat de manager</value>
+  </data>
+  <data name="documentsView.signedByInstructor" xml:space="preserve">
+    <value>Semnat de instructor</value>
+  </data>
+  <data name="documentsView.signedByAdmin" xml:space="preserve">
+    <value>Semnat de administrator</value>
+  </data>
+  <data name="documentsView.actions" xml:space="preserve">
+    <value>Acțiuni</value>
+  </data>
+  <data name="documentsView.pdf" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="documentsView.validate" xml:space="preserve">
+    <value>Validează</value>
+  </data>
+  <data name="documentsView.noDocumentsGenerated" xml:space="preserve">
+    <value>Niciun document generat.</value>
+  </data>
+  <data name="documentsView.failedToLoad" xml:space="preserve">
+    <value>Încărcarea documentelor a eșuat.</value>
+  </data>
+  <data name="documentsView.bulkGenerationFailed" xml:space="preserve">
+    <value>Generarea în bloc a eșuat.</value>
+  </data>
+  <data name="documentsView.bulkTrainingSuccess" xml:space="preserve">
+    <value>Instruirea periodică în bloc a fost creată cu succes pentru toți utilizatorii!</value>
+  </data>
+  <data name="documentsView.bulkInitialTrainingSuccess" xml:space="preserve">
+    <value>Instruirea inițială în bloc a fost aplicată cu succes. Valorile inițiale existente au fost păstrate nemodificate.</value>
+  </data>
+  <data name="documentsView.failedToGetToken" xml:space="preserve">
+    <value>Obținerea tokenului de semnare a eșuat.</value>
+  </data>
+  <data name="documentsView.noDocumentsPendingSignature" xml:space="preserve">
+    <value>Niciun document în așteptarea semnăturii dumneavoastră.</value>
+  </data>
+  <data name="documentsView.failedValidateDoc" xml:space="preserve">
+    <value>Validarea semnăturilor pentru acest document a eșuat.</value>
+  </data>
+  <data name="documentsView.failedValidateAll" xml:space="preserve">
+    <value>Validarea semnăturilor a eșuat.</value>
+  </data>
+  <data name="documentsView.failedOpenPdf" xml:space="preserve">
+    <value>Deschiderea fișierului PDF a eșuat.</value>
+  </data>
+  <data name="documentsView.regenerationFailed" xml:space="preserve">
+    <value>Regenerarea a eșuat.</value>
+  </data>
+  <data name="messages.failedToLoadDocuments" xml:space="preserve">
+    <value>Încărcarea documentelor a eșuat.</value>
+  </data>
+  <data name="testSignature.title" xml:space="preserve">
+    <value>Testează linkul de semnătură</value>
+  </data>
+  <data name="testSignature.subtitle" xml:space="preserve">
+    <value>Folosiți acest instrument pentru a declanșa manual fluxul de e-mail pentru semnătură.</value>
+  </data>
+  <data name="testSignature.recipientEmail" xml:space="preserve">
+    <value>Adresa de e-mail a destinatarului</value>
+  </data>
+  <data name="testSignature.emailHint" xml:space="preserve">
+    <value>Furnizați o adresă de e-mail care NU are un cont pentru a testa fluxul cu link securizat. Sau furnizați o adresă de e-mail existentă pentru a testa fluxul de autentificare.</value>
+  </data>
+  <data name="testSignature.documentNameMock" xml:space="preserve">
+    <value>Numele documentului (fictiv)</value>
+  </data>
+  <data name="testSignature.sendingEllipsis" xml:space="preserve">
+    <value>Se trimite...</value>
+  </data>
+  <data name="testSignature.sendTestRequest" xml:space="preserve">
+    <value>Trimite cererea de test</value>
+  </data>
+  <data name="testSignature.emailRequired" xml:space="preserve">
+    <value>Vă rugăm să introduceți o adresă de e-mail.</value>
+  </data>
+  <data name="testSignature.requestSent" xml:space="preserve">
+    <value>Cererea de semnătură a fost trimisă cu succes! Verificați căsuța de e-mail sau jurnalele din backend.</value>
+  </data>
+  <data name="testSignature.errorGenerating" xml:space="preserve">
+    <value>A apărut o eroare la generarea linkului.</value>
+  </data>
+  <data name="notification.noPermission" xml:space="preserve">
+    <value>Nu aveți permisiunea de a notifica acest utilizator.</value>
+  </data>
+  <data name="notification.alreadySignedDoc" xml:space="preserve">
+    <value>Utilizatorul a semnat deja documentul {0}.</value>
+  </data>
+  <data name="notification.noUnsignedDoc" xml:space="preserve">
+    <value>Utilizatorul nu are un document {0} nesemnat de semnat.</value>
+  </data>
+  <data name="notification.sent" xml:space="preserve">
+    <value>Notificarea a fost trimisă cu succes.</value>
+  </data>
+  <data name="notification.lineManagerNotFound" xml:space="preserve">
+    <value>Managerul de linie nu a fost găsit.</value>
+  </data>
+  <data name="notification.noAssignedUsers" xml:space="preserve">
+    <value>Acest manager de linie nu are utilizatori atribuiți.</value>
+  </data>
+  <data name="notification.allTeamSigned" xml:space="preserve">
+    <value>Toți utilizatorii din subordinea acestui manager de linie au semnat deja documentul {0}.</value>
+  </data>
+  <data name="notification.sentForMissing" xml:space="preserve">
+    <value>Notificarea a fost trimisă cu succes pentru {0} semnături lipsă.</value>
+  </data>
+  <data name="notification.noActiveLineManagers" xml:space="preserve">
+    <value>Nu au fost găsiți manageri de linie activi.</value>
+  </data>
+  <data name="notification.allManagersTeamsSigned" xml:space="preserve">
+    <value>Echipele tuturor managerilor au semnat deja documentul {0}. Nu a fost trimis niciun e-mail.</value>
+  </data>
+  <data name="notification.sentToManagers" xml:space="preserve">
+    <value>Notificări trimise către {0} manager(i) de linie cu documente {1} nesemnate.</value>
+  </data>
+</root>
