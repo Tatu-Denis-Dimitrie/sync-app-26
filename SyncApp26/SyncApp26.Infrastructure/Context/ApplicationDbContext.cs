@@ -70,7 +70,7 @@ namespace SyncApp26.Infrastructure.Context
                 entity.ToTable(t =>
                 {
                     t.HasCheckConstraint("CK_Users_BloodType", "\"BloodType\" IS NULL OR \"BloodType\" IN (0, 1, 2, 3, 4, 5, 6, 7)");
-                    t.HasCheckConstraint("CK_Users_PreferredLanguage", "\"PreferredLanguage\" IS NULL OR \"PreferredLanguage\" IN (0)");
+                    t.HasCheckConstraint("CK_Users_PreferredLanguage", "\"PreferredLanguage\" IS NULL OR \"PreferredLanguage\" IN (0, 1)");
                 });
 
                 entity.Property(e => e.FirstName)

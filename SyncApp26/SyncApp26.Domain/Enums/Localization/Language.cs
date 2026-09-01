@@ -10,6 +10,7 @@ namespace SyncApp26.Domain.Enums
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum Language
     {
-        En
+        En,
+        Ro
     }
 }

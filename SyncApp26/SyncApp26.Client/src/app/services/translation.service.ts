@@ -4,11 +4,12 @@ import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthenticationService } from './authentication.service';
 
-export const SUPPORTED_LANGUAGES = ['En'] as const;
+export const SUPPORTED_LANGUAGES = ['En', 'Ro'] as const;
 export type Language = typeof SUPPORTED_LANGUAGES[number];
 
 export const LANGUAGE_LABELS: Record<Language, string> = {
-  En: 'English'
+  En: 'English',
+  Ro: 'Română'
 };
 
 const DEFAULT_LANGUAGE: Language = 'En';
