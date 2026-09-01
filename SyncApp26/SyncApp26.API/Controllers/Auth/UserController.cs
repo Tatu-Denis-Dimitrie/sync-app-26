@@ -401,14 +401,17 @@ namespace SyncApp26.API.Controllers
                 });
             }
 
-            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
-            Guid? currentUserId = User.GetUserId();
-            if (!seesEverything && currentUserId is { } uid)
+            // Fail closed on a missing caller id: a null would otherwise match a null AssignedToId
+            // below and hand out manager-level attestation rights.
+            if (User.GetUserId() is not { } currentUserId)
             {
-                if (user.AssignedToId != uid && user.Id != uid)
-                {
-                    return Forbid();
-                }
+                return Unauthorized();
+            }
+
+            bool seesEverything = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.SsmOfficer) || User.IsInRole(Roles.SuOfficer);
+            if (!seesEverything && user.AssignedToId != currentUserId && user.Id != currentUserId)
+            {
+                return Forbid();
             }
 
             // Attestation fields (who trained them, when) stay officer/admin/manager territory -

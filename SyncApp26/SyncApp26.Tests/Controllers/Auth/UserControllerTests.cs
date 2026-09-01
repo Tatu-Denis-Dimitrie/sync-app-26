@@ -637,6 +637,22 @@ namespace SyncApp26.Tests.Controllers.Auth
         }
 
         [Fact]
+        public async Task UpdateUserSSMSUForm_NoCallerId_ReturnsUnauthorizedWithoutTouchingTheRecord()
+        {
+            // Regression: a null caller id used to match a null AssignedToId, granting an anonymous
+            // caller manager-level attestation rights on any unassigned employee.
+            var controller = CreateController();
+            controller.SetAnonymousUser();
+            var user = MakeUser(assignedToId: null);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.UpdateUserSSMSUForm(user.Id, new UpdateUserSSMSUFormDTO());
+
+            Assert.IsType<UnauthorizedResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(It.IsAny<User>(), It.IsAny<UpdateUserSSMSUFormDTO>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        [Fact]
         public async Task UpdateUserSSMSUForm_LineManagerOfReport_PassesCanEditAttestationTrue()
         {
             // Line managers keep write access to their direct reports' attestation fields.
