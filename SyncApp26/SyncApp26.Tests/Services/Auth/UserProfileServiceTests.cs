@@ -426,11 +426,40 @@ namespace SyncApp26.Tests.Services.Auth
                 }
             };
 
-            await service.UpdateSsmSuFormAsync(user, dto);
+            await service.UpdateSsmSuFormAsync(user, dto, canEditAttestation: true);
 
             Assert.Equal("123 Main St", user.Address);
             var saved = _dbFixture.Context.UserInitialTrainings.Single(t => t.UserId == user.Id && t.DocumentType == "SSM");
             Assert.Equal("Instructor A", saved.IntroductoryTrainingInstructor);
+            _userServiceMock.Verify(s => s.UpdateUserAsync(user), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateSsmSuFormAsync_CannotEditAttestation_SkipsTrainingAndAdmittedByButSavesBioFields()
+        {
+            var service = CreateService();
+            var user = MakeUser();
+            SeedUserRow(user);
+
+            var dto = new UpdateUserSSMSUFormDTO
+            {
+                Address = "123 Main St",
+                AdmittedByName = "Self-Forged Officer",
+                AdmittedByFunction = "Self-Forged Function",
+                AdmittedDate = DateTime.UtcNow,
+                InitialTrainings = new List<InitialTrainingEntryDTO>
+                {
+                    new() { DocumentType = "SSM", IntroductoryTrainingInstructor = "Self-Forged Instructor" }
+                }
+            };
+
+            await service.UpdateSsmSuFormAsync(user, dto, canEditAttestation: false);
+
+            Assert.Equal("123 Main St", user.Address);
+            Assert.Null(user.AdmittedByName);
+            Assert.Null(user.AdmittedByFunction);
+            Assert.Null(user.AdmittedDate);
+            Assert.Empty(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == user.Id));
             _userServiceMock.Verify(s => s.UpdateUserAsync(user), Times.Once);
         }
 
@@ -458,7 +487,7 @@ namespace SyncApp26.Tests.Services.Auth
                 }
             };
 
-            await service.UpdateSsmSuFormAsync(user, dto);
+            await service.UpdateSsmSuFormAsync(user, dto, canEditAttestation: true);
 
             var rows = _dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == user.Id).ToList();
             Assert.Single(rows);
@@ -480,7 +509,7 @@ namespace SyncApp26.Tests.Services.Auth
                 }
             };
 
-            await service.UpdateSsmSuFormAsync(user, dto);
+            await service.UpdateSsmSuFormAsync(user, dto, canEditAttestation: true);
 
             Assert.Empty(_dbFixture.Context.UserInitialTrainings.Where(t => t.UserId == user.Id));
         }

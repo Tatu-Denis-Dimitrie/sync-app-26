@@ -9,7 +9,7 @@ namespace SyncApp26.Application.IServices
     {
         Task<UserResponseDTO> CreateUserAsync(UserRequestDTO request, Guid? actingUserId = null);
         Task<UserResponseDTO> UpdateUserAsync(User existingUser, UserRequestDTO request);
-        Task UpdateSsmSuFormAsync(User user, UpdateUserSSMSUFormDTO dto);
+        Task UpdateSsmSuFormAsync(User user, UpdateUserSSMSUFormDTO dto, bool canEditAttestation);
         Task<BulkInitialTrainingResultDTO> ApplyBulkInitialTrainingAsync(BulkInitialTrainingDTO dto, Guid? restrictToAssignedToId);
         Task<UserResponseDTO> SetUserRolesAsync(Guid userId, List<string> roleNames, Guid actingAdminId);
         Task<UserResponseDTO> UpdatePreferredLanguageAsync(Guid userId, Language language);

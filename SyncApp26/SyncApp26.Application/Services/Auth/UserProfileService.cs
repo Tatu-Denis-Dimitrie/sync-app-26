@@ -317,7 +317,7 @@ namespace SyncApp26.Application.Services
             return new UserResponseDTO { Success = true, Message = _localizer["messages.userUpdated"] };
         }
 
-        public async Task UpdateSsmSuFormAsync(User user, UpdateUserSSMSUFormDTO dto)
+        public async Task UpdateSsmSuFormAsync(User user, UpdateUserSSMSUFormDTO dto, bool canEditAttestation)
         {
             user.DateOfBirth = dto.DateOfBirth;
             user.PlaceOfBirth = dto.PlaceOfBirth;
@@ -329,41 +329,49 @@ namespace SyncApp26.Application.Services
             user.CommuteRoute = dto.CommuteRoute;
             user.CommuteDurationMinutes = dto.CommuteDurationMinutes;
 
-            user.AdmittedByName = dto.AdmittedByName;
-            user.AdmittedByFunction = dto.AdmittedByFunction;
-            user.AdmittedDate = dto.AdmittedDate;
+            if (canEditAttestation)
+            {
+                user.AdmittedByName = dto.AdmittedByName;
+                user.AdmittedByFunction = dto.AdmittedByFunction;
+                user.AdmittedDate = dto.AdmittedDate;
+            }
 
             user.UpdatedAt = DateTime.UtcNow;
 
-            foreach (var entry in dto.InitialTrainings)
+            // Who trained the employee and when is attestation, not self-reported bio data - an
+            // employee editing their own record can't also be the one vouching they were trained.
+            if (canEditAttestation)
             {
-                if (string.IsNullOrWhiteSpace(entry.DocumentType)) continue;
-                var docType = entry.DocumentType.ToUpper();
-                var existing = await _userInitialTrainingService.GetByUserIdAndTypeAsync(user.Id, docType);
-
-                var isNew = existing == null;
-                existing ??= new UserInitialTraining { UserId = user.Id, DocumentType = docType, CreatedAt = DateTime.UtcNow };
-
-                existing.IntroductoryTrainingDate = entry.IntroductoryTrainingDate;
-                existing.IntroductoryTrainingHours = entry.IntroductoryTrainingHours;
-                existing.IntroductoryTrainingInstructor = entry.IntroductoryTrainingInstructor;
-                existing.IntroductoryTrainingInstructorFunction = entry.IntroductoryTrainingInstructorFunction;
-                existing.IntroductoryTrainingContent = entry.IntroductoryTrainingContent;
-                existing.WorkplaceTrainingDate = entry.WorkplaceTrainingDate;
-                existing.WorkplaceTrainingLocation = entry.WorkplaceTrainingLocation;
-                existing.WorkplaceTrainingHours = entry.WorkplaceTrainingHours;
-                existing.WorkplaceTrainingInstructor = entry.WorkplaceTrainingInstructor;
-                existing.WorkplaceTrainingInstructorFunction = entry.WorkplaceTrainingInstructorFunction;
-                existing.WorkplaceTrainingContent = entry.WorkplaceTrainingContent;
-                existing.UpdatedAt = DateTime.UtcNow;
-
-                if (isNew)
+                foreach (var entry in dto.InitialTrainings)
                 {
-                    await _userInitialTrainingService.AddAsync(existing);
-                }
-                else
-                {
-                    await _userInitialTrainingService.UpdateAsync(existing);
+                    if (string.IsNullOrWhiteSpace(entry.DocumentType)) continue;
+                    var docType = entry.DocumentType.ToUpper();
+                    var existing = await _userInitialTrainingService.GetByUserIdAndTypeAsync(user.Id, docType);
+
+                    var isNew = existing == null;
+                    existing ??= new UserInitialTraining { UserId = user.Id, DocumentType = docType, CreatedAt = DateTime.UtcNow };
+
+                    existing.IntroductoryTrainingDate = entry.IntroductoryTrainingDate;
+                    existing.IntroductoryTrainingHours = entry.IntroductoryTrainingHours;
+                    existing.IntroductoryTrainingInstructor = entry.IntroductoryTrainingInstructor;
+                    existing.IntroductoryTrainingInstructorFunction = entry.IntroductoryTrainingInstructorFunction;
+                    existing.IntroductoryTrainingContent = entry.IntroductoryTrainingContent;
+                    existing.WorkplaceTrainingDate = entry.WorkplaceTrainingDate;
+                    existing.WorkplaceTrainingLocation = entry.WorkplaceTrainingLocation;
+                    existing.WorkplaceTrainingHours = entry.WorkplaceTrainingHours;
+                    existing.WorkplaceTrainingInstructor = entry.WorkplaceTrainingInstructor;
+                    existing.WorkplaceTrainingInstructorFunction = entry.WorkplaceTrainingInstructorFunction;
+                    existing.WorkplaceTrainingContent = entry.WorkplaceTrainingContent;
+                    existing.UpdatedAt = DateTime.UtcNow;
+
+                    if (isNew)
+                    {
+                        await _userInitialTrainingService.AddAsync(existing);
+                    }
+                    else
+                    {
+                        await _userInitialTrainingService.UpdateAsync(existing);
+                    }
                 }
             }
 

@@ -560,7 +560,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var result = await controller.UpdateUserSSMSUForm(Guid.NewGuid(), new UpdateUserSSMSUFormDTO());
 
             Assert.IsType<NotFoundObjectResult>(result.Result);
-            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(It.IsAny<User>(), It.IsAny<UpdateUserSSMSUFormDTO>()), Times.Never);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(It.IsAny<User>(), It.IsAny<UpdateUserSSMSUFormDTO>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Fact]
@@ -575,7 +575,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var result = await controller.UpdateUserSSMSUForm(user.Id, new UpdateUserSSMSUFormDTO());
 
             Assert.IsType<ForbidResult>(result.Result);
-            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(It.IsAny<User>(), It.IsAny<UpdateUserSSMSUFormDTO>()), Times.Never);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(It.IsAny<User>(), It.IsAny<UpdateUserSSMSUFormDTO>(), It.IsAny<bool>()), Times.Never);
         }
 
         [Fact]
@@ -592,7 +592,7 @@ namespace SyncApp26.Tests.Controllers.Auth
             var ok = Assert.IsType<OkObjectResult>(result.Result);
             var dto = Assert.IsType<UserResponseDTO>(ok.Value);
             Assert.True(dto.Success);
-            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(user, It.IsAny<UpdateUserSSMSUFormDTO>()), Times.Once);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(user, It.IsAny<UpdateUserSSMSUFormDTO>(), true), Times.Once);
         }
 
         [Fact]
@@ -616,7 +616,56 @@ namespace SyncApp26.Tests.Controllers.Auth
             var ok = Assert.IsType<OkObjectResult>(result.Result);
             var responseDto = Assert.IsType<UserResponseDTO>(ok.Value);
             Assert.True(responseDto.Success);
-            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(user, dto), Times.Once);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(user, dto, true), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUserSSMSUForm_SelfEdit_PassesCanEditAttestationFalse()
+        {
+            // Regression: an employee editing their own record must not also be able to
+            // self-attest who trained them - see the SSM/SU self-attestation pentest finding.
+            var callerId = Guid.NewGuid();
+            var controller = CreateController();
+            controller.SetUser(callerId, role: Roles.BasicUser);
+            var user = MakeUser(id: callerId);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.UpdateUserSSMSUForm(user.Id, new UpdateUserSSMSUFormDTO());
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(user, It.IsAny<UpdateUserSSMSUFormDTO>(), false), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdateUserSSMSUForm_NoCallerId_ReturnsUnauthorizedWithoutTouchingTheRecord()
+        {
+            // Regression: a null caller id used to match a null AssignedToId, granting an anonymous
+            // caller manager-level attestation rights on any unassigned employee.
+            var controller = CreateController();
+            controller.SetAnonymousUser();
+            var user = MakeUser(assignedToId: null);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.UpdateUserSSMSUForm(user.Id, new UpdateUserSSMSUFormDTO());
+
+            Assert.IsType<UnauthorizedResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(It.IsAny<User>(), It.IsAny<UpdateUserSSMSUFormDTO>(), It.IsAny<bool>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateUserSSMSUForm_LineManagerOfReport_PassesCanEditAttestationTrue()
+        {
+            // Line managers keep write access to their direct reports' attestation fields.
+            var managerId = Guid.NewGuid();
+            var controller = CreateController();
+            controller.SetUser(managerId, role: Roles.LineManager);
+            var user = MakeUser(assignedToId: managerId);
+            _userServiceMock.Setup(s => s.GetUserByIdAsync(user.Id)).ReturnsAsync(user);
+
+            var result = await controller.UpdateUserSSMSUForm(user.Id, new UpdateUserSSMSUFormDTO());
+
+            Assert.IsType<OkObjectResult>(result.Result);
+            _userProfileServiceMock.Verify(s => s.UpdateSsmSuFormAsync(user, It.IsAny<UpdateUserSSMSUFormDTO>(), true), Times.Once);
         }
 
         // ───────────────────────── BulkInitialTraining ─────────────────────────
