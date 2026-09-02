@@ -11,6 +11,7 @@ import { Department, User } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 interface DepartmentSignatureStats {
   ssmSigned: number;
@@ -24,7 +25,7 @@ type SignatureFilter = 'all' | 'ssm-signed' | 'su-signed' | 'both-signed' | 'uns
 @Component({
   selector: 'app-departments',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe, OrgNamePipe],
   templateUrl: './departments.component.html',
   styleUrls: ['./departments.component.css']
 })

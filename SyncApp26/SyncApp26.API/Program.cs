@@ -15,7 +15,10 @@ using SyncApp26.API.Middleware;
 using SyncApp26.API.Extensions;
 using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.IdentityModel.Tokens;
+using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Threading.RateLimiting;
 using Serilog;
@@ -342,6 +345,51 @@ try
     app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
+
+    {
+        var supportedCultures = (app.Configuration.GetSection("Localization:SupportedLanguages").Get<string[]>()
+                ?? new[] { nameof(Language.En) })
+            .Select(code => new CultureInfo(code.ToLowerInvariant()))
+            .ToList();
+
+        var defaultCulture = new CultureInfo(
+            (app.Configuration["Localization:DefaultLanguage"] ?? nameof(Language.En)).ToLowerInvariant());
+
+        var localizationOptions = new RequestLocalizationOptions
+        {
+            DefaultRequestCulture = new RequestCulture(defaultCulture),
+            SupportedCultures = supportedCultures,
+            SupportedUICultures = supportedCultures,
+            ApplyCurrentCultureToResponseHeaders = true
+        };
+
+        localizationOptions.RequestCultureProviders.Clear();
+        localizationOptions.RequestCultureProviders.Add(new CustomRequestCultureProvider(context =>
+        {
+            var localization = context.RequestServices.GetRequiredService<ILocalizationService>();
+
+            var requestedCode = PrimaryLanguageSubtag(context.Request.Headers["X-App-Language"])
+                ?? PrimaryLanguageSubtag(context.Request.Headers.AcceptLanguage);
+
+            var cultureName = localization.ResolveLanguage(requestedCode).ToString().ToLowerInvariant();
+            return Task.FromResult<ProviderCultureResult?>(new ProviderCultureResult(cultureName, cultureName));
+
+            static string? PrimaryLanguageSubtag(Microsoft.Extensions.Primitives.StringValues header)
+            {
+                var raw = header.ToString();
+                if (string.IsNullOrWhiteSpace(raw))
+                {
+                    return null;
+                }
+
+                var first = raw.Split(',', 2)[0].Split(';', 2)[0].Trim();
+                var primary = first.Split('-', 2)[0].Trim();
+                return primary.Length == 0 ? null : primary;
+            }
+        }));
+
+        app.UseRequestLocalization(localizationOptions);
+    }
 
     // CSRF check for cookie-authenticated requests. After UseAuthentication so User is resolved.
     app.Use(async (context, next) =>

@@ -15,6 +15,7 @@ import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 interface DocumentDto {
   id: string;
@@ -41,7 +42,7 @@ interface DocumentDto {
 @Component({
   selector: 'app-documents-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent, BulkInitialTrainingModalComponent, SignatureStatusBadgeComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, PaginationComponent, BulkTrainingModalComponent, BulkInitialTrainingModalComponent, SignatureStatusBadgeComponent, TranslatePipe, OrgNamePipe],
   templateUrl: './documents-view.component.html',
   styleUrl: './documents-view.component.css'
 })

@@ -443,9 +443,9 @@
                   {{ employee.firstName }} {{ employee.lastName }}
                 </button>
                 <p class="truncate text-xs text-muted-foreground">
-                  {{ employee.departmentName }}
+                  {{ employee.departmentName | orgName:'department' }}
                   @if (employee.function) {
-                    <span class="text-border"> · </span>{{ employee.function }}
+                    <span class="text-border"> · </span>{{ employee.function | orgName:'function' }}
                   }
                 </p>
               </div>

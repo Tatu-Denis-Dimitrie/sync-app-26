@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="profile.firstName" xml:space="preserve">
+    <value>Prenume</value>
+  </data>
+  <data name="profile.lastName" xml:space="preserve">
+    <value>Nume</value>
+  </data>
+  <data name="profile.email" xml:space="preserve">
+    <value>E-mail</value>
+  </data>
+  <data name="profile.department" xml:space="preserve">
+    <value>Departament</value>
+  </data>
+  <data name="profile.function" xml:space="preserve">
+    <value>Funcție</value>
+  </data>
+  <data name="profile.workSite" xml:space="preserve">
+    <value>Punct de lucru</value>
+  </data>
+  <data name="profile.badgeNumber" xml:space="preserve">
+    <value>Număr legitimație</value>
+  </data>
+  <data name="profile.address" xml:space="preserve">
+    <value>Adresă</value>
+  </data>
+  <data name="profile.dateOfBirth" xml:space="preserve">
+    <value>Data nașterii</value>
+  </data>
+  <data name="profile.bloodType" xml:space="preserve">
+    <value>Grupa sanguină</value>
+  </data>
+  <data name="roles.admin" xml:space="preserve">
+    <value>Administrator</value>
+  </data>
+  <data name="roles.lineManager" xml:space="preserve">
+    <value>Manager de linie</value>
+  </data>
+  <data name="roles.basicUser" xml:space="preserve">
+    <value>Utilizator standard</value>
+  </data>
+  <data name="roles.ssmOfficer" xml:space="preserve">
+    <value>Responsabil SSM</value>
+  </data>
+  <data name="roles.suOfficer" xml:space="preserve">
+    <value>Responsabil SU</value>
+  </data>
+  <data name="actions.editUser" xml:space="preserve">
+    <value>Editează utilizatorul</value>
+  </data>
+  <data name="actions.deleteUser" xml:space="preserve">
+    <value>Șterge utilizatorul</value>
+  </data>
+  <data name="actions.createCustomRole" xml:space="preserve">
+    <value>Creează un rol personalizat</value>
+  </data>
+  <data name="filters.allDepartments" xml:space="preserve">
+    <value>Toate departamentele</value>
+  </data>
+  <data name="filters.allRoles" xml:space="preserve">
+    <value>Toate rolurile</value>
+  </data>
+  <data name="messages.userNotFound" xml:space="preserve">
+    <value>Utilizatorul nu a fost găsit</value>
+  </data>
+  <data name="messages.departmentNotFound" xml:space="preserve">
+    <value>Departamentul nu a fost găsit</value>
+  </data>
+  <data name="messages.firstLastEmailRequired" xml:space="preserve">
+    <value>Prenumele, numele și adresa de e-mail sunt obligatorii</value>
+  </data>
+  <data name="messages.invalidEmailFormat" xml:space="preserve">
+    <value>Format de e-mail invalid</value>
+  </data>
+  <data name="messages.cannotAssignSelf" xml:space="preserve">
+    <value>Utilizatorul nu poate fi atribuit sieși</value>
+  </data>
+  <data name="messages.assignedToNotFound" xml:space="preserve">
+    <value>Utilizatorul căruia i s-a făcut atribuirea nu a fost găsit</value>
+  </data>
+  <data name="messages.circularAssignment" xml:space="preserve">
+    <value>A fost detectată o atribuire circulară: nu puteți atribui un utilizator cuiva care îi este subordonat</value>
+  </data>
+  <data name="messages.userCreated" xml:space="preserve">
+    <value>Utilizatorul a fost creat cu succes</value>
+  </data>
+  <data name="messages.userUpdated" xml:space="preserve">
+    <value>Utilizatorul a fost actualizat cu succes</value>
+  </data>
+  <data name="messages.roleDoesNotExist" xml:space="preserve">
+    <value>Rolul „{0}” nu există.</value>
+  </data>
+  <data name="messages.cannotRemoveLastAdmin" xml:space="preserve">
+    <value>Nu se poate elimina rolul de Administrator de la ultimul administrator rămas.</value>
+  </data>
+  <data name="messages.rolesUpdated" xml:space="preserve">
+    <value>Rolurile au fost actualizate cu succes</value>
+  </data>
+  <data name="messages.unsupportedLanguage" xml:space="preserve">
+    <value>Limbă neacceptată.</value>
+  </data>
+  <data name="messages.languagePreferenceUpdated" xml:space="preserve">
+    <value>Preferința de limbă a fost actualizată cu succes</value>
+  </data>
+  <data name="labels.employee" xml:space="preserve">
+    <value>Angajat</value>
+  </data>
+  <data name="labels.employees" xml:space="preserve">
+    <value>Angajați</value>
+  </data>
+  <data name="labels.lineManagers" xml:space="preserve">
+    <value>Manageri de linie</value>
+  </data>
+  <data name="labels.role" xml:space="preserve">
+    <value>Rol</value>
+  </data>
+  <data name="labels.rolesColon" xml:space="preserve">
+    <value>Roluri:</value>
+  </data>
+  <data name="labels.departmentColon" xml:space="preserve">
+    <value>Departament:</value>
+  </data>
+  <data name="labels.managerColon" xml:space="preserve">
+    <value>Manager:</value>
+  </data>
+  <data name="labels.selectFunction" xml:space="preserve">
+    <value>Selectați funcția</value>
+  </data>
+  <data name="labels.noRolesFound" xml:space="preserve">
+    <value>Nu au fost găsite roluri.</value>
+  </data>
+  <data name="labels.noUsersFound" xml:space="preserve">
+    <value>Nu au fost găsiți utilizatori</value>
+  </data>
+  <data name="labels.noWorkSite" xml:space="preserve">
+    <value>Fără punct de lucru</value>
+  </data>
+  <data name="labels.searchPlaceholder" xml:space="preserve">
+    <value>Căutați utilizatori...</value>
+  </data>
+  <data name="labels.roleNamePlaceholder" xml:space="preserve">
+    <value>Numele rolului</value>
+  </data>
+  <data name="labels.roleDescriptionPlaceholder" xml:space="preserve">
+    <value>Descriere (opțional)</value>
+  </data>
+  <data name="actions.view" xml:space="preserve">
+    <value>Vizualizează</value>
+  </data>
+  <data name="messages.pleaseSelectLineManager" xml:space="preserve">
+    <value>Vă rugăm să selectați un manager de linie pentru angajat.</value>
+  </data>
+  <data name="messages.errorUpdatingUserToast" xml:space="preserve">
+    <value>Eroare la actualizarea utilizatorului</value>
+  </data>
+  <data name="messages.errorDeletingUserToast" xml:space="preserve">
+    <value>Eroare la ștergerea utilizatorului</value>
+  </data>
+  <data name="messages.errorLoadingRoles" xml:space="preserve">
+    <value>Eroare la încărcarea rolurilor</value>
+  </data>
+  <data name="messages.rolesUpdatedToast" xml:space="preserve">
+    <value>Rolurile au fost actualizate cu succes.</value>
+  </data>
+  <data name="messages.errorUpdatingRolesToast" xml:space="preserve">
+    <value>Eroare la actualizarea rolurilor</value>
+  </data>
+  <data name="messages.errorCreatingRole" xml:space="preserve">
+    <value>Eroare la crearea rolului</value>
+  </data>
+  <data name="messages.errorDeletingRole" xml:space="preserve">
+    <value>Eroare la ștergerea rolului</value>
+  </data>
+  <data name="messages.roleCreated" xml:space="preserve">
+    <value>Rolul „{0}” a fost creat.</value>
+  </data>
+  <data name="messages.roleDeleted" xml:space="preserve">
+    <value>Rolul „{0}” a fost șters.</value>
+  </data>
+  <data name="stats.usersInView" xml:space="preserve">
+    <value>Utilizatori afișați</value>
+  </data>
+  <data name="stats.statisticsByDepartment" xml:space="preserve">
+    <value>Statistici pe departament</value>
+  </data>
+  <data name="stats.signatureCoveragePerDepartment" xml:space="preserve">
+    <value>Gradul de acoperire a semnăturilor pe departament</value>
+  </data>
+  <data name="stats.statisticsByLineManager" xml:space="preserve">
+    <value>Statistici pe manager de linie</value>
+  </data>
+  <data name="stats.teamsNeedingFollowUp" xml:space="preserve">
+    <value>Echipe care necesită urmărire</value>
+  </data>
+  <data name="stats.signatureStatisticsByDepartment" xml:space="preserve">
+    <value>Statistici privind semnăturile pe departament</value>
+  </data>
+  <data name="stats.quickOverviewSigningCoverage" xml:space="preserve">
+    <value>Prezentare rapidă a gradului de acoperire a semnării pentru fiecare departament</value>
+  </data>
+  <data name="stats.lineManagerTeamSigningStatus" xml:space="preserve">
+    <value>Starea semnării pe echipa managerului de linie</value>
+  </data>
+  <data name="stats.teamsHighlighted" xml:space="preserve">
+    <value>Echipele care necesită urmărire sunt evidențiate</value>
+  </data>
+  <data name="table.total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="table.subordinates" xml:space="preserve">
+    <value>Subordonați</value>
+  </data>
+  <data name="table.missingSsm" xml:space="preserve">
+    <value>SSM lipsă</value>
+  </data>
+  <data name="table.missingSu" xml:space="preserve">
+    <value>SU lipsă</value>
+  </data>
+  <data name="table.missingAny" xml:space="preserve">
+    <value>Lipsă oricare</value>
+  </data>
+  <data name="table.fullySignedBoth" xml:space="preserve">
+    <value>Ambele semnate integral</value>
+  </data>
+  <data name="messages.sendingEmails" xml:space="preserve">
+    <value>Se trimit e-mailuri…</value>
+  </data>
+  <data name="messages.noManagersWithSubordinates" xml:space="preserve">
+    <value>Niciun manager de linie cu subordonați atribuiți în acest interval de filtrare.</value>
+  </data>
+  <data name="actions.viewAs" xml:space="preserve">
+    <value>Vizualizează ca</value>
+  </data>
+  <data name="actions.roles" xml:space="preserve">
+    <value>Roluri</value>
+  </data>
+  <data name="labels.rolesForPrefix" xml:space="preserve">
+    <value>Roluri pentru</value>
+  </data>
+  <data name="messages.noUsersMatchingFilter" xml:space="preserve">
+    <value>Nu există utilizatori care să corespundă criteriilor de filtrare.</value>
+  </data>
+  <data name="labels.noLineManagerTopLevel" xml:space="preserve">
+    <value>Fără manager de linie (nivel superior)</value>
+  </data>
+  <data name="labels.selectLineManager" xml:space="preserve">
+    <value>Selectați managerul de linie</value>
+  </data>
+  <data name="buttons.saveChanges" xml:space="preserve">
+    <value>Salvează modificările</value>
+  </data>
+  <data name="buttons.saveRoles" xml:space="preserve">
+    <value>Salvează rolurile</value>
+  </data>
+  <data name="messages.viewAsWarning" xml:space="preserve">
+    <value>Sesiunea dumneavoastră trece imediat la a acestuia, cu permisiunile sale. Puteți reveni oricând la propria sesiune din antet.</value>
+  </data>
+  <data name="messages.switching" xml:space="preserve">
+    <value>Se comută…</value>
+  </data>
+  <data name="messages.deleteUserConfirmPrefix" xml:space="preserve">
+    <value>Sigur doriți să ștergeți</value>
+  </data>
+  <data name="messages.deleteUserConfirmSuffix" xml:space="preserve">
+    <value>? Această acțiune nu poate fi anulată.</value>
+  </data>
+  <data name="labels.notSignedBothFilter" xml:space="preserve">
+    <value>Nesemnat (SSM+SU)</value>
+  </data>
+  <data name="labels.searchGenericPlaceholder" xml:space="preserve">
+    <value>Căutați...</value>
+  </data>
+  <data name="labels.noEmployeesFound" xml:space="preserve">
+    <value>Nu au fost găsiți angajați</value>
+  </data>
+  <data name="sections.personalInformation" xml:space="preserve">
+    <value>Informații personale</value>
+  </data>
+  <data name="profile.employeeId" xml:space="preserve">
+    <value>ID angajat</value>
+  </data>
+  <data name="profile.fullName" xml:space="preserve">
+    <value>Nume complet</value>
+  </data>
+  <data name="sections.workInformation" xml:space="preserve">
+    <value>Informații despre muncă</value>
+  </data>
+  <data name="labels.unknownLowercase" xml:space="preserve">
+    <value>necunoscut</value>
+  </data>
+  <data name="profile.managerId" xml:space="preserve">
+    <value>ID manager</value>
+  </data>
+  <data name="labels.departmentManager" xml:space="preserve">
+    <value>Manager de departament</value>
+  </data>
+  <data name="labels.summary" xml:space="preserve">
+    <value>Rezumat</value>
+  </data>
+  <data name="labels.userType" xml:space="preserve">
+    <value>Tip utilizator</value>
+  </data>
+  <data name="roles.managerShort" xml:space="preserve">
+    <value>Manager</value>
+  </data>
+  <data name="labels.lastUpdated" xml:space="preserve">
+    <value>Ultima actualizare</value>
+  </data>
+  <data name="labels.created" xml:space="preserve">
+    <value>Creat</value>
+  </data>
+  <data name="sections.userHistory" xml:space="preserve">
+    <value>Istoricul utilizatorului</value>
+  </data>
+  <data name="labels.entriesCount" xml:space="preserve">
+    <value>{0} intrări</value>
+  </data>
+  <data name="messages.loadingUserHistory" xml:space="preserve">
+    <value>Se încarcă istoricul utilizatorului...</value>
+  </data>
+  <data name="messages.noUserHistory" xml:space="preserve">
+    <value>Nu există istoric pentru acest angajat.</value>
+  </data>
+  <data name="labels.selectAnEmployee" xml:space="preserve">
+    <value>Selectați un angajat</value>
+  </data>
+  <data name="messages.chooseUserFromList" xml:space="preserve">
+    <value>Alegeți un utilizator din lista din stânga pentru a vedea toate detaliile</value>
+  </data>
+  <data name="messages.loadingProfile" xml:space="preserve">
+    <value>Se încarcă profilul...</value>
+  </data>
+  <data name="actions.changeEmail" xml:space="preserve">
+    <value>Schimbă adresa de e-mail</value>
+  </data>
+  <data name="messages.emailChangeReviewNotice" xml:space="preserve">
+    <value>Cererea dumneavoastră va fi examinată de un administrator înainte de a intra în vigoare.</value>
+  </data>
+  <data name="labels.newEmailAddress" xml:space="preserve">
+    <value>Adresă de e-mail nouă</value>
+  </data>
+  <data name="labels.newEmailLocalPartPlaceholder" xml:space="preserve">
+    <value>nume.nou</value>
+  </data>
+  <data name="labels.reasonOptional" xml:space="preserve">
+    <value>Motiv (opțional)</value>
+  </data>
+  <data name="labels.emailChangeReasonPlaceholder" xml:space="preserve">
+    <value>ex. mi-am schimbat numele de familie după căsătorie</value>
+  </data>
+  <data name="messages.emailChangeSubmitted" xml:space="preserve">
+    <value>Cererea dumneavoastră de modificare a adresei de e-mail a fost trimisă. Acum așteaptă aprobarea administratorului.</value>
+  </data>
+  <data name="messages.userSessionNotFound" xml:space="preserve">
+    <value>Sesiunea utilizatorului nu a fost găsită.</value>
+  </data>
+  <data name="messages.couldNotLoadUserDetails" xml:space="preserve">
+    <value>Detaliile utilizatorului nu au putut fi încărcate.</value>
+  </data>
+  <data name="fields.placeOfBirth" xml:space="preserve">
+    <value>Locul nașterii</value>
+  </data>
+  <data name="fields.departmentName" xml:space="preserve">
+    <value>Departament (nume)</value>
+  </data>
+  <data name="fields.functionName" xml:space="preserve">
+    <value>Funcție (nume)</value>
+  </data>
+  <data name="fields.workSiteName" xml:space="preserve">
+    <value>Punct de lucru (nume)</value>
+  </data>
+  <data name="fields.commuteRoute" xml:space="preserve">
+    <value>Traseul de deplasare</value>
+  </data>
+  <data name="fields.commuteDurationMinutes" xml:space="preserve">
+    <value>Durata deplasării (minute)</value>
+  </data>
+  <data name="messages.invalidEmailLocalPart" xml:space="preserve">
+    <value>Vă rugăm să introduceți un nume de e-mail valid (fără spații sau @).</value>
+  </data>
+  <data name="profile.personalId" xml:space="preserve">
+    <value>Cod numeric personal</value>
+  </data>
+  <data name="sections.assignedEmployees" xml:space="preserve">
+    <value>Angajați atribuiți</value>
+  </data>
+  <data name="labels.searchByNamePlaceholder" xml:space="preserve">
+    <value>Căutați după prenume sau nume...</value>
+  </data>
+  <data name="messages.noAssignedUsersFound" xml:space="preserve">
+    <value>Nu au fost găsiți utilizatori atribuiți.</value>
+  </data>
+  <data name="messages.couldNotLoadProfileDetails" xml:space="preserve">
+    <value>Detaliile profilului nu au putut fi încărcate.</value>
+  </data>
+  <data name="api.departmentNotFound" xml:space="preserve">
+    <value>Departamentul nu a fost găsit</value>
+  </data>
+  <data name="api.lineManagerNotFound" xml:space="preserve">
+    <value>Managerul de linie nu a fost găsit</value>
+  </data>
+  <data name="api.userNotFound" xml:space="preserve">
+    <value>Utilizatorul nu a fost găsit</value>
+  </data>
+  <data name="api.userDeleted" xml:space="preserve">
+    <value>Utilizatorul a fost șters cu succes</value>
+  </data>
+  <data name="api.ssmSuFormUpdated" xml:space="preserve">
+    <value>Fișa SSM/SU a fost actualizată cu succes</value>
+  </data>
+  <data name="bulkInitialTraining.noUsersMatched" xml:space="preserve">
+    <value>Nu au fost găsiți utilizatori cărora să li se aplice datele de instruire inițială.</value>
+  </data>
+  <data name="bulkInitialTraining.failedForUser" xml:space="preserve">
+    <value>Eșuat pentru utilizatorul {0}: {1}</value>
+  </data>
+  <data name="messages.selectLineManagerForEmployee" xml:space="preserve">
+    <value>Vă rugăm să selectați un manager de linie pentru angajat.</value>
+  </data>
+</root>

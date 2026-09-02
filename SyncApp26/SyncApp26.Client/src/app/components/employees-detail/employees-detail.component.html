@@ -64,7 +64,7 @@
                   <option
                     [value]="dept.name"
                     >
-                    {{ dept.name }}
+                    {{ dept.name | orgName:'department' }}
                   </option>
                 }
               </select>
@@ -130,7 +130,7 @@
                         {{ user.firstName }} {{ user.lastName }}
                       </h4>
                       <p class="text-xs text-muted-foreground truncate">
-                        {{ user.departmentName }}
+                        {{ user.departmentName | orgName:'department' }}
                       </p>
                     </div>
                   </div>
@@ -361,7 +361,7 @@
                               >{{ 'profile.department' | translate:'Users' }}</label
                               >
                               <p class="text-foreground font-medium mt-1">
-                                {{ selectedUser.departmentName }}
+                                {{ selectedUser.departmentName | orgName:'department' }}
                               </p>
                             </div>
                             <div>
@@ -369,7 +369,7 @@
                                 >{{ 'profile.function' | translate:'Users' }}</label
                                 >
                                 <p class="text-foreground font-medium mt-1">
-                                  {{ selectedUser.function?.trim() || tUsers('labels.unknownLowercase') }}
+                                  {{ (selectedUser.function | orgName:'function') || tUsers('labels.unknownLowercase') }}
                                 </p>
                               </div>
                               @if (selectedUser.assignedToPersonalId) {
@@ -428,7 +428,7 @@
                                     <div>
                                       <p class="text-xs text-muted-foreground">{{ 'profile.department' | translate:'Users' }}</p>
                                       <p class="text-sm font-medium text-foreground mt-1">
-                                        {{ selectedUser.departmentName }}
+                                        {{ selectedUser.departmentName | orgName:'department' }}
                                       </p>
                                     </div>
                                     <div>
@@ -869,7 +869,7 @@
                                               >
                                               @for (dept of departments$ | async; track dept) {
                                                 <option [value]="dept.id">
-                                                  {{ dept.name }}
+                                                  {{ dept.name | orgName:'department' }}
                                                 </option>
                                               }
                                             </select>
@@ -885,7 +885,7 @@
                                               <option value="" disabled>{{ 'labels.selectFunction' | translate:'Users' }}</option>
                                               @for (fn of availableFunctions; track fn) {
                                                 <option [value]="fn">
-                                                  {{ fn }}
+                                                  {{ fn | orgName:'function' }}
                                                 </option>
                                               }
                                             </select>

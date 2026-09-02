@@ -15,6 +15,7 @@ using SyncApp26.Infrastructure.Repositories;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using System.Globalization;
 using System.Security.Cryptography;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -1216,6 +1217,28 @@ namespace SyncApp26.Infrastructure.Services
 
         // ─── Public interface methods ────────────────────────────────────────────
 
+        // Renders a PDF with CurrentCulture/CurrentUICulture pinned to invariant so the output is
+        // deterministic: the DocumentTemplate IStringLocalizer then resolves to the neutral (English
+        // base) resx and every ToString()/string.Format falls on invariant formatting, no matter what
+        // language the request that triggered this was in. QuestPDF's GeneratePdf() is synchronous, so
+        // there is no await between the swap and the restore.
+        private static byte[] RenderInInvariantCulture(Func<byte[]> render)
+        {
+            var originalCulture = CultureInfo.CurrentCulture;
+            var originalUiCulture = CultureInfo.CurrentUICulture;
+            try
+            {
+                CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+                CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+                return render();
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = originalCulture;
+                CultureInfo.CurrentUICulture = originalUiCulture;
+            }
+        }
+
         public async Task<string> GeneratePdfSnapshotAsync(User user, UserDocument document)
         {
             var docsFolder = Path.Combine(Directory.GetCurrentDirectory(), "GeneratedDocuments");
@@ -1228,8 +1251,16 @@ namespace SyncApp26.Infrastructure.Services
             var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.UserId, document.DocumentType);
             var initialTrainingSignatures = await LoadInitialTrainingSignatureLookupAsync(document.UserId, document.DocumentType);
 
-            // Generate to memory first — if layout throws, the existing file on disk is NOT corrupted
-            var pdfBytes = BuildDocument(user, document, periodicSignatures, initialTrainingSignatures).GeneratePdf();
+            // The archived snapshot's content MUST NOT depend on the acting user's UI language:
+            // DocumentHash (SHA-256 of these bytes) is bound into every signer's RSA proof
+            // ("{DocumentId}|{DocumentHash}|{Ip}|{Timestamp}"), so a language-dependent render would
+            // make already-stored proofs unverifiable and flip the archived text every time a
+            // differently-localized user triggers a regeneration. The snapshot is therefore always
+            // rendered in the invariant (English base) culture; only the on-the-fly view follows the
+            // viewer's language.
+            // Generate to memory first — if layout throws, the existing file on disk is NOT corrupted.
+            var pdfBytes = RenderInInvariantCulture(() =>
+                BuildDocument(user, document, periodicSignatures, initialTrainingSignatures).GeneratePdf());
             File.WriteAllBytes(filePath, pdfBytes);
 
             using var sha256 = SHA256.Create();

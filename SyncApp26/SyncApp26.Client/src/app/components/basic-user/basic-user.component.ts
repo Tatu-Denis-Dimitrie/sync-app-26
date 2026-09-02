@@ -19,11 +19,12 @@ import { CustomSelectComponent, SelectOption } from '../../shared/components/cus
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 @Component({
   selector: 'app-basic-user',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, PaginationComponent, CustomSelectComponent, TranslatePipe, OrgNamePipe],
   templateUrl: './basic-user.component.html',
   styleUrls: ['./basic-user.component.css']
 })

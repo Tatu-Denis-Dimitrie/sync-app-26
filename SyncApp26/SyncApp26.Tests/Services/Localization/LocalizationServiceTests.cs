@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Resources;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
@@ -80,19 +81,41 @@ namespace SyncApp26.Tests.Services.Localization
         }
 
         [Fact]
+        public void GetTranslations_NonEnglish_FallsBackToInvariantValueForKeysMissingFromTheLanguageFile()
+        {
+            var localizerMock = new Mock<IStringLocalizer>();
+            localizerMock.Setup(l => l.GetAllStrings(false)).Returns(() =>
+                CultureInfo.CurrentUICulture.Name == "ro"
+                    ? new[] { new LocalizedString("greeting", "Bună") }
+                    : new[] { new LocalizedString("greeting", "Hello"), new LocalizedString("farewell", "Goodbye") });
+
+            _factoryMock.Setup(f => f.Create(LocalizationScopes.Common, It.IsAny<string>()))
+                .Returns(localizerMock.Object);
+            _factoryMock.Setup(f => f.Create(It.Is<string>(s => s != LocalizationScopes.Common), It.IsAny<string>()))
+                .Throws(new MissingManifestResourceException());
+
+            var result = CreateService().GetTranslations(Language.Ro);
+
+            Assert.Equal("Bună", result[LocalizationScopes.Common]["greeting"]);
+            Assert.Equal("Goodbye", result[LocalizationScopes.Common]["farewell"]);
+        }
+
+        [Fact]
         public void ResolveLanguage_SupportedCode_ReturnsParsedLanguageCaseInsensitively()
         {
-            var service = CreateService(BuildConfiguration(new[] { "En" }, "En"));
+            var service = CreateService(BuildConfiguration(new[] { "En", "Ro" }, "En"));
 
             Assert.Equal(Language.En, service.ResolveLanguage("en"));
             Assert.Equal(Language.En, service.ResolveLanguage("EN"));
+            Assert.Equal(Language.Ro, service.ResolveLanguage("ro"));
+            Assert.Equal(Language.Ro, service.ResolveLanguage("RO"));
         }
 
         [Theory]
         [InlineData(null)]
         [InlineData("")]
         [InlineData("not-a-real-code")]
-        [InlineData("ro")] // not defined on Language yet, so it can never be "supported" either
+        [InlineData("ro")] // defined on Language, but this deployment lists only "En" as supported
         public void ResolveLanguage_UnrecognizedOrUnsupportedCode_FallsBackToConfiguredDefault(string? requestedCode)
         {
             var service = CreateService(BuildConfiguration(new[] { "En" }, "En"));
@@ -121,6 +144,30 @@ namespace SyncApp26.Tests.Services.Localization
             Assert.Equal("Sign In", result[LocalizationScopes.Auth]["login.submit"]);
             Assert.Equal("Save", result[LocalizationScopes.Common]["buttons.save"]);
             Assert.Equal("User not found", result[LocalizationScopes.Users]["messages.userNotFound"]);
+        }
+
+        [Fact]
+        public void GetTranslations_RealResxFilesOnDisk_RomanianCatalogueHasTheSameKeysAsEnglishForEveryScope()
+        {
+            var factory = new ResourceManagerStringLocalizerFactory(
+                Options.Create(new LocalizationOptions { ResourcesPath = "Resources" }),
+                NullLoggerFactory.Instance);
+            var service = new LocalizationService(factory, BuildConfiguration(new[] { "En", "Ro" }, "En"));
+
+            var english = service.GetTranslations(Language.En);
+            var romanian = service.GetTranslations(Language.Ro);
+
+
+            Assert.Equal(LocalizationScopes.All.Count, romanian.Count);
+            foreach (var scope in LocalizationScopes.All)
+            {
+                Assert.Equal(
+                    english[scope].Keys.OrderBy(k => k, StringComparer.Ordinal),
+                    romanian[scope].Keys.OrderBy(k => k, StringComparer.Ordinal));
+            }
+
+            // Spot-check that a translated scope actually comes back in Romanian, not English.
+            Assert.Equal("Salvează", romanian[LocalizationScopes.Common]["buttons.save"]);
         }
     }
 }

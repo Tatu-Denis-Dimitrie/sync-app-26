@@ -17,11 +17,12 @@ import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } 
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, PaginationComponent, ComparisonViewComponent, RouterModule, TranslatePipe, OrgNamePipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })

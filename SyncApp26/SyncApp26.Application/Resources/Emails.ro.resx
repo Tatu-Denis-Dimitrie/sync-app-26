@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="verifyAccount.subject" xml:space="preserve">
+    <value>Verificați-vă contul SyncApp26</value>
+  </data>
+  <data name="resetPassword.subject" xml:space="preserve">
+    <value>Resetați-vă parola SyncApp26</value>
+  </data>
+  <data name="signDocument.subject" xml:space="preserve">
+    <value>Acțiune necesară: Semnați documentul {0}</value>
+  </data>
+  <data name="missingSignature.subject" xml:space="preserve">
+    <value>Acțiune necesară: Semnătură lipsă pentru {0}</value>
+  </data>
+  <data name="usersMissingSignatures.subject" xml:space="preserve">
+    <value>Acțiune necesară: Utilizatori fără semnătură pentru {0}</value>
+  </data>
+  <data name="securityAlert.subject" xml:space="preserve">
+    <value>Alertă de securitate SyncApp26</value>
+  </data>
+  <data name="common.footerUserManagement" xml:space="preserve">
+    <value>SyncApp26 - Sistem de gestionare a utilizatorilor</value>
+  </data>
+  <data name="common.footerSsmSu" xml:space="preserve">
+    <value>SyncApp26 - Platformă de digitalizare SSM și SU</value>
+  </data>
+  <data name="common.greetingNamed" xml:space="preserve">
+    <value>Bună ziua {0},</value>
+  </data>
+  <data name="common.greetingNoName" xml:space="preserve">
+    <value>Bună ziua,</value>
+  </data>
+  <data name="common.buttonFallbackIntro" xml:space="preserve">
+    <value>Dacă butonul nu funcționează, copiați și lipiți acest link în browser:</value>
+  </data>
+  <data name="verify.headerTag" xml:space="preserve">
+    <value>Verificarea contului</value>
+  </data>
+  <data name="verify.title" xml:space="preserve">
+    <value>Verificați-vă adresa de e-mail</value>
+  </data>
+  <data name="verify.intro" xml:space="preserve">
+    <value>Vă mulțumim pentru înregistrarea în SyncApp26. Vă rugăm să vă verificați adresa de e-mail pentru a vă activa contul.</value>
+  </data>
+  <data name="verify.button" xml:space="preserve">
+    <value>Verifică adresa de e-mail</value>
+  </data>
+  <data name="verify.expiry" xml:space="preserve">
+    <value>Acest link expiră în &lt;strong&gt;24 de ore&lt;/strong&gt;.</value>
+  </data>
+  <data name="reset.headerTag" xml:space="preserve">
+    <value>Resetarea parolei</value>
+  </data>
+  <data name="reset.title" xml:space="preserve">
+    <value>Resetarea parolei</value>
+  </data>
+  <data name="reset.intro" xml:space="preserve">
+    <value>Faceți clic pe butonul de mai jos pentru a vă reseta parola:</value>
+  </data>
+  <data name="reset.button" xml:space="preserve">
+    <value>Resetează parola</value>
+  </data>
+  <data name="reset.expiry" xml:space="preserve">
+    <value>Acest link expiră în &lt;strong&gt;{0} de minute&lt;/strong&gt;.</value>
+  </data>
+  <data name="docSign.headerTag" xml:space="preserve">
+    <value>Este necesară semnarea documentului</value>
+  </data>
+  <data name="docSign.title" xml:space="preserve">
+    <value>Este necesară semnarea documentului</value>
+  </data>
+  <data name="docSign.newDocument" xml:space="preserve">
+    <value>Aveți un document nou (&lt;strong&gt;{0}&lt;/strong&gt;) care necesită semnătura dumneavoastră.</value>
+  </data>
+  <data name="docSign.noAccountInstructions" xml:space="preserve">
+    <value>Deoarece nu aveți un cont, îl puteți semna în siguranță folosind linkul de mai jos sau vă puteți crea un cont după ce accesați linkul.</value>
+  </data>
+  <data name="docSign.loginInstructions" xml:space="preserve">
+    <value>Vă rugăm să vă autentificați în cont pentru a examina și semna documentul.</value>
+  </data>
+  <data name="docSign.buttonReviewAndSign" xml:space="preserve">
+    <value>Examinează și semnează documentul</value>
+  </data>
+  <data name="docSign.buttonLogIn" xml:space="preserve">
+    <value>Autentifică-te pentru a semna</value>
+  </data>
+  <data name="docSign.secureOneTimeLink" xml:space="preserve">
+    <value>Acest link este un link securizat, de unică folosință.</value>
+  </data>
+  <data name="missingSigUser.headerTag" xml:space="preserve">
+    <value>Acțiune necesară: Semnătură lipsă</value>
+  </data>
+  <data name="missingSigUser.title" xml:space="preserve">
+    <value>Semnătură lipsă</value>
+  </data>
+  <data name="missingSigUser.body" xml:space="preserve">
+    <value>Nu ați semnat documentul &lt;strong&gt;{0}&lt;/strong&gt; care a avut loc la data de &lt;strong&gt;{1}&lt;/strong&gt;.</value>
+  </data>
+  <data name="missingSigUser.noAccountInstructions" xml:space="preserve">
+    <value>Deoarece încă nu aveți un cont, puteți semna documentul direct folosind linkul securizat de mai jos:</value>
+  </data>
+  <data name="missingSigUser.personalLink" xml:space="preserve">
+    <value>Acesta este un link personal și securizat, valabil numai pentru acest document.</value>
+  </data>
+  <data name="missingSigUser.loginInstructions" xml:space="preserve">
+    <value>Vă rugăm să vă autentificați în cont și să semnați acest document cât mai curând posibil.</value>
+  </data>
+  <data name="missingSigUser.dateRecently" xml:space="preserve">
+    <value>recent</value>
+  </data>
+  <data name="missingSigManager.headerTag" xml:space="preserve">
+    <value>Acțiune necesară: Semnături lipsă</value>
+  </data>
+  <data name="missingSigManager.title" xml:space="preserve">
+    <value>Prezentare generală a semnăturilor lipsă</value>
+  </data>
+  <data name="missingSigManager.body" xml:space="preserve">
+    <value>Aveți &lt;strong&gt;{0}&lt;/strong&gt; utilizator(i) care nu au semnat documentul &lt;strong&gt;{1}&lt;/strong&gt;.</value>
+  </data>
+  <data name="missingSigManager.callToAction" xml:space="preserve">
+    <value>Vă rugăm să rezolvați această problemă și să discutați cu aceștia pentru a vă asigura că toate documentele necesare sunt semnate.</value>
+  </data>
+  <data name="securityAlert.subjectOne" xml:space="preserve">
+    <value>Alertă de securitate SyncApp26 — 1 anomalie de semnătură necesită verificare</value>
+  </data>
+  <data name="securityAlert.subjectMany" xml:space="preserve">
+    <value>Alertă de securitate SyncApp26 — {0} anomalii de semnătură necesită verificare</value>
+  </data>
+  <data name="securityAlert.title" xml:space="preserve">
+    <value>Alertă de verificare a semnăturilor</value>
+  </data>
+  <data name="securityAlert.headline" xml:space="preserve">
+    <value>A fost detectată o problemă de integritate a semnăturii</value>
+  </data>
+  <data name="securityAlert.subhead" xml:space="preserve">
+    <value>Scanare automată de verificare</value>
+  </data>
+  <data name="securityAlert.intro" xml:space="preserve">
+    <value>Scanarea programată de verificare a integrității semnăturilor tocmai s-a încheiat. Majoritatea înregistrărilor sunt corecte, însă câteva nu mai corespund înregistrării criptografice originale:</value>
+  </data>
+  <data name="securityAlert.statChecked" xml:space="preserve">
+    <value>Verificate</value>
+  </data>
+  <data name="securityAlert.statFlagged" xml:space="preserve">
+    <value>Semnalate</value>
+  </data>
+  <data name="securityAlert.colSignatureId" xml:space="preserve">
+    <value>ID semnătură</value>
+  </data>
+  <data name="securityAlert.colSignerUserId" xml:space="preserve">
+    <value>ID utilizator semnatar</value>
+  </data>
+  <data name="securityAlert.colStatus" xml:space="preserve">
+    <value>Stare</value>
+  </data>
+  <data name="securityAlert.showingFirst" xml:space="preserve">
+    <value>Se afișează primele {0} din {1} anomalii. Consultați jurnalele serverului pentru lista completă.</value>
+  </data>
+  <data name="securityAlert.footerNote" xml:space="preserve">
+    <value>Aceste semnături nu mai corespund înregistrării criptografice originale — considerați-le neverificate până când cineva confirmă ce s-a întâmplat.</value>
+  </data>
+  <data name="dataChangeApproved.subject" xml:space="preserve">
+    <value>Cerere de modificare a datelor aprobată</value>
+  </data>
+  <data name="dataChangeApproved.body" xml:space="preserve">
+    <value>&lt;p&gt;Bună ziua {0},&lt;/p&gt;&lt;p&gt;Cererea dumneavoastră de modificare a datelor, transmisă la data de {1}, a fost aprobată și aplicată profilului dumneavoastră de către administratori.&lt;/p&gt;</value>
+  </data>
+</root>

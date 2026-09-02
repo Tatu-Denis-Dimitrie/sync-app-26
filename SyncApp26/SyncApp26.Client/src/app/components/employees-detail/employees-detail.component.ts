@@ -15,11 +15,12 @@ import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/r
 import { DocumentPageState, DocumentListPageResponse, emptyDocumentPageState } from '../../shared/models/document-page.model';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 @Component({
   selector: 'app-employees-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, PaginationComponent, TranslatePipe, OrgNamePipe],
   templateUrl: './employees-detail.component.html',
   styleUrls: ['./employees-detail.component.css']
 })

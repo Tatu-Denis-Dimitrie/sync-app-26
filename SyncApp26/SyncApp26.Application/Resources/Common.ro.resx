@@ -63,318 +63,318 @@
     <value>SyncApp26</value>
   </data>
   <data name="buttons.save" xml:space="preserve">
-    <value>Save</value>
+    <value>Salvează</value>
   </data>
   <data name="buttons.cancel" xml:space="preserve">
-    <value>Cancel</value>
+    <value>Anulează</value>
   </data>
   <data name="buttons.yes" xml:space="preserve">
-    <value>Yes</value>
+    <value>Da</value>
   </data>
   <data name="buttons.add" xml:space="preserve">
-    <value>Add</value>
+    <value>Adaugă</value>
   </data>
   <data name="buttons.saving" xml:space="preserve">
-    <value>Saving...</value>
+    <value>Se salvează...</value>
   </data>
   <data name="labels.status" xml:space="preserve">
-    <value>Status</value>
+    <value>Stare</value>
   </data>
   <data name="status.active" xml:space="preserve">
-    <value>Active</value>
+    <value>Activ</value>
   </data>
   <data name="status.inactive" xml:space="preserve">
-    <value>Inactive</value>
+    <value>Inactiv</value>
   </data>
   <data name="labels.notAvailable" xml:space="preserve">
     <value>N/A</value>
   </data>
   <data name="messages.submitting" xml:space="preserve">
-    <value>Submitting...</value>
+    <value>Se trimite...</value>
   </data>
   <data name="messages.failedToSubmitRequest" xml:space="preserve">
-    <value>Failed to submit request.</value>
+    <value>Trimiterea cererii a eșuat.</value>
   </data>
   <data name="labels.none" xml:space="preserve">
-    <value>None</value>
+    <value>Niciunul</value>
   </data>
   <data name="buttons.delete" xml:space="preserve">
-    <value>Delete</value>
+    <value>Șterge</value>
   </data>
   <data name="buttons.edit" xml:space="preserve">
-    <value>Edit</value>
+    <value>Editează</value>
   </data>
   <data name="buttons.close" xml:space="preserve">
-    <value>Close</value>
+    <value>Închide</value>
   </data>
   <data name="buttons.confirm" xml:space="preserve">
-    <value>Confirm</value>
+    <value>Confirmă</value>
   </data>
   <data name="buttons.restore" xml:space="preserve">
-    <value>Restore</value>
+    <value>Restabilește</value>
   </data>
   <data name="pagination.next" xml:space="preserve">
-    <value>Next</value>
+    <value>Următorul</value>
   </data>
   <data name="pagination.previous" xml:space="preserve">
-    <value>Previous</value>
+    <value>Anteriorul</value>
   </data>
   <data name="status.loading" xml:space="preserve">
-    <value>Loading...</value>
+    <value>Se încarcă...</value>
   </data>
   <data name="buttons.print" xml:space="preserve">
-    <value>Print</value>
+    <value>Printează</value>
   </data>
   <data name="buttons.back" xml:space="preserve">
-    <value>Back</value>
+    <value>Înapoi</value>
   </data>
   <data name="buttons.hide" xml:space="preserve">
-    <value>Hide</value>
+    <value>Ascunde</value>
   </data>
   <data name="buttons.skip" xml:space="preserve">
-    <value>Skip</value>
+    <value>Omite</value>
   </data>
   <data name="buttons.done" xml:space="preserve">
-    <value>Done</value>
+    <value>Gata</value>
   </data>
   <data name="labels.department" xml:space="preserve">
-    <value>Department</value>
+    <value>Departament</value>
   </data>
   <data name="status.loadingUsers" xml:space="preserve">
-    <value>Loading users...</value>
+    <value>Se încarcă utilizatorii...</value>
   </data>
   <data name="status.loadingDepartments" xml:space="preserve">
-    <value>Loading departments...</value>
+    <value>Se încarcă departamentele...</value>
   </data>
   <data name="buttons.ok" xml:space="preserve">
     <value>OK</value>
   </data>
   <data name="buttons.selectAll" xml:space="preserve">
-    <value>Select All</value>
+    <value>Selectează tot</value>
   </data>
   <data name="buttons.deselectAll" xml:space="preserve">
-    <value>Deselect All</value>
+    <value>Deselectează tot</value>
   </data>
   <data name="labels.yes" xml:space="preserve">
-    <value>Yes</value>
+    <value>Da</value>
   </data>
   <data name="labels.no" xml:space="preserve">
-    <value>No</value>
+    <value>Nu</value>
   </data>
   <data name="buttons.logout" xml:space="preserve">
-    <value>Logout</value>
+    <value>Deconectare</value>
   </data>
   <data name="buttons.signIn" xml:space="preserve">
-    <value>Sign In</value>
+    <value>Autentificare</value>
   </data>
   <data name="nav.dashboard" xml:space="preserve">
-    <value>Dashboard</value>
+    <value>Panou de control</value>
   </data>
   <data name="nav.departments" xml:space="preserve">
-    <value>Departments</value>
+    <value>Departamente</value>
   </data>
   <data name="nav.workSites" xml:space="preserve">
-    <value>Work Sites</value>
+    <value>Puncte de lucru</value>
   </data>
   <data name="nav.users" xml:space="preserve">
-    <value>Users</value>
+    <value>Utilizatori</value>
   </data>
   <data name="nav.employees" xml:space="preserve">
-    <value>Employees</value>
+    <value>Angajați</value>
   </data>
   <data name="nav.documents" xml:space="preserve">
-    <value>Documents</value>
+    <value>Documente</value>
   </data>
   <data name="nav.signature" xml:space="preserve">
-    <value>Signature</value>
+    <value>Semnătură</value>
   </data>
   <data name="nav.requests" xml:space="preserve">
-    <value>Requests</value>
+    <value>Cereri</value>
   </data>
   <data name="nav.dataRequests" xml:space="preserve">
-    <value>Data Requests</value>
+    <value>Cereri de date</value>
   </data>
   <data name="nav.userHistory" xml:space="preserve">
-    <value>User History</value>
+    <value>Istoric utilizatori</value>
   </data>
   <data name="nav.managerConsole" xml:space="preserve">
-    <value>Manager Console</value>
+    <value>Consolă manager</value>
   </data>
   <data name="nav.home" xml:space="preserve">
-    <value>Home</value>
+    <value>Acasă</value>
   </data>
   <data name="nav.myProfile" xml:space="preserve">
-    <value>My Profile</value>
+    <value>Profilul meu</value>
   </data>
   <data name="header.accessVerified" xml:space="preserve">
-    <value>Access Verified</value>
+    <value>Acces verificat</value>
   </data>
   <data name="header.exit" xml:space="preserve">
-    <value>Exit</value>
+    <value>Ieșire</value>
   </data>
   <data name="header.viewingAs" xml:space="preserve">
-    <value>Viewing as</value>
+    <value>Vizualizare ca</value>
   </data>
   <data name="header.unimpersonate" xml:space="preserve">
-    <value>Unimpersonate</value>
+    <value>Oprește impersonarea</value>
   </data>
   <data name="header.unimpersonateName" xml:space="preserve">
-    <value>Unimpersonate {0}</value>
+    <value>Oprește impersonarea {0}</value>
   </data>
   <data name="header.exitImpersonationOf" xml:space="preserve">
-    <value>Exit impersonation of {0}</value>
+    <value>Ieși din impersonarea {0}</value>
   </data>
   <data name="header.stopViewingAs" xml:space="preserve">
-    <value>Stop viewing as</value>
+    <value>Oprește vizualizarea ca</value>
   </data>
   <data name="header.signatureIntegrityAlert" xml:space="preserve">
-    <value>Signature integrity alert</value>
+    <value>Alertă de integritate a semnăturii</value>
   </data>
   <data name="header.anomalyBreakdown" xml:space="preserve">
-    <value>{0} of {1} checked signatures were flagged. Full breakdown sent to your inbox.</value>
+    <value>{0} din {1} semnături verificate au fost semnalate. Detalierea completă a fost trimisă în căsuța dumneavoastră de e-mail.</value>
   </data>
   <data name="header.gotIt" xml:space="preserve">
-    <value>Got it</value>
+    <value>Am înțeles</value>
   </data>
   <data name="header.profileSettings" xml:space="preserve">
-    <value>Profile Settings</value>
+    <value>Setările profilului</value>
   </data>
   <data name="footer.version" xml:space="preserve">
-    <value>Version:</value>
+    <value>Versiune:</value>
   </data>
   <data name="accessRestricted.title" xml:space="preserve">
-    <value>Access Restricted</value>
+    <value>Acces restricționat</value>
   </data>
   <data name="accessRestricted.greeting" xml:space="preserve">
-    <value>Hello,</value>
+    <value>Bună ziua,</value>
   </data>
   <data name="accessRestricted.message" xml:space="preserve">
-    <value>The full application features are currently only available for &lt;strong&gt;Admin&lt;/strong&gt; users.</value>
+    <value>Toate funcționalitățile aplicației sunt disponibile în prezent doar pentru utilizatorii &lt;strong&gt;Administrator&lt;/strong&gt;.</value>
   </data>
   <data name="accessRestricted.devInProgressTitle" xml:space="preserve">
-    <value>Development in Progress</value>
+    <value>Dezvoltare în curs</value>
   </data>
   <data name="accessRestricted.devInProgressDescription" xml:space="preserve">
-    <value>We're currently developing features for &lt;strong&gt;Basic Users&lt;/strong&gt; and &lt;strong&gt;Line Managers&lt;/strong&gt;. These will be available soon!</value>
+    <value>În prezent dezvoltăm funcționalități pentru &lt;strong&gt;Utilizatorii standard&lt;/strong&gt; și &lt;strong&gt;Managerii de linie&lt;/strong&gt;. Acestea vor fi disponibile în curând!</value>
   </data>
   <data name="pagination.showing" xml:space="preserve">
-    <value>Showing</value>
+    <value>Se afișează</value>
   </data>
   <data name="pagination.to" xml:space="preserve">
-    <value>to</value>
+    <value>–</value>
   </data>
   <data name="pagination.of" xml:space="preserve">
-    <value>of</value>
+    <value>din</value>
   </data>
   <data name="pagination.results" xml:space="preserve">
-    <value>results</value>
+    <value>rezultate</value>
   </data>
   <data name="pagination.perPage" xml:space="preserve">
-    <value>Per page:</value>
+    <value>Pe pagină:</value>
   </data>
   <data name="pagination.custom" xml:space="preserve">
-    <value>Custom…</value>
+    <value>Personalizat…</value>
   </data>
   <data name="pagination.label" xml:space="preserve">
-    <value>Pagination</value>
+    <value>Paginare</value>
   </data>
   <data name="loadingScreen.initialization" xml:space="preserve">
-    <value>Initialization...</value>
+    <value>Inițializare...</value>
   </data>
   <data name="loadingScreen.resourcesLoading" xml:space="preserve">
-    <value>Resources loading...</value>
+    <value>Se încarcă resursele...</value>
   </data>
   <data name="loadingScreen.connectingToServer" xml:space="preserve">
-    <value>Connecting to server...</value>
+    <value>Se conectează la server...</value>
   </data>
   <data name="loadingScreen.synchronizingData" xml:space="preserve">
-    <value>Synchronizing data...</value>
+    <value>Se sincronizează datele...</value>
   </data>
   <data name="loadingScreen.preparingInterface" xml:space="preserve">
-    <value>Preparing interface...</value>
+    <value>Se pregătește interfața...</value>
   </data>
   <data name="loadingScreen.done" xml:space="preserve">
-    <value>Done!</value>
+    <value>Gata!</value>
   </data>
   <data name="languageSwitcher.ariaLabel" xml:space="preserve">
-    <value>Language: {0}</value>
+    <value>Limbă: {0}</value>
   </data>
   <data name="errors.unexpectedTitle" xml:space="preserve">
-    <value>An unexpected error occurred.</value>
+    <value>A apărut o eroare neașteptată.</value>
   </data>
   <data name="errors.unexpectedDetail" xml:space="preserve">
-    <value>Contact an administrator with the trace ID if the problem persists.</value>
+    <value>Contactați un administrator și indicați ID-ul de urmărire dacă problema persistă.</value>
   </data>
   <data name="errors.failedToReadVersion" xml:space="preserve">
-    <value>Failed to read version</value>
+    <value>Citirea versiunii a eșuat</value>
   </data>
   <data name="roles.admin" xml:space="preserve">
-    <value>Admin</value>
+    <value>Administrator</value>
   </data>
   <data name="roles.lineManager" xml:space="preserve">
-    <value>Line Manager</value>
+    <value>Manager de linie</value>
   </data>
   <data name="roles.basicUser" xml:space="preserve">
-    <value>Basic User</value>
+    <value>Utilizator standard</value>
   </data>
   <data name="roles.ssmOfficer" xml:space="preserve">
-    <value>SSM Officer</value>
+    <value>Responsabil SSM</value>
   </data>
   <data name="roles.suOfficer" xml:space="preserve">
-    <value>SU Officer</value>
+    <value>Responsabil SU</value>
   </data>
   <data name="department.engineering" xml:space="preserve">
-    <value>Engineering</value>
+    <value>Inginerie</value>
   </data>
   <data name="department.humanResources" xml:space="preserve">
-    <value>Human Resources</value>
+    <value>Resurse Umane</value>
   </data>
   <data name="department.sales" xml:space="preserve">
-    <value>Sales</value>
+    <value>Vânzări</value>
   </data>
   <data name="department.finance" xml:space="preserve">
-    <value>Finance</value>
+    <value>Finanțe</value>
   </data>
   <data name="function.teamLead" xml:space="preserve">
-    <value>Team Lead</value>
+    <value>Coordonator echipă</value>
   </data>
   <data name="function.softwareEngineer" xml:space="preserve">
-    <value>Software Engineer</value>
+    <value>Inginer software</value>
   </data>
   <data name="function.qaEngineer" xml:space="preserve">
-    <value>QA Engineer</value>
+    <value>Inginer QA</value>
   </data>
   <data name="function.hrDirector" xml:space="preserve">
-    <value>HR Director</value>
+    <value>Director Resurse Umane</value>
   </data>
   <data name="function.hrSpecialist" xml:space="preserve">
-    <value>HR Specialist</value>
+    <value>Specialist Resurse Umane</value>
   </data>
   <data name="function.recruiter" xml:space="preserve">
-    <value>Recruiter</value>
+    <value>Recrutor</value>
   </data>
   <data name="function.salesDirector" xml:space="preserve">
-    <value>Sales Director</value>
+    <value>Director Vânzări</value>
   </data>
   <data name="function.accountExecutive" xml:space="preserve">
-    <value>Account Executive</value>
+    <value>Responsabil clienți</value>
   </data>
   <data name="function.salesRepresentative" xml:space="preserve">
-    <value>Sales Representative</value>
+    <value>Reprezentant Vânzări</value>
   </data>
   <data name="function.marketingDirector" xml:space="preserve">
-    <value>Marketing Director</value>
+    <value>Director Marketing</value>
   </data>
   <data name="function.contentSpecialist" xml:space="preserve">
-    <value>Content Specialist</value>
+    <value>Specialist conținut</value>
   </data>
   <data name="function.digitalMarketingSpecialist" xml:space="preserve">
-    <value>Digital Marketing Specialist</value>
+    <value>Specialist marketing digital</value>
   </data>
   <data name="function.financialAnalyst" xml:space="preserve">
-    <value>Financial Analyst</value>
+    <value>Analist financiar</value>
   </data>
   <data name="function.accountant" xml:space="preserve">
-    <value>Accountant</value>
+    <value>Contabil</value>
   </data>
 </root>

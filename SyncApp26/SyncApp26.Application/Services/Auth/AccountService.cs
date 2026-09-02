@@ -201,7 +201,8 @@ namespace SyncApp26.Application.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Roles = roleNames
+                Roles = roleNames,
+                PreferredLanguage = user.PreferredLanguage
             };
         }
 
@@ -245,7 +246,8 @@ namespace SyncApp26.Application.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Roles = roleNames
+                Roles = roleNames,
+                PreferredLanguage = user.PreferredLanguage
             };
         }
 
@@ -282,7 +284,8 @@ namespace SyncApp26.Application.Services
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Roles = roleNames
+                Roles = roleNames,
+                PreferredLanguage = user.PreferredLanguage
             };
         }
 

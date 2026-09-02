@@ -1,3 +1,4 @@
+using SyncApp26.Domain.Enums;
 using SyncApp26.Shared.DTOs.Request.User;
 
 namespace SyncApp26.Application.IServices
@@ -42,6 +43,7 @@ namespace SyncApp26.Application.IServices
         public string? FirstName { get; init; }
         public string? LastName { get; init; }
         public IReadOnlyList<string> Roles { get; init; } = Array.Empty<string>();
+        public Language? PreferredLanguage { get; init; }
     }
 
     public class RegisteredAccountDTO

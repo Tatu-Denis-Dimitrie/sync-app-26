@@ -1,0 +1,626 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Microsoft ResX Schema, version 2.0 - see https://learn.microsoft.com/dotnet/core/extensions/resources -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="importHistory.title" xml:space="preserve">
+    <value>Istoricul importurilor</value>
+  </data>
+  <data name="importHistory.fileName" xml:space="preserve">
+    <value>Numele fișierului</value>
+  </data>
+  <data name="importHistory.importDate" xml:space="preserve">
+    <value>Data importului</value>
+  </data>
+  <data name="changeHistory.fieldName" xml:space="preserve">
+    <value>Numele câmpului</value>
+  </data>
+  <data name="changeHistory.oldValue" xml:space="preserve">
+    <value>Valoarea veche</value>
+  </data>
+  <data name="changeHistory.newValue" xml:space="preserve">
+    <value>Valoarea nouă</value>
+  </data>
+  <data name="changeHistory.unknownField" xml:space="preserve">
+    <value>Câmp necunoscut</value>
+  </data>
+  <data name="changeHistory.loadError" xml:space="preserve">
+    <value>Încărcarea istoricului conflictelor a eșuat.</value>
+  </data>
+  <data name="labels.import" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="importHistory.fileLabel" xml:space="preserve">
+    <value>Fișier:</value>
+  </data>
+  <data name="importHistory.idLabel" xml:space="preserve">
+    <value>ID:</value>
+  </data>
+  <data name="labels.database" xml:space="preserve">
+    <value>Baza de date</value>
+  </data>
+  <data name="labels.csv" xml:space="preserve">
+    <value>CSV</value>
+  </data>
+  <data name="labels.manual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="labels.manualBadge" xml:space="preserve">
+    <value>manual</value>
+  </data>
+  <data name="labels.dateLabel" xml:space="preserve">
+    <value>Data:</value>
+  </data>
+  <data name="labels.previous" xml:space="preserve">
+    <value>Anterior</value>
+  </data>
+  <data name="labels.new" xml:space="preserve">
+    <value>Nou</value>
+  </data>
+  <data name="csvValidation.extension" xml:space="preserve">
+    <value>Fișierul trebuie să aibă extensia .csv</value>
+  </data>
+  <data name="csvValidation.encoding" xml:space="preserve">
+    <value>Codificare de fișier invalidă. Fișierul trebuie să fie codificat UTF-8.</value>
+  </data>
+  <data name="csvValidation.invalidChars" xml:space="preserve">
+    <value>Fișierul conține caractere speciale invalide: {0}</value>
+  </data>
+  <data name="csvValidation.empty" xml:space="preserve">
+    <value>Fișierul CSV este gol</value>
+  </data>
+  <data name="csvValidation.headersOnly" xml:space="preserve">
+    <value>Fișierul CSV conține doar anteturi, fără rânduri de date</value>
+  </data>
+  <data name="csvValidation.tooManyRows" xml:space="preserve">
+    <value>Fișierul CSV conține {0} rânduri, depășind maximul de {1}. Împărțiți fișierul în loturi mai mici.</value>
+  </data>
+  <data name="csvValidation.moreErrors" xml:space="preserve">
+    <value>...și încă {0} erori</value>
+  </data>
+  <data name="csvValidation.readError" xml:space="preserve">
+    <value>Eroare la citirea fișierului CSV: {0}</value>
+  </data>
+  <data name="csvValidation.missingColumn" xml:space="preserve">
+    <value>Lipsește o coloană obligatorie: „{0}”. Fișierul CSV trebuie să conțină coloanele: {1}</value>
+  </data>
+  <data name="csvValidation.blankColumnNames" xml:space="preserve">
+    <value>Nume de coloană necompletate la poziția (pozițiile): {0}. Fiecare coloană trebuie să aibă un nume de antet (o virgulă la finalul rândului de antet este o cauză frecventă).</value>
+  </data>
+  <data name="csvValidation.duplicateColumns" xml:space="preserve">
+    <value>Au fost găsite coloane duplicate: {0}</value>
+  </data>
+  <data name="csvValidation.row.columnCount" xml:space="preserve">
+    <value>Rândul {0}: Se așteptau {1} coloane, au fost găsite {2}</value>
+  </data>
+  <data name="csvValidation.row.required" xml:space="preserve">
+    <value>Rândul {0}: {1} este obligatoriu și nu poate fi gol</value>
+  </data>
+  <data name="csvValidation.row.tooLong" xml:space="preserve">
+    <value>Rândul {0}: {1} este prea lung (maximum {2} caractere)</value>
+  </data>
+  <data name="csvValidation.row.emailFormat" xml:space="preserve">
+    <value>Rândul {0}: Adresa de e-mail „{1}” nu are un format valid</value>
+  </data>
+  <data name="csvValidation.row.departmentMissing" xml:space="preserve">
+    <value>Rândul {0}: Departamentul „{1}” nu există în baza de date. Vă rugăm să creați mai întâi departamentul.</value>
+  </data>
+  <data name="csvValidation.row.assignedFormat" xml:space="preserve">
+    <value>Rândul {0}: AssignedToPersonalId „{1}” nu are un format valid</value>
+  </data>
+  <data name="csvValidation.row.functionTooLong" xml:space="preserve">
+    <value>Rândul {0}: Funcția este prea lungă (maximum {1} caractere)</value>
+  </data>
+  <data name="csvValidation.row.workSiteTooLong" xml:space="preserve">
+    <value>Rândul {0}: Punctul de lucru este prea lung (maximum {1} caractere)</value>
+  </data>
+  <data name="csvSync.noFileUploaded" xml:space="preserve">
+    <value>Niciun fișier încărcat</value>
+  </data>
+  <data name="csvSync.fileMustBeCsv" xml:space="preserve">
+    <value>Fișierul trebuie să fie un fișier CSV</value>
+  </data>
+  <data name="csvSync.validationFailed" xml:space="preserve">
+    <value>Validarea fișierului CSV a eșuat</value>
+  </data>
+  <data name="csvSync.someInvalidRows" xml:space="preserve">
+    <value>Fișierul CSV are unele rânduri invalide</value>
+  </data>
+  <data name="csvSync.errorProcessing" xml:space="preserve">
+    <value>Eroare la procesarea fișierului CSV</value>
+  </data>
+  <data name="csvSync.noSyncItems" xml:space="preserve">
+    <value>Nu au fost furnizate elemente de sincronizare</value>
+  </data>
+  <data name="csvSync.errorSyncingUsers" xml:space="preserve">
+    <value>Eroare la sincronizarea utilizatorilor</value>
+  </data>
+  <data name="csvSync.errorSyncingDepartments" xml:space="preserve">
+    <value>Eroare la sincronizarea departamentelor</value>
+  </data>
+  <data name="csvSync.emptyOrInvalid" xml:space="preserve">
+    <value>Fișierul CSV este gol sau invalid</value>
+  </data>
+  <data name="csvSync.nameColumnRequired" xml:space="preserve">
+    <value>Fișierul CSV trebuie să conțină o coloană „name”.</value>
+  </data>
+  <data name="csvSync.tooManyDepartmentRows" xml:space="preserve">
+    <value>Fișierul CSV conține mai mult de {0} rânduri. Împărțiți fișierul în loturi mai mici.</value>
+  </data>
+  <data name="csvSync.departmentRowOneColumn" xml:space="preserve">
+    <value>Rândul {0}: Fișierul CSV trebuie să conțină exact o coloană (name). Au fost găsite {1} coloane.</value>
+  </data>
+  <data name="csvSync.invalidImportHistoryData" xml:space="preserve">
+    <value>Date invalide privind istoricul importurilor.</value>
+  </data>
+  <data name="csvSync.invalidUserChangeHistoryData" xml:space="preserve">
+    <value>Date invalide privind istoricul modificărilor utilizatorilor.</value>
+  </data>
+  <data name="csvSync.failedProcessUser" xml:space="preserve">
+    <value>Procesarea utilizatorului {0} a eșuat: {1}</value>
+  </data>
+  <data name="csvSync.failedBatchOperations" xml:space="preserve">
+    <value>Executarea operațiunilor în lot a eșuat: {0}</value>
+  </data>
+  <data name="csvSync.syncSuccess" xml:space="preserve">
+    <value>{0} înregistrări au fost sincronizate cu succes în {1} ms</value>
+  </data>
+  <data name="csvSync.syncWithErrors" xml:space="preserve">
+    <value>Sincronizat cu erori: {0} eșuate</value>
+  </data>
+  <data name="csvSync.failedProcessDepartment" xml:space="preserve">
+    <value>Procesarea departamentului {0} a eșuat: {1}</value>
+  </data>
+  <data name="csvSync.deptSyncSuccess" xml:space="preserve">
+    <value>{0} departamente au fost sincronizate cu succes</value>
+  </data>
+  <data name="csvSync.syncFailed" xml:space="preserve">
+    <value>Sincronizarea a eșuat</value>
+  </data>
+  <data name="csvSync.userNotFound" xml:space="preserve">
+    <value>Utilizatorul {0} nu a fost găsit</value>
+  </data>
+  <data name="csvSync.departmentInactiveCreate" xml:space="preserve">
+    <value>Utilizatorul {0}: Departamentul „{1}” nu există sau este inactiv. Vă rugăm să vă asigurați că departamentul există și este activ.</value>
+  </data>
+  <data name="csvSync.basicUserRoleMissing" xml:space="preserve">
+    <value>Utilizatorul {0}: Rolul BasicUser nu este configurat. Contul nu poate fi creat fără acesta.</value>
+  </data>
+  <data name="csvSync.departmentInactiveUpdateField" xml:space="preserve">
+    <value>Utilizatorul {0}: Nu se poate actualiza departamentul la „{1}” - departamentul nu există sau este inactiv.</value>
+  </data>
+  <data name="csvSync.departmentInactiveUpdate" xml:space="preserve">
+    <value>Utilizatorul {0}: Departamentul „{1}” nu există sau este inactiv. Utilizatorul nu poate fi actualizat.</value>
+  </data>
+  <data name="dashboard.analysisCompleted" xml:space="preserve">
+    <value>Analiză finalizată în {0}</value>
+  </data>
+  <data name="dashboard.analysisCompletedDetailed" xml:space="preserve">
+    <value>Analiză finalizată în {0} (Server: {1}, Rețea: {2})</value>
+  </data>
+  <data name="dashboard.syncCompleted" xml:space="preserve">
+    <value>Sincronizare finalizată în {0}</value>
+  </data>
+  <data name="dashboard.syncCompletedDetailed" xml:space="preserve">
+    <value>Sincronizare finalizată în {0} (Server: {1}, Rețea: {2})</value>
+  </data>
+  <data name="dashboard.invalidRowsSkipped" xml:space="preserve">
+    <value> ({0} rânduri invalide ignorate)</value>
+  </data>
+  <data name="dashboard.validationWarningsTitle" xml:space="preserve">
+    <value>Avertismente la validarea fișierului CSV</value>
+  </data>
+  <data name="dashboard.hasInvalidRowsProceedTitle" xml:space="preserve">
+    <value>Fișierul CSV are rânduri invalide - Continuați cu rândurile valide?</value>
+  </data>
+  <data name="dashboard.validationFailedTitle" xml:space="preserve">
+    <value>Validarea fișierului CSV a eșuat</value>
+  </data>
+  <data name="dashboard.uploadErrorTitle" xml:space="preserve">
+    <value>Eroare la încărcare</value>
+  </data>
+  <data name="dashboard.uploadFailedTitle" xml:space="preserve">
+    <value>Încărcarea a eșuat</value>
+  </data>
+  <data name="dashboard.unknownError" xml:space="preserve">
+    <value>A apărut o eroare necunoscută</value>
+  </data>
+  <data name="dashboard.rowFieldMessage" xml:space="preserve">
+    <value>Rândul {0}: {1} - {2}</value>
+  </data>
+  <data name="dashboard.moreErrors" xml:space="preserve">
+    <value>...și încă {0} erori</value>
+  </data>
+  <data name="dashboard.csvComparison" xml:space="preserve">
+    <value>Comparație CSV</value>
+  </data>
+  <data name="dashboard.synchronizing" xml:space="preserve">
+    <value>Se sincronizează...</value>
+  </data>
+  <data name="dashboard.synchronizeSelectedUsers" xml:space="preserve">
+    <value>Sincronizează {0} utilizatori selectați</value>
+  </data>
+  <data name="dashboard.synchronizeSelectedDepartments" xml:space="preserve">
+    <value>Sincronizează {0} departamente selectate</value>
+  </data>
+  <data name="dashboard.noNewDepartments" xml:space="preserve">
+    <value>Niciun departament nou de importat</value>
+  </data>
+  <data name="dashboard.totalChanges" xml:space="preserve">
+    <value>Total modificări</value>
+  </data>
+  <data name="dashboard.selected" xml:space="preserve">
+    <value>Selectate</value>
+  </data>
+  <data name="dashboard.departmentCsvComparison" xml:space="preserve">
+    <value>Comparație CSV departamente</value>
+  </data>
+  <data name="dashboard.searchDepartments" xml:space="preserve">
+    <value>Căutați departamente...</value>
+  </data>
+  <data name="dashboard.unknownDepartment" xml:space="preserve">
+    <value>Departament necunoscut</value>
+  </data>
+  <data name="dashboard.departmentDatabase" xml:space="preserve">
+    <value>Departament (bază de date)</value>
+  </data>
+  <data name="dashboard.departmentCsv" xml:space="preserve">
+    <value>Departament (CSV)</value>
+  </data>
+  <data name="dashboard.added" xml:space="preserve">
+    <value>+ adăugat</value>
+  </data>
+  <data name="dashboard.totalUsers" xml:space="preserve">
+    <value>Total utilizatori</value>
+  </data>
+  <data name="dashboard.lineManagers" xml:space="preserve">
+    <value>Manageri de linie</value>
+  </data>
+  <data name="dashboard.employees" xml:space="preserve">
+    <value>Angajați</value>
+  </data>
+  <data name="dashboard.departments" xml:space="preserve">
+    <value>Departamente</value>
+  </data>
+  <data name="dashboard.searchUsers" xml:space="preserve">
+    <value>Căutați utilizatori...</value>
+  </data>
+  <data name="dashboard.allDepartments" xml:space="preserve">
+    <value>Toate departamentele</value>
+  </data>
+  <data name="dashboard.selectFunction" xml:space="preserve">
+    <value>Selectați funcția</value>
+  </data>
+  <data name="dashboard.allRoles" xml:space="preserve">
+    <value>Toate rolurile</value>
+  </data>
+  <data name="dashboard.importCsv" xml:space="preserve">
+    <value>Importă CSV</value>
+  </data>
+  <data name="dashboard.importDepartments" xml:space="preserve">
+    <value>Importă departamente</value>
+  </data>
+  <data name="dashboard.user" xml:space="preserve">
+    <value>Utilizator</value>
+  </data>
+  <data name="dashboard.role" xml:space="preserve">
+    <value>Rol</value>
+  </data>
+  <data name="dashboard.function" xml:space="preserve">
+    <value>Funcție</value>
+  </data>
+  <data name="dashboard.lineManager" xml:space="preserve">
+    <value>Manager de linie</value>
+  </data>
+  <data name="dashboard.employee" xml:space="preserve">
+    <value>Angajat</value>
+  </data>
+  <data name="dashboard.hasSigned" xml:space="preserve">
+    <value>A semnat</value>
+  </data>
+  <data name="dashboard.sortByCreated" xml:space="preserve">
+    <value>Sortează după data creării</value>
+  </data>
+  <data name="dashboard.created" xml:space="preserve">
+    <value>Creat</value>
+  </data>
+  <data name="dashboard.sortByUpdated" xml:space="preserve">
+    <value>Sortează după data actualizării</value>
+  </data>
+  <data name="dashboard.updated" xml:space="preserve">
+    <value>Actualizat</value>
+  </data>
+  <data name="dashboard.unknown" xml:space="preserve">
+    <value>necunoscut</value>
+  </data>
+  <data name="dashboard.createdTitle" xml:space="preserve">
+    <value>Creat: {0}</value>
+  </data>
+  <data name="dashboard.updatedTitle" xml:space="preserve">
+    <value>Actualizat: {0}</value>
+  </data>
+  <data name="dashboard.notYetUpdated" xml:space="preserve">
+    <value>Neactualizat încă</value>
+  </data>
+  <data name="dashboard.usersNotFound" xml:space="preserve">
+    <value>Nu au fost găsiți utilizatori.</value>
+  </data>
+  <data name="dashboard.tryAdjustingFilters" xml:space="preserve">
+    <value>Încercați să ajustați filtrele sau termenul de căutare.</value>
+  </data>
+  <data name="dashboard.errorsLabel" xml:space="preserve">
+    <value>Erori:</value>
+  </data>
+  <data name="dashboard.warningsLabel" xml:space="preserve">
+    <value>Avertismente:</value>
+  </data>
+  <data name="dashboard.statisticsLabel" xml:space="preserve">
+    <value>Statistici:</value>
+  </data>
+  <data name="dashboard.totalRows" xml:space="preserve">
+    <value>Total rânduri</value>
+  </data>
+  <data name="dashboard.validRows" xml:space="preserve">
+    <value>Rânduri valide</value>
+  </data>
+  <data name="dashboard.invalidRows" xml:space="preserve">
+    <value>Rânduri invalide</value>
+  </data>
+  <data name="dashboard.proceedWithValidRows" xml:space="preserve">
+    <value>Continuă cu {0} rânduri valide</value>
+  </data>
+  <data name="dashboard.validationTime" xml:space="preserve">
+    <value>Validare: {0}</value>
+  </data>
+  <data name="dashboard.comparisonTime" xml:space="preserve">
+    <value>Comparație: {0}</value>
+  </data>
+  <data name="dashboard.totalServerTime" xml:space="preserve">
+    <value>Total server: {0}</value>
+  </data>
+  <data name="dashboard.status.new" xml:space="preserve">
+    <value>nou</value>
+  </data>
+  <data name="dashboard.status.unchanged" xml:space="preserve">
+    <value>nemodificat</value>
+  </data>
+  <data name="comparison.conflicts" xml:space="preserve">
+    <value>Conflicte</value>
+  </data>
+  <data name="comparison.selectAllUsersTitle" xml:space="preserve">
+    <value>Selectează toate modificările noi și modificate. Ștergerile nu sunt niciodată selectate în bloc - verificați fiecare în parte.</value>
+  </data>
+  <data name="comparison.allUsersSelected" xml:space="preserve">
+    <value>&#x2713; Toți utilizatorii selectați</value>
+  </data>
+  <data name="comparison.selectAllUsers" xml:space="preserve">
+    <value>Selectează toți utilizatorii</value>
+  </data>
+  <data name="comparison.toggleAllConflictsTitle" xml:space="preserve">
+    <value>Comută toate căsuțele de bifat pentru câmpurile în conflict</value>
+  </data>
+  <data name="comparison.allConflictsAccepted" xml:space="preserve">
+    <value>&#x2713; Toate conflictele acceptate</value>
+  </data>
+  <data name="comparison.acceptAllConflicts" xml:space="preserve">
+    <value>Acceptă toate conflictele</value>
+  </data>
+  <data name="comparison.filterNew" xml:space="preserve">
+    <value>Noi</value>
+  </data>
+  <data name="comparison.filterModified" xml:space="preserve">
+    <value>Modificate</value>
+  </data>
+  <data name="comparison.filterDeleted" xml:space="preserve">
+    <value>Șterse</value>
+  </data>
+  <data name="comparison.searchPlaceholder" xml:space="preserve">
+    <value>Căutați după nume, e-mail, departament...</value>
+  </data>
+  <data name="comparison.unknownUser" xml:space="preserve">
+    <value>Utilizator necunoscut</value>
+  </data>
+  <data name="comparison.idLabel" xml:space="preserve">
+    <value>ID: {0}</value>
+  </data>
+  <data name="comparison.lastUpdated" xml:space="preserve">
+    <value>Ultima actualizare</value>
+  </data>
+  <data name="comparison.fieldsSelected" xml:space="preserve">
+    <value>{0} / {1} câmpuri selectate</value>
+  </data>
+  <data name="comparison.removed" xml:space="preserve">
+    <value>- eliminat</value>
+  </data>
+  <data name="comparison.pendingRequestPrefix" xml:space="preserve">
+    <value>&#x26A0; cerere în așteptare: </value>
+  </data>
+  <data name="comparison.pendingRequestTitle" xml:space="preserve">
+    <value>O cerere de modificare a datelor în așteptare dorește ca acest câmp să aibă o altă valoare</value>
+  </data>
+  <data name="comparison.keepRequestPrefix" xml:space="preserve">
+    <value>Păstrează cererea: </value>
+  </data>
+  <data name="comparison.useCsvValuePrefix" xml:space="preserve">
+    <value>Folosește valoarea din CSV: </value>
+  </data>
+  <data name="comparison.selectToSync" xml:space="preserve">
+    <value>Selectați pentru a sincroniza acest câmp</value>
+  </data>
+  <data name="comparison.none" xml:space="preserve">
+    <value>Niciunul</value>
+  </data>
+  <data name="comparison.checkBoxesHint" xml:space="preserve">
+    <value>Bifați căsuțele din coloana din mijloc pentru a selecta câmpurile pe care doriți să le actualizați. Doar câmpurile selectate vor fi sincronizate.</value>
+  </data>
+  <data name="comparison.noComparisons" xml:space="preserve">
+    <value>Nicio comparație disponibilă</value>
+  </data>
+  <data name="comparison.uploadToCompare" xml:space="preserve">
+    <value>Încărcați un fișier CSV pentru a-l compara cu baza de date</value>
+  </data>
+  <data name="comparison.status.new" xml:space="preserve">
+    <value>nou</value>
+  </data>
+  <data name="comparison.status.modified" xml:space="preserve">
+    <value>modificat</value>
+  </data>
+  <data name="comparison.status.unchanged" xml:space="preserve">
+    <value>nemodificat</value>
+  </data>
+  <data name="comparison.status.deleted" xml:space="preserve">
+    <value>șters</value>
+  </data>
+  <data name="comparison.field.firstNameDb" xml:space="preserve">
+    <value>Prenume (bază de date)</value>
+  </data>
+  <data name="comparison.field.firstNameCsv" xml:space="preserve">
+    <value>Prenume (CSV)</value>
+  </data>
+  <data name="comparison.field.lastNameDb" xml:space="preserve">
+    <value>Nume (bază de date)</value>
+  </data>
+  <data name="comparison.field.lastNameCsv" xml:space="preserve">
+    <value>Nume (CSV)</value>
+  </data>
+  <data name="comparison.field.emailDb" xml:space="preserve">
+    <value>E-mail (bază de date)</value>
+  </data>
+  <data name="comparison.field.emailCsv" xml:space="preserve">
+    <value>E-mail (CSV)</value>
+  </data>
+  <data name="comparison.field.departmentDb" xml:space="preserve">
+    <value>Departament (bază de date)</value>
+  </data>
+  <data name="comparison.field.departmentCsv" xml:space="preserve">
+    <value>Departament (CSV)</value>
+  </data>
+  <data name="comparison.field.lineManagerDb" xml:space="preserve">
+    <value>Manager de linie (bază de date)</value>
+  </data>
+  <data name="comparison.field.lineManagerCsv" xml:space="preserve">
+    <value>Manager de linie (CSV)</value>
+  </data>
+  <data name="comparison.field.functionDb" xml:space="preserve">
+    <value>Funcție (bază de date)</value>
+  </data>
+  <data name="comparison.field.functionCsv" xml:space="preserve">
+    <value>Funcție (CSV)</value>
+  </data>
+  <data name="comparison.field.workSiteDb" xml:space="preserve">
+    <value>Punct de lucru (bază de date)</value>
+  </data>
+  <data name="comparison.field.workSiteCsv" xml:space="preserve">
+    <value>Punct de lucru (CSV)</value>
+  </data>
+  <data name="importHistory.searchPlaceholder" xml:space="preserve">
+    <value>Căutați după numele fișierului, utilizator sau zi...</value>
+  </data>
+  <data name="importHistory.sortPrefix" xml:space="preserve">
+    <value>Sortare: </value>
+  </data>
+  <data name="importHistory.oldest" xml:space="preserve">
+    <value>Cele mai vechi</value>
+  </data>
+  <data name="importHistory.newest" xml:space="preserve">
+    <value>Cele mai noi</value>
+  </data>
+  <data name="importHistory.loading" xml:space="preserve">
+    <value>Se încarcă istoricul modificărilor...</value>
+  </data>
+  <data name="importHistory.loadError" xml:space="preserve">
+    <value>Încărcarea istoricului modificărilor utilizatorilor a eșuat.</value>
+  </data>
+  <data name="importHistory.noneAvailable" xml:space="preserve">
+    <value>Niciun istoric al modificărilor disponibil.</value>
+  </data>
+  <data name="importHistory.sectionImportConflicts" xml:space="preserve">
+    <value>Conflicte de import</value>
+  </data>
+  <data name="importHistory.sectionManualChanges" xml:space="preserve">
+    <value>Modificări manuale</value>
+  </data>
+  <data name="importHistory.sectionDataChangeRequests" xml:space="preserve">
+    <value>Cereri de modificare a datelor</value>
+  </data>
+  <data name="importHistory.conflictsCount" xml:space="preserve">
+    <value>{0} conflicte</value>
+  </data>
+  <data name="importHistory.changesCount" xml:space="preserve">
+    <value>{0} modificări</value>
+  </data>
+  <data name="importHistory.noConflictsForImport" xml:space="preserve">
+    <value>Niciun conflict pentru acest import.</value>
+  </data>
+  <data name="importHistory.requested" xml:space="preserve">
+    <value>Solicitat</value>
+  </data>
+  <data name="importHistory.field.firstName" xml:space="preserve">
+    <value>Prenume</value>
+  </data>
+  <data name="importHistory.field.lastName" xml:space="preserve">
+    <value>Nume</value>
+  </data>
+  <data name="importHistory.field.department" xml:space="preserve">
+    <value>Departament</value>
+  </data>
+  <data name="importHistory.field.lineManager" xml:space="preserve">
+    <value>Manager de linie</value>
+  </data>
+</root>

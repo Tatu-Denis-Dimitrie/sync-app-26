@@ -58,17 +58,35 @@ namespace SyncApp26.Application.Services
             try
             {
                 var localizer = GetScopedLocalizer(scope);
-                var values = ReadAllStrings(localizer, ToCulture(language));
+                var english = ReadAllStringsOrEmpty(localizer, CultureInfo.InvariantCulture);
 
-                if (language != Language.En)
+                if (language == Language.En)
                 {
-                    foreach (var fallback in ReadAllStrings(localizer, CultureInfo.InvariantCulture))
-                    {
-                        values.TryAdd(fallback.Key, fallback.Value);
-                    }
+                    return english;
+                }
+
+                // A scope whose {Scope}.{code}.resx has not been authored yet - or one that is only
+                // partially translated - falls back to the English value key by key, so shipping a
+                // language one scope at a time never leaves the caller with raw keys.
+                var values = ReadAllStringsOrEmpty(localizer, ToCulture(language));
+                foreach (var fallback in english)
+                {
+                    values.TryAdd(fallback.Key, fallback.Value);
                 }
 
                 return values;
+            }
+            catch (MissingManifestResourceException)
+            {
+                return new Dictionary<string, string>();
+            }
+        }
+
+        private static Dictionary<string, string> ReadAllStringsOrEmpty(IStringLocalizer localizer, CultureInfo culture)
+        {
+            try
+            {
+                return ReadAllStrings(localizer, culture);
             }
             catch (MissingManifestResourceException)
             {

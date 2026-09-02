@@ -244,7 +244,7 @@
             <h3
               class="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors"
               >
-              {{ dept.name }}
+              {{ dept.name | orgName:'department' }}
             </h3>
             <!-- Active/Inactive Badge with Toggle Button -->
             <div class="mb-3 flex items-center justify-between">
@@ -503,7 +503,7 @@
                     <h3
                       class="text-xl font-bold text-foreground mb-3 opacity-75 line-through"
                       >
-                      {{ dept.name }}
+                      {{ dept.name | orgName:'department' }}
                     </h3>
                     <!-- Countdown Badge -->
                     <div class="mb-3 flex items-center justify-between">
@@ -651,7 +651,7 @@
             </div>
             <p class="text-muted-foreground text-sm mb-6">
               {{ 'departments.restoreConfirmPrefix' | translate:'Organization' }}
-              <strong>{{ deptToRestore?.name }}</strong
+              <strong>{{ deptToRestore?.name | orgName:'department' }}</strong
                 >{{ 'departments.restoreConfirmSuffix' | translate:'Organization' }}
               </p>
               <div class="flex justify-end gap-3">
@@ -706,7 +706,7 @@
                 </button>
               </div>
               <p class="text-muted-foreground text-sm mb-4">
-                {{ 'departments.deleteConfirmPrefix' | translate:'Organization' }} <strong>{{ selectedDept?.name }}</strong
+                {{ 'departments.deleteConfirmPrefix' | translate:'Organization' }} <strong>{{ selectedDept?.name | orgName:'department' }}</strong
                 >{{ 'departments.deleteConfirmSuffix' | translate:'Organization' }}
               </p>
               @if (
@@ -738,7 +738,7 @@
                         <option value="">{{ 'departments.selectTarget' | translate:'Organization' }}</option>
                         @for (dept of allDepartments; track dept) {
                           <option [value]="dept.id">
-                            {{ dept.name }}
+                            {{ dept.name | orgName:'department' }}
                           </option>
                         }
                       </select>

@@ -231,7 +231,7 @@
                         class="border-t border-border/40 hover:bg-muted/30 transition-colors"
                         >
                         <td class="py-3 px-4 font-medium text-foreground">
-                          {{ row.departmentName }}
+                          {{ row.departmentName | orgName:'department' }}
                         </td>
                         <td class="py-3 px-4 text-right">
                           <span
@@ -464,7 +464,7 @@
                                                   {{ row.managerName }}
                                                 </td>
                                                 <td class="py-3 px-4 text-muted-foreground">
-                                                  {{ row.departmentName }}
+                                                  {{ row.departmentName | orgName:'department' }}
                                                 </td>
                                                 <td class="py-3 px-4 text-right">
                                                   <span
@@ -569,7 +569,7 @@
                                               <option value="all">{{ 'filters.allDepartments' | translate:'Users' }}</option>
                                               @for (dept of departments$ | async; track dept) {
                                                 <option [value]="dept.name">
-                                                  {{ dept.name }}
+                                                  {{ dept.name | orgName:'department' }}
                                                 </option>
                                               }
                                             </select>
@@ -687,7 +687,7 @@
                                                 <div class="flex items-center justify-between text-sm">
                                                   <span class="text-muted-foreground">{{ 'labels.departmentColon' | translate:'Users' }}</span>
                                                   <span class="font-medium text-foreground">{{
-                                                    user.departmentName
+                                                    user.departmentName | orgName:'department'
                                                   }}</span>
                                                 </div>
                                                 @if (user.roles && user.roles.length > 0) {
@@ -941,7 +941,7 @@
                                                           >
                                                           @for (dept of departments$ | async; track dept) {
                                                             <option [value]="dept.id">
-                                                              {{ dept.name }}
+                                                              {{ dept.name | orgName:'department' }}
                                                             </option>
                                                           }
                                                         </select>
@@ -957,7 +957,7 @@
                                                           <option value="" disabled>{{ 'labels.selectFunction' | translate:'Users' }}</option>
                                                           @for (fn of availableFunctions; track fn) {
                                                             <option [value]="fn">
-                                                              {{ fn }}
+                                                              {{ fn | orgName:'function' }}
                                                             </option>
                                                           }
                                                         </select>

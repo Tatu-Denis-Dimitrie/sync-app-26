@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 interface DepartmentOption {
   id: string;
@@ -42,7 +43,7 @@ interface BulkInitialTrainingData {
 @Component({
   selector: 'app-bulk-initial-training-modal',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, OrgNamePipe],
   templateUrl: './bulk-initial-training-modal.component.html',
   styleUrls: ['./bulk-initial-training-modal.component.css']
 })

@@ -8,6 +8,7 @@ import { AuthenticationService } from '../../services/authentication.service';
 import { isValidName } from '../../shared/utils/name-validation.util';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
+import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
 // Endpoint cap on SyncApp26.API/Controllers/Documents/SignatureVerificationController.cs (MaxUsersPerRequest).
 const MAX_VALIDATION_USERS = 200;
@@ -74,7 +75,7 @@ interface BulkTrainingData {
 @Component({
   selector: 'app-bulk-training-modal',
   standalone: true,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, OrgNamePipe],
   templateUrl: './bulk-training-modal.component.html',
   styleUrls: ['./bulk-training-modal.component.css']
 })

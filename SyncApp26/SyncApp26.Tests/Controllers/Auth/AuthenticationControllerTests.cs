@@ -247,12 +247,15 @@ namespace SyncApp26.Tests.Controllers.Auth
                     Email = "a@b.com",
                     FirstName = "A",
                     LastName = "B",
-                    Roles = new[] { Roles.Admin }
+                    Roles = new[] { Roles.Admin },
+                    PreferredLanguage = Language.Ro
                 });
 
             var result = await controller.Login(new LoginUserRequestDTO { Email = "a@b.com", Password = "Str0ng!Pass" });
 
-            Assert.IsType<OkObjectResult>(result);
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var user = ok.Value!.GetType().GetProperty("user")!.GetValue(ok.Value)!;
+            Assert.Equal(Language.Ro, user.GetType().GetProperty("preferredLanguage")!.GetValue(user));
         }
 
         [Fact]
