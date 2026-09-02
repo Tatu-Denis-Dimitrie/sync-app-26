@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -328,6 +329,57 @@ namespace SyncApp26.Tests.Services.Documents
                 pos = end + "endstream".Length;
             }
             return sb.ToString();
+        }
+
+        [Fact]
+        public async Task GeneratePdfSnapshot_ContentIsCultureIndependent_WhileTheOnTheFlyViewFollowsCulture()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SSM", "PendingUser");
+            SeedTraining(owner, doc, "Norme initiale", 2m, new DateTime(2026, 1, 15));
+
+            async Task<User> LoadOwnerAsync()
+            {
+                _dbFixture.Context.ChangeTracker.Clear();
+                return await _dbFixture.Context.Users
+                    .Include(x => x.Function).Include(x => x.AssignedTo).ThenInclude(m => m!.Function)
+                    .Include(x => x.PeriodicTrainings).Include(x => x.InitialTrainings)
+                    .FirstAsync(x => x.Id == owner.Id);
+            }
+
+            async Task<string> SnapshotContentAsync()
+            {
+                var path = await service.GeneratePdfSnapshotAsync(await LoadOwnerAsync(), _dbFixture.Context.UserDocuments.Find(doc.Id)!);
+                return PdfContentStreams(await File.ReadAllBytesAsync(path));
+            }
+
+            async Task<string> ViewContentAsync() =>
+                PdfContentStreams(await service.GeneratePdfBytesAsync(await LoadOwnerAsync(), _dbFixture.Context.UserDocuments.Find(doc.Id)!));
+
+            var originalCulture = CultureInfo.CurrentCulture;
+            var originalUiCulture = CultureInfo.CurrentUICulture;
+            try
+            {
+                CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+                CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+                var snapshotEn = await SnapshotContentAsync();
+
+                CultureInfo.CurrentCulture = new CultureInfo("ro");
+                CultureInfo.CurrentUICulture = new CultureInfo("ro");
+                var snapshotRo = await SnapshotContentAsync();
+                var viewRo = await ViewContentAsync();
+
+                Assert.False(string.IsNullOrWhiteSpace(snapshotEn));
+                Assert.Equal(snapshotEn, snapshotRo);   // stored snapshot: same rendered text regardless of culture
+                Assert.NotEqual(snapshotRo, viewRo);     // the view: template headers followed the "ro" culture
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = originalCulture;
+                CultureInfo.CurrentUICulture = originalUiCulture;
+            }
         }
 
         [Fact]
