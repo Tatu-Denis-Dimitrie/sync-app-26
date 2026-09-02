@@ -36,7 +36,8 @@ try
 
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services));
+        .ReadFrom.Services(services)
+        .Enrich.With(new RedactionEnricher(LogRedactionOptions.FromConfiguration(context.Configuration))));
 
     // Add services to the container.
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
