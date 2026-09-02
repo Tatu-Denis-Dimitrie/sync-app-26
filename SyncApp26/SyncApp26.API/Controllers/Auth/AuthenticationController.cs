@@ -63,8 +63,7 @@ namespace SyncApp26.API.Controllers
                     return Ok(new { message = _localizer["api.registrationSuccessful"].Value });
                 }
 
-                // Built from server-side config, not Request.Host: a spoofed Host header would
-                // otherwise let an attacker redirect the verification token to their own domain.
+                // Server-side config, not Request.Host - avoids Host header injection.
                 var configuredApiBaseUrl = _configuration["Api:BaseUrl"];
                 var apiBaseUrl = string.IsNullOrWhiteSpace(configuredApiBaseUrl) ? "http://localhost:5022" : configuredApiBaseUrl;
                 var verifyUrl = $"{apiBaseUrl}/api/authentication/verify-email?email={Uri.EscapeDataString(registered.Email)}&token={Uri.EscapeDataString(registered.EmailVerificationToken)}";

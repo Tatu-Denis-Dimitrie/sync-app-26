@@ -1245,8 +1245,7 @@ namespace SyncApp26.Infrastructure.Services
             if (!Directory.Exists(docsFolder)) Directory.CreateDirectory(docsFolder);
 
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            // FirstName/LastName can reach here via the data-change-request flow, which does not
-            // enforce NameValidationConstants.NamePattern - sanitize before it becomes a path segment.
+            // Sanitize: FirstName/LastName can reach here unvalidated via data-change-request.
             var safeFirst = string.Concat(user.FirstName.Where(char.IsLetterOrDigit));
             var safeLast = string.Concat(user.LastName.Where(char.IsLetterOrDigit));
             var fileName = $"{timestamp}_{document.DocumentType}_{safeFirst}_{safeLast}_{document.Id}.pdf";

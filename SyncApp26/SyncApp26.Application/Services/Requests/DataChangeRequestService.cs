@@ -5,6 +5,7 @@ using SyncApp26.Domain.Entities;
 using SyncApp26.Domain.Enums;
 using SyncApp26.Domain.IRepositories;
 using SyncApp26.Shared.DTOs.DataChange;
+using SyncApp26.Shared.Validation;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -31,6 +32,12 @@ namespace SyncApp26.Application.Services
         private static readonly HashSet<string> NavigationNameFields = new(StringComparer.OrdinalIgnoreCase)
         {
             DepartmentField, FunctionField, WorkSiteField
+        };
+
+        // These end up in a PDF filename, so they need the same format check every other entry point enforces.
+        private static readonly HashSet<string> PersonNameFields = new(StringComparer.OrdinalIgnoreCase)
+        {
+            nameof(User.FirstName), nameof(User.LastName)
         };
 
         // Every field the self-service UI actually offers (see availableFields on the
@@ -560,6 +567,14 @@ namespace SyncApp26.Application.Services
                             if (prop != null && prop.CanWrite)
                             {
                                 var stringValue = kv.Value?.ToString();
+
+                                if (PersonNameFields.Contains(kv.Key) &&
+                                    (stringValue == null ||
+                                     stringValue.Length > NameValidationConstants.NameMaxLength ||
+                                     !Regex.IsMatch(stringValue, NameValidationConstants.NamePattern)))
+                                {
+                                    continue; // Invalid name format - same stale-row guard as above.
+                                }
 
                                 if (prop.PropertyType == typeof(string))
                                     prop.SetValue(req.User, stringValue);

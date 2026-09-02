@@ -360,7 +360,7 @@ namespace SyncApp26.Application.Services
 
             await _userService.UpdateUserAsync(user);
 
-            // A stolen refresh token must not survive the very password reset meant to lock it out.
+            // Revoke sessions so a stolen refresh token doesn't survive the reset.
             await _refreshTokenService.RevokeAllForUserAsync(user.Id);
 
             return AccountActionResult<bool>.Ok(true);

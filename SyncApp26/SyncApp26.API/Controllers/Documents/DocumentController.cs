@@ -293,9 +293,10 @@ namespace SyncApp26.API.Controllers
 
         private List<(string Type, Guid? RestrictToAssignedToId)> ResolveAuthorizedTypes(string documentType)
         {
+            // Normalize and drop unrecognized types - a Line Manager caller isn't otherwise checked.
             var requestedTypes = documentType.Equals("Both", StringComparison.OrdinalIgnoreCase)
-                ? new[] { "SSM", "SU" }
-                : new[] { documentType.ToUpper() };
+                ? new[] { DocumentTypes.Ssm, DocumentTypes.Su }
+                : new[] { DocumentTypes.Normalize(documentType) }.OfType<string>().ToArray();
 
             bool isLineManager = User.IsInRole(Roles.LineManager);
             var currentUserId = User.GetUserId();
@@ -406,15 +407,19 @@ namespace SyncApp26.API.Controllers
                 var user = await _userService.GetUserByIdAsync(request.UserId);
                 if (user == null) return NotFound(new { message = _localizer["api.userNotFound"].Value });
 
+                // Reject anything but SSM/SU - it ends up as a path segment in the PDF filename.
+                if (DocumentTypes.Normalize(request.DocumentType) is not { } documentType)
+                    return BadRequest(new { message = _localizer["api.documentTypeMustBeSsmOrSu"].Value });
+
                 // The officer for this document's type can generate for anyone; a line manager is
                 // restricted to their own direct reports. Admin has no standing here at all.
-                bool canInitiate = User.CanInitiateFor(request.DocumentType)
+                bool canInitiate = User.CanInitiateFor(documentType)
                     || (User.IsInRole(Roles.LineManager) && user.AssignedToId == User.GetUserId());
 
                 if (!canInitiate)
                     return Forbid();
 
-                var document = await _documentService.GenerateDocumentAsync(request.UserId, request.DocumentType, adminEmail);
+                var document = await _documentService.GenerateDocumentAsync(request.UserId, documentType, adminEmail);
 
                 // Now we need to send the signature request to the user.
                 // Assuming we get the user's email from the generated document...
