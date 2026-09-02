@@ -16,6 +16,7 @@ namespace SyncApp26.Tests.Services.Auth
         private readonly Mock<ITokenService> _tokenServiceMock = new();
         private readonly Mock<IGoogleTokenValidator> _googleTokenValidatorMock = new();
         private readonly Mock<IMicrosoftTokenValidator> _microsoftTokenValidatorMock = new();
+        private readonly Mock<IRefreshTokenService> _refreshTokenServiceMock = new();
         private readonly Mock<ILocalizationService> _localizationServiceMock = new();
 
         private AccountService CreateService()
@@ -29,6 +30,7 @@ namespace SyncApp26.Tests.Services.Auth
                 _tokenServiceMock.Object,
                 _googleTokenValidatorMock.Object,
                 _microsoftTokenValidatorMock.Object,
+                _refreshTokenServiceMock.Object,
                 NullLogger<AccountService>.Instance,
                 _localizationServiceMock.Object);
         }

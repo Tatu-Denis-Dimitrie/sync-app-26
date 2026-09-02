@@ -653,7 +653,7 @@ public class CsvSyncService : ICsvSyncService
             Id = Guid.NewGuid(),
             FirstName = csvData.FirstName.Trim(),
             LastName = csvData.LastName.Trim(),
-            Email = csvData.Email.Trim(),
+            Email = csvData.Email.Trim().ToLowerInvariant(),
             DepartmentId = department.Id,
             AssignedToId = assignedManager?.Id,
             PersonalId = csvData.PersonalId,
@@ -1094,7 +1094,7 @@ public class CsvSyncService : ICsvSyncService
 
     private async Task<bool> ApplyEmailResolutionAsync(CsvUserDTO csvData, User existingUser, ImportHistory importHistory, string? chosenPendingValue)
     {
-        var newValue = chosenPendingValue ?? csvData.Email;
+        var newValue = (chosenPendingValue ?? csvData.Email).Trim().ToLowerInvariant();
         if (existingUser.Email == newValue)
         {
             return false;

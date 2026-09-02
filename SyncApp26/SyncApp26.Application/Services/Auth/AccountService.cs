@@ -18,6 +18,7 @@ namespace SyncApp26.Application.Services
         private readonly ITokenService _tokenService;
         private readonly IGoogleTokenValidator _googleTokenValidator;
         private readonly IMicrosoftTokenValidator _microsoftTokenValidator;
+        private readonly IRefreshTokenService _refreshTokenService;
         private readonly ILogger<AccountService> _logger;
         private readonly IStringLocalizer _localizer;
 
@@ -27,6 +28,7 @@ namespace SyncApp26.Application.Services
             ITokenService tokenService,
             IGoogleTokenValidator googleTokenValidator,
             IMicrosoftTokenValidator microsoftTokenValidator,
+            IRefreshTokenService refreshTokenService,
             ILogger<AccountService> logger,
             ILocalizationService localizationService)
         {
@@ -35,6 +37,7 @@ namespace SyncApp26.Application.Services
             _tokenService = tokenService;
             _googleTokenValidator = googleTokenValidator;
             _microsoftTokenValidator = microsoftTokenValidator;
+            _refreshTokenService = refreshTokenService;
             _logger = logger;
             _localizer = localizationService.GetScopedLocalizer(LocalizationScopes.Auth);
         }
@@ -356,6 +359,9 @@ namespace SyncApp26.Application.Services
             user.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(user);
+
+            // A stolen refresh token must not survive the very password reset meant to lock it out.
+            await _refreshTokenService.RevokeAllForUserAsync(user.Id);
 
             return AccountActionResult<bool>.Ok(true);
         }

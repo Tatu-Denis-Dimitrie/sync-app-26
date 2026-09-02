@@ -87,7 +87,7 @@ namespace SyncApp26.Application.Services
                 PersonalId = Guid.NewGuid().ToString(),
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                Email = request.Email,
+                Email = request.Email.Trim().ToLowerInvariant(),
                 DepartmentId = request.DepartmentId,
                 AssignedToId = request.AssignedToId,
                 FunctionId = await ResolveFunctionIdAsync(request.Function),
@@ -207,7 +207,7 @@ namespace SyncApp26.Application.Services
 
             existingUser.FirstName = request.FirstName;
             existingUser.LastName = request.LastName;
-            existingUser.Email = request.Email;
+            existingUser.Email = request.Email.Trim().ToLowerInvariant();
             existingUser.DepartmentId = request.DepartmentId;
             existingUser.AssignedToId = request.AssignedToId;
             existingUser.FunctionId = resolvedFunctionId;

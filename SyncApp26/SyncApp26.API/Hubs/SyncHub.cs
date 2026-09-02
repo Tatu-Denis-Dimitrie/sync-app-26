@@ -17,14 +17,4 @@ public class SyncHub : Hub
         }
         await base.OnConnectedAsync();
     }
-
-    public async Task JoinGroup(string transferId)
-    {
-        await Groups.AddToGroupAsync(Context.ConnectionId, transferId);
-    }
-
-    public async Task LeaveGroup(string transferId)
-    {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, transferId);
-    }
 }
