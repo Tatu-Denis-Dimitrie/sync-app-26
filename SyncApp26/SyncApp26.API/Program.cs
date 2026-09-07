@@ -15,6 +15,7 @@ using SyncApp26.API.Middleware;
 using SyncApp26.API.Extensions;
 using SyncApp26.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.IdentityModel.Tokens;
 using System.Globalization;
@@ -66,7 +67,7 @@ try
     {
         options.AddDefaultPolicy(policy =>
         {
-            policy.WithOrigins("http://localhost:4200", "http://localhost:5022")  // Angular dev server and API
+            policy.WithOrigins("http://localhost:4200", "http://localhost:5022", "https://syncapp.wherewefishin.uk")  // Angular dev server, API, and the Cloudflare Tunnel production origin
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();
@@ -203,7 +204,9 @@ try
         options.Cookie.Name = "syncapp26_antiforgery";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = authCookieOptions.SameSite;
-        options.Cookie.SecurePolicy = authCookieOptions.Secure ? CookieSecurePolicy.Always : CookieSecurePolicy.None;
+        // SameAsRequest, not Always: Always throws on any plain-HTTP request (e.g. localhost:8080
+        // direct access, bypassing the tunnel/TLS), instead of just omitting Secure on that cookie.
+        options.Cookie.SecurePolicy = authCookieOptions.Secure ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.None;
     });
 
     // JWT Authentication
@@ -280,8 +283,17 @@ try
 
     app.UseExceptionHandler();
 
-    // Registered first - some downstream middleware short-circuits without calling next(), which
-    // would otherwise skip a header middleware placed later.
+    // Real client IP/scheme from behind nginx, trusted only from the docker network.
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1
+    };
+    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("172.19.0.0"), 16));
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+
+    // Registered right after forwarded-headers - some downstream middleware short-circuits
+    // without calling next(), which would otherwise skip a header middleware placed later.
     app.Use(async (context, next) =>
     {
         context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
