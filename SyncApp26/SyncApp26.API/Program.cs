@@ -283,14 +283,13 @@ try
 
     app.UseExceptionHandler();
 
-    // Recovers the real client IP/scheme from behind the reverse proxy (nginx/cloudflared).
+    // Real client IP/scheme from behind nginx, trusted only from the docker network.
     var forwardedHeadersOptions = new ForwardedHeadersOptions
     {
         ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
         ForwardLimit = 1
     };
-    forwardedHeadersOptions.KnownNetworks.Clear();
-    forwardedHeadersOptions.KnownProxies.Clear();
+    forwardedHeadersOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("172.19.0.0"), 16));
     app.UseForwardedHeaders(forwardedHeadersOptions);
 
     // Registered right after forwarded-headers - some downstream middleware short-circuits

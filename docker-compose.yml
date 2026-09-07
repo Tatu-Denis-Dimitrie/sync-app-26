@@ -46,7 +46,7 @@ services:
 
   # Cloudflare Tunnel (2 replicas for HA). Hostname routing is configured in the Cloudflare dashboard.
   cloudflared-1:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.7.2
     container_name: syncapp26-tunnel-1
     command: tunnel --no-autoupdate --ha-connections 4 --protocol http2 run
     environment:
@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
 
   cloudflared-2:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.7.2
     container_name: syncapp26-tunnel-2
     command: tunnel --no-autoupdate --ha-connections 4 --protocol http2 run
     environment:
@@ -74,6 +74,9 @@ services:
 networks:
   syncapp26_net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
 
 volumes:
   syncapp26_db_data:
