@@ -6,7 +6,11 @@ import { LineManagerGuard } from './guards/line-manager.guard';
 
 // Pages are lazy-loaded to keep the initial bundle under budget.
 export const routes: Routes = [
-  { path: '', redirectTo: '/login', pathMatch: 'full' },
+  // Unconditional redirect, not a guard decision - '/loading' re-evaluates the real session via
+  // AuthGuard and sends an already-logged-in visitor to their dashboard instead of bouncing them
+  // through '/login' regardless of a perfectly valid session (this was the root cause of the
+  // dashboard-flash-then-login-redirect bug: visiting the bare domain ignored auth state entirely).
+  { path: '', redirectTo: '/loading', pathMatch: 'full' },
 
   // Public routes (no authentication required)
   {
@@ -118,5 +122,7 @@ export const routes: Routes = [
     canActivate: [AdminGuard]
   },
 
-  { path: '**', redirectTo: '/login' }
+  // Same reasoning as the '' route above - let '/loading' decide based on the real session
+  // instead of unconditionally bouncing an already-logged-in visitor to '/login'.
+  { path: '**', redirectTo: '/loading' }
 ];
