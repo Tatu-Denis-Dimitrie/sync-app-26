@@ -26,6 +26,10 @@ namespace SyncApp26.Shared.DTOs.Response.PeriodicTraining
         public string? InstructorSignatureMethod { get; set; }
         public string? VerifierSignature { get; set; }
         public string? VerifierSignatureMethod { get; set; }
+        // The manager's signature for this training session. Not a column on PeriodicTraining - the
+        // manager signs at document level, so it is resolved from that row's SignatureRecord.
+        public string? ManagerSignatureData { get; set; }
+        public string? ManagerSignatureMethod { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? ExcludedFromPrintAt { get; set; }

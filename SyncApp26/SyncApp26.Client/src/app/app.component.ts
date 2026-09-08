@@ -3,6 +3,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { FooterComponent } from './components/footer/footer.component';
 import { HeaderComponent } from './components/header/header.component';
+import { AuthenticationService } from './services/authentication.service';
 import { LoadingService } from './services/loading.service';
 import { Observable, Subscription, filter } from 'rxjs';
 
@@ -16,12 +17,13 @@ import { Observable, Subscription, filter } from 'rxjs';
 export class AppComponent implements OnInit, OnDestroy {
   title = 'SyncApp26.Client';
   loading$!: Observable<boolean>;
-  showHeader = true;
+  showHeader = false;
   private routerSubscription!: Subscription;
 
   constructor(
     private loadingService: LoadingService,
-    private router: Router
+    private router: Router,
+    private authService: AuthenticationService
   ) {}
 
   ngOnInit(): void {
@@ -59,7 +61,9 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private updateHeaderVisibility(url: string): void {
     const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/reset-password/', '/sign/'];
-    // Check if the current URL starts with any of the public routes
-    this.showHeader = !publicRoutes.some(route => url.startsWith(route));
+    // The session check is what stops the header flashing: on first paint the router has not
+    // resolved a route yet (url is still '/'), so a URL-only test renders the app chrome for a
+    // beat before the guard bounces an unauthenticated visitor to /login.
+    this.showHeader = !publicRoutes.some(route => url.startsWith(route)) && this.authService.isLoggedIn();
   }
 }

@@ -57,15 +57,19 @@ namespace SyncApp26.API.Controllers
             // Issued even for anonymous callers, who need a valid CSRF pairing before their first form submit.
             HttpContext.IssueXsrfCookie(_antiforgery, _authCookieOptions);
 
+            // Tells the client whether a silent refresh is even worth attempting. Without it every
+            // anonymous visitor fires a doomed POST /refresh that the browser logs as a console 401.
+            var canRefresh = Request.Cookies.ContainsKey(AuthCookieExtensions.RefreshCookieName);
+
             if (User.GetUserId() is not { } userId)
             {
-                return Ok(new { authenticated = false });
+                return Ok(new { authenticated = false, canRefresh });
             }
 
             var user = await _userService.GetUserByIdAsync(userId);
             if (user == null)
             {
-                return Ok(new { authenticated = false });
+                return Ok(new { authenticated = false, canRefresh });
             }
 
             // Roles come from the signed token, not the DB, so the UI can't diverge from what the API authorizes.

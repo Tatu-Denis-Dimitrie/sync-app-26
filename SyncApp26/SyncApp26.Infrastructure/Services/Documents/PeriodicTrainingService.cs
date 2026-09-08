@@ -79,7 +79,55 @@ namespace SyncApp26.Infrastructure.Services
                 .OrderBy(pt => pt.TrainingDate)
                 .ToListAsync();
 
-            return trainings.Select(MapToDTO);
+            var dtos = trainings.Select(MapToDTO).ToList();
+            await FillManagerSignaturesAsync(userId, trainings, dtos);
+            return dtos;
+        }
+
+        // The manager signs the document, not the training row, so their signature lives in the
+        // SignatureRecord audit trail rather than on PeriodicTraining. Resolved per row so each
+        // training session shows the signature it was actually approved with.
+        private async Task FillManagerSignaturesAsync(
+            Guid userId, List<PeriodicTraining> trainings, List<PeriodicTrainingResponseDTO> dtos)
+        {
+            var documents = await _context.UserDocuments
+                .AsNoTracking()
+                .Where(d => d.UserId == userId)
+                .Select(d => new { d.Id, d.ManagerSignatureData, d.ManagerSignatureMethod })
+                .ToListAsync();
+            if (documents.Count == 0) return;
+
+            var documentsById = documents.ToDictionary(d => d.Id);
+            var docIds = documents.Select(d => d.Id).ToList();
+
+            var managerRecords = await _context.SignatureRecords
+                .AsNoTracking()
+                .Where(r => docIds.Contains(r.UserDocumentId)
+                    && r.SignerRole == "Manager"
+                    && r.PeriodicTrainingId != null)
+                .ToListAsync();
+
+            // Latest record wins per row, matching how the PDF resolves the same lookup.
+            var managerByTraining = managerRecords
+                .OrderByDescending(r => r.SignedAt)
+                .ThenByDescending(r => r.CreatedAt)
+                .GroupBy(r => r.PeriodicTrainingId!.Value)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            for (var i = 0; i < trainings.Count; i++)
+            {
+                var training = trainings[i];
+
+                // A row copied into a regenerated document keeps its record under the original row's id.
+                var lookupId = training.SourceRowId ?? training.Id;
+                managerByTraining.TryGetValue(lookupId, out var record);
+
+                var document = training.UserDocumentId.HasValue
+                    && documentsById.TryGetValue(training.UserDocumentId.Value, out var d) ? d : null;
+
+                dtos[i].ManagerSignatureData = record?.SignatureData ?? document?.ManagerSignatureData;
+                dtos[i].ManagerSignatureMethod = record?.SignatureMethod ?? document?.ManagerSignatureMethod;
+            }
         }
 
         public async Task<PeriodicTrainingResponseDTO> UpdateAsync(Guid id, UpdatePeriodicTrainingDTO dto)

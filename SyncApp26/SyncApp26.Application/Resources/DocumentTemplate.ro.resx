@@ -275,8 +275,8 @@ care a verificat</value>
   <data name="screen.periodic.sigTrainerManager" xml:space="preserve">
     <value>Semnătura celui care a instruit (manager)</value>
   </data>
-  <data name="screen.periodic.sigVerifierAdmin" xml:space="preserve">
-    <value>Semnătura celui care a verificat (administrator)</value>
+  <data name="screen.periodic.sigInstructor" xml:space="preserve">
+    <value>Semnătura instructorului</value>
   </data>
   <data name="screen.defaultManagerFunction" xml:space="preserve">
     <value>Manager</value>
