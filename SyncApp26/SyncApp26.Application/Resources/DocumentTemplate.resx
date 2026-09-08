@@ -275,8 +275,8 @@ signature</value>
   <data name="screen.periodic.sigTrainerManager" xml:space="preserve">
     <value>Trainer signature (manager)</value>
   </data>
-  <data name="screen.periodic.sigVerifierAdmin" xml:space="preserve">
-    <value>Verifier signature (admin)</value>
+  <data name="screen.periodic.sigInstructor" xml:space="preserve">
+    <value>Instructor signature</value>
   </data>
   <data name="screen.defaultManagerFunction" xml:space="preserve">
     <value>Manager</value>

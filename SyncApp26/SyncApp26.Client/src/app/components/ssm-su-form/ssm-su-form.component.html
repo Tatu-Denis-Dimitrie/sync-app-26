@@ -590,7 +590,7 @@
                           <th>{{ 'screen.periodic.sigTrainerManager' | translate:'DocumentTemplate' }}</th>
                           @if (selectedTab === 'ssm') {
                             <th>
-                              {{ 'screen.periodic.sigVerifierAdmin' | translate:'DocumentTemplate' }}
+                              {{ 'screen.periodic.sigInstructor' | translate:'DocumentTemplate' }}
                             </th>
                           }
                           <th class="no-print">{{ 'history.title' | translate:'Documents' }}</th>
@@ -628,16 +628,16 @@
                                   }
                                 </td>
                                 <td class="sig-cell">
-                                  @if (t.instructorSignature) {
+                                  @if (t.managerSignatureData) {
                                     @if (
-                                      t.instructorSignatureMethod?.toLowerCase() === 'type') {
+                                      t.managerSignatureMethod?.toLowerCase() === 'type') {
                                       <span
                                         class="sig-typed"
-                                        >{{ t.instructorSignature }}</span
+                                        >{{ t.managerSignatureData }}</span
                                         >
                                     } @else {
                                       <img
-                                        [src]="getSafeImage(t.instructorSignature)"
+                                        [src]="getSafeImage(t.managerSignatureData)"
                                         class="sig-thumb"
                                         />
                                       }
@@ -647,16 +647,16 @@
                                   </td>
                                   @if (selectedTab === 'ssm') {
                                     <td class="sig-cell">
-                                      @if (t.verifierSignature) {
+                                      @if (t.instructorSignature) {
                                         @if (
-                                          t.verifierSignatureMethod?.toLowerCase() === 'type') {
+                                          t.instructorSignatureMethod?.toLowerCase() === 'type') {
                                           <span
                                             class="sig-typed"
-                                            >{{ t.verifierSignature }}</span
+                                            >{{ t.instructorSignature }}</span
                                             >
                                         } @else {
                                           <img
-                                            [src]="getSafeImage(t.verifierSignature)"
+                                            [src]="getSafeImage(t.instructorSignature)"
                                             class="sig-thumb"
                                             />
                                           }
