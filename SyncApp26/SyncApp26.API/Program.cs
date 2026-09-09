@@ -329,7 +329,12 @@ try
         const int slowRequestMs = 3000;
 
         options.MessageTemplate =
-            "{RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+            "{RequestMethod} {Path} responded {StatusCode} in {Elapsed:0.0000} ms";
+
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("Path", RequestPathSanitizer.Sanitize(httpContext.Request.Path));
+        };
 
         options.GetLevel = (httpContext, elapsed, exception) =>
         {
