@@ -175,6 +175,7 @@ try
     builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();
     builder.Services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
     builder.Services.AddSingleton<IMicrosoftTokenValidator, MicrosoftTokenValidator>();
+    builder.Services.AddSingleton(TimeProvider.System);
 
     // Background Services
     builder.Services.AddHostedService<DepartmentCleanupService>();

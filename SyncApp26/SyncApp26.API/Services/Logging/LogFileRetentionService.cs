@@ -3,8 +3,7 @@ namespace SyncApp26.API.Services.Logging
     /// <summary>
     /// Enforces the "at most N log files per day, deleted after M days" policy Serilog's own
     /// retainedFileCountLimit can't express (it counts across all days, not per day -- see
-    /// LogFilePruner). Runs on a fixed interval and deletes whatever LogFilePruner flags, per
-    /// configured directory.
+    /// LogFilePruner). Deletes whatever LogFilePruner flags, per configured directory
     ///
     /// Configured under "LogRetention". No section, or an empty Directories list, disables the
     /// service entirely -- it does nothing rather than guessing at a default log location.
@@ -13,23 +12,35 @@ namespace SyncApp26.API.Services.Logging
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<LogFileRetentionService> _logger;
+        private readonly TimeProvider _timeProvider;
         private readonly string _contentRootPath;
 
         public LogFileRetentionService(
-            IConfiguration configuration, ILogger<LogFileRetentionService> logger, IHostEnvironment environment)
+            IConfiguration configuration,
+            ILogger<LogFileRetentionService> logger,
+            TimeProvider timeProvider,
+            IHostEnvironment environment)
         {
             _configuration = configuration;
             _logger = logger;
+            _timeProvider = timeProvider;
             _contentRootPath = environment.ContentRootPath;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var intervalMinutes = _configuration.GetValue<int?>("LogRetention:SweepIntervalMinutes") ?? 60;
-            if (intervalMinutes < 1) intervalMinutes = 60;
-            var interval = TimeSpan.FromMinutes(intervalMinutes);
+            // Sweep() is synchronous directory/file IO. Yielding first lets IHostedService.
+            // StartAsync return immediately instead of blocking host startup on however long the
+            // first sweep takes -- previously this ran inline, before the loop's first await.
+            await Task.Yield();
 
-            _logger.LogInformation("Log file retention sweep starting; interval {IntervalMinutes}min.", intervalMinutes);
+            var schedule = LogRetentionScheduler.ParseSchedule(_configuration.GetValue<string>("LogRetention:Schedule"));
+            var dailyAtLocalTime = LogRetentionScheduler.ParseDailyAtLocalTime(_configuration.GetValue<string>("LogRetention:DailyAtLocalTime"));
+
+            _logger.LogInformation(
+                "Log file retention sweep starting; schedule {Schedule}{DailyAtLocalTime}.",
+                schedule,
+                schedule == LogRetentionSchedule.Daily ? $" at {dailyAtLocalTime}" : string.Empty);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -42,15 +53,31 @@ namespace SyncApp26.API.Services.Logging
                     _logger.LogError(ex, "Log file retention sweep failed.");
                 }
 
+                if (schedule == LogRetentionSchedule.Startup)
+                {
+                    break;
+                }
+
+                var delay = schedule == LogRetentionSchedule.Daily
+                    ? LogRetentionScheduler.GetDelayUntilNextDailyRun(_timeProvider.GetLocalNow(), dailyAtLocalTime)
+                    : GetIntervalDelay();
+
                 try
                 {
-                    await Task.Delay(interval, stoppingToken);
+                    await Task.Delay(delay, _timeProvider, stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
                     break;
                 }
             }
+        }
+
+        private TimeSpan GetIntervalDelay()
+        {
+            var intervalMinutes = _configuration.GetValue<int?>("LogRetention:SweepIntervalMinutes") ?? 60;
+            if (intervalMinutes < 1) intervalMinutes = 60;
+            return TimeSpan.FromMinutes(intervalMinutes);
         }
 
         private void Sweep()
@@ -62,7 +89,13 @@ namespace SyncApp26.API.Services.Logging
             }
 
             var retentionDays = _configuration.GetValue<int?>("LogRetention:RetentionDays") ?? 10;
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var applyToCurrentDay = _configuration.GetValue<bool?>("LogRetention:ApplyToCurrentDay") ?? false;
+
+            // Local date, matching how Serilog itself names rolling files (Serilog.Sinks.File has
+            // no UTC option -- it names files from DateTime.Now). Using UtcNow here previously
+            // meant every file was up to a day early or late to expire, depending on the server's
+            // UTC offset and time of day.
+            var today = DateOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
             var deletedCount = 0;
 
             foreach (var directoryConfig in directories)
@@ -89,7 +122,7 @@ namespace SyncApp26.API.Services.Logging
                     .Select(name => name!)
                     .ToList();
 
-                var toDelete = LogFilePruner.SelectFilesToDelete(fileNames, maxFilesPerDay, retentionDays, today);
+                var toDelete = LogFilePruner.SelectFilesToDelete(fileNames, maxFilesPerDay, retentionDays, today, applyToCurrentDay);
 
                 foreach (var name in toDelete)
                 {
@@ -97,10 +130,13 @@ namespace SyncApp26.API.Services.Logging
                     {
                         File.Delete(Path.Combine(fullPath, name));
                         deletedCount++;
+                        _logger.LogDebug("Deleted log file {FileName}.", name);
                     }
-                    catch (IOException ex)
+                    catch (Exception ex)
                     {
-                        // Most likely still open by the active file sink -- picked up on the next sweep.
+                        // Most likely still open by the active file sink, or a permissions issue --
+                        // either way, one bad file must not stop the rest of this directory (or the
+                        // remaining directories) from being swept. Picked up again next sweep.
                         _logger.LogWarning(ex, "Could not delete log file {FileName}; will retry next sweep.", name);
                     }
                 }

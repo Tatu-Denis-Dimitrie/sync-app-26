@@ -67,19 +67,54 @@ namespace SyncApp26.Tests.Services.Logging
         [Fact]
         public void SelectFilesToDelete_DayOverBudget_DeletesTheOldestRollsFirst()
         {
-            // 10 files for today, budget is 8 -- the two oldest (lowest sequence) rolls must go,
-            // the eight most recent must survive.
+            var yesterday = Today.AddDays(-1);
+            var files = Enumerable.Range(0, 10)
+                .Select(i => i == 0 ? $"syncapp-{yesterday:yyyyMMdd}.log" : $"syncapp-{yesterday:yyyyMMdd}_{i:000}.log")
+                .ToArray();
+
+            var toDelete = LogFilePruner.SelectFilesToDelete(files, maxFilesPerDay: 8, retentionDays: 10, Today);
+
+            Assert.Equal(2, toDelete.Count);
+            Assert.Contains($"syncapp-{yesterday:yyyyMMdd}.log", toDelete);
+            Assert.Contains($"syncapp-{yesterday:yyyyMMdd}_001.log", toDelete);
+            Assert.DoesNotContain($"syncapp-{yesterday:yyyyMMdd}_009.log", toDelete);
+            Assert.DoesNotContain($"syncapp-{yesterday:yyyyMMdd}_008.log", toDelete);
+        }
+
+        // ───────────────────────── applyToCurrentDay ─────────────────────────
+
+        [Fact]
+        public void SelectFilesToDelete_TodayOverBudget_ByDefaultLeavesTodayAlone()
+        {
             var files = Enumerable.Range(0, 10)
                 .Select(i => i == 0 ? "syncapp-20260825.log" : $"syncapp-20260825_{i:000}.log")
                 .ToArray();
 
             var toDelete = LogFilePruner.SelectFilesToDelete(files, maxFilesPerDay: 8, retentionDays: 10, Today);
 
+            Assert.Empty(toDelete);
+        }
+
+        [Fact]
+        public void SelectFilesToDelete_TodayOverBudget_WithApplyToCurrentDayTrue_PrunesItLikeAnyOtherDay()
+        {
+            var files = Enumerable.Range(0, 10)
+                .Select(i => i == 0 ? "syncapp-20260825.log" : $"syncapp-20260825_{i:000}.log")
+                .ToArray();
+
+            var toDelete = LogFilePruner.SelectFilesToDelete(
+                files, maxFilesPerDay: 8, retentionDays: 10, Today, applyToCurrentDay: true);
+
             Assert.Equal(2, toDelete.Count);
-            Assert.Contains("syncapp-20260825.log", toDelete);
-            Assert.Contains("syncapp-20260825_001.log", toDelete);
-            Assert.DoesNotContain("syncapp-20260825_009.log", toDelete);
-            Assert.DoesNotContain("syncapp-20260825_008.log", toDelete);
+        }
+
+        [Fact]
+        public void SelectFilesToDelete_TodayWithinRetentionWindow_ExemptionDoesNotBypassAging()
+        {
+            var toDelete = LogFilePruner.SelectFilesToDelete(
+                new[] { "syncapp-20260825.log" }, maxFilesPerDay: 8, retentionDays: 10, Today);
+
+            Assert.Empty(toDelete);
         }
 
         [Fact]
@@ -130,10 +165,11 @@ namespace SyncApp26.Tests.Services.Logging
         public void SelectFilesToDelete_MultipleDays_AreBudgetedIndependently()
         {
             var yesterday = Today.AddDays(-1);
+            var twoDaysAgo = Today.AddDays(-2);
             var files = new[]
             {
-                // Today: 3 files, budget 2 -- one must go.
-                "syncapp-20260825.log", "syncapp-20260825_001.log", "syncapp-20260825_002.log",
+                // Two days ago: 3 files, budget 2 -- one must go.
+                $"syncapp-{twoDaysAgo:yyyyMMdd}.log", $"syncapp-{twoDaysAgo:yyyyMMdd}_001.log", $"syncapp-{twoDaysAgo:yyyyMMdd}_002.log",
                 // Yesterday: 1 file, well within budget -- must survive.
                 $"syncapp-{yesterday:yyyyMMdd}.log"
             };
@@ -141,7 +177,7 @@ namespace SyncApp26.Tests.Services.Logging
             var toDelete = LogFilePruner.SelectFilesToDelete(files, maxFilesPerDay: 2, retentionDays: 10, Today);
 
             Assert.Single(toDelete);
-            Assert.Contains("syncapp-20260825.log", toDelete);
+            Assert.Contains($"syncapp-{twoDaysAgo:yyyyMMdd}.log", toDelete);
             Assert.DoesNotContain($"syncapp-{yesterday:yyyyMMdd}.log", toDelete);
         }
     }
