@@ -2,8 +2,8 @@
   <div class="container mx-auto px-4 py-8">
     <!-- Filters -->
     <div class="bg-card border border-border rounded-lg p-4 mb-6">
-      <div class="flex flex-col md:flex-row md:items-center gap-3">
-        <div class="relative md:w-64 md:min-w-[8rem]">
+      <div class="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
+        <div class="relative md:flex-1 md:min-w-[10rem]">
           <input
             type="text"
             [(ngModel)]="searchQuery"
@@ -29,7 +29,7 @@
           <select
             [(ngModel)]="selectedType"
             (ngModelChange)="onFilterChange()"
-            class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all truncate md:min-w-0"
+            class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-w-0 truncate"
             >
             <option value="SSM">SSM</option>
             <option value="SU">SU</option>
@@ -38,7 +38,7 @@
           <select
             [(ngModel)]="selectedStatus"
             (ngModelChange)="onFilterChange()"
-            class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all truncate md:min-w-0"
+            class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-w-0 truncate"
             >
             <option value="all">{{ 'filters.allStatuses' | translate:'Documents' }}</option>
             <option value="PendingUser">{{ 'status.pendingUser' | translate:'Documents' }}</option>
@@ -51,7 +51,7 @@
           <select
             [(ngModel)]="selectedSignatureFilter"
             (ngModelChange)="onFilterChange()"
-            class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all truncate md:min-w-0"
+            class="px-4 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all min-w-0 truncate"
             >
             <option value="all">{{ 'filters.allSignatures' | translate:'Documents' }}</option>
             <option value="employeeSigned">{{ 'filters.employeeSignedOnly' | translate:'Documents' }}</option>
@@ -60,18 +60,21 @@
           </select>
 
           <!-- Page actions moved inline with filters -->
-          <div class="flex items-center gap-3 md:ml-auto shrink-0">
+          <!-- Indivisible only from lg up, where min-w-max still fits the card: it drops to its own
+               full-width line as a unit instead of splitting the buttons across two rows. Below lg
+               the group takes a full line of its own and may wrap internally. -->
+          <div class="flex flex-wrap items-center gap-3 md:w-full lg:w-auto lg:flex-nowrap lg:flex-1 lg:min-w-max">
             @if (!isAdmin) {
               <button
                 (click)="openBulkTrainingModal()"
-                class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors"
+                class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors flex-1 min-w-[9rem] lg:min-w-0 truncate"
                 >
                 {{ 'documentsView.bulkPeriodicTraining' | translate:'Documents' }}
               </button>
 
               <button
                 (click)="openBulkInitialTrainingModal()"
-                class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors"
+                class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors flex-1 min-w-[9rem] lg:min-w-0 truncate"
                 >
                 {{ 'documentsView.bulkInitialTraining' | translate:'Documents' }}
               </button>
@@ -80,39 +83,39 @@
             @if (pendingAdminCount > 0) {
               <button
                 (click)="bulkSignAsOfficer()"
-                class="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors flex items-center gap-2"
+                class="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors flex-1 min-w-[9rem] lg:min-w-0 flex items-center justify-center gap-2"
                 >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                 </svg>
-                {{ 'documentsView.signAllAsVerifier' | translate:'Documents':pendingAdminCount }}
+                <span class="truncate">{{ 'documentsView.signAllAsVerifier' | translate:'Documents':pendingAdminCount }}</span>
               </button>
             }
 
             <button
               (click)="openRegenerateModal()"
-              class="px-4 py-2 border border-gray-400 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+              class="px-4 py-2 border border-gray-400 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors flex-1 min-w-[9rem] lg:min-w-0 flex items-center justify-center gap-2"
               >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {{ 'actions.regenerateDocuments' | translate:'Documents' }}
+              <span class="truncate">{{ 'actions.regenerateDocuments' | translate:'Documents' }}</span>
             </button>
 
             <button
               (click)="validateAllVisible()"
               [disabled]="isBulkValidating"
-              class="px-4 py-2 border border-primary/30 text-primary rounded-md text-sm font-medium hover:bg-primary/10 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              class="px-4 py-2 border border-primary/30 text-primary rounded-md text-sm font-medium hover:bg-primary/10 transition-colors flex-1 min-w-[9rem] lg:min-w-0 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
               @if (isBulkValidating) {
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <div class="animate-spin rounded-full h-4 w-4 shrink-0 border-b-2 border-primary"></div>
               }
               @if (!isBulkValidating) {
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               }
-              {{ 'documentsView.validateAllThisPage' | translate:'Documents' }}
+              <span class="truncate">{{ 'documentsView.validateAllThisPage' | translate:'Documents' }}</span>
             </button>
 
           </div>
@@ -371,11 +374,6 @@
                     <th
                       class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
                       >
-                      {{ 'documentsView.signedByAdmin' | translate:'Documents' }}
-                    </th>
-                    <th
-                      class="text-center px-4 py-3 text-sm font-medium text-muted-foreground"
-                      >
                       {{ 'documentsView.actions' | translate:'Documents' }}
                     </th>
                   </tr>
@@ -479,35 +477,6 @@
                                 >
                             }
                           </td>
-                          <td class="px-4 py-3 text-center">
-                            @if (doc.adminSignedAt) {
-                              <div class="flex flex-col items-center gap-1">
-                                <span class="text-green-600 text-sm">{{
-                                  doc.adminSignedAt | date: "dd.MM.yyyy"
-                                }}</span>
-                                @if (getSignatureStatus(doc.adminSignatureId)) {
-                                  <app-signature-status-badge [status]="getSignatureStatus(doc.adminSignatureId)"></app-signature-status-badge>
-                                }
-                              </div>
-                            }
-                            @if (!doc.adminSignedAt && doc.status === 'PendingAdmin') {
-                              <button
-                                (click)="signAsAdmin(doc)"
-                                class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-orange-500 rounded-md hover:bg-orange-600 transition-colors"
-                                >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                                </svg>
-                                {{ 'actions.sign' | translate:'Documents' }}
-                              </button>
-                            }
-                            @if (!doc.adminSignedAt && doc.status !== 'PendingAdmin') {
-                              <span
-                                class="text-muted-foreground text-sm"
-                                >—</span
-                                >
-                              }
-                            </td>
                             <td class="px-4 py-3 text-center">
                               <div class="flex items-center justify-center gap-2">
                                 <button

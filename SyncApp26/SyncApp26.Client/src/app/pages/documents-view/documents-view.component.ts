@@ -295,19 +295,6 @@ export class DocumentsViewComponent implements OnInit {
     }
   }
 
-  signAsAdmin(doc: DocumentDto): void {
-    this.error = null;
-    this.http.get<{ token: string }>(`${environment.apiUrl}/document/token-for-document/${doc.id}`)
-      .subscribe({
-        next: (res) => {
-          this.router.navigate(['/sign', res.token]);
-        },
-        error: (err) => {
-          this.error = err.error?.message || this.tDocuments('documentsView.failedToGetToken');
-        }
-      });
-  }
-
   bulkSignAsOfficer(): void {
     this.error = null;
     // Get a token for any document pending the officer's signature, then navigate to the signing

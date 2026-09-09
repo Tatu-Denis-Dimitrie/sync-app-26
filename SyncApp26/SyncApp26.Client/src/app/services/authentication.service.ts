@@ -82,6 +82,8 @@ export interface MessageResponse {
 
 interface MeResponse {
   authenticated: boolean;
+  /** Server-side hint: a refresh cookie is present, so a silent refresh can actually succeed. */
+  canRefresh?: boolean;
   user?: User;
   impersonating?: boolean;
   impersonator?: User;
@@ -107,6 +109,20 @@ export class AuthenticationService {
   /** Populates session state from the server. Must never throw/reject, or bootstrap aborts with a blank page. */
   hydrate(): Observable<void> {
     return this.http.get<MeResponse>(`${this.apiUrl}/me`).pipe(
+      switchMap(response => {
+        if (response.authenticated || !response.canRefresh) {
+          return of(response);
+        }
+        // /me always reports its own result rather than a 401 (see SessionController.Me), so the
+        // refresh interceptor never sees this and never gets a chance to retry - do it here instead.
+        // The access cookie may have simply expired while the longer-lived refresh cookie is still
+        // valid, which is the common case for any return visit or a freshly opened second tab -
+        // this is what caused the dashboard flash and second-tab login bounce.
+        return this.http.post(`${this.apiUrl}/refresh`, {}).pipe(
+          switchMap(() => this.http.get<MeResponse>(`${this.apiUrl}/me`)),
+          catchError(() => of(response))
+        );
+      }),
       tap(response => this.applyMeResponse(response)),
       map(() => void 0),
       catchError(() => {
