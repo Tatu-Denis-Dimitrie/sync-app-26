@@ -33,8 +33,8 @@ Key settings:
   - Dev-only HMAC key used to chain-sign `SignatureRecord` rows (see docs/08_signature-safety.md). Must be a long random value; do not reuse the example placeholder outside local dev.
 - Serilog
   - Standard Serilog configuration section (MinimumLevel, Enrich, WriteTo). Ships with Console plus two rolling file sinks (`logs/syncapp-.log` for all levels, `logs/errors/error-.log` for Error and above), each capped at 10 MB/file with day-based rolling.
-- LogRetention:SweepIntervalMinutes, LogRetention:RetentionDays, LogRetention:Directories
-  - Drives the `LogFileRetentionService` background sweep that prunes old log files beyond what Serilog's own rolling limits remove. `Directories` lists each log folder with a `MaxFilesPerDay` cap.
+- LogRetention:Schedule, LogRetention:DailyAtLocalTime, LogRetention:SweepIntervalMinutes, LogRetention:RetentionDays, LogRetention:ApplyToCurrentDay, LogRetention:Directories
+  - Drives the `LogFileRetentionService` background sweep that prunes old log files beyond what Serilog's own rolling limits remove. `Directories` lists each log folder with a `MaxFilesPerDay` cap. Always sweeps once at startup, then follows `Schedule`: `Daily` (default) at `DailyAtLocalTime` (default `03:15`, local server time, matching how Serilog itself names rolling files), `Interval` every `SweepIntervalMinutes`, or `Startup` to never repeat. `ApplyToCurrentDay` (default `false`) controls whether today's still-growing file count is subject to `MaxFilesPerDay` — left off by default so a busy day can't prune its own morning logs.
 - AllowedHosts
   - Standard ASP.NET Core host-header allowlist (`*` by default in the example template).
 

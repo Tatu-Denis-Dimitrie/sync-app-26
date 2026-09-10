@@ -37,7 +37,8 @@ try
 
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services));
+        .ReadFrom.Services(services)
+        .Enrich.With(new RedactionEnricher(LogRedactionOptions.FromConfiguration(context.Configuration))));
 
     // Add services to the container.
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -174,6 +175,7 @@ try
     builder.Services.AddSingleton<IHmacSignatureService, HmacSignatureService>();
     builder.Services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
     builder.Services.AddSingleton<IMicrosoftTokenValidator, MicrosoftTokenValidator>();
+    builder.Services.AddSingleton(TimeProvider.System);
 
     // Background Services
     builder.Services.AddHostedService<DepartmentCleanupService>();
@@ -328,7 +330,12 @@ try
         const int slowRequestMs = 3000;
 
         options.MessageTemplate =
-            "{RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+            "{RequestMethod} {Path} responded {StatusCode} in {Elapsed:0.0000} ms";
+
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("Path", RequestPathSanitizer.Sanitize(httpContext.Request.Path));
+        };
 
         options.GetLevel = (httpContext, elapsed, exception) =>
         {

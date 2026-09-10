@@ -45,9 +45,17 @@ namespace SyncApp26.API.Services.Logging
         /// anything at least <paramref name="retentionDays"/> days old, plus the oldest rolls of any
         /// single day that has more than <paramref name="maxFilesPerDay"/> files. File names this
         /// class doesn't recognize as a rolling log are left alone.
+        ///
+        /// <paramref name="applyToCurrentDay"/> defaults to false, which exempts <paramref
+        /// name="today"/> from the per-day cap: today's file count is still climbing as the
+        /// process keeps logging, so enforcing the cap against a day that isn't over yet can
+        /// delete this morning's logs while whatever caused them is still unfolding -- exactly
+        /// the ones an admin would want. The retention-window check above is unaffected either
+        /// way, since today's age is always 0.
         /// </summary>
         public static IReadOnlyList<string> SelectFilesToDelete(
-            IEnumerable<string> fileNames, int maxFilesPerDay, int retentionDays, DateOnly today)
+            IEnumerable<string> fileNames, int maxFilesPerDay, int retentionDays, DateOnly today,
+            bool applyToCurrentDay = false)
         {
             var toDelete = new List<string>();
             var byDay = new Dictionary<DateOnly, List<(string Name, int Seq)>>();
@@ -74,8 +82,13 @@ namespace SyncApp26.API.Services.Logging
                 filesForDay.Add((name, seq));
             }
 
-            foreach (var filesForDay in byDay.Values)
+            foreach (var (date, filesForDay) in byDay)
             {
+                if (date == today && !applyToCurrentDay)
+                {
+                    continue;
+                }
+
                 var overflow = filesForDay.Count - maxFilesPerDay;
                 if (overflow <= 0)
                 {
