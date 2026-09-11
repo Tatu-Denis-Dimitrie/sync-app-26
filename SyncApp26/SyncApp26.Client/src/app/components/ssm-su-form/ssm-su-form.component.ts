@@ -13,6 +13,30 @@ import { BloodType, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/c
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
+// Resolved server-side (DocumentService) so these match the generated PDF exactly.
+interface InitialTrainingSignatureBlock {
+  signerName?: string;
+  signerFunction?: string;
+  signatureData?: string;
+  signatureMethod?: string;
+  signedAtUtc?: string;
+}
+
+interface InitialTrainingSignatureSet {
+  trainee?: InitialTrainingSignatureBlock;
+  trainer?: InitialTrainingSignatureBlock;
+  /** Null for SU, which has no verifier line. */
+  verifier?: InitialTrainingSignatureBlock;
+}
+
+interface InitialTrainingSignatures {
+  documentType: string;
+  introductory?: InitialTrainingSignatureSet;
+  workplace?: InitialTrainingSignatureSet;
+  admittedToWork?: InitialTrainingSignatureBlock;
+  admittedDate?: string;
+}
+
 interface InitialTrainingEntry {
   documentType: string;
   introductoryTrainingDate?: string;
@@ -59,6 +83,7 @@ interface UserSSMSUForm {
   latestInstructorSignatureMethod?: string;
   latestVerifierSignature?: string;
   latestVerifierSignatureMethod?: string;
+  initialTrainingSignatures?: InitialTrainingSignatures[];
 }
 
 @Component({
@@ -216,6 +241,34 @@ export class SsmSuFormComponent implements OnInit {
     if (!data) return null;
     const prefixed = data.startsWith('data:') ? data : `data:image/png;base64,${data}`;
     return this.sanitizer.bypassSecurityTrustUrl(prefixed);
+  }
+
+  private signaturesFor(documentType: 'SSM' | 'SU'): InitialTrainingSignatures | undefined {
+    return this.userForm?.initialTrainingSignatures
+      ?.find(s => (s.documentType || '').toUpperCase() === documentType);
+  }
+
+  get ssmSignatures(): InitialTrainingSignatures | undefined {
+    return this.signaturesFor('SSM');
+  }
+
+  get suSignatures(): InitialTrainingSignatures | undefined {
+    return this.signaturesFor('SU');
+  }
+
+  // Content detection, like the PDF - the stored method is unreliable across inherited slots.
+  isDrawnSignature(block?: InitialTrainingSignatureBlock): boolean {
+    return !!block?.signatureData?.startsWith('data:image/');
+  }
+
+  // Matches the PDF's "yyyy.MM.dd HH:mm:ss".
+  formatSignedAt(signedAtUtc?: string): string {
+    if (!signedAtUtc) return '-';
+    const d = new Date(signedAtUtc);
+    if (isNaN(d.getTime())) return '-';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} `
+      + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
 
   isHistoryExpanded(t: any): boolean {

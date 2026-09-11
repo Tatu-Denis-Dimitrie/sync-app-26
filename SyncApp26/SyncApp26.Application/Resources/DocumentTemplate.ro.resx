@@ -246,22 +246,22 @@ care a verificat</value>
     <value>Semnături:</value>
   </data>
   <data name="screen.sigLineTrainee.ssm" xml:space="preserve">
-    <value>• a persoanei instruite: ________________</value>
+    <value>• a persoanei instruite:</value>
   </data>
   <data name="screen.sigLineTrainee.su" xml:space="preserve">
-    <value>• a persoanei instruite: ________________</value>
+    <value>• a persoanei instruite:</value>
   </data>
   <data name="screen.sigLineTrainer" xml:space="preserve">
-    <value>• a persoanei care a efectuat instruirea: ________________</value>
+    <value>• a persoanei care a efectuat instruirea:</value>
   </data>
   <data name="screen.sigLineVerifier" xml:space="preserve">
-    <value>• a persoanei care a verificat însușirea cunoștințelor: ________________</value>
+    <value>• a persoanei care a verificat însușirea cunoștințelor:</value>
   </data>
   <data name="screen.sigLineVerifierEmployee" xml:space="preserve">
-    <value>• a angajatului care a verificat însușirea cunoștințelor: ________________</value>
+    <value>• a angajatului care a verificat însușirea cunoștințelor:</value>
   </data>
   <data name="screen.sigLineVerifierEmployeeKnowledge" xml:space="preserve">
-    <value>• a angajatului care a verificat însușirea cunoștințelor: ________________</value>
+    <value>• a angajatului care a verificat însușirea cunoștințelor:</value>
   </data>
   <data name="screen.dateAndSignature" xml:space="preserve">
     <value>Data și semnătura:</value>

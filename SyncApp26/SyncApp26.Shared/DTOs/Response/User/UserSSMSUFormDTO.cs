@@ -38,5 +38,11 @@ namespace SyncApp26.Shared.DTOs.Response.User
         public string? LatestInstructorSignatureMethod { get; set; }
         public string? LatestVerifierSignature { get; set; }
         public string? LatestVerifierSignatureMethod { get; set; }
+        /// <summary>
+        /// Response-only: one entry per document type, resolved the same way the PDF resolves them.
+        /// Deliberately not on <see cref="InitialTrainingEntryDTO"/>, which is also the request shape -
+        /// signatures must never be writable through the form's save payload.
+        /// </summary>
+        public List<InitialTrainingSignaturesDTO> InitialTrainingSignatures { get; set; } = new();
     }
 }

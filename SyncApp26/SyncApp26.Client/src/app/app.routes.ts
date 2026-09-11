@@ -39,6 +39,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/confirm-email-change/confirm-email-change.component').then(m => m.ConfirmEmailChangeComponent)
   },
   {
+    // Public, no guard - Google/Microsoft fetch this URL when reviewing the OAuth app.
+    path: 'privacy',
+    loadComponent: () => import('./pages/privacy-policy/privacy-policy.component').then(m => m.PrivacyPolicyComponent)
+  },
+  {
     path: 'sign/:token',
     loadComponent: () => import('./pages/document-signature/document-signature.component').then(m => m.DocumentSignatureComponent)
   },

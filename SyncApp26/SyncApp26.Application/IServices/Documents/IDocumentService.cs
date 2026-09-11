@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SyncApp26.Domain.Entities;
+using SyncApp26.Shared.DTOs.Response.User;
 
 namespace SyncApp26.Application.IServices
 {
@@ -23,6 +24,9 @@ namespace SyncApp26.Application.IServices
         Task<IEnumerable<UserDocument>> GetAllPendingUserDocumentsAsync(string documentType);
         Task<IEnumerable<UserDocument>> GetAllDocumentsAsync();
         Task<UserDocument?> GetDocumentByIdAsync(Guid documentId);
+
+        /// <summary>Initial-training signatures for one document type, resolved the same way the PDF resolves them.</summary>
+        Task<InitialTrainingSignaturesDTO> GetInitialTrainingSignaturesAsync(Guid userId, string documentType);
         Task<Dictionary<Guid, string>> GetDocumentTypesByIdsAsync(IEnumerable<Guid> documentIds);
         Task<bool> UpdateDocumentSignatureAsync(Guid documentId, Guid signerUserId, string signerRole, string signatureMethod, string signatureData, string ipAddress, Guid? periodicTrainingId = null);
         Task<Guid?> GetCurrentTrainingIdForDocumentAsync(Guid documentId);

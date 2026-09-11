@@ -5,7 +5,7 @@ export const environment = {
   // ignore port), so an absolute URL here would still "work" while silently being cross-site -
   // never point this back at an absolute URL, even temporarily to debug.
   apiUrl: '/api',
-  googleClientId: '651123926793-1s1fchku41c2fmf6s2o49rh4avb1f8f3.apps.googleusercontent.com',
+  googleClientId: '497290497367-8ejhffm98u1bjvks1m9isc2o8vkmm3lr.apps.googleusercontent.com',
   microsoftClientId: '8ede3c76-3466-4d33-a067-b51fe144c46a',
   endpoints: {
     users: '/user',

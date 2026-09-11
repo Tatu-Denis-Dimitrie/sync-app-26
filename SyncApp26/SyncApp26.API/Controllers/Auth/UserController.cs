@@ -338,6 +338,13 @@ namespace SyncApp26.API.Controllers
                 .ThenByDescending(pt => pt.Id)
                 .FirstOrDefault();
 
+            // Resolved by the document service so the form shows the same signatures as the PDF.
+            var initialTrainingSignatures = new List<InitialTrainingSignaturesDTO>
+            {
+                await _documentService.GetInitialTrainingSignaturesAsync(id, DocumentTypes.Ssm),
+                await _documentService.GetInitialTrainingSignaturesAsync(id, DocumentTypes.Su)
+            };
+
             return Ok(new UserSSMSUFormDTO
             {
                 Id = user.Id,
@@ -384,7 +391,8 @@ namespace SyncApp26.API.Controllers
                 LatestInstructorSignature = latestTraining?.InstructorSignature,
                 LatestInstructorSignatureMethod = latestTraining?.InstructorSignatureMethod,
                 LatestVerifierSignature = latestTraining?.VerifierSignature,
-                LatestVerifierSignatureMethod = latestTraining?.VerifierSignatureMethod
+                LatestVerifierSignatureMethod = latestTraining?.VerifierSignatureMethod,
+                InitialTrainingSignatures = initialTrainingSignatures
             });
         }
 

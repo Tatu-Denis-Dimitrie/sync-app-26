@@ -377,4 +377,58 @@
   <data name="function.accountant" xml:space="preserve">
     <value>Contabil</value>
   </data>
+  <data name="privacy.title" xml:space="preserve">
+    <value>Politica de confidențialitate</value>
+  </data>
+  <data name="privacy.intro" xml:space="preserve">
+    <value>SyncApp26 este o aplicație internă folosită de un angajator pentru a ține evidența instruirilor de securitate și sănătate în muncă (SSM) și situații de urgență (SU) ale propriilor angajați. Pagina aceasta explică ce date cu caracter personal prelucrează aplicația și în ce scop.</value>
+  </data>
+  <data name="privacy.data.title" xml:space="preserve">
+    <value>Ce date prelucrăm</value>
+  </data>
+  <data name="privacy.data.body" xml:space="preserve">
+    <value>Date de identificare și de angajare: nume, adresă de e-mail de serviciu, număr de identificare personal, departament, funcție și punct de lucru. Date despre instruiri: datele calendaristice, durata, materialul predat și semnăturile aplicate pe fiecare instruire și document. Date tehnice strict necesare securității: adresa IP înregistrată în momentul aplicării unei semnături și momentul fiecărei semnături.</value>
+  </data>
+  <data name="privacy.purpose.title" xml:space="preserve">
+    <value>De ce le prelucrăm</value>
+  </data>
+  <data name="privacy.purpose.body" xml:space="preserve">
+    <value>Pentru întocmirea și păstrarea fișelor individuale de instruire cerute de legislația de securitate și sănătate în muncă și pentru a dovedi că instruirile au avut loc. Datele nu sunt folosite pentru publicitate, profilare sau decizii automate și nu sunt vândute.</value>
+  </data>
+  <data name="privacy.access.title" xml:space="preserve">
+    <value>Cine are acces</value>
+  </data>
+  <data name="privacy.access.body" xml:space="preserve">
+    <value>Fiecare angajat își vede propria fișă. Managerii direcți văd fișele persoanelor din subordine. Lucrătorii desemnați SSM/SU și administratorii stabiliți de angajator văd fișele de care răspund. Datele nu sunt transmise terților din afara angajatorului, cu excepția cazurilor în care legea o cere (de exemplu, un control al inspecției muncii).</value>
+  </data>
+  <data name="privacy.signin.title" xml:space="preserve">
+    <value>Autentificarea cu Google sau Microsoft</value>
+  </data>
+  <data name="privacy.signin.body" xml:space="preserve">
+    <value>Dacă te autentifici cu un cont Google sau Microsoft, primim doar adresa de e-mail și numele, pentru a le potrivi cu un cont care există deja în aplicație. Autentificarea în acest fel nu creează niciodată un cont nou și nu cerem acces la e-mailul, fișierele sau contactele tale.</value>
+  </data>
+  <data name="privacy.cookies.title" xml:space="preserve">
+    <value>Cookie-uri</value>
+  </data>
+  <data name="privacy.cookies.body" xml:space="preserve">
+    <value>Aplicația folosește exclusiv cookie-uri strict necesare pentru menținerea sesiunii de autentificare și pentru protecția împotriva atacurilor de tip cross-site request forgery. Nu există cookie-uri de publicitate sau de urmărire.</value>
+  </data>
+  <data name="privacy.retention.title" xml:space="preserve">
+    <value>Cât timp le păstrăm</value>
+  </data>
+  <data name="privacy.retention.body" xml:space="preserve">
+    <value>Fișele de instruire și semnăturile aferente se păstrează atât timp cât legea impune păstrarea acestor documente, pentru că servesc drept dovadă că instruirea a fost efectuată. Semnăturile deja aplicate nu sunt modificate retroactiv niciodată.</value>
+  </data>
+  <data name="privacy.rights.title" xml:space="preserve">
+    <value>Drepturile tale</value>
+  </data>
+  <data name="privacy.rights.body" xml:space="preserve">
+    <value>Ai dreptul de acces la datele tale, de rectificare a datelor inexacte, de ștergere sau de restricționare a prelucrării în situațiile permise de lege și de opoziție la prelucrare. Poți depune și o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal.</value>
+  </data>
+  <data name="privacy.contact.title" xml:space="preserve">
+    <value>Contact</value>
+  </data>
+  <data name="privacy.contact.body" xml:space="preserve">
+    <value>Pentru orice solicitare privind datele tale cu caracter personal, contactează departamentul de resurse umane al angajatorului sau administratorul acestei aplicații.</value>
+  </data>
 </root>
