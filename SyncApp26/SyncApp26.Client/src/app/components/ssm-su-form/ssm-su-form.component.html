@@ -1,3 +1,24 @@
+<!-- One signature line: the label, then the signature the PDF prints in that slot, with the same
+     "Digitally signed by / Date" caption. Empty slots keep an underline, exactly like the PDF. -->
+<ng-template #sigLine let-label let-block="block">
+  <p>
+    {{ label }}
+    @if (block?.signatureData) {
+      <span class="sig-inline">
+        @if (isDrawnSignature(block)) {
+          <img [src]="getSafeImage(block.signatureData)" class="sig-thumb" />
+        } @else {
+          <span class="sig-typed">{{ block.signatureData }}</span>
+        }
+        <span class="sig-caption">{{ 'signature.digitallySignedBy' | translate:'DocumentTemplate':block.signerName }}</span>
+        <span class="sig-caption">{{ 'signature.dateLabel' | translate:'DocumentTemplate':formatSignedAt(block.signedAtUtc) }}</span>
+      </span>
+    } @else {
+      <span class="sig-blank"></span>
+    }
+  </p>
+</ng-template>
+
 <div class="container">
   @if (loading) {
     <div class="loading">{{ 'status.loading' | translate:'Common' }}</div>
@@ -389,9 +410,9 @@
                       }
                       <div class="signatures">
                         <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
-                        <p>{{ 'screen.sigLineTrainee.ssm' | translate:'DocumentTemplate' }}</p>
-                        <p>{{ 'screen.sigLineTrainer' | translate:'DocumentTemplate' }}</p>
-                        <p>{{ 'screen.sigLineVerifier' | translate:'DocumentTemplate' }}</p>
+                        <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineTrainee.ssm' | translate:'DocumentTemplate'), block: ssmSignatures?.introductory?.trainee }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineTrainer' | translate:'DocumentTemplate'), block: ssmSignatures?.introductory?.trainer }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineVerifier' | translate:'DocumentTemplate'), block: ssmSignatures?.introductory?.verifier }"></ng-container>
                       </div>
                     </div>
                     <div class="section instruction-section">
@@ -504,9 +525,9 @@
                       }
                       <div class="signatures">
                         <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
-                        <p>{{ 'screen.sigLineTrainee.ssm' | translate:'DocumentTemplate' }}</p>
-                        <p>{{ 'screen.sigLineTrainer' | translate:'DocumentTemplate' }}</p>
-                        <p>{{ 'screen.sigLineVerifier' | translate:'DocumentTemplate' }}</p>
+                        <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineTrainee.ssm' | translate:'DocumentTemplate'), block: ssmSignatures?.workplace?.trainee }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineTrainer' | translate:'DocumentTemplate'), block: ssmSignatures?.workplace?.trainer }"></ng-container>
+                        <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineVerifier' | translate:'DocumentTemplate'), block: ssmSignatures?.workplace?.verifier }"></ng-container>
                       </div>
                     </div>
                     <div class="section">
@@ -551,7 +572,9 @@
                         {{ 'screen.dateAndSignature' | translate:'DocumentTemplate' }}
                         @if (!editMode) {
                           <span>{{
-                            formatDate(formData.admittedDate) || "___________________"
+                            formatDate(formData.admittedDate)
+                            || formatDate(ssmSignatures?.admittedDate)
+                            || "___________________"
                           }}</span>
                         }
                         @if (editMode) {
@@ -562,6 +585,9 @@
                             />
                         }
                       </p>
+                      @if (!editMode) {
+                        <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('signature.label' | translate:'DocumentTemplate'), block: ssmSignatures?.admittedToWork }"></ng-container>
+                      }
                     </div>
                   </div>
                   <!-- Pagina Instruire periodică -->
@@ -933,8 +959,8 @@
                                   }
                                   <div class="signatures">
                                     <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
-                                    <p>{{ 'screen.sigLineTrainee.su' | translate:'DocumentTemplate' }}</p>
-                                    <p>{{ 'screen.sigLineVerifierEmployee' | translate:'DocumentTemplate' }}</p>
+                                    <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineTrainee.su' | translate:'DocumentTemplate'), block: suSignatures?.introductory?.trainee }"></ng-container>
+                                    <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineVerifierEmployee' | translate:'DocumentTemplate'), block: suSignatures?.introductory?.trainer }"></ng-container>
                                   </div>
                                 </div>
                                 <div class="section instruction-section">
@@ -1051,8 +1077,8 @@
                                   }
                                   <div class="signatures">
                                     <p><strong>{{ 'screen.signatures' | translate:'DocumentTemplate' }}</strong></p>
-                                    <p>{{ 'screen.sigLineTrainee.su' | translate:'DocumentTemplate' }}</p>
-                                    <p>{{ 'screen.sigLineVerifierEmployeeKnowledge' | translate:'DocumentTemplate' }}</p>
+                                    <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineTrainee.su' | translate:'DocumentTemplate'), block: suSignatures?.workplace?.trainee }"></ng-container>
+                                    <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('screen.sigLineVerifierEmployeeKnowledge' | translate:'DocumentTemplate'), block: suSignatures?.workplace?.trainer }"></ng-container>
                                   </div>
                                 </div>
                                 <div class="section">
@@ -1097,7 +1123,9 @@
                                     {{ 'screen.dateAndSignature' | translate:'DocumentTemplate' }}
                                     @if (!editMode) {
                                       <span>{{
-                                        formatDate(formData.admittedDate) || "___________________"
+                                        formatDate(formData.admittedDate)
+                                        || formatDate(suSignatures?.admittedDate)
+                                        || "___________________"
                                       }}</span>
                                     }
                                     @if (editMode) {
@@ -1108,6 +1136,9 @@
                                         />
                                     }
                                   </p>
+                                  @if (!editMode) {
+                                    <ng-container [ngTemplateOutlet]="sigLine" [ngTemplateOutletContext]="{ $implicit: ('signature.label' | translate:'DocumentTemplate'), block: suSignatures?.admittedToWork }"></ng-container>
+                                  }
                                 </div>
                               </div>
                               <!-- Pagina Instructaj periodic SU -->

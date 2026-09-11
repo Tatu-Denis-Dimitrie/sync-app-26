@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LANGUAGE_LABELS, Language, SUPPORTED_LANGUAGES, TranslationService } from '../../services/translation.service';
 
@@ -13,7 +13,20 @@ export class LanguageSwitcherComponent {
   readonly labels = LANGUAGE_LABELS;
   isOpen = false;
 
-  constructor(private translationService: TranslationService) {}
+  constructor(private translationService: TranslationService, private host: ElementRef<HTMLElement>) {}
+
+  // Same pattern as CustomSelectComponent.
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.isOpen && !this.host.nativeElement.contains(event.target as Node)) {
+      this.close();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.close();
+  }
 
   get currentLanguage(): Language {
     return this.translationService.language();

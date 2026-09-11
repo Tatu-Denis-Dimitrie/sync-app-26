@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthenticationService, User, rolesLabel, Roles } from '../../services/authentication.service';
@@ -31,6 +31,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isProfileOpen = false;
   isAnomalyPopoverOpen = false;
   isScrolled = false;
+  @ViewChild('anomalyWrapper') anomalyWrapper?: ElementRef<HTMLElement>;
+  @ViewChild('profileWrapper') profileWrapper?: ElementRef<HTMLElement>;
+  @ViewChild('menuButton') menuButton?: ElementRef<HTMLElement>;
+  @ViewChild('menuPanel') menuPanel?: ElementRef<HTMLElement>;
   pendingSignatureCount = 0;
   pendingRequestCount = 0;
   anomalyAlert: SignatureAnomalyAlert | null = null;
@@ -265,5 +269,32 @@ export class HeaderComponent implements OnInit, OnDestroy {
   @HostListener('window:scroll', [])
   onScroll(): void {
     this.isScrolled = window.scrollY > 0;
+  }
+
+  // Checked per-wrapper, not header-wide, so clicking one overlay doesn't leave the other open.
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as Node;
+
+    if (this.isAnomalyPopoverOpen && !this.anomalyWrapper?.nativeElement.contains(target)) {
+      this.isAnomalyPopoverOpen = false;
+    }
+
+    if (this.isProfileOpen && !this.profileWrapper?.nativeElement.contains(target)) {
+      this.isProfileOpen = false;
+    }
+
+    if (this.isMenuOpen
+      && !this.menuButton?.nativeElement.contains(target)
+      && !this.menuPanel?.nativeElement.contains(target)) {
+      this.isMenuOpen = false;
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.isAnomalyPopoverOpen = false;
+    this.isProfileOpen = false;
+    this.isMenuOpen = false;
   }
 }

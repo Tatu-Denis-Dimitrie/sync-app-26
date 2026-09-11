@@ -63,7 +63,7 @@ Key settings:
 - googleClientId: OAuth client ID for Google Sign-In. Must match Authentication:Google:ClientId in the API config.
 - microsoftClientId: Application (client) ID for Microsoft Sign-In. Must match Authentication:Microsoft:ClientId in the API config.
 
-Note: angular.json has no fileReplacements configured, so environment.ts is used for every build configuration, including production. environment.prod.ts and environment.staging.ts are currently not wired up.
+Note: the production build configuration in angular.json replaces environment.ts with environment.prod.ts, and `production` is the default configuration — so a deployed build uses environment.prod.ts, not environment.ts. These values are compiled into the bundle, meaning a change to environment.prod.ts only takes effect after rebuilding the frontend image; the container's environment variables cannot override them. (environment.staging.ts is referenced by no build configuration and is currently unused.)
 
 ## CORS
 Allowed origins are configured in SyncApp26/SyncApp26.API/Program.cs. Ensure the SPA base URL is included for local and deployed environments.

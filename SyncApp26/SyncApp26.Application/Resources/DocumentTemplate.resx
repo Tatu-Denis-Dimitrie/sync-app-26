@@ -246,22 +246,22 @@ signature</value>
     <value>Signatures:</value>
   </data>
   <data name="screen.sigLineTrainee.ssm" xml:space="preserve">
-    <value>• of the person trained: ________________</value>
+    <value>• of the person trained:</value>
   </data>
   <data name="screen.sigLineTrainee.su" xml:space="preserve">
-    <value>• of the person briefed: ________________</value>
+    <value>• of the person briefed:</value>
   </data>
   <data name="screen.sigLineTrainer" xml:space="preserve">
-    <value>• of the person who conducted the training: ________________</value>
+    <value>• of the person who conducted the training:</value>
   </data>
   <data name="screen.sigLineVerifier" xml:space="preserve">
-    <value>• of the person who verified comprehension: ________________</value>
+    <value>• of the person who verified comprehension:</value>
   </data>
   <data name="screen.sigLineVerifierEmployee" xml:space="preserve">
-    <value>• of the employee who verified comprehension: ________________</value>
+    <value>• of the employee who verified comprehension:</value>
   </data>
   <data name="screen.sigLineVerifierEmployeeKnowledge" xml:space="preserve">
-    <value>• of the employee who verified knowledge comprehension: ________________</value>
+    <value>• of the employee who verified knowledge comprehension:</value>
   </data>
   <data name="screen.dateAndSignature" xml:space="preserve">
     <value>Date and signature:</value>

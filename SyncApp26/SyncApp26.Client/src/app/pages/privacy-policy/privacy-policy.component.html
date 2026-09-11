@@ -1,0 +1,22 @@
+<div class="privacy-page">
+  @if (!isLoggedIn) {
+    <header class="privacy-topbar">
+      <span class="privacy-brand">{{ 'appName' | translate:'Common' }}</span>
+      <app-language-switcher />
+    </header>
+  }
+
+  <main class="privacy-content">
+    <h1>{{ 'privacy.title' | translate:'Common' }}</h1>
+    <p class="privacy-intro">{{ 'privacy.intro' | translate:'Common' }}</p>
+
+    @for (section of sections; track section) {
+      <section class="privacy-section">
+        <h2>{{ 'privacy.' + section + '.title' | translate:'Common' }}</h2>
+        <p>{{ 'privacy.' + section + '.body' | translate:'Common' }}</p>
+      </section>
+    }
+
+    <a routerLink="/login" class="link">{{ 'buttons.back' | translate:'Common' }}</a>
+  </main>
+</div>

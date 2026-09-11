@@ -12,6 +12,7 @@ using SyncApp26.Domain.Enums;
 using SyncApp26.Domain.Exceptions;
 using SyncApp26.Infrastructure.Context;
 using SyncApp26.Infrastructure.Repositories;
+using SyncApp26.Shared.DTOs.Response.User;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -400,8 +401,42 @@ namespace SyncApp26.Infrastructure.Services
             string? instructorSigMethod = null, string? instructorSigData = null,
             string? verifierSigMethod = null, string? verifierSigData = null)
         {
-            var userRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("User");
-            var officerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Instructor");
+            var blocks = ResolveInitialTrainingSignatureBlocks(isSsm, user, document,
+                ctx.InitialTrainingSignatures, ctx.ManagerName, ctx.ManagerFunction,
+                instructorName, instructorPosition, userSigMethod, userSigData,
+                instructorSigMethod, instructorSigData, verifierSigMethod, verifierSigData);
+
+            col.Item().PaddingTop(6).Row(row =>
+            {
+                row.RelativeItem().Column(c => RenderSignatureBlock(c,
+                    isSsm ? ctx.T["signature.trainee.ssm"] : ctx.T["signature.trainee.su"],
+                    blocks.Trainee, ctx.T));
+
+                row.ConstantItem(10);
+                row.RelativeItem().Column(c => RenderSignatureBlock(c,
+                    ctx.T["signature.trainer"], blocks.Trainer, ctx.T));
+
+                if (isSsm)
+                {
+                    row.ConstantItem(10);
+                    row.RelativeItem().Column(c => RenderSignatureBlock(c,
+                        ctx.T["signature.verifier"], blocks.Verifier ?? default, ctx.T));
+                }
+            });
+        }
+
+        // Extracted from the PDF rendering so the web form shows the same signatures without a second copy of this rule.
+        private static InitialTrainingSignatureBlocks ResolveInitialTrainingSignatureBlocks(
+            bool isSsm, User user, UserDocument? document,
+            IReadOnlyDictionary<string, SignatureRecord> initialTrainingSignatures,
+            string? managerName, string? managerFunction,
+            string? instructorName, string? instructorPosition,
+            string? userSigMethod, string? userSigData,
+            string? instructorSigMethod, string? instructorSigData,
+            string? verifierSigMethod, string? verifierSigData)
+        {
+            var userRecord = initialTrainingSignatures.GetValueOrDefault("User");
+            var officerRecord = initialTrainingSignatures.GetValueOrDefault("Instructor");
 
             // Legacy documents completed before the SSM/SU officer took over the Instructor slot
             // (Faza 2 of the roles plan) really had a separate Admin/Verifier signer — keep those
@@ -419,12 +454,12 @@ namespace SyncApp26.Infrastructure.Services
                 // document's Manager* columns: a periodic-training revision resets those and the
                 // manager re-signs, which would otherwise swap this block's image and date for the
                 // newer capture. Falls back to the document only for pre-SignatureRecord documents.
-                var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
-                renderedInstructorName = managerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
-                renderedInstructorPosition = managerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
-                renderedInstructorSigMethod = managerRecord?.SignatureMethod ?? document.ManagerSignatureMethod;
-                renderedInstructorSigData = managerRecord?.SignatureData ?? document.ManagerSignatureData;
-                renderedInstructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
+                var managerRecord = initialTrainingSignatures.GetValueOrDefault("Manager");
+                renderedInstructorName = managerRecord?.SignerFullNameSnapshot ?? managerName;
+                renderedInstructorPosition = managerRecord?.SignerPositionSnapshot ?? managerFunction;
+                renderedInstructorSigMethod = managerRecord?.SignatureMethod ?? document?.ManagerSignatureMethod;
+                renderedInstructorSigData = managerRecord?.SignatureData ?? document?.ManagerSignatureData;
+                renderedInstructorSignedAt = managerRecord?.SignedAt.UtcDateTime ?? document?.ManagerSignedAt;
             }
             else
             {
@@ -450,7 +485,7 @@ namespace SyncApp26.Infrastructure.Services
                 }
                 else
                 {
-                    var legacyVerifierRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Admin");
+                    var legacyVerifierRecord = initialTrainingSignatures.GetValueOrDefault("Admin");
                     renderedVerifierName = legacyVerifierRecord?.SignerFullNameSnapshot;
                     renderedVerifierPosition = legacyVerifierRecord?.SignerPositionSnapshot;
                     renderedVerifierSigMethod = verifierSigMethod;
@@ -459,33 +494,26 @@ namespace SyncApp26.Infrastructure.Services
                 }
             }
 
-            col.Item().PaddingTop(6).Row(row =>
-            {
-                row.RelativeItem().Column(c => RenderSignatureBlock(c,
-                    isSsm ? ctx.T["signature.trainee.ssm"] : ctx.T["signature.trainee.su"],
-                    new SignatureBlockData(
-                        userRecord?.SignerFullNameSnapshot ?? $"{user.FirstName} {user.LastName}",
-                        userRecord?.SignerPositionSnapshot ?? user.Function?.Name,
-                        userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime), ctx.T));
-
-                row.ConstantItem(10);
-                row.RelativeItem().Column(c => RenderSignatureBlock(c,
-                    ctx.T["signature.trainer"],
-                    new SignatureBlockData(
-                        renderedInstructorName, renderedInstructorPosition,
-                        renderedInstructorSigMethod, renderedInstructorSigData, renderedInstructorSignedAt), ctx.T));
-
-                if (isSsm)
-                {
-                    row.ConstantItem(10);
-                    row.RelativeItem().Column(c => RenderSignatureBlock(c,
-                        ctx.T["signature.verifier"],
-                        new SignatureBlockData(
-                            renderedVerifierName, renderedVerifierPosition,
-                            renderedVerifierSigMethod, renderedVerifierSigData, renderedVerifierSignedAt), ctx.T));
-                }
-            });
+            return new InitialTrainingSignatureBlocks(
+                new SignatureBlockData(
+                    userRecord?.SignerFullNameSnapshot ?? $"{user.FirstName} {user.LastName}",
+                    userRecord?.SignerPositionSnapshot ?? user.Function?.Name,
+                    userSigMethod, userSigData, userRecord?.SignedAt.UtcDateTime),
+                new SignatureBlockData(
+                    renderedInstructorName, renderedInstructorPosition,
+                    renderedInstructorSigMethod, renderedInstructorSigData, renderedInstructorSignedAt),
+                isSsm
+                    ? new SignatureBlockData(
+                        renderedVerifierName, renderedVerifierPosition,
+                        renderedVerifierSigMethod, renderedVerifierSigData, renderedVerifierSignedAt)
+                    : null);
         }
+
+        // Verifier is null for SU, which has no verifier block at all.
+        private readonly record struct InitialTrainingSignatureBlocks(
+            SignatureBlockData Trainee,
+            SignatureBlockData Trainer,
+            SignatureBlockData? Verifier);
 
         private static void SectionHeader(ColumnDescriptor col, string title, string color)
         {
@@ -961,10 +989,8 @@ namespace SyncApp26.Infrastructure.Services
         // the periodic-training page.
         private static void RenderAdmittedToWorkItem(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx)
         {
-            // "Admis la lucru" records a one-time approval, so every field here comes from the
-            // manager's FIRST signature — image and date included — and never the newer capture a
-            // later periodic-training revision forces onto the document's Manager* columns.
-            var managerRecord = ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+            var admitted = ResolveAdmittedToWorkSignature(user, document,
+                ctx.InitialTrainingSignatures, ctx.ManagerName, ctx.ManagerFunction);
 
             col.Item().Text(ctx.T["initial.admittedToWork"]).Bold();
             col.Item().Height(3);
@@ -982,25 +1008,97 @@ namespace SyncApp26.Infrastructure.Services
             col.Item().Height(4);
             col.Item().Row(r =>
             {
-                // Same fallback shape as the two rows above: the explicitly recorded admission date
-                // wins, otherwise the moment the manager actually signed this admission — the date
-                // the signature block below already prints — so the line is never left blank.
-                var admittedOn = user.AdmittedDate
-                    ?? managerRecord?.SignedAt.UtcDateTime
-                    ?? document.ManagerSignedAt;
                 r.ConstantItem(160).Text(ctx.T["admitted.date"]).Bold();
-                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admittedOn?.ToString("dd.MM.yyyy")));
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admitted.AdmittedOn?.ToString("dd.MM.yyyy")));
             });
             col.Item().Height(6);
 
-            col.Item().Width(220).Column(c => RenderSignatureBlock(c, ctx.T["signature.label"],
-                new SignatureBlockData(
-                    managerRecord?.SignerFullNameSnapshot ?? user.AdmittedByName ?? ctx.ManagerName,
-                    managerRecord?.SignerPositionSnapshot ?? user.AdmittedByFunction ?? ctx.ManagerFunction,
-                    managerRecord?.SignatureMethod ?? document.ManagerSignatureMethod,
-                    managerRecord?.SignatureData ?? document.ManagerSignatureData,
-                    managerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt), ctx.T));
+            col.Item().Width(220).Column(c => RenderSignatureBlock(c, ctx.T["signature.label"], admitted.Block, ctx.T));
         }
+
+        // One-time approval, so this uses the manager's FIRST signature, never a later revision's capture. Shared with the web form.
+        private static (SignatureBlockData Block, DateTime? AdmittedOn) ResolveAdmittedToWorkSignature(
+            User user, UserDocument? document,
+            IReadOnlyDictionary<string, SignatureRecord> initialTrainingSignatures,
+            string? managerName, string? managerFunction)
+        {
+            var managerRecord = initialTrainingSignatures.GetValueOrDefault("Manager");
+
+            var admittedOn = user.AdmittedDate
+                ?? managerRecord?.SignedAt.UtcDateTime
+                ?? document?.ManagerSignedAt;
+
+            var block = new SignatureBlockData(
+                managerRecord?.SignerFullNameSnapshot ?? user.AdmittedByName ?? managerName,
+                managerRecord?.SignerPositionSnapshot ?? user.AdmittedByFunction ?? managerFunction,
+                managerRecord?.SignatureMethod ?? document?.ManagerSignatureMethod,
+                managerRecord?.SignatureData ?? document?.ManagerSignatureData,
+                managerRecord?.SignedAt.UtcDateTime ?? document?.ManagerSignedAt);
+
+            return (block, admittedOn);
+        }
+
+        public async Task<InitialTrainingSignaturesDTO> GetInitialTrainingSignaturesAsync(Guid userId, string documentType)
+        {
+            var result = new InitialTrainingSignaturesDTO { DocumentType = documentType };
+
+            var user = await LoadUserWithDocumentDataAsync(userId);
+            if (user == null) return result;
+
+            var records = await LoadInitialTrainingSignatureLookupAsync(userId, documentType);
+
+            // First document of this type - the right legacy fallback for its Manager* columns.
+            var document = await _context.UserDocuments
+                .AsNoTracking()
+                .Where(d => d.UserId == userId && d.DocumentType == documentType)
+                .OrderBy(d => d.GeneratedAt)
+                .FirstOrDefaultAsync();
+
+            bool isSsm = DocumentTypes.IsSsm(documentType);
+            var it = user.InitialTrainings?.FirstOrDefault(t => t.DocumentType == documentType);
+
+            string managerName = user.AssignedTo != null
+                ? $"{user.AssignedTo.FirstName} {user.AssignedTo.LastName}"
+                : F(user.AdmittedByName);
+            string managerFunction = user.AssignedTo?.Function?.Name ?? F(user.AdmittedByFunction);
+
+            // Mirrors the two SignatureRow calls the PDF makes for these sections.
+            result.Introductory = ToSignatureSetDto(ResolveInitialTrainingSignatureBlocks(
+                isSsm, user, document, records, managerName, managerFunction,
+                it?.IntroductoryTrainingInstructor, it?.IntroductoryTrainingInstructorFunction,
+                it?.UserSignatureMethod, it?.UserSignatureData,
+                it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                it?.VerifierSignatureMethod, it?.VerifierSignatureData));
+
+            result.Workplace = ToSignatureSetDto(ResolveInitialTrainingSignatureBlocks(
+                isSsm, user, document, records, managerName, managerFunction,
+                it?.WorkplaceTrainingInstructor, it?.WorkplaceTrainingInstructorFunction,
+                it?.UserSignatureMethod, it?.UserSignatureData,
+                it?.InstructorSignatureMethod, it?.InstructorSignatureData,
+                it?.VerifierSignatureMethod, it?.VerifierSignatureData));
+
+            var admitted = ResolveAdmittedToWorkSignature(user, document, records, managerName, managerFunction);
+            result.AdmittedToWork = ToSignatureBlockDto(admitted.Block);
+            result.AdmittedDate = admitted.AdmittedOn;
+
+            return result;
+        }
+
+        private static InitialTrainingSignatureSetDTO ToSignatureSetDto(InitialTrainingSignatureBlocks blocks) => new()
+        {
+            Trainee = ToSignatureBlockDto(blocks.Trainee),
+            Trainer = ToSignatureBlockDto(blocks.Trainer),
+            Verifier = blocks.Verifier is { } verifier ? ToSignatureBlockDto(verifier) : null
+        };
+
+        private static InitialTrainingSignatureBlockDTO ToSignatureBlockDto(SignatureBlockData data) => new()
+        {
+            SignerName = data.FullName,
+            SignerFunction = data.Position,
+            SignatureData = data.SignatureData,
+            SignatureMethod = data.SignatureMethod,
+            SignedAtUtc = data.SignedAtUtc
+        };
 
         // ══════════════════════════════════════════════════════
         // PAGE 3 — INSTRUIRE PERIODICĂ

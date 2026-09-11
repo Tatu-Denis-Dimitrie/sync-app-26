@@ -377,4 +377,58 @@
   <data name="function.accountant" xml:space="preserve">
     <value>Accountant</value>
   </data>
+  <data name="privacy.title" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="privacy.intro" xml:space="preserve">
+    <value>SyncApp26 is an internal application used by an employer to keep occupational health and safety (SSM) and emergency situations (SU) training records for its own employees. This page explains what personal data the application processes and why.</value>
+  </data>
+  <data name="privacy.data.title" xml:space="preserve">
+    <value>What data we process</value>
+  </data>
+  <data name="privacy.data.body" xml:space="preserve">
+    <value>Identification and employment data: name, work email address, personal identification number, department, job function and work site. Training records: dates, duration, the material taught, and the signatures applied to each training session and document. Technical data strictly needed for security: the IP address recorded at the moment a signature is applied, and the time of each signature.</value>
+  </data>
+  <data name="privacy.purpose.title" xml:space="preserve">
+    <value>Why we process it</value>
+  </data>
+  <data name="privacy.purpose.body" xml:space="preserve">
+    <value>To draw up and keep the individual training records required by occupational health and safety legislation, and to prove that those trainings actually took place. The data is not used for advertising, profiling or automated decision-making, and it is not sold.</value>
+  </data>
+  <data name="privacy.access.title" xml:space="preserve">
+    <value>Who has access</value>
+  </data>
+  <data name="privacy.access.body" xml:space="preserve">
+    <value>Each employee sees their own record. Line managers see the records of the people who report to them. SSM/SU officers and administrators designated by the employer see the records they are responsible for. The data is not shared with third parties outside the employer, except where the law requires it (for example a labour inspection).</value>
+  </data>
+  <data name="privacy.signin.title" xml:space="preserve">
+    <value>Signing in with Google or Microsoft</value>
+  </data>
+  <data name="privacy.signin.body" xml:space="preserve">
+    <value>If you sign in with a Google or Microsoft account, we receive only your email address and name in order to match them to an account that already exists in the application. Signing in this way never creates a new account, and we request no access to your email, files or contacts.</value>
+  </data>
+  <data name="privacy.cookies.title" xml:space="preserve">
+    <value>Cookies</value>
+  </data>
+  <data name="privacy.cookies.body" xml:space="preserve">
+    <value>The application uses only cookies strictly necessary to keep you signed in and to protect against cross-site request forgery. There are no advertising or tracking cookies.</value>
+  </data>
+  <data name="privacy.retention.title" xml:space="preserve">
+    <value>How long we keep it</value>
+  </data>
+  <data name="privacy.retention.body" xml:space="preserve">
+    <value>Training records and their signatures are kept for as long as the law requires such documents to be retained, because they serve as proof that the training was carried out. Signatures already applied are never altered retroactively.</value>
+  </data>
+  <data name="privacy.rights.title" xml:space="preserve">
+    <value>Your rights</value>
+  </data>
+  <data name="privacy.rights.body" xml:space="preserve">
+    <value>You have the right to access your data, to have inaccurate data corrected, to request erasure or restriction of processing where the law allows it, and to object to processing. You can also lodge a complaint with the national data protection supervisory authority.</value>
+  </data>
+  <data name="privacy.contact.title" xml:space="preserve">
+    <value>Contact</value>
+  </data>
+  <data name="privacy.contact.body" xml:space="preserve">
+    <value>For any request regarding your personal data, contact your employer's human resources department or the administrator of this application.</value>
+  </data>
 </root>
