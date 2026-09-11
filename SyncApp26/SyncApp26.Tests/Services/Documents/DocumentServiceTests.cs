@@ -1441,5 +1441,137 @@ namespace SyncApp26.Tests.Services.Documents
             _dbFixture.Context.SaveChanges();
             return record;
         }
+
+        // ───────────────────────── GetInitialTrainingSignaturesAsync ─────────────────────────
+
+        [Fact]
+        public async Task GetInitialTrainingSignaturesAsync_SsmDocument_TrainerIsManagerAndVerifierIsOfficer()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var officerFunction = SeedFunction("Inspector SSM");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var officer = SeedUser("Mihai", "Ionescu", officerFunction, Roles.SsmOfficer);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SSM", DocumentStatuses.PendingUser);
+            var training = SeedTraining(owner, doc, "Norme initiale", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Type", "USER-SIG", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "MANAGER-SIG", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, officer.Id, "Instructor", "Type", "OFFICER-SIG", "1.1.1.1", training.Id);
+
+            var result = await service.GetInitialTrainingSignaturesAsync(owner.Id, "SSM");
+
+            Assert.NotNull(result.Introductory);
+            Assert.Equal("MANAGER-SIG", result.Introductory!.Trainer?.SignatureData);
+            Assert.Equal("OFFICER-SIG", result.Introductory.Verifier?.SignatureData);
+        }
+
+        [Fact]
+        public async Task GetInitialTrainingSignaturesAsync_SuDocument_NeverPopulatesVerifier()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var officerFunction = SeedFunction("Inspector SU");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var officer = SeedUser("Mihai", "Ionescu", officerFunction, Roles.SuOfficer);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SU", DocumentStatuses.PendingUser);
+            var training = SeedTraining(owner, doc, "Norme SU", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Type", "USER-SIG", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "MANAGER-SIG", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, officer.Id, "Instructor", "Type", "OFFICER-SIG", "1.1.1.1", training.Id);
+
+            var result = await service.GetInitialTrainingSignaturesAsync(owner.Id, "SU");
+
+            Assert.NotNull(result.Introductory);
+            Assert.Null(result.Introductory!.Verifier);
+            // SU has no officer-swap: the officer's own capture is the "Trainer" block.
+            Assert.Equal("OFFICER-SIG", result.Introductory.Trainer?.SignatureData);
+        }
+
+        [Fact]
+        public async Task GetInitialTrainingSignaturesAsync_AdmittedToWork_PrefersSignatureRecordOverDocumentColumns()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SSM", DocumentStatuses.PendingUser);
+            var training = SeedTraining(owner, doc, "Norme initiale", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Type", "USER-SIG", "1.1.1.1", training.Id);
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "MANAGER-RECORD-SIG", "1.1.1.1", training.Id);
+
+            // A later revision resigns the document's own columns - the frozen approval must not follow it.
+            var trackedDoc = _dbFixture.Context.UserDocuments.Find(doc.Id)!;
+            trackedDoc.ManagerSignatureData = "STALE-RESIGN-SIG";
+            trackedDoc.ManagerSignedAt = DateTime.UtcNow.AddDays(5);
+            _dbFixture.Context.SaveChanges();
+
+            var result = await service.GetInitialTrainingSignaturesAsync(owner.Id, "SSM");
+
+            Assert.Equal("MANAGER-RECORD-SIG", result.AdmittedToWork?.SignatureData);
+        }
+
+        [Fact]
+        public async Task GetInitialTrainingSignaturesAsync_AdmittedToWork_FallsBackToDocumentColumns_WhenNoSignatureRecordExists()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            _dbFixture.Context.SaveChanges();
+
+            // Legacy-shaped: manager signature at document level only, no SignatureRecord.
+            var doc = SeedDocument(owner, "SSM", DocumentStatuses.Completed);
+            doc.ManagerSignatureData = "LEGACY-DOC-SIG";
+            doc.ManagerSignedAt = new DateTime(2026, 1, 10, 9, 0, 0, DateTimeKind.Utc);
+            _dbFixture.Context.SaveChanges();
+
+            var result = await service.GetInitialTrainingSignaturesAsync(owner.Id, "SSM");
+
+            Assert.Equal("LEGACY-DOC-SIG", result.AdmittedToWork?.SignatureData);
+            Assert.Equal(doc.ManagerSignedAt, result.AdmittedDate);
+        }
+
+        [Fact]
+        public async Task GetInitialTrainingSignaturesAsync_AdmittedDate_PrefersExplicitAdmittedDateOverSignatureRecordTimestamp()
+        {
+            var service = CreateService();
+            var function = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction, Roles.LineManager);
+            var owner = SeedUser("Adela", "Popescu", function);
+            owner.AssignedToId = manager.Id;
+            owner.AdmittedDate = new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc);
+            _dbFixture.Context.SaveChanges();
+
+            var doc = SeedDocument(owner, "SSM", DocumentStatuses.PendingUser);
+            var training = SeedTraining(owner, doc, "Norme initiale", 2m, new DateTime(2026, 1, 15));
+
+            await service.UpdateDocumentSignatureAsync(doc.Id, owner.Id, "User", "Type", "USER-SIG", "1.1.1.1", training.Id);
+            // Manager signs well after the recorded admission date - the explicit date must still win.
+            await service.UpdateDocumentSignatureAsync(doc.Id, manager.Id, "Manager", "Type", "MANAGER-SIG", "1.1.1.1", training.Id);
+
+            var result = await service.GetInitialTrainingSignaturesAsync(owner.Id, "SSM");
+
+            Assert.Equal(owner.AdmittedDate, result.AdmittedDate);
+        }
     }
 }
