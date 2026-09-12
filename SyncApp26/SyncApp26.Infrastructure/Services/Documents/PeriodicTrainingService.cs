@@ -84,21 +84,17 @@ namespace SyncApp26.Infrastructure.Services
             return dtos;
         }
 
-        // The manager signs the document, not the training row, so their signature lives in the
-        // SignatureRecord audit trail rather than on PeriodicTraining. Resolved per row so each
-        // training session shows the signature it was actually approved with.
+        // The manager signs the document, so their signature lives in SignatureRecords, not on the
+        // row. Resolved per row, and only that row's: no fallback to the document, matching the PDF.
         private async Task FillManagerSignaturesAsync(
             Guid userId, List<PeriodicTraining> trainings, List<PeriodicTrainingResponseDTO> dtos)
         {
-            var documents = await _context.UserDocuments
+            var docIds = await _context.UserDocuments
                 .AsNoTracking()
                 .Where(d => d.UserId == userId)
-                .Select(d => new { d.Id, d.ManagerSignatureData, d.ManagerSignatureMethod })
+                .Select(d => d.Id)
                 .ToListAsync();
-            if (documents.Count == 0) return;
-
-            var documentsById = documents.ToDictionary(d => d.Id);
-            var docIds = documents.Select(d => d.Id).ToList();
+            if (docIds.Count == 0) return;
 
             var managerRecords = await _context.SignatureRecords
                 .AsNoTracking()
@@ -122,11 +118,8 @@ namespace SyncApp26.Infrastructure.Services
                 var lookupId = training.SourceRowId ?? training.Id;
                 managerByTraining.TryGetValue(lookupId, out var record);
 
-                var document = training.UserDocumentId.HasValue
-                    && documentsById.TryGetValue(training.UserDocumentId.Value, out var d) ? d : null;
-
-                dtos[i].ManagerSignatureData = record?.SignatureData ?? document?.ManagerSignatureData;
-                dtos[i].ManagerSignatureMethod = record?.SignatureMethod ?? document?.ManagerSignatureMethod;
+                dtos[i].ManagerSignatureData = record?.SignatureData;
+                dtos[i].ManagerSignatureMethod = record?.SignatureMethod;
             }
         }
 

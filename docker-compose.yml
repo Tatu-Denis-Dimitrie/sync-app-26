@@ -15,6 +15,8 @@ services:
     volumes:
       - syncapp26_db_data:/app/data
       - syncapp26_logs:/app/logs
+      # Signed PDF archive; DocumentHash/PdfFilePath in the DB point here, so it must outlive the container.
+      - syncapp26_documents:/app/GeneratedDocuments
     networks:
       - syncapp26_net
     healthcheck:
@@ -81,3 +83,4 @@ networks:
 volumes:
   syncapp26_db_data:
   syncapp26_logs:
+  syncapp26_documents:

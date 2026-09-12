@@ -872,6 +872,12 @@
   <data name="signatureStatus.chainBroken" xml:space="preserve">
     <value>Chain Broken</value>
   </data>
+  <data name="signatureStatus.contentModified" xml:space="preserve">
+    <value>Content Modified</value>
+  </data>
+  <data name="signatureStatus.fileModified" xml:space="preserve">
+    <value>File Modified</value>
+  </data>
   <data name="signatureStatus.legacy" xml:space="preserve">
     <value>Legacy</value>
   </data>
@@ -935,14 +941,53 @@
   <data name="documentSignature.cryptographicallySecured" xml:space="preserve">
     <value>Cryptographically Secured</value>
   </data>
-  <data name="documentSignature.protectedWithPrefix" xml:space="preserve">
-    <value>Protected with</value>
+  <data name="documentSignature.protectedDescription" xml:space="preserve">
+    <value>Each signature is sealed as an HMAC-SHA256 record that freezes your identity and the training content at that moment, is chained to your previous signatures and is re-verified automatically. Your IP address and timestamp are permanently recorded.</value>
   </data>
-  <data name="documentSignature.protectedWithMid" xml:space="preserve">
-    <value>fingerprinting and an</value>
+  <data name="documentSignature.whatHappensTitle" xml:space="preserve">
+    <value>What happens when you sign</value>
   </data>
-  <data name="documentSignature.protectedWithSuffix" xml:space="preserve">
-    <value>server stamp. Your IP and timestamp are permanently recorded.</value>
+  <data name="documentSignature.whatHappens1" xml:space="preserve">
+    <value>Your signature and the training content, exactly as they are now, are frozen into a tamper-evident record.</value>
+  </data>
+  <data name="documentSignature.whatHappens2" xml:space="preserve">
+    <value>Any later change to the signed content is detected and flagged on the signature.</value>
+  </data>
+  <data name="documentSignature.whatHappens3" xml:space="preserve">
+    <value>This link is single-use and expires 7 days after it was sent.</value>
+  </data>
+  <data name="documentSignature.legalBasis" xml:space="preserve">
+    <value>Legal basis</value>
+  </data>
+  <data name="documentSignature.declarationTitle" xml:space="preserve">
+    <value>What you are confirming</value>
+  </data>
+  <data name="documentSignature.ssm.title" xml:space="preserve">
+    <value>Individual occupational health and safety (SSM) training record</value>
+  </data>
+  <data name="documentSignature.ssm.law1" xml:space="preserve">
+    <value>Law no. 319/2006 on occupational health and safety — art. 20 (the employer's obligation to train workers) and art. 22–23 (workers' obligations)</value>
+  </data>
+  <data name="documentSignature.ssm.law2" xml:space="preserve">
+    <value>Government Decision no. 1425/2006 (methodological norms) — Chapter V, training of workers: introductory-general, at the workplace and periodic; Annex 11, the individual training record</value>
+  </data>
+  <data name="documentSignature.declaration.ssm" xml:space="preserve">
+    <value>I confirm that I have received the training recorded in this document, that I have understood its content and the risks specific to my workplace, and that I undertake to follow the safety instructions, to use work and protective equipment correctly and to report any situation that could endanger me or others.</value>
+  </data>
+  <data name="documentSignature.su.title" xml:space="preserve">
+    <value>Individual emergency situations (SU) training record</value>
+  </data>
+  <data name="documentSignature.su.law1" xml:space="preserve">
+    <value>Law no. 307/2006 on fire protection — art. 22 (employees' obligations at the workplace)</value>
+  </data>
+  <data name="documentSignature.su.law2" xml:space="preserve">
+    <value>Ministry of Administration and Interior Order no. 712/2005 — general provisions on employee training in emergency situations: introductory-general, at the workplace and periodic</value>
+  </data>
+  <data name="documentSignature.su.law3" xml:space="preserve">
+    <value>Law no. 481/2004 on civil protection</value>
+  </data>
+  <data name="documentSignature.declaration.su" xml:space="preserve">
+    <value>I confirm that I have received the emergency situations training recorded in this document, that I have understood the fire prevention rules, the evacuation plan and the alarm procedures for my workplace, and that I undertake to comply with them and to report any fire hazard.</value>
   </data>
   <data name="documentSignature.employeeSignature" xml:space="preserve">
     <value>Employee Signature</value>
@@ -950,20 +995,14 @@
   <data name="documentSignature.managerSignature" xml:space="preserve">
     <value>Manager Signature</value>
   </data>
-  <data name="documentSignature.instructorSignature" xml:space="preserve">
-    <value>Instructor Signature</value>
-  </data>
-  <data name="documentSignature.verifierAdminSignature" xml:space="preserve">
-    <value>Verifier (Admin) Signature</value>
-  </data>
-  <data name="documentSignature.admin" xml:space="preserve">
-    <value>Admin</value>
+  <data name="documentSignature.officerSignature" xml:space="preserve">
+    <value>{0} Officer Signature</value>
   </data>
   <data name="documentSignature.awaitingEmployee" xml:space="preserve">
     <value>Awaiting employee</value>
   </data>
-  <data name="documentSignature.awaitingInstructor" xml:space="preserve">
-    <value>Awaiting instructor</value>
+  <data name="documentSignature.awaitingOfficer" xml:space="preserve">
+    <value>Awaiting {0} officer</value>
   </data>
   <data name="documentSignature.yourSignatureGoesHere" xml:space="preserve">
     <value>Your signature goes here</value>
@@ -1144,9 +1183,6 @@
   </data>
   <data name="messages.failedToLoadDocuments" xml:space="preserve">
     <value>Failed to load documents.</value>
-  </data>
-  <data name="messages.couldNotOpenDocument" xml:space="preserve">
-    <value>Could not open document. Please try again.</value>
   </data>
   <data name="testSignature.title" xml:space="preserve">
     <value>Test Signature Link</value>

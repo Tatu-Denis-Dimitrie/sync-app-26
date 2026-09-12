@@ -962,7 +962,7 @@ namespace SyncApp26.Infrastructure.Services
                 text.Span(ctx.T["initial.performedOn"]).FontSize(10);
                 text.Span(FUnderline(it?.WorkplaceTrainingDate?.ToString("dd.MM.yyyy"))).Underline().FontSize(10);
                 text.Span(ctx.T["initial.atWorkstation"]).FontSize(10);
-                text.Span(FUnderline(it?.WorkplaceTrainingLocation ?? user.Function?.Name)).Underline().FontSize(10);
+                text.Span(FUnderline(ResolveWorkplaceTrainingLocation(user, it))).Underline().FontSize(10);
                 text.Span(ctx.T["initial.forDuration"]).FontSize(10);
                 text.Span(FUnderline(it?.WorkplaceTrainingHours?.ToString())).Underline().FontSize(10);
                 text.Span(ctx.T["initial.hoursByComma"]).FontSize(10);
@@ -984,6 +984,17 @@ namespace SyncApp26.Infrastructure.Services
                 it?.VerifierSignatureMethod, it?.VerifierSignatureData);
         }
 
+        // "locul de muncă/postul de lucru": work site is the place, function is the post.
+        private static string? ResolveWorkplaceTrainingLocation(User user, UserInitialTraining? it)
+        {
+            if (!string.IsNullOrWhiteSpace(it?.WorkplaceTrainingLocation))
+                return it.WorkplaceTrainingLocation;
+
+            var parts = new[] { user.WorkSite?.Name, user.Function?.Name }
+                .Where(p => !string.IsNullOrWhiteSpace(p));
+            return string.Join(" / ", parts);
+        }
+
         // 3. Admis la lucru — this is the employee's line Manager's dedicated signature slot
         // (approving the employee's admission to work), independent of the Instructor slot on
         // the periodic-training page.
@@ -994,16 +1005,17 @@ namespace SyncApp26.Infrastructure.Services
 
             col.Item().Text(ctx.T["initial.admittedToWork"]).Bold();
             col.Item().Height(3);
+            // Same resolution as the signature block below, so the rows never name someone else.
             col.Item().Row(r =>
             {
                 r.ConstantItem(160).Text(ctx.T["admitted.fullName"]).Bold();
-                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByName ?? ctx.ManagerName));
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admitted.Block.FullName));
             });
             col.Item().Height(4);
             col.Item().Row(r =>
             {
                 r.ConstantItem(160).Text(ctx.T["admitted.function"]).Bold();
-                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(user.AdmittedByFunction ?? ctx.ManagerFunction));
+                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admitted.Block.Position));
             });
             col.Item().Height(4);
             col.Item().Row(r =>
@@ -1220,19 +1232,13 @@ namespace SyncApp26.Infrastructure.Services
 
             if (applyOfficerSwap)
             {
-                // Each row shows the manager signature captured for THAT training session, not the
-                // document's first one — this table is a log of separate sessions, so a row must
-                // keep the signature and date it was actually signed with. (Section 3 "Admis la
-                // lucru" is the opposite case: one-time approval, always the first signature.)
-                // Falls back to the earliest record, then the document columns, for rows signed
-                // before per-training records existed.
-                var rowManagerRecord = ctx.PeriodicSignatures.GetValueOrDefault((signatureLookupId, "Manager"))
-                    ?? ctx.InitialTrainingSignatures.GetValueOrDefault("Manager");
+                // Only this session's manager signature; no record = empty slot, never borrowed.
+                var rowManagerRecord = ctx.PeriodicSignatures.GetValueOrDefault((signatureLookupId, "Manager"));
                 instructorName = rowManagerRecord?.SignerFullNameSnapshot ?? ctx.ManagerName;
                 instructorPosition = rowManagerRecord?.SignerPositionSnapshot ?? ctx.ManagerFunction;
-                instructorSigMethod = rowManagerRecord?.SignatureMethod ?? document.ManagerSignatureMethod;
-                instructorSigData = rowManagerRecord?.SignatureData ?? document.ManagerSignatureData;
-                instructorSignedAt = rowManagerRecord?.SignedAt.UtcDateTime ?? document.ManagerSignedAt;
+                instructorSigMethod = rowManagerRecord?.SignatureMethod;
+                instructorSigData = rowManagerRecord?.SignatureData;
+                instructorSignedAt = rowManagerRecord?.SignedAt.UtcDateTime;
             }
             else
             {
@@ -1367,6 +1373,14 @@ namespace SyncApp26.Infrastructure.Services
             using var sha256 = SHA256.Create();
             var hashBytes = sha256.ComputeHash(pdfBytes);
             document.DocumentHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+
+            // Path and hash set together; the old file goes only once the new one is on disk.
+            var previousPath = document.PdfFilePath;
+            document.PdfFilePath = filePath;
+            if (!string.IsNullOrEmpty(previousPath) && previousPath != filePath && File.Exists(previousPath))
+            {
+                try { File.Delete(previousPath); } catch { /* non-fatal: an orphan file, not a wrong one */ }
+            }
 
             return filePath;
         }
@@ -1812,6 +1826,7 @@ namespace SyncApp26.Infrastructure.Services
             var previousHash = previousRecord?.SignatureHmac;
 
             var version = SignatureCanonicalSerializer.CurrentVersion;
+            var documentContentHash = await ComputeDocumentContentHashAsync(doc.UserId, doc.DocumentType);
             var canonicalInput = new SignatureCanonicalInput(
                 signerUserId,
                 fullNameSnapshot,
@@ -1823,7 +1838,8 @@ namespace SyncApp26.Infrastructure.Services
                 training?.TrainingDate,
                 signedAtOffset,
                 previousHash,
-                version);
+                version,
+                documentContentHash);
 
             var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
             var hmac = await _hmacSignatureService.ComputeHmacAsync(canonical);
@@ -1838,6 +1854,7 @@ namespace SyncApp26.Infrastructure.Services
                 SignerPositionSnapshot = positionSnapshot,
                 SignerBadgeNumberSnapshot = badgeNumberSnapshot,
                 SignerWorkSiteNameSnapshot = workSiteNameSnapshot,
+                DocumentContentHashSnapshot = documentContentHash,
                 SignatureMethod = signatureMethod,
                 SignatureData = signatureData,
                 MaterialTaughtSnapshot = training?.MaterialTaught,
@@ -1854,6 +1871,18 @@ namespace SyncApp26.Infrastructure.Services
             // Committed immediately, not left for the caller's own SaveChanges, so that multiple
             // signatures by the same signer within one operation still chain correctly.
             await _context.SaveChangesAsync();
+        }
+
+        // AsNoTracking: the caller may already track the subject with pending changes.
+        private async Task<string?> ComputeDocumentContentHashAsync(Guid subjectUserId, string documentType)
+        {
+            var subject = await _context.Users
+                .AsNoTracking()
+                .Include(u => u.InitialTrainings)
+                .FirstOrDefaultAsync(u => u.Id == subjectUserId);
+            if (subject == null) return null;
+
+            return DocumentContentFingerprint.Compute(DocumentContentInput.FromUser(subject, documentType));
         }
 
         // One-off repair for SignatureRecords created before the Version column existed (they were

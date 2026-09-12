@@ -22,7 +22,8 @@ namespace SyncApp26.Application.Services
         DateTime? TrainingDateSnapshot,
         DateTimeOffset SignedAt,
         string? PreviousSignatureHash,
-        int Version);
+        int Version,
+        string? DocumentContentHashSnapshot = null); // V4+; optional so V1-V3 call sites stay untouched
 
     /// <summary>
     /// Turns a SignatureCanonicalInput into a deterministic byte sequence suitable for keyed
@@ -33,7 +34,7 @@ namespace SyncApp26.Application.Services
     {
         /// <summary>The schema version new signatures are created with. Bump this — and add a new
         /// SerializeVN case below — when the field set changes; never edit an existing case.</summary>
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         public static string Serialize(SignatureCanonicalInput input)
         {
@@ -42,6 +43,7 @@ namespace SyncApp26.Application.Services
                 1 => SerializeV1(input),
                 2 => SerializeV2(input),
                 3 => SerializeV3(input),
+                4 => SerializeV4(input),
                 _ => throw new NotSupportedException($"Unknown signature canonical schema version {input.Version}.")
             };
         }
@@ -99,6 +101,25 @@ namespace SyncApp26.Application.Services
             AppendField(sb, input.MaterialTaughtSnapshot);
             AppendField(sb, FormatDuration(input.DurationHoursSnapshot));
             AppendField(sb, FormatTrainingDate(input.TrainingDateSnapshot));
+            AppendField(sb, input.SignedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+            AppendField(sb, input.PreviousSignatureHash);
+            return sb.ToString();
+        }
+
+        // V3 plus the document fingerprint (DocumentContentFingerprint). Frozen like V1-V3.
+        private static string SerializeV4(SignatureCanonicalInput input)
+        {
+            var sb = new StringBuilder();
+            AppendField(sb, input.Version.ToString(CultureInfo.InvariantCulture));
+            AppendField(sb, input.SignerUserId.ToString("D"));
+            AppendField(sb, input.SignerFullNameSnapshot);
+            AppendField(sb, input.SignerPositionSnapshot);
+            AppendField(sb, input.SignerBadgeNumberSnapshot);
+            AppendField(sb, input.SignerWorkSiteNameSnapshot);
+            AppendField(sb, input.MaterialTaughtSnapshot);
+            AppendField(sb, FormatDuration(input.DurationHoursSnapshot));
+            AppendField(sb, FormatTrainingDate(input.TrainingDateSnapshot));
+            AppendField(sb, input.DocumentContentHashSnapshot);
             AppendField(sb, input.SignedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
             AppendField(sb, input.PreviousSignatureHash);
             return sb.ToString();

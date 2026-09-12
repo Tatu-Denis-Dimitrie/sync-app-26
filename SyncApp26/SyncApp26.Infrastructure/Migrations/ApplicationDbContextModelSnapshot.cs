@@ -438,6 +438,10 @@ namespace SyncApp26.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DocumentContentHashSnapshot")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal?>("DurationHoursSnapshot")
                         .HasColumnType("TEXT");
 

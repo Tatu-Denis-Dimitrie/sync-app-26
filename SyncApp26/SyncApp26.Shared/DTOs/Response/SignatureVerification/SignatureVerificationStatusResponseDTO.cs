@@ -10,7 +10,7 @@ namespace SyncApp26.Shared.DTOs.Response.SignatureVerification
         /// <summary>Empty (Guid.Empty) when Status is "NotFound". Lets callers resolve the owning document's type (SSM/SU) for officer-scoped access checks.</summary>
         public Guid UserDocumentId { get; set; }
 
-        /// <summary>"Valid", "Invalid", "ChainBroken", "Legacy", or "NotFound".</summary>
+        /// <summary>"Valid", "Invalid", "ChainBroken", "ContentModified", "FileModified", "Legacy", or "NotFound".</summary>
         public string Status { get; set; } = string.Empty;
 
         /// <summary>True when the stored SignatureHmac recomputes from the frozen snapshot fields.</summary>
@@ -21,6 +21,12 @@ namespace SyncApp26.Shared.DTOs.Response.SignatureVerification
 
         /// <summary>True for backfilled rows with no real HMAC — never treated as verified.</summary>
         public bool IsLegacy { get; set; }
+
+        /// <summary>Fingerprint matches live data. Null unless latest of its role and V4+.</summary>
+        public bool? IsContentIntact { get; set; }
+
+        /// <summary>Stored PDF matches DocumentHash. Null when there is no stored file.</summary>
+        public bool? IsFileIntact { get; set; }
 
         public DateTimeOffset VerifiedAt { get; set; }
     }

@@ -63,6 +63,15 @@ export class DocumentSignatureComponent implements OnInit {
     return this.translationService.translate('Documents', key);
   }
 
+  get isSsm(): boolean {
+    return (this.documentData?.documentType ?? '').toUpperCase() === 'SSM';
+  }
+
+  // The final chain step is the SSM or SU officer, decided by document type.
+  get officerType(): string {
+    return this.isSsm ? 'SSM' : 'SU';
+  }
+
   ngOnInit(): void {
     this.isLoggedIn = this.authService.isLoggedIn();
     this.token = this.route.snapshot.paramMap.get('token');

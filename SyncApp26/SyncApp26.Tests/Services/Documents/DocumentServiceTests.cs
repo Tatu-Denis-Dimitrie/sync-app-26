@@ -39,12 +39,21 @@ namespace SyncApp26.Tests.Services.Documents
         // the service captured the *correct* values, not just *some* non-null value.
         private static string ExpectedHmac(Guid signerUserId, string fullName, string position,
             string? material, decimal? duration, DateTime? trainingDate, DateTimeOffset signedAt,
-            string? badgeNumber = null, string? workSite = null)
+            string? badgeNumber = null, string? workSite = null, string? documentContentHash = null)
         {
-            var input = new SignatureCanonicalInput(signerUserId, fullName, position, badgeNumber, workSite, material, duration, trainingDate, signedAt, null, SignatureCanonicalSerializer.CurrentVersion);
+            var input = new SignatureCanonicalInput(signerUserId, fullName, position, badgeNumber, workSite, material, duration, trainingDate, signedAt, null, SignatureCanonicalSerializer.CurrentVersion, documentContentHash);
             var canonical = SignatureCanonicalSerializer.Serialize(input);
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(TestKey));
             return Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+        }
+
+        private string ExpectedDocumentContentHash(Guid subjectUserId, string documentType)
+        {
+            var subject = _dbFixture.Context.Users
+                .AsNoTracking()
+                .Include(u => u.InitialTrainings)
+                .Single(u => u.Id == subjectUserId);
+            return DocumentContentFingerprint.Compute(DocumentContentInput.FromUser(subject, documentType));
         }
 
         private Function SeedFunction(string name)
@@ -407,9 +416,17 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Null(record.PreviousSignatureHash);
             Assert.False(string.IsNullOrEmpty(record.SignatureHmac));
 
+            var documentHash = ExpectedDocumentContentHash(owner.Id, "SU");
+            Assert.Equal(documentHash, record.DocumentContentHashSnapshot);
+
             var expected = ExpectedHmac(owner.Id, "Adela Popescu", "Operator", "Norme SSM generale", 2m,
-                new DateTime(2026, 1, 15), record.SignedAt);
+                new DateTime(2026, 1, 15), record.SignedAt, documentContentHash: documentHash);
             Assert.Equal(expected, record.SignatureHmac);
+
+            // The document fingerprint is genuinely part of the hashed input, not just stored alongside it.
+            var withoutDocumentHash = ExpectedHmac(owner.Id, "Adela Popescu", "Operator", "Norme SSM generale", 2m,
+                new DateTime(2026, 1, 15), record.SignedAt);
+            Assert.NotEqual(withoutDocumentHash, record.SignatureHmac);
         }
 
         [Fact]
@@ -427,13 +444,14 @@ namespace SyncApp26.Tests.Services.Documents
             var record = _dbFixture.Context.SignatureRecords.Single(r => r.UserDocumentId == doc.Id);
             Assert.Equal("BADGE-4471", record.SignerBadgeNumberSnapshot);
 
+            var documentHash = ExpectedDocumentContentHash(owner.Id, "SU");
             var expected = ExpectedHmac(owner.Id, "Adela Popescu", "Operator", "Norme SSM generale", 2m,
-                new DateTime(2026, 1, 15), record.SignedAt, badgeNumber: "BADGE-4471");
+                new DateTime(2026, 1, 15), record.SignedAt, badgeNumber: "BADGE-4471", documentContentHash: documentHash);
             Assert.Equal(expected, record.SignatureHmac);
 
             // The badge is genuinely part of the hashed input, not just stored alongside it.
             var withoutBadge = ExpectedHmac(owner.Id, "Adela Popescu", "Operator", "Norme SSM generale", 2m,
-                new DateTime(2026, 1, 15), record.SignedAt);
+                new DateTime(2026, 1, 15), record.SignedAt, documentContentHash: documentHash);
             Assert.NotEqual(withoutBadge, record.SignatureHmac);
         }
 

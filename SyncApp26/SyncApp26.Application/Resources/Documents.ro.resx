@@ -872,6 +872,12 @@
   <data name="signatureStatus.chainBroken" xml:space="preserve">
     <value>Lanț întrerupt</value>
   </data>
+  <data name="signatureStatus.contentModified" xml:space="preserve">
+    <value>Conținut modificat</value>
+  </data>
+  <data name="signatureStatus.fileModified" xml:space="preserve">
+    <value>Fișier modificat</value>
+  </data>
   <data name="signatureStatus.legacy" xml:space="preserve">
     <value>Moștenită</value>
   </data>
@@ -935,14 +941,53 @@
   <data name="documentSignature.cryptographicallySecured" xml:space="preserve">
     <value>Securizat criptografic</value>
   </data>
-  <data name="documentSignature.protectedWithPrefix" xml:space="preserve">
-    <value>Protejat cu</value>
+  <data name="documentSignature.protectedDescription" xml:space="preserve">
+    <value>Fiecare semnătură este sigilată ca înregistrare HMAC-SHA256 care îngheață identitatea dumneavoastră și conținutul instruirii din acel moment, este legată de semnăturile dumneavoastră anterioare și este reverificată automat. Adresa IP și marca temporală sunt înregistrate permanent.</value>
   </data>
-  <data name="documentSignature.protectedWithMid" xml:space="preserve">
-    <value>amprentare și o</value>
+  <data name="documentSignature.whatHappensTitle" xml:space="preserve">
+    <value>Ce se întâmplă când semnați</value>
   </data>
-  <data name="documentSignature.protectedWithSuffix" xml:space="preserve">
-    <value>ștampilă de server. Adresa dumneavoastră IP și marca temporală sunt înregistrate permanent.</value>
+  <data name="documentSignature.whatHappens1" xml:space="preserve">
+    <value>Semnătura dumneavoastră și conținutul instruirii, exact așa cum sunt acum, sunt înghețate într-o înregistrare a cărei modificare este detectabilă.</value>
+  </data>
+  <data name="documentSignature.whatHappens2" xml:space="preserve">
+    <value>Orice modificare ulterioară a conținutului semnat este detectată și semnalată pe semnătură.</value>
+  </data>
+  <data name="documentSignature.whatHappens3" xml:space="preserve">
+    <value>Acest link este de unică folosință și expiră la 7 zile de la trimitere.</value>
+  </data>
+  <data name="documentSignature.legalBasis" xml:space="preserve">
+    <value>Temei legal</value>
+  </data>
+  <data name="documentSignature.declarationTitle" xml:space="preserve">
+    <value>Ce confirmați prin semnătură</value>
+  </data>
+  <data name="documentSignature.ssm.title" xml:space="preserve">
+    <value>Fișa de instruire individuală privind securitatea și sănătatea în muncă</value>
+  </data>
+  <data name="documentSignature.ssm.law1" xml:space="preserve">
+    <value>Legea nr. 319/2006 a securității și sănătății în muncă — art. 20 (obligația angajatorului de a asigura instruirea lucrătorilor) și art. 22–23 (obligațiile lucrătorilor)</value>
+  </data>
+  <data name="documentSignature.ssm.law2" xml:space="preserve">
+    <value>H.G. nr. 1425/2006 (normele metodologice) — Cap. V, instruirea lucrătorilor: introductiv-generală, la locul de muncă și periodică; Anexa nr. 11, fișa de instruire individuală</value>
+  </data>
+  <data name="documentSignature.declaration.ssm" xml:space="preserve">
+    <value>Confirm că am fost instruit(ă) conform celor consemnate în acest document, că am înțeles conținutul instruirii și riscurile specifice locului meu de muncă și că mă oblig să respect instrucțiunile de securitate, să utilizez corect echipamentele de muncă și de protecție și să semnalez orice situație care ar putea pune în pericol propria persoană sau alte persoane.</value>
+  </data>
+  <data name="documentSignature.su.title" xml:space="preserve">
+    <value>Fișa individuală de instructaj în domeniul situațiilor de urgență</value>
+  </data>
+  <data name="documentSignature.su.law1" xml:space="preserve">
+    <value>Legea nr. 307/2006 privind apărarea împotriva incendiilor — art. 22 (obligațiile salariaților la locul de muncă)</value>
+  </data>
+  <data name="documentSignature.su.law2" xml:space="preserve">
+    <value>O.M.A.I. nr. 712/2005 — dispozițiile generale privind instruirea salariaților în domeniul situațiilor de urgență: instructaj introductiv general, la locul de muncă și periodic</value>
+  </data>
+  <data name="documentSignature.su.law3" xml:space="preserve">
+    <value>Legea nr. 481/2004 privind protecția civilă</value>
+  </data>
+  <data name="documentSignature.declaration.su" xml:space="preserve">
+    <value>Confirm că am fost instruit(ă) în domeniul situațiilor de urgență conform celor consemnate în acest document, că am înțeles regulile de prevenire a incendiilor, planul de evacuare și procedurile de alarmare pentru locul meu de muncă și că mă oblig să le respect și să semnalez orice pericol de incendiu.</value>
   </data>
   <data name="documentSignature.employeeSignature" xml:space="preserve">
     <value>Semnătura angajatului</value>
@@ -950,20 +995,14 @@
   <data name="documentSignature.managerSignature" xml:space="preserve">
     <value>Semnătura managerului</value>
   </data>
-  <data name="documentSignature.instructorSignature" xml:space="preserve">
-    <value>Semnătura instructorului</value>
-  </data>
-  <data name="documentSignature.verifierAdminSignature" xml:space="preserve">
-    <value>Semnătura verificatorului (administrator)</value>
-  </data>
-  <data name="documentSignature.admin" xml:space="preserve">
-    <value>Administrator</value>
+  <data name="documentSignature.officerSignature" xml:space="preserve">
+    <value>Semnătura responsabilului {0}</value>
   </data>
   <data name="documentSignature.awaitingEmployee" xml:space="preserve">
     <value>În așteptarea angajatului</value>
   </data>
-  <data name="documentSignature.awaitingInstructor" xml:space="preserve">
-    <value>În așteptarea instructorului</value>
+  <data name="documentSignature.awaitingOfficer" xml:space="preserve">
+    <value>În așteptarea responsabilului {0}</value>
   </data>
   <data name="documentSignature.yourSignatureGoesHere" xml:space="preserve">
     <value>Semnătura dumneavoastră se pune aici</value>
