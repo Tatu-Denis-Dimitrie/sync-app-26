@@ -1064,6 +1064,24 @@
   <data name="adminSignature.adminSignatureTitle" xml:space="preserve">
     <value>Semnătura administratorului</value>
   </data>
+  <data name="adminSignature.subtitle" xml:space="preserve">
+    <value>Se salvează o singură dată și se aplică de fiecare dată când semnați un document.</value>
+  </data>
+  <data name="adminSignature.current" xml:space="preserve">
+    <value>Semnătura curentă</value>
+  </data>
+  <data name="adminSignature.active" xml:space="preserve">
+    <value>Activă</value>
+  </data>
+  <data name="adminSignature.drawHint" xml:space="preserve">
+    <value>Semnați aici</value>
+  </data>
+  <data name="adminSignature.newSignature" xml:space="preserve">
+    <value>Semnătură nouă</value>
+  </data>
+  <data name="adminSignature.noneYet" xml:space="preserve">
+    <value>Nicio semnătură salvată încă.</value>
+  </data>
   <data name="adminSignature.errorSaving" xml:space="preserve">
     <value>Eroare la salvarea semnăturii!</value>
   </data>

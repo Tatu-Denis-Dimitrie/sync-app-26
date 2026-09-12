@@ -696,23 +696,25 @@
                                       </td>
                                     }
                                     <td class="no-print actions-cell">
-                                      @if (isExcludedFromPrint(t)) {
-                                        <span class="excluded-tag">{{ 'printExclusion.excludedTag' | translate:'Documents' }}</span>
-                                      }
-                                      <button type="button" class="history-toggle" (click)="toggleHistory(t)">
-                                        {{ isHistoryExpanded(t) ? ('buttons.hide' | translate:'Common') : ('history.title' | translate:'Documents') }}
-                                      </button>
-                                      @if (isAdmin) {
+                                      <div class="actions-stack">
                                         @if (isExcludedFromPrint(t)) {
-                                          <button type="button" class="history-toggle disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
-                                            {{ 'printExclusion.include' | translate:'Documents' }}
-                                          </button>
-                                        } @else if (hasInvalidSignature(t)) {
-                                          <button type="button" class="history-toggle exclude-print-btn disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
-                                            {{ 'printExclusion.exclude' | translate:'Documents' }}
-                                          </button>
+                                          <span class="excluded-tag">{{ 'printExclusion.excludedTag' | translate:'Documents' }}</span>
                                         }
-                                      }
+                                        <button type="button" class="history-toggle" (click)="toggleHistory(t)">
+                                          {{ isHistoryExpanded(t) ? ('buttons.hide' | translate:'Common') : ('history.title' | translate:'Documents') }}
+                                        </button>
+                                        @if (isAdmin) {
+                                          @if (isExcludedFromPrint(t)) {
+                                            <button type="button" class="history-toggle disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
+                                              {{ 'printExclusion.include' | translate:'Documents' }}
+                                            </button>
+                                          } @else if (hasInvalidSignature(t)) {
+                                            <button type="button" class="history-toggle exclude-print-btn disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
+                                              {{ 'printExclusion.exclude' | translate:'Documents' }}
+                                            </button>
+                                          }
+                                        }
+                                      </div>
                                     </td>
                                   </tr>
                                   @if (isHistoryExpanded(t)) {
@@ -1219,23 +1221,25 @@
                                                 }
                                               </td>
                                               <td class="no-print actions-cell">
-                                                @if (isExcludedFromPrint(t)) {
-                                                  <span class="excluded-tag">{{ 'printExclusion.excludedTag' | translate:'Documents' }}</span>
-                                                }
-                                                <button type="button" class="history-toggle" (click)="toggleHistory(t)">
-                                                  {{ isHistoryExpanded(t) ? ('buttons.hide' | translate:'Common') : ('history.title' | translate:'Documents') }}
-                                                </button>
-                                                @if (isAdmin) {
+                                                <div class="actions-stack">
                                                   @if (isExcludedFromPrint(t)) {
-                                                    <button type="button" class="history-toggle disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
-                                                      {{ 'printExclusion.include' | translate:'Documents' }}
-                                                    </button>
-                                                  } @else if (hasInvalidSignature(t)) {
-                                                    <button type="button" class="history-toggle exclude-print-btn disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
-                                                      {{ 'printExclusion.exclude' | translate:'Documents' }}
-                                                    </button>
+                                                    <span class="excluded-tag">{{ 'printExclusion.excludedTag' | translate:'Documents' }}</span>
                                                   }
-                                                }
+                                                  <button type="button" class="history-toggle" (click)="toggleHistory(t)">
+                                                    {{ isHistoryExpanded(t) ? ('buttons.hide' | translate:'Common') : ('history.title' | translate:'Documents') }}
+                                                  </button>
+                                                  @if (isAdmin) {
+                                                    @if (isExcludedFromPrint(t)) {
+                                                      <button type="button" class="history-toggle disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
+                                                        {{ 'printExclusion.include' | translate:'Documents' }}
+                                                      </button>
+                                                    } @else if (hasInvalidSignature(t)) {
+                                                      <button type="button" class="history-toggle exclude-print-btn disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
+                                                        {{ 'printExclusion.exclude' | translate:'Documents' }}
+                                                      </button>
+                                                    }
+                                                  }
+                                                </div>
                                               </td>
                                             </tr>
                                             @if (isHistoryExpanded(t)) {

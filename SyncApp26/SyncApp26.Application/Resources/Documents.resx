@@ -1064,6 +1064,24 @@
   <data name="adminSignature.adminSignatureTitle" xml:space="preserve">
     <value>Admin Signature</value>
   </data>
+  <data name="adminSignature.subtitle" xml:space="preserve">
+    <value>Saved once, applied every time you sign a document.</value>
+  </data>
+  <data name="adminSignature.current" xml:space="preserve">
+    <value>Current signature</value>
+  </data>
+  <data name="adminSignature.active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="adminSignature.drawHint" xml:space="preserve">
+    <value>Sign here</value>
+  </data>
+  <data name="adminSignature.newSignature" xml:space="preserve">
+    <value>New signature</value>
+  </data>
+  <data name="adminSignature.noneYet" xml:space="preserve">
+    <value>No signature saved yet.</value>
+  </data>
   <data name="adminSignature.errorSaving" xml:space="preserve">
     <value>Error saving signature!</value>
   </data>

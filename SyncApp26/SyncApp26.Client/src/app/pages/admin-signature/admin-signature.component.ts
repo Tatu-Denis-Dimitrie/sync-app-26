@@ -29,7 +29,9 @@ export class AdminSignatureComponent {
   typedSignature: string = '';
   savedSignature: any = null;
   isSigConfirmed = false;
-  currentYear = new Date().getFullYear();
+  isSaving = false;
+  statusMessage = '';
+  statusKind: 'success' | 'error' = 'success';
 
   // Admin keeps this page to store a signature even though it no longer signs anything, so the
   // heading reflects whichever officer duty actually uses it — falling back to "Admin" only when
@@ -153,7 +155,7 @@ export class AdminSignatureComponent {
   }
 
   saveSignature() {
-    if (!this.isSigConfirmed) return;
+    if (!this.isSigConfirmed || this.isSaving) return;
     let payload;
     if (this.signatureMethod === 'draw') {
       if (!this.signaturePad) return;
@@ -162,17 +164,23 @@ export class AdminSignatureComponent {
     } else {
       payload = { signatureData: this.typedSignature, signatureMethod: 'Type' };
     }
+
+    this.isSaving = true;
+    this.statusMessage = '';
     this.userSignatureService.saveMySignature(payload).subscribe({
-      next: (response) => {
-        console.log('Response:', response);
-        alert(this.tDocuments('messages.signatureSavedSuccessfully'));
+      next: () => {
+        this.isSaving = false;
+        this.statusKind = 'success';
+        this.statusMessage = this.tDocuments('messages.signatureSavedSuccessfully');
         this.loadSignature();
         this.isSigConfirmed = false;
+        this.typedSignature = '';
         this.clearSignature();
       },
-      error: (err) => {
-        console.error('Error saving admin signature:', err);
-        alert(this.tDocuments('adminSignature.errorSaving'));
+      error: () => {
+        this.isSaving = false;
+        this.statusKind = 'error';
+        this.statusMessage = this.tDocuments('adminSignature.errorSaving');
       }
     });
   }

@@ -18,12 +18,12 @@ interface WorkSiteStats {
   /** Share of the site's roster that has signed, 0-100, for the fill tracks. */
   ssmPct: number;
   suPct: number;
-  /** Share fully covered on both documents — the headline number each row leads with. */
-  bothPct: number;
+  /** Signatures collected out of all required (two per employee) — the headline; moves with every signature. */
+  coveragePct: number;
 }
 
 const EMPTY_STATS: WorkSiteStats = {
-  employeeCount: 0, ssmSigned: 0, suSigned: 0, bothSigned: 0, unsigned: 0, ssmPct: 0, suPct: 0, bothPct: 0
+  employeeCount: 0, ssmSigned: 0, suSigned: 0, bothSigned: 0, unsigned: 0, ssmPct: 0, suPct: 0, coveragePct: 0
 };
 
 @Component({
@@ -146,7 +146,7 @@ export class WorkSitesComponent implements OnInit {
       unsigned: employees.filter(u => !u.hasSignedSsm && !u.hasSignedSu).length,
       ssmPct: Math.round((ssmSigned / employees.length) * 100),
       suPct: Math.round((suSigned / employees.length) * 100),
-      bothPct: Math.round((bothSigned / employees.length) * 100)
+      coveragePct: Math.round(((ssmSigned + suSigned) / (employees.length * 2)) * 100)
     };
   }
 

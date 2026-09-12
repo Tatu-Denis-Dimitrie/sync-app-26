@@ -346,8 +346,10 @@ export class SsmSuFormComponent implements OnInit {
     }
   }
 
+  // Any status where the signature no longer vouches for the row's content offers print exclusion.
   hasInvalidSignature(t: any): boolean {
-    return this.getHistoryEntries(t).some(e => e.status === 'Invalid' || e.status === 'ChainBroken');
+    return this.getHistoryEntries(t).some(e =>
+      e.status === 'Invalid' || e.status === 'ChainBroken' || e.status === 'ContentModified');
   }
 
   isExcludedFromPrint(t: any): boolean {
