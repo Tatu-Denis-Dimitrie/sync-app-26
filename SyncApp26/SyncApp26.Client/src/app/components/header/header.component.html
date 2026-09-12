@@ -149,12 +149,6 @@
                     </span>
                   </span>
                 </button>
-                @if (impersonationBlockedMessage) {
-                  <span class="hidden max-w-[11rem] truncate rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive md:inline-block"
-                    [title]="impersonationBlockedMessage">
-                    {{ impersonationBlockedMessage }}
-                  </span>
-                }
               </div>
             }
             @if (isAdmin && anomalyAlert) {

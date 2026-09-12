@@ -67,14 +67,18 @@
             @if (!isAdmin) {
               <button
                 (click)="openBulkTrainingModal()"
-                class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors flex-1 min-w-[9rem] lg:min-w-0 truncate"
+                [disabled]="isImpersonating"
+                [title]="isImpersonating ? impersonationBlockTitle : null"
+                class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors flex-1 min-w-[9rem] lg:min-w-0 truncate disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600"
                 >
                 {{ 'documentsView.bulkPeriodicTraining' | translate:'Documents' }}
               </button>
 
               <button
                 (click)="openBulkInitialTrainingModal()"
-                class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors flex-1 min-w-[9rem] lg:min-w-0 truncate"
+                [disabled]="isImpersonating"
+                [title]="isImpersonating ? impersonationBlockTitle : null"
+                class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors flex-1 min-w-[9rem] lg:min-w-0 truncate disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-700"
                 >
                 {{ 'documentsView.bulkInitialTraining' | translate:'Documents' }}
               </button>
@@ -83,7 +87,9 @@
             @if (pendingAdminCount > 0) {
               <button
                 (click)="bulkSignAsOfficer()"
-                class="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors flex-1 min-w-[9rem] lg:min-w-0 flex items-center justify-center gap-2"
+                [disabled]="isImpersonating"
+                [title]="isImpersonating ? impersonationBlockTitle : null"
+                class="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-semibold hover:bg-orange-600 transition-colors flex-1 min-w-[9rem] lg:min-w-0 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500"
                 >
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
@@ -94,7 +100,9 @@
 
             <button
               (click)="openRegenerateModal()"
-              class="px-4 py-2 border border-gray-400 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors flex-1 min-w-[9rem] lg:min-w-0 flex items-center justify-center gap-2"
+              [disabled]="isImpersonating"
+              [title]="isImpersonating ? impersonationBlockTitle : null"
+              class="px-4 py-2 border border-gray-400 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors flex-1 min-w-[9rem] lg:min-w-0 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100"
               >
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -219,6 +227,8 @@
                   <button
                     type="button"
                     (click)="confirmBulkGenerate()"
+                    [disabled]="isImpersonating"
+                    [title]="isImpersonating ? impersonationBlockTitle : null"
                     class="px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                     {{ 'documentsView.generate' | translate:'Documents' }}
@@ -274,7 +284,8 @@
                   <button
                     type="button"
                     (click)="confirmRegenerate()"
-                    [disabled]="!!regenerateResult"
+                    [disabled]="!!regenerateResult || isImpersonating"
+                    [title]="isImpersonating ? impersonationBlockTitle : null"
                     class="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-medium hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                     {{ 'documentsView.regenerate' | translate:'Documents' }}

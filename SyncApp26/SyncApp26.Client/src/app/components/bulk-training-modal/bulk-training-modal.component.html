@@ -316,8 +316,9 @@
                                     type="button"
                                     class="btn-primary"
                                     (click)="submitBulkTraining()"
+                                    [title]="isImpersonating ? impersonationBlockTitle : null"
           [disabled]="
-            isSubmitting || !formData.trainingDate || isLoadingDepartments
+            isSubmitting || !formData.trainingDate || isLoadingDepartments || isImpersonating
           "
                                     >
                                     {{ isSubmitting ? ('bulkTraining.addingEllipsis' | translate:'Documents') : ('bulkTraining.addTrainingRecords' | translate:'Documents') }}

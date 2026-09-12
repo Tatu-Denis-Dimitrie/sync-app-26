@@ -239,6 +239,9 @@
   <data name="header.profileSettings" xml:space="preserve">
     <value>Setările profilului</value>
   </data>
+  <data name="impersonation.actionBlocked" xml:space="preserve">
+    <value>Indisponibil în modul de vizualizare ca alt utilizator</value>
+  </data>
   <data name="footer.version" xml:space="preserve">
     <value>Versiune:</value>
   </data>

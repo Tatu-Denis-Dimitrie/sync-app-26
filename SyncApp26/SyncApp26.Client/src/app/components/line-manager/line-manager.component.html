@@ -83,11 +83,15 @@
             </div>
             <div class="flex gap-2">
               <button (click)="openEmailChangeModal()"
-                class="px-4 py-2 bg-slate-700 text-white rounded text-sm hover:bg-slate-800 transition">
+                [disabled]="isImpersonating"
+                [title]="isImpersonating ? impersonationBlockTitle : null"
+                class="px-4 py-2 bg-slate-700 text-white rounded text-sm hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-700">
                 {{ 'actions.changeEmail' | translate:'Users' }}
               </button>
               <button (click)="openDataChangeModal()"
-                class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition">
+                [disabled]="isImpersonating"
+                [title]="isImpersonating ? impersonationBlockTitle : null"
+                class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600">
                 {{ 'actions.requestDataChange' | translate:'Requests' }}
               </button>
             </div>
@@ -99,7 +103,9 @@
                 <h3 class="text-xl font-bold text-foreground">{{ 'sections.documentsPendingSignature' | translate:'Documents' }}</h3>
                 @if (pendingManager.totalCount > 0 || pendingInstructor.totalCount > 0) {
                   <button (click)="signAllDocuments()"
-                    class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                    [disabled]="isImpersonating"
+                    [title]="isImpersonating ? impersonationBlockTitle : null"
+                    class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12l2 2 4-4M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
@@ -131,7 +137,9 @@
                           {{ 'actions.view' | translate:'Users' }}
                         </button>
                         <button (click)="signDocument(doc.id)"
-                          class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+                          [disabled]="isImpersonating"
+                          [title]="isImpersonating ? impersonationBlockTitle : null"
+                          class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600">
                           {{ 'actions.sign' | translate:'Documents' }}
                         </button>
                       </div>
@@ -166,7 +174,9 @@
                           {{ 'actions.view' | translate:'Users' }}
                         </button>
                         <button (click)="signDocument(doc.id)"
-                          class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+                          [disabled]="isImpersonating"
+                          [title]="isImpersonating ? impersonationBlockTitle : null"
+                          class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600">
                           {{ 'actions.countersign' | translate:'Documents' }}
                         </button>
                       </div>
@@ -201,7 +211,9 @@
                           {{ 'actions.view' | translate:'Users' }}
                         </button>
                         <button (click)="signDocument(doc.id)"
-                          class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition">
+                          [disabled]="isImpersonating"
+                          [title]="isImpersonating ? impersonationBlockTitle : null"
+                          class="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600">
                           {{ 'actions.sign' | translate:'Documents' }}
                         </button>
                       </div>
@@ -379,8 +391,9 @@
                   </div>
                   <p class="text-xs text-teal-600 mt-2">{{ 'labels.savedPrefix' | translate:'Documents' }} {{formatDateTime(savedSignature!.createdAt)}} &nbsp;·&nbsp; {{ 'labels.methodPrefix' | translate:'Documents' }} {{ savedSignature!.signatureMethod }}</p>
                 </div>
-                <button (click)="revokeSignature()" [disabled]="isSigLoading"
-                class="px-3 py-2 border border-red-300 text-red-700 text-xs font-semibold rounded-md hover:bg-red-50 transition disabled:opacity-50 shrink-0">{{ 'actions.revoke' | translate:'Documents' }}</button>
+                <button (click)="revokeSignature()" [disabled]="isSigLoading || isImpersonating"
+                [title]="isImpersonating ? impersonationBlockTitle : null"
+                class="px-3 py-2 border border-red-300 text-red-700 text-xs font-semibold rounded-md hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0">{{ 'actions.revoke' | translate:'Documents' }}</button>
               </div>
             </div>
           } @else {
@@ -431,7 +444,8 @@
                 class="mt-0.5 h-4 w-4 rounded border-border text-teal-600 focus:ring-teal-500" />
               <span class="text-sm text-muted-foreground">{{ 'messages.signatureConfirmation' | translate:'Documents' }}</span>
             </label>
-            <button (click)="saveSignature()" [disabled]="!isSigConfirmed || isSigLoading"
+            <button (click)="saveSignature()" [disabled]="!isSigConfirmed || isSigLoading || isImpersonating"
+              [title]="isImpersonating ? impersonationBlockTitle : null"
               class="px-5 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
               @if (isSigLoading) {
                 <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -543,10 +557,10 @@
                   <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
                     <div class="flex items-center justify-center gap-2">
                       @if (assignedUser.hasUnsignedSsm) {
-                        <button (click)="$event.stopPropagation(); notifyUser(assignedUser, 'SSM')" [title]="'actions.notifyMissingSsmTitle' | translate:'Documents'" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition">{{ 'actions.notifySsm' | translate:'Documents' }}</button>
+                        <button (click)="$event.stopPropagation(); notifyUser(assignedUser, 'SSM')" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : ('actions.notifyMissingSsmTitle' | translate:'Documents')" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-100">{{ 'actions.notifySsm' | translate:'Documents' }}</button>
                       }
                       @if (assignedUser.hasUnsignedSu) {
-                        <button (click)="$event.stopPropagation(); notifyUser(assignedUser, 'SU')" [title]="'actions.notifyMissingSuTitle' | translate:'Documents'" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition">{{ 'actions.notifySu' | translate:'Documents' }}</button>
+                        <button (click)="$event.stopPropagation(); notifyUser(assignedUser, 'SU')" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : ('actions.notifyMissingSuTitle' | translate:'Documents')" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-100">{{ 'actions.notifySu' | translate:'Documents' }}</button>
                       }
                       @if (!assignedUser.hasUnsignedSsm && !assignedUser.hasUnsignedSu) {
                         <span class="text-green-600 text-xs font-medium">{{ 'labels.none' | translate:'Common' }}</span>
@@ -632,7 +646,8 @@
       <div class="px-6 py-4 border-t border-border bg-muted/30 flex justify-end gap-3">
         <button (click)="closeDataChangeModal()"
         class="px-4 py-2 border border-border rounded text-sm text-foreground hover:bg-muted transition">{{ 'buttons.cancel' | translate:'Common' }}</button>
-        <button (click)="submitDataChangeRequest()" [disabled]="isSubmittingDataChange"
+        <button (click)="submitDataChangeRequest()" [disabled]="isSubmittingDataChange || isImpersonating"
+          [title]="isImpersonating ? impersonationBlockTitle : null"
           class="px-4 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
           {{ isSubmittingDataChange ? ('messages.submitting' | translate:'Common') : ('actions.submitRequest' | translate:'Requests') }}
         </button>
@@ -688,7 +703,8 @@
       <div class="px-6 py-4 border-t border-border bg-muted/30 flex justify-end gap-3">
         <button (click)="closeEmailChangeModal()"
         class="px-4 py-2 border border-border rounded text-sm text-foreground hover:bg-muted transition">{{ 'buttons.cancel' | translate:'Common' }}</button>
-        <button (click)="submitEmailChangeRequest()" [disabled]="isSubmittingEmailChange"
+        <button (click)="submitEmailChangeRequest()" [disabled]="isSubmittingEmailChange || isImpersonating"
+          [title]="isImpersonating ? impersonationBlockTitle : null"
           class="px-4 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
           {{ isSubmittingEmailChange ? ('messages.submitting' | translate:'Common') : ('actions.submitRequest' | translate:'Requests') }}
         </button>
