@@ -237,8 +237,9 @@
                         </button>
                         <button
                           (click)="openEditModal(selectedUser, $event)"
-                          class="text-sm p-1.5 rounded-md hover:bg-secondary text-primary transition-colors"
-                          [title]="'actions.editUser' | translate:'Users'"
+                          [disabled]="isImpersonating"
+                          class="text-sm p-1.5 rounded-md hover:bg-secondary text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                          [title]="isImpersonating ? impersonationBlockTitle : ('actions.editUser' | translate:'Users')"
                           >
                           <svg
                             class="w-4 h-4"
@@ -256,8 +257,9 @@
                         </button>
                         <button
                           (click)="openDeleteModal(selectedUser, $event)"
-                          class="text-sm p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors"
-                          [title]="'actions.deleteUser' | translate:'Users'"
+                          [disabled]="isImpersonating"
+                          class="text-sm p-1.5 rounded-md hover:bg-destructive/10 text-destructive transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                          [title]="isImpersonating ? impersonationBlockTitle : ('actions.deleteUser' | translate:'Users')"
                           >
                           <svg
                             class="w-4 h-4"
@@ -935,7 +937,9 @@
                                               </button>
                                               <button
                                                 type="submit"
-                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
+                                                [disabled]="isImpersonating"
+                                                [title]="isImpersonating ? impersonationBlockTitle : null"
+                                                class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                 {{ 'buttons.saveChanges' | translate:'Users' }}
                                               </button>
@@ -973,7 +977,9 @@
                                               <button
                                                 type="button"
                                                 (click)="confirmDelete()"
-                                                class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90"
+                                                [disabled]="isImpersonating"
+                                                [title]="isImpersonating ? impersonationBlockTitle : null"
+                                                class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md text-sm font-medium hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                 {{ 'buttons.delete' | translate:'Common' }}
                                               </button>

@@ -41,12 +41,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isImpersonating = false;
   /** The admin's own account while impersonating; null otherwise. */
   impersonatorUser: User | null = null;
-  impersonationBlockedMessage: string | null = null;
   private routerSubscription!: Subscription;
   private signatureCountSubscription!: Subscription;
   private anomalyAlertSubscription!: Subscription;
   private requestCountSubscription!: Subscription;
-  private impersonationBlockedMessageSubscription!: Subscription;
 
   constructor(
     private authService: AuthenticationService,
@@ -65,12 +63,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.checkAuthStatus();
-
-    // Unconditional: start()/stop() always hard-reload the page (see ImpersonationService), so there's
-    // no stale-flag risk here the way there is for the role-gated subscriptions below.
-    this.impersonationBlockedMessageSubscription = this.impersonationService.blockedMessage$.subscribe(
-      message => this.impersonationBlockedMessage = message
-    );
 
     // Close menus on navigation
     this.routerSubscription = this.router.events.pipe(
@@ -145,9 +137,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
     if (this.requestCountSubscription) {
       this.requestCountSubscription.unsubscribe();
-    }
-    if (this.impersonationBlockedMessageSubscription) {
-      this.impersonationBlockedMessageSubscription.unsubscribe();
     }
   }
 

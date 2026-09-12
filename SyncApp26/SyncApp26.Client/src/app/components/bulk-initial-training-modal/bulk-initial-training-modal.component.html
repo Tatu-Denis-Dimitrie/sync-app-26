@@ -435,7 +435,8 @@
                                                                   type="button"
                                                                   class="btn-primary"
                                                                   (click)="submitBulkInitialTraining()"
-                                                                  [disabled]="isSubmitting || isLoadingDepartments"
+                                                                  [title]="isImpersonating ? impersonationBlockTitle : null"
+                                                                  [disabled]="isSubmitting || isLoadingDepartments || isImpersonating"
                                                                   >
                                                                   {{ isSubmitting ? ('bulkInitialTraining.applyingEllipsis' | translate:'Documents') : ('bulkInitialTraining.applyButton' | translate:'Documents') }}
                                                                 </button>

@@ -46,8 +46,9 @@
           @if (!editMode && !isAdmin) {
             <button
               (click)="generateDocument()"
-              [disabled]="generatingDoc"
-              class="generate-button bg-teal-600 text-white px-3 py-1.5 rounded-md hover:bg-teal-700 flex items-center gap-2 mr-2 border-0 cursor-pointer"
+              [disabled]="generatingDoc || isImpersonating"
+              [title]="isImpersonating ? impersonationBlockTitle : null"
+              class="generate-button bg-teal-600 text-white px-3 py-1.5 rounded-md hover:bg-teal-700 flex items-center gap-2 mr-2 border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
               @if (!generatingDoc) {
                 <svg
@@ -70,7 +71,9 @@
           @if (!editMode) {
             <button
               (click)="toggleEditMode()"
-              class="edit-button"
+              [disabled]="isImpersonating"
+              [title]="isImpersonating ? impersonationBlockTitle : null"
+              class="edit-button disabled:opacity-50 disabled:cursor-not-allowed"
               >
               <svg
                 class="w-4 h-4"
@@ -91,8 +94,9 @@
           @if (editMode) {
             <button
               (click)="saveForm()"
-              [disabled]="saving"
-              class="save-button"
+              [disabled]="saving || isImpersonating"
+              [title]="isImpersonating ? impersonationBlockTitle : null"
+              class="save-button disabled:opacity-50 disabled:cursor-not-allowed"
               >
               <svg
                 class="w-4 h-4"
@@ -700,11 +704,11 @@
                                       </button>
                                       @if (isAdmin) {
                                         @if (isExcludedFromPrint(t)) {
-                                          <button type="button" class="history-toggle" (click)="togglePrintExclusion(t)">
+                                          <button type="button" class="history-toggle disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
                                             {{ 'printExclusion.include' | translate:'Documents' }}
                                           </button>
                                         } @else if (hasInvalidSignature(t)) {
-                                          <button type="button" class="history-toggle exclude-print-btn" (click)="togglePrintExclusion(t)">
+                                          <button type="button" class="history-toggle exclude-print-btn disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
                                             {{ 'printExclusion.exclude' | translate:'Documents' }}
                                           </button>
                                         }
@@ -1223,11 +1227,11 @@
                                                 </button>
                                                 @if (isAdmin) {
                                                   @if (isExcludedFromPrint(t)) {
-                                                    <button type="button" class="history-toggle" (click)="togglePrintExclusion(t)">
+                                                    <button type="button" class="history-toggle disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
                                                       {{ 'printExclusion.include' | translate:'Documents' }}
                                                     </button>
                                                   } @else if (hasInvalidSignature(t)) {
-                                                    <button type="button" class="history-toggle exclude-print-btn" (click)="togglePrintExclusion(t)">
+                                                    <button type="button" class="history-toggle exclude-print-btn disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="isImpersonating" [title]="isImpersonating ? impersonationBlockTitle : null" (click)="togglePrintExclusion(t)">
                                                       {{ 'printExclusion.exclude' | translate:'Documents' }}
                                                     </button>
                                                   }

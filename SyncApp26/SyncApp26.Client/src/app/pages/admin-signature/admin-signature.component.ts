@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild } from '@angular/core';
 import { UserSignatureService } from '../../services/user-signature.service';
 import { Router } from '@angular/router';
 import { AuthenticationService, Roles, rolesLabel } from '../../services/authentication.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslationService } from '../../services/translation.service';
@@ -87,8 +88,18 @@ export class AdminSignatureComponent {
     private userSignatureService: UserSignatureService,
     private router: Router,
     private authService: AuthenticationService,
+    private impersonationService: ImpersonationService,
     private translationService: TranslationService
   ) {}
+
+  // Saving writes to the impersonated account; drawing on the canvas is local, so it stays on.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.translationService.translate('Common', 'impersonation.actionBlocked');
+  }
 
   ngAfterViewInit() {
     this.initCanvas();  

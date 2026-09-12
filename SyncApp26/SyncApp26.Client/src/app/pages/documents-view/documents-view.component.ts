@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
 import { map, catchError, shareReplay, take } from 'rxjs/operators';
 import { AuthenticationService } from '../../services/authentication.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { PaginationComponent } from '../../components/pagination/pagination.component';
 import { BulkTrainingModalComponent } from '../../components/bulk-training-modal/bulk-training-modal.component';
 import { BulkInitialTrainingModalComponent } from '../../components/bulk-initial-training-modal/bulk-initial-training-modal.component';
@@ -114,6 +115,7 @@ export class DocumentsViewComponent implements OnInit {
     private authService: AuthenticationService,
     private sanitizer: DomSanitizer,
     private signatureVerificationService: SignatureVerificationService,
+    private impersonationService: ImpersonationService,
     private translationService: TranslationService
   ) {}
 
@@ -123,6 +125,16 @@ export class DocumentsViewComponent implements OnInit {
 
   get isAdmin(): boolean {
     return this.authService.isAdmin();
+  }
+
+  // Writes are disabled, not hidden - impersonation exists to show the user's own screen.
+  // Signature validation stays enabled: it only reads.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.translationService.translate('Common', 'impersonation.actionBlocked');
   }
 
   ngOnInit(): void {

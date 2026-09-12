@@ -239,6 +239,9 @@
   <data name="header.profileSettings" xml:space="preserve">
     <value>Profile Settings</value>
   </data>
+  <data name="impersonation.actionBlocked" xml:space="preserve">
+    <value>Not available while viewing as another user</value>
+  </data>
   <data name="footer.version" xml:space="preserve">
     <value>Version:</value>
   </data>

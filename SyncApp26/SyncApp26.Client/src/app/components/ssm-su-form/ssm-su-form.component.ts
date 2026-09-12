@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { AuthenticationService } from '../../services/authentication.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { SignatureVerificationService, SignatureVersionSummary, PeriodicTrainingSignatureHistory } from '../../services/signature-verification.service';
 import { SignatureStatusBadgeComponent } from '../../components/signature-status-badge/signature-status-badge.component';
 import { isValidName, isValidFunction } from '../../shared/utils/name-validation.util';
@@ -161,8 +162,19 @@ export class SsmSuFormComponent implements OnInit {
     private sanitizer: DomSanitizer,
     private authService: AuthenticationService,
     private signatureVerificationService: SignatureVerificationService,
+    private impersonationService: ImpersonationService,
     private translationService: TranslationService
   ) {}
+
+  // Writes are disabled, not hidden - impersonation exists to show the user's own screen.
+  // Reading, printing and signature history stay available.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.translationService.translate('Common', 'impersonation.actionBlocked');
+  }
 
   tDocuments(key: string): string {
     return this.translationService.translate('Documents', key);

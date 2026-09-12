@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { TranslationService } from '../../services/translation.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
@@ -86,7 +87,20 @@ export class BulkInitialTrainingModalComponent {
     selectedUserIds: []
   };
 
-  constructor(private http: HttpClient, private translationService: TranslationService) {}
+  constructor(
+    private http: HttpClient,
+    private impersonationService: ImpersonationService,
+    private translationService: TranslationService
+  ) {}
+
+  // Second gate behind the disabled launcher in documents-view.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.translationService.translate('Common', 'impersonation.actionBlocked');
+  }
 
   tDocuments(key: string): string {
     return this.translationService.translate('Documents', key);
