@@ -9,6 +9,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { DataChangeRequestService } from '../../services/data-change-request.service';
 import { WorkSiteService } from '../../services/work-site.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { User, UserRole, BLOOD_TYPE_LABELS, BLOOD_TYPE_OPTIONS } from '../../models/csv-sync.model';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
@@ -126,7 +127,16 @@ export class BasicUserComponent implements OnInit {
   get hasRequestedChanges(): boolean {
     return Object.keys(this.requestedChanges).length > 0;
   }
-  
+
+  // Writes are disabled, not hidden - impersonation exists to show the user's own screen.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.tCommon('impersonation.actionBlocked');
+  }
+
   // ────────────────────────────────────────────────────────────────────────
 
   constructor(
@@ -135,6 +145,7 @@ export class BasicUserComponent implements OnInit {
     private userSignatureService: UserSignatureService,
     private dataChangeRequestService: DataChangeRequestService,
     private workSiteService: WorkSiteService,
+    private impersonationService: ImpersonationService,
     private router: Router,
     private http: HttpClient,
     private translationService: TranslationService

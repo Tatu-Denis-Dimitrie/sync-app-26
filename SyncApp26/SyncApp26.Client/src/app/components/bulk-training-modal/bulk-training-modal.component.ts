@@ -7,6 +7,7 @@ import { SignatureVerificationService } from '../../services/signature-verificat
 import { AuthenticationService } from '../../services/authentication.service';
 import { isValidName } from '../../shared/utils/name-validation.util';
 import { TranslationService } from '../../services/translation.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { OrgNamePipe } from '../../shared/pipes/org-name.pipe';
 
@@ -129,8 +130,18 @@ export class BulkTrainingModalComponent {
     private http: HttpClient,
     private signatureVerificationService: SignatureVerificationService,
     private authService: AuthenticationService,
+    private impersonationService: ImpersonationService,
     private translationService: TranslationService
   ) {
+  }
+
+  // Second gate behind the disabled launcher in documents-view.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.translationService.translate('Common', 'impersonation.actionBlocked');
   }
 
   tDocuments(key: string): string {

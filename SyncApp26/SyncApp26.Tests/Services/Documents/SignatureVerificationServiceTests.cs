@@ -79,6 +79,23 @@ namespace SyncApp26.Tests.Services.Documents
             return doc;
         }
 
+        // Plain seeded documents have no stored file (file check = not applicable); this one does.
+        private UserDocument SeedDocumentWithStoredPdf(User owner, string documentType, string status)
+        {
+            var doc = SeedDocument(owner, documentType, status);
+
+            var dir = Path.Combine(Path.GetTempPath(), "syncapp26-tests", "GeneratedDocuments");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, $"{doc.Id}.pdf");
+            var bytes = Encoding.UTF8.GetBytes("%PDF-1.4 seeded test document " + doc.Id);
+            File.WriteAllBytes(path, bytes);
+
+            doc.PdfFilePath = path;
+            doc.DocumentHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
+            _dbFixture.Context.SaveChanges();
+            return doc;
+        }
+
         private SignatureRecord SignDocument(DocumentService docService, UserDocument doc, User signer, string signerRole = "User")
         {
             docService.UpdateDocumentSignatureAsync(doc.Id, signer.Id, signerRole, "Draw", "sig-data", "1.2.3.4")
@@ -244,7 +261,8 @@ namespace SyncApp26.Tests.Services.Documents
                 secondRecord.TrainingDateSnapshot,
                 secondRecord.SignedAt,
                 forgedPreviousHash,
-                secondRecord.Version);
+                secondRecord.Version,
+                secondRecord.DocumentContentHashSnapshot);
             var forgedCanonical = SignatureCanonicalSerializer.Serialize(forgedInput);
             secondRecord.PreviousSignatureHash = forgedPreviousHash;
             secondRecord.SignatureHmac = await _hmacService.ComputeHmacAsync(forgedCanonical);
@@ -255,6 +273,202 @@ namespace SyncApp26.Tests.Services.Documents
             Assert.Equal("ChainBroken", status!.Status);
             Assert.True(status.IsHashValid);
             Assert.False(status.IsChainValid);
+        }
+
+        // ───────────────────────── document content / file integrity ─────────────────────────
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_UntouchedDocument_ReportsContentAndFileIntact()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocumentWithStoredPdf(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            var record = SignDocument(docService, doc, owner);
+            var status = await CreateVerificationService().GetVerificationStatusAsync(record.Id);
+
+            Assert.Equal("Valid", status!.Status);
+            Assert.True(status.IsContentIntact);
+            Assert.True(status.IsFileIntact);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_AttestationEditedAfterSigning_ReturnsContentModified()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+            var record = SignDocument(docService, doc, owner);
+
+            // An attestation field - the admission date - edited after the fact.
+            owner.AdmittedDate = new DateTime(2026, 2, 1);
+            _dbFixture.Context.SaveChanges();
+
+            var status = await CreateVerificationService().GetVerificationStatusAsync(record.Id);
+
+            Assert.Equal("ContentModified", status!.Status);
+            Assert.True(status.IsHashValid);   // the record itself is authentic...
+            Assert.True(status.IsChainValid);
+            Assert.False(status.IsContentIntact); // ...the document moved on after it
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_BioDataEditedAfterSigning_StaysValid()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+            var record = SignDocument(docService, doc, owner);
+
+            // Bio data and people's names change through normal HR flows; neither invalidates the document.
+            owner.PlaceOfBirth = "Brașov";
+            owner.Address = "Str. Lungă 1";
+            owner.LastName = "Ionescu";
+            owner.AdmittedByName = "Altcineva";
+            owner.AdmittedByFunction = "Altă funcție";
+            _dbFixture.Context.SaveChanges();
+
+            var status = await CreateVerificationService().GetVerificationStatusAsync(record.Id);
+
+            Assert.Equal("Valid", status!.Status);
+            Assert.True(status.IsContentIntact);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_SupersededInSameRole_IsNotCheckedAgainstLiveDocumentContent()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            var first = SignDocument(docService, doc, owner);
+            var second = SignDocumentAgain(docService, doc, owner);
+
+            owner.AdmittedDate = new DateTime(2026, 2, 1);
+            _dbFixture.Context.SaveChanges();
+
+            var service = CreateVerificationService();
+            var firstStatus = await service.GetVerificationStatusAsync(first.Id);
+            var secondStatus = await service.GetVerificationStatusAsync(second.Id);
+
+            // The re-sign superseded the first record in its role: it stays on its snapshot.
+            Assert.Equal("Valid", firstStatus!.Status);
+            Assert.Null(firstStatus.IsContentIntact);
+            Assert.Equal("ContentModified", secondStatus!.Status);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_ContentEditedBetweenRoles_FlagsOnlyTheRoleThatSignedTheOldContent()
+        {
+            var docService = CreateDocumentService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+            var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            var userRecord = SignDocument(docService, doc, owner);
+
+            owner.AdmittedDate = new DateTime(2026, 2, 1);
+            _dbFixture.Context.SaveChanges();
+
+            var managerRecord = SignDocumentAgain(docService, doc, manager, signerRole: "Manager");
+
+            var service = CreateVerificationService();
+            var userStatus = await service.GetVerificationStatusAsync(userRecord.Id);
+            var managerStatus = await service.GetVerificationStatusAsync(managerRecord.Id);
+
+            // The employee signed a different version than the one the manager countersigned.
+            Assert.Equal("ContentModified", userStatus!.Status);
+            Assert.Equal("Valid", managerStatus!.Status);
+            Assert.True(managerStatus.IsContentIntact);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_StoredPdfAltered_FlagsEverySignatureOnTheDocument()
+        {
+            var docService = CreateDocumentService();
+            var employeeFunction = SeedFunction("Operator");
+            var managerFunction = SeedFunction("Sef Echipa");
+            var manager = SeedUser("Radu", "Stanescu", managerFunction);
+            var owner = SeedUser("Adela", "Popescu", employeeFunction, manager.Id);
+            var doc = SeedDocumentWithStoredPdf(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+
+            var userRecord = SignDocument(docService, doc, owner);
+            var managerRecord = SignDocumentAgain(docService, doc, manager, signerRole: "Manager");
+
+            var storedPath = _dbFixture.Context.UserDocuments.Single(d => d.Id == doc.Id).PdfFilePath!;
+            File.AppendAllText(storedPath, "%tampered");
+
+            var statuses = await CreateVerificationService()
+                .GetVerificationStatusBatchAsync(new[] { userRecord.Id, managerRecord.Id });
+
+            // One file, so one verdict for everyone who signed it.
+            Assert.All(statuses, s => Assert.Equal("FileModified", s.Status));
+            Assert.All(statuses, s => Assert.False(s.IsFileIntact));
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_StoredPdfAlteredOnDisk_ReturnsFileModified()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocumentWithStoredPdf(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+            var record = SignDocument(docService, doc, owner);
+
+            var storedPath = _dbFixture.Context.UserDocuments.Single(d => d.Id == doc.Id).PdfFilePath!;
+            Assert.True(File.Exists(storedPath));
+            File.AppendAllText(storedPath, "%tampered");
+
+            var status = await CreateVerificationService().GetVerificationStatusAsync(record.Id);
+
+            Assert.Equal("FileModified", status!.Status);
+            Assert.True(status.IsHashValid);
+            Assert.True(status.IsContentIntact); // the data behind it is unchanged - only the file was
+            Assert.False(status.IsFileIntact);
+        }
+
+        [Fact]
+        public async Task GetVerificationStatusAsync_PreV4Record_ContentCheckNotApplicable()
+        {
+            var docService = CreateDocumentService();
+            var function = SeedFunction("Operator");
+            var owner = SeedUser("Adela", "Popescu", function);
+            var doc = SeedDocument(owner, "SU", "PendingUser");
+            SeedTraining(owner, doc, "Norme SSM generale", 2m, new DateTime(2026, 1, 15));
+            var record = SignDocument(docService, doc, owner);
+
+            // Rewrite the record as a genuine V3 signature: no fingerprint, HMAC computed under V3.
+            var v3Input = new SignatureCanonicalInput(
+                record.SignerUserId, record.SignerFullNameSnapshot, record.SignerPositionSnapshot,
+                record.SignerBadgeNumberSnapshot, record.SignerWorkSiteNameSnapshot,
+                record.MaterialTaughtSnapshot, record.DurationHoursSnapshot, record.TrainingDateSnapshot,
+                record.SignedAt, record.PreviousSignatureHash, 3);
+            record.Version = 3;
+            record.DocumentContentHashSnapshot = null;
+            record.SignatureHmac = await _hmacService.ComputeHmacAsync(SignatureCanonicalSerializer.Serialize(v3Input));
+            _dbFixture.Context.SaveChanges();
+
+            owner.AdmittedDate = new DateTime(2026, 2, 1);
+            _dbFixture.Context.SaveChanges();
+
+            var status = await CreateVerificationService().GetVerificationStatusAsync(record.Id);
+
+            // No fingerprint to compare against: not applicable, never a false flag.
+            Assert.Equal("Valid", status!.Status);
+            Assert.Null(status.IsContentIntact);
         }
 
         [Fact]

@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { AuthenticationService } from '../../services/authentication.service';
 import { UserSignatureService, UserSignature } from '../../services/user-signature.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { CanvasSignaturePad } from '../../shared/utils/canvas-signature-pad';
 import { TranslationService } from '../../services/translation.service';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
@@ -53,6 +54,7 @@ export class DocumentSignatureComponent implements OnInit {
     private http: HttpClient,
     private authService: AuthenticationService,
     private userSignatureService: UserSignatureService,
+    private impersonationService: ImpersonationService,
     private cdr: ChangeDetectorRef,
     private translationService: TranslationService
   ) { }
@@ -61,10 +63,28 @@ export class DocumentSignatureComponent implements OnInit {
     return this.translationService.translate('Documents', key);
   }
 
+  get isSsm(): boolean {
+    return (this.documentData?.documentType ?? '').toUpperCase() === 'SSM';
+  }
+
+  // The final chain step is the SSM or SU officer, decided by document type.
+  get officerType(): string {
+    return this.isSsm ? 'SSM' : 'SU';
+  }
+
   ngOnInit(): void {
     this.isLoggedIn = this.authService.isLoggedIn();
     this.token = this.route.snapshot.paramMap.get('token');
     this.isBulkMode = this.route.snapshot.queryParamMap.get('bulk') === 'true';
+
+    // Stop before validating the token: walking through the whole form only to fail on the last
+    // click suggests access that isn't there.
+    if (this.impersonationService.isImpersonating()) {
+      this.errorMessage = this.translationService.translate('Common', 'impersonation.actionBlocked');
+      this.isValidating = false;
+      this.isLoading = false;
+      return;
+    }
 
     if (!this.token) {
       this.errorMessage = this.tDocuments('documentSignature.invalidLinkNoToken');

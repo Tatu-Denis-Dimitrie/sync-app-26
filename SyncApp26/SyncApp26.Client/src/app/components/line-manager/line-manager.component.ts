@@ -15,6 +15,7 @@ import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 import { UserSignatureService, UserSignature, UserSignatureHistory } from '../../services/user-signature.service';
 import { NotificationService } from '../../services/notification.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { formatDate as formatDateUtil, getRelativeTime as getRelativeTimeUtil } from '../../shared/utils/date-format.util';
 import { getRoleBadgeColor as getRoleBadgeColorUtil } from '../../shared/utils/role.util';
 import { isValidName, isValidFunction } from '../../shared/utils/name-validation.util';
@@ -136,6 +137,15 @@ export class LineManagerComponent implements OnInit {
     return Object.keys(this.requestedChanges).length > 0;
   }
 
+  // Writes are disabled, not hidden - impersonation exists to show the user's own screen.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.tCommon('impersonation.actionBlocked');
+  }
+
   // ────────────────────────────────────────────────────────────────────────
 
   constructor(
@@ -147,6 +157,7 @@ export class LineManagerComponent implements OnInit {
     private router: Router,
     private userSignatureService: UserSignatureService,
     private notificationService: NotificationService,
+    private impersonationService: ImpersonationService,
     private translationService: TranslationService
   ) {
     this.availableFields = [

@@ -26,6 +26,9 @@ export class SignatureStatusBadgeComponent {
       case 'Valid': return 'bg-green-100 text-green-800';
       case 'Invalid': return 'bg-red-100 text-red-800';
       case 'ChainBroken': return 'bg-orange-100 text-orange-800';
+      // Amber, not red: the signature itself is authentic - the document moved on after it.
+      case 'ContentModified': return 'bg-amber-100 text-amber-800';
+      case 'FileModified': return 'bg-amber-100 text-amber-800';
       case 'Legacy': return 'bg-gray-200 text-gray-500';
       case 'NotFound': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -37,6 +40,8 @@ export class SignatureStatusBadgeComponent {
       Valid: 'signatureStatus.valid',
       Invalid: 'signatureStatus.invalid',
       ChainBroken: 'signatureStatus.chainBroken',
+      ContentModified: 'signatureStatus.contentModified',
+      FileModified: 'signatureStatus.fileModified',
       Legacy: 'signatureStatus.legacy',
       NotFound: 'signatureStatus.notFound'
     };

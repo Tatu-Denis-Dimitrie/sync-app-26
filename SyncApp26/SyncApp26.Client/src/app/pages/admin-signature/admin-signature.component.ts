@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild } from '@angular/core';
 import { UserSignatureService } from '../../services/user-signature.service';
 import { Router } from '@angular/router';
 import { AuthenticationService, Roles, rolesLabel } from '../../services/authentication.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslationService } from '../../services/translation.service';
@@ -28,7 +29,9 @@ export class AdminSignatureComponent {
   typedSignature: string = '';
   savedSignature: any = null;
   isSigConfirmed = false;
-  currentYear = new Date().getFullYear();
+  isSaving = false;
+  statusMessage = '';
+  statusKind: 'success' | 'error' = 'success';
 
   // Admin keeps this page to store a signature even though it no longer signs anything, so the
   // heading reflects whichever officer duty actually uses it — falling back to "Admin" only when
@@ -87,8 +90,18 @@ export class AdminSignatureComponent {
     private userSignatureService: UserSignatureService,
     private router: Router,
     private authService: AuthenticationService,
+    private impersonationService: ImpersonationService,
     private translationService: TranslationService
   ) {}
+
+  // Saving writes to the impersonated account; drawing on the canvas is local, so it stays on.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.translationService.translate('Common', 'impersonation.actionBlocked');
+  }
 
   ngAfterViewInit() {
     this.initCanvas();  
@@ -142,7 +155,7 @@ export class AdminSignatureComponent {
   }
 
   saveSignature() {
-    if (!this.isSigConfirmed) return;
+    if (!this.isSigConfirmed || this.isSaving) return;
     let payload;
     if (this.signatureMethod === 'draw') {
       if (!this.signaturePad) return;
@@ -151,17 +164,23 @@ export class AdminSignatureComponent {
     } else {
       payload = { signatureData: this.typedSignature, signatureMethod: 'Type' };
     }
+
+    this.isSaving = true;
+    this.statusMessage = '';
     this.userSignatureService.saveMySignature(payload).subscribe({
-      next: (response) => {
-        console.log('Response:', response);
-        alert(this.tDocuments('messages.signatureSavedSuccessfully'));
+      next: () => {
+        this.isSaving = false;
+        this.statusKind = 'success';
+        this.statusMessage = this.tDocuments('messages.signatureSavedSuccessfully');
         this.loadSignature();
         this.isSigConfirmed = false;
+        this.typedSignature = '';
         this.clearSignature();
       },
-      error: (err) => {
-        console.error('Error saving admin signature:', err);
-        alert(this.tDocuments('adminSignature.errorSaving'));
+      error: () => {
+        this.isSaving = false;
+        this.statusKind = 'error';
+        this.statusMessage = this.tDocuments('adminSignature.errorSaving');
       }
     });
   }

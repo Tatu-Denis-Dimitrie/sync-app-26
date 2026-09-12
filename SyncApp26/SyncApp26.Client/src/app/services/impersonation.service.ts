@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthenticationService, Roles, User } from './authentication.service';
 
@@ -14,9 +14,6 @@ interface ImpersonateResponse {
 @Injectable({ providedIn: 'root' })
 export class ImpersonationService {
   private apiUrl = environment.apiUrl + '/authentication';
-
-  private blockedMessageSubject = new BehaviorSubject<string | null>(null);
-  blockedMessage$ = this.blockedMessageSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -52,12 +49,6 @@ export class ImpersonationService {
       next: () => { this.document.location.href = '/dashboard'; },
       error: () => { this.document.location.href = '/login'; }
     });
-  }
-
-  /** Surfaces a 403 IMPERSONATION_READ_ONLY message in the banner for a few seconds. */
-  reportBlockedAction(message: string): void {
-    this.blockedMessageSubject.next(message);
-    setTimeout(() => this.blockedMessageSubject.next(null), 5000);
   }
 
   private landingRouteFor(roles: string[]): string {

@@ -59,6 +59,10 @@ namespace SyncApp26.Domain.Entities
         [MaxLength(200)]
         public string? SignerWorkSiteNameSnapshot { get; set; }
 
+        /// <summary>Document attestation fingerprint at signing time (V4+); null for V1-V3.</summary>
+        [MaxLength(64)]
+        public string? DocumentContentHashSnapshot { get; set; }
+
         /// <summary>"Draw" or "Type"</summary>
         [MaxLength(50)]
         public string SignatureMethod { get; set; } = string.Empty;

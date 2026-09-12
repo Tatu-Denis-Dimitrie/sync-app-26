@@ -6,6 +6,7 @@ import { Observable, combineLatest, BehaviorSubject } from 'rxjs';
 import { map, take } from 'rxjs/operators';
 import { UserSyncService } from '../../services/user-sync.service';
 import { AuthenticationService } from '../../services/authentication.service';
+import { ImpersonationService } from '../../services/impersonation.service';
 import { User, UserRole, Department, UserChangeHistory } from '../../models/csv-sync.model';
 import { PaginationComponent } from '../pagination/pagination.component';
 import { HttpClient } from '@angular/common/http';
@@ -77,8 +78,18 @@ export class EmployeesDetailComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private http: HttpClient,
+    private impersonationService: ImpersonationService,
     private translationService: TranslationService
   ) { }
+
+  // Writes are disabled, not hidden - impersonation exists to show the user's own screen.
+  get isImpersonating(): boolean {
+    return this.impersonationService.isImpersonating();
+  }
+
+  get impersonationBlockTitle(): string {
+    return this.translationService.translate('Common', 'impersonation.actionBlocked');
+  }
 
   tUsers(key: string): string {
     return this.translationService.translate('Users', key);

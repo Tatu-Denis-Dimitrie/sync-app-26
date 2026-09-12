@@ -3,7 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export type SignatureVerificationStatusValue = 'Valid' | 'Invalid' | 'ChainBroken' | 'Legacy' | 'NotFound';
+export type SignatureVerificationStatusValue =
+  'Valid' | 'Invalid' | 'ChainBroken' | 'ContentModified' | 'FileModified' | 'Legacy' | 'NotFound';
 
 export interface SignatureVerificationStatus {
   signatureId: string;
@@ -13,6 +14,8 @@ export interface SignatureVerificationStatus {
   isHashValid: boolean;
   isChainValid: boolean;
   isLegacy: boolean;
+  isContentIntact: boolean | null; // latest signature of its role only
+  isFileIntact: boolean | null;    // null when there is no stored file
   verifiedAt: string;
 }
 

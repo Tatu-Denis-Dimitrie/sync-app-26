@@ -337,6 +337,8 @@ namespace SyncApp26.API.Services
                     {
                         "Invalid" => ("#fee2e2", "#b91c1c"),
                         "ChainBroken" => ("#ffedd5", "#c2410c"),
+                        "ContentModified" => ("#fef3c7", "#b45309"),
+                        "FileModified" => ("#fef3c7", "#b45309"),
                         _ => ("#e5e7eb", "#374151")
                     };
 

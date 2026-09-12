@@ -15,7 +15,8 @@ namespace SyncApp26.Tests.Services.Security
             DateTime? trainingDate = null,
             DateTimeOffset? signedAt = null,
             string? previousHash = null,
-            int? version = null) => new(
+            int? version = null,
+            string? documentContentHash = "3f8a1c2e4b5d6f7081920a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f") => new(
                 signerUserId ?? Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 fullName,
                 position,
@@ -26,7 +27,8 @@ namespace SyncApp26.Tests.Services.Security
                 trainingDate ?? new DateTime(2026, 1, 15),
                 signedAt ?? new DateTimeOffset(2026, 1, 15, 10, 30, 0, TimeSpan.Zero),
                 previousHash,
-                version ?? SignatureCanonicalSerializer.CurrentVersion);
+                version ?? SignatureCanonicalSerializer.CurrentVersion,
+                documentContentHash);
 
         [Fact]
         public void Serialize_SameInput_ProducesIdenticalString()
@@ -114,11 +116,10 @@ namespace SyncApp26.Tests.Services.Security
         }
 
         [Fact]
-        public void CurrentVersion_Is3()
+        public void CurrentVersion_Is4()
         {
-            // Locks in which version new signatures are made under today — if this changes, it
-            // should be a deliberate version bump (see the class doc comment), not an accident.
-            Assert.Equal(3, SignatureCanonicalSerializer.CurrentVersion);
+            // A change here must be a deliberate version bump, not an accident.
+            Assert.Equal(4, SignatureCanonicalSerializer.CurrentVersion);
         }
 
         [Fact]
@@ -280,5 +281,56 @@ namespace SyncApp26.Tests.Services.Security
 
             Assert.Equal(expected, SignatureCanonicalSerializer.Serialize(input));
         }
+
+        [Fact]
+        public void SerializeV3_IgnoresDocumentContentHash_SoExistingSignaturesStillVerify()
+        {
+            // The fingerprint arrived with V4; V3 must never start hashing it.
+            var withHash = MakeInput(version: 3);
+            var withoutHash = MakeInput(version: 3, documentContentHash: null);
+
+            Assert.Equal(
+                SignatureCanonicalSerializer.Serialize(withHash),
+                SignatureCanonicalSerializer.Serialize(withoutHash));
+        }
+
+        [Fact]
+        public void SerializeV4_ChangedDocumentContentHash_ProducesDifferentString()
+        {
+            var a = MakeInput(version: 4, documentContentHash: new string('a', 64));
+            var b = MakeInput(version: 4, documentContentHash: new string('b', 64));
+
+            Assert.NotEqual(SignatureCanonicalSerializer.Serialize(a), SignatureCanonicalSerializer.Serialize(b));
+        }
+
+        [Fact]
+        public void SerializeV4_MustNeverChange_MatchesIndependentlyRebuiltFormat()
+        {
+            // Same contract as V1-V3: frozen, expected string rebuilt independently.
+            var input = MakeInput(fullName: "Ștefan Ionescu", version: 4);
+
+            string Field(string? value)
+            {
+                var v = value ?? string.Empty;
+                return $"{System.Text.Encoding.UTF8.GetByteCount(v)}:{v}";
+            }
+
+            var expected =
+                Field("4") +
+                Field(input.SignerUserId.ToString("D")) +
+                Field(input.SignerFullNameSnapshot) +
+                Field(input.SignerPositionSnapshot) +
+                Field(input.SignerBadgeNumberSnapshot) +
+                Field(input.SignerWorkSiteNameSnapshot) +
+                Field(input.MaterialTaughtSnapshot) +
+                Field(input.DurationHoursSnapshot!.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.TrainingDateSnapshot!.Value.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.DocumentContentHashSnapshot) +
+                Field(input.SignedAt.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture)) +
+                Field(input.PreviousSignatureHash);
+
+            Assert.Equal(expected, SignatureCanonicalSerializer.Serialize(input));
+        }
+
     }
 }

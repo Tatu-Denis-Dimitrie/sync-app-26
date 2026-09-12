@@ -41,6 +41,7 @@ Key settings:
 Note: `Frontend:BaseUrl` and `Frontend:ResetPasswordUrl` are read by the code and documented above, but `appsettings.example.json` currently only ships `Frontend:LoginUrl` — add the other two yourself if you need signature-link or password-reset emails to point somewhere other than the code's hardcoded `localhost:4200` fallback.
 
 Operational guidance:
+- In Docker, three paths must be volume-mounted to survive a container recreate: `/app/data` (SQLite), `/app/logs`, and `/app/GeneratedDocuments` (the signed PDF archive that `UserDocument.PdfFilePath` / `DocumentHash` point to). Without the last one, every signature on every document reports `FileModified` after a redeploy because its file is gone. If documents were generated before that volume existed, run the admin "Regenerate documents" action once to recreate the archive.
 - Do not commit real SMTP credentials or production JWT secrets.
 - Prefer environment variables or a secret store for production.
 - Update CORS origins in SyncApp26/SyncApp26.API/Program.cs to match deployed SPA URLs. `AllowCredentials()` is set alongside them, which is required for the session cookie to be sent cross-origin but also means origins cannot be wildcarded (`AllowAnyOrigin` is incompatible with `AllowCredentials`).

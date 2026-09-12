@@ -67,7 +67,7 @@ namespace SyncApp26.API.Services
                     foreach (var status in statuses)
                     {
                         recordsChecked++;
-                        if (status.Status is "Invalid" or "ChainBroken")
+                        if (status.Status is "Invalid" or "ChainBroken" or "ContentModified" or "FileModified")
                         {
                             anomaliesFound++;
                             _logger.LogWarning(

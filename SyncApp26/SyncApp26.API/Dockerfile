@@ -41,8 +41,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# EF creates the .db file but not its parent dir.
-RUN mkdir -p /app/data /app/logs/errors \
+# EF creates the .db file but not its parent dir. GeneratedDocuments holds the signed PDF
+# archive and is volume-mounted like data/ - without that it vanished on every recreate.
+RUN mkdir -p /app/data /app/logs/errors /app/GeneratedDocuments \
     && chown -R app:app /app
 
 COPY --from=build /app/publish .

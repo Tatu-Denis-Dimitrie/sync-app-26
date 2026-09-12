@@ -11,8 +11,8 @@ using SyncApp26.Infrastructure.Context;
 namespace SyncApp26.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260901084825_WidenPreferredLanguageConstraintForRo")]
-    partial class WidenPreferredLanguageConstraintForRo
+    [Migration("20260912174033_AddDocumentContentHashSnapshot")]
+    partial class AddDocumentContentHashSnapshot
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -439,6 +439,10 @@ namespace SyncApp26.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DocumentContentHashSnapshot")
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<decimal?>("DurationHoursSnapshot")

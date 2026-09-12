@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SyncApp26.Application.IServices;
@@ -27,6 +29,7 @@ namespace SyncApp26.Infrastructure.Services
     /// entire point of keeping signature history. Also checks the per-signer hash chain that
     /// DocumentService.CreateSignatureRecordAsync builds — a record's stored PreviousSignatureHash
     /// must match its signer's actual prior SignatureHmac.
+    /// Document-level: fingerprint (V4+) on the latest signature per role → ContentModified; stored PDF hash on every signature → FileModified.
     /// </summary>
     public class SignatureVerificationService : ISignatureVerificationService
     {
@@ -39,6 +42,11 @@ namespace SyncApp26.Infrastructure.Services
             _hmacSignatureService = hmacSignatureService;
         }
 
+        // Null = not applicable.
+        private sealed record DocumentIntegrity(bool? IsContentIntact, bool? IsFileIntact);
+
+        private sealed record DocumentIntegritySource(UserDocument Document, User? Subject, bool? FileIntact);
+
         public async Task<SignatureVerificationStatusResponseDTO?> GetVerificationStatusAsync(Guid signatureId)
         {
             var record = await _context.SignatureRecords.FirstOrDefaultAsync(r => r.Id == signatureId);
@@ -50,7 +58,12 @@ namespace SyncApp26.Infrastructure.Services
             var liveTraining = isMostRecent && record.PeriodicTrainingId.HasValue
                 ? await _context.PeriodicTrainings.FirstOrDefaultAsync(t => t.Id == record.PeriodicTrainingId.Value)
                 : null;
-            return await ComputeStatusAsync(record, previous, liveTraining);
+
+            var latestByRole = await LoadMostRecentIdsByDocumentRoleAsync(new[] { record.UserDocumentId });
+            var sources = new Dictionary<Guid, DocumentIntegritySource?>();
+            var integrity = await ComputeDocumentIntegrityAsync(record, latestByRole, sources);
+
+            return await ComputeStatusAsync(record, previous, liveTraining, integrity);
         }
 
         // True when this record is the most recently signed one in its signing slot —
@@ -98,6 +111,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ToDictionary(t => t.Id);
 
             var (mostRecentIdByTraining, mostRecentIdByDocument) = await LoadMostRecentIdsBySlotAsync(records);
+            var latestByRole = await LoadMostRecentIdsByDocumentRoleAsync(records.Select(r => r.UserDocumentId));
+            var sources = new Dictionary<Guid, DocumentIntegritySource?>();
 
             var results = new List<SignatureVerificationStatusResponseDTO>();
             foreach (var id in ids)
@@ -125,10 +140,84 @@ namespace SyncApp26.Infrastructure.Services
                 var liveTraining = isMostRecent && record.PeriodicTrainingId.HasValue
                     ? trainingsById.GetValueOrDefault(record.PeriodicTrainingId.Value)
                     : null;
-                results.Add(await ComputeStatusAsync(record, previous, liveTraining));
+                var integrity = await ComputeDocumentIntegrityAsync(record, latestByRole, sources);
+                results.Add(await ComputeStatusAsync(record, previous, liveTraining, integrity));
             }
 
             return results;
+        }
+
+        // Latest per (document, role); the per-slot lookup above is per (row, role).
+        private async Task<Dictionary<(Guid, string), Guid>> LoadMostRecentIdsByDocumentRoleAsync(IEnumerable<Guid> documentIds)
+        {
+            var docIds = documentIds.Distinct().ToList();
+            if (docIds.Count == 0) return new Dictionary<(Guid, string), Guid>();
+
+            return (await _context.SignatureRecords
+                    .Where(r => docIds.Contains(r.UserDocumentId))
+                    .Select(r => new { r.Id, r.UserDocumentId, r.SignerRole, r.SignedAt, r.CreatedAt })
+                    .ToListAsync())
+                .GroupBy(r => (r.UserDocumentId, r.SignerRole))
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.SignedAt).ThenByDescending(r => r.CreatedAt).First().Id);
+        }
+
+        // File check: every signature. Fingerprint: latest of its role only.
+        private async Task<DocumentIntegrity> ComputeDocumentIntegrityAsync(
+            SignatureRecord record,
+            Dictionary<(Guid, string), Guid> latestByRole,
+            Dictionary<Guid, DocumentIntegritySource?> sources)
+        {
+            if (!sources.TryGetValue(record.UserDocumentId, out var source))
+            {
+                source = await LoadDocumentIntegritySourceAsync(record.UserDocumentId);
+                sources[record.UserDocumentId] = source;
+            }
+            if (source == null) return new DocumentIntegrity(null, null);
+
+            bool? contentIntact = null;
+            var isLatestOfRole = latestByRole.TryGetValue((record.UserDocumentId, record.SignerRole), out var latestId) && latestId == record.Id;
+            if (isLatestOfRole && record.DocumentContentHashSnapshot != null && source.Subject != null)
+            {
+                var live = DocumentContentFingerprint.Compute(DocumentContentInput.FromUser(source.Subject, source.Document.DocumentType));
+                contentIntact = string.Equals(live, record.DocumentContentHashSnapshot, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return new DocumentIntegrity(contentIntact, source.FileIntact);
+        }
+
+        private async Task<DocumentIntegritySource?> LoadDocumentIntegritySourceAsync(Guid documentId)
+        {
+            var document = await _context.UserDocuments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Id == documentId);
+            if (document == null) return null;
+
+            var subject = await _context.Users
+                .AsNoTracking()
+                .Include(u => u.InitialTrainings)
+                .FirstOrDefaultAsync(u => u.Id == document.UserId);
+
+            return new DocumentIntegritySource(document, subject, ComputeFileIntegrity(document));
+        }
+
+        // A missing file counts as not intact; no stored file or hash = not applicable.
+        private static bool? ComputeFileIntegrity(UserDocument document)
+        {
+            if (string.IsNullOrWhiteSpace(document.PdfFilePath) || string.IsNullOrWhiteSpace(document.DocumentHash))
+                return null;
+
+            if (!File.Exists(document.PdfFilePath)) return false;
+
+            try
+            {
+                using var stream = File.OpenRead(document.PdfFilePath);
+                var actual = Convert.ToHexString(SHA256.HashData(stream));
+                return string.Equals(actual, document.DocumentHash, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (IOException)
+            {
+                return false;
+            }
         }
 
         // Grouped most-recent-signature-per-slot lookup for a batch, so determining "is this the
@@ -219,6 +308,8 @@ namespace SyncApp26.Infrastructure.Services
             var mostRecentIdByRole = records
                 .GroupBy(r => r.SignerRole)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.SignedAt).ThenByDescending(r => r.CreatedAt).First().Id);
+            var latestByRole = await LoadMostRecentIdsByDocumentRoleAsync(records.Select(r => r.UserDocumentId));
+            var sources = new Dictionary<Guid, DocumentIntegritySource?>();
 
             var signerChainsBySignerId = new Dictionary<Guid, List<SignatureRecord>>();
             var versionsByRole = new Dictionary<string, List<SignatureVersionSummaryDTO>>();
@@ -233,7 +324,8 @@ namespace SyncApp26.Infrastructure.Services
                     signerChainsBySignerId[record.SignerUserId] = signerChain;
                 }
                 var previous = FindPreviousRecord(record, signerChain);
-                var status = await ComputeStatusAsync(record, previous, isMostRecent ? training : null);
+                var integrity = await ComputeDocumentIntegrityAsync(record, latestByRole, sources);
+                var status = await ComputeStatusAsync(record, previous, isMostRecent ? training : null, integrity);
 
                 if (!versionsByRole.TryGetValue(record.SignerRole, out var roleVersions))
                 {
@@ -299,6 +391,8 @@ namespace SyncApp26.Infrastructure.Services
                     .ToDictionary(t => t.Id);
 
             var (mostRecentIdByTraining, mostRecentIdByDocument) = await LoadMostRecentIdsBySlotAsync(records);
+            var latestByRole = await LoadMostRecentIdsByDocumentRoleAsync(docIds);
+            var sources = new Dictionary<Guid, DocumentIntegritySource?>();
 
             foreach (var record in records)
             {
@@ -310,7 +404,8 @@ namespace SyncApp26.Infrastructure.Services
                 var liveTraining = isMostRecent && record.PeriodicTrainingId.HasValue
                     ? trainingsById.GetValueOrDefault(record.PeriodicTrainingId.Value)
                     : null;
-                var status = await ComputeStatusAsync(record, previous, liveTraining);
+                var integrity = await ComputeDocumentIntegrityAsync(record, latestByRole, sources);
+                var status = await ComputeStatusAsync(record, previous, liveTraining, integrity);
 
                 result[employeeIdByDocumentId[record.UserDocumentId]].Add(status);
             }
@@ -335,7 +430,7 @@ namespace SyncApp26.Infrastructure.Services
             return signerChainDescending[index + 1];
         }
 
-        private async Task<SignatureVerificationStatusResponseDTO> ComputeStatusAsync(SignatureRecord record, SignatureRecord? previous, PeriodicTraining? liveTraining)
+        private async Task<SignatureVerificationStatusResponseDTO> ComputeStatusAsync(SignatureRecord record, SignatureRecord? previous, PeriodicTraining? liveTraining, DocumentIntegrity integrity)
         {
             var now = DateTimeOffset.UtcNow;
 
@@ -364,8 +459,8 @@ namespace SyncApp26.Infrastructure.Services
             var durationHours = liveTraining != null ? liveTraining.DurationHours : record.DurationHoursSnapshot;
             var trainingDate = liveTraining != null ? liveTraining.TrainingDate : record.TrainingDateSnapshot;
 
-            // Reserialize with the schema this exact record was signed under (record.Version),
-            // never today's schema — that's the whole point of storing Version.
+            // Reserialize under the record's own Version. The fingerprint goes in as STORED: the HMAC
+            // proves the record is authentic; stored-vs-live is a separate fact with its own status.
             var canonicalInput = new SignatureCanonicalInput(
                 record.SignerUserId,
                 record.SignerFullNameSnapshot,
@@ -377,13 +472,20 @@ namespace SyncApp26.Infrastructure.Services
                 trainingDate,
                 record.SignedAt,
                 record.PreviousSignatureHash,
-                record.Version);
+                record.Version,
+                record.DocumentContentHashSnapshot);
             var canonical = SignatureCanonicalSerializer.Serialize(canonicalInput);
 
             var isHashValid = await _hmacSignatureService.VerifyHmacAsync(canonical, record.SignatureHmac);
             var isChainValid = record.PreviousSignatureHash == previous?.SignatureHmac;
 
-            var status = !isHashValid ? "Invalid" : !isChainValid ? "ChainBroken" : "Valid";
+            // Only an authentic record gets to say the document changed.
+            var status =
+                !isHashValid ? "Invalid"
+                : !isChainValid ? "ChainBroken"
+                : integrity.IsContentIntact == false ? "ContentModified"
+                : integrity.IsFileIntact == false ? "FileModified"
+                : "Valid";
 
             return new SignatureVerificationStatusResponseDTO
             {
@@ -394,6 +496,8 @@ namespace SyncApp26.Infrastructure.Services
                 IsHashValid = isHashValid,
                 IsChainValid = isChainValid,
                 IsLegacy = false,
+                IsContentIntact = integrity.IsContentIntact,
+                IsFileIntact = integrity.IsFileIntact,
                 VerifiedAt = now
             };
         }

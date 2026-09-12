@@ -1,5 +1,7 @@
-<div [ngClass]="{'fixed top-0 left-0 right-0': isScrolled, 'relative': !isScrolled}" class="z-[100] px-0 transition-all duration-500 pointer-events-none"
-  [class.pt-4]="isScrolled" [class.pt-0]="!isScrolled">
+<!-- sticky, not relative/fixed: toggling fixed pulled the header out of flow, shrank the document by
+     its height and, on pages barely taller than the viewport, bounced scrollY back to 0 in a loop. -->
+<div class="sticky top-0 z-[100] px-0 transition-all duration-500 pointer-events-none"
+  [class.pt-2]="isScrolled" [class.pt-0]="!isScrolled">
 
   <nav class="w-full transition-all duration-500 pointer-events-auto overflow-visible shadow-sm" [ngClass]="{
       'rounded-none border-b border-white/10 bg-background/60 backdrop-blur-md': !isScrolled,
@@ -149,12 +151,6 @@
                     </span>
                   </span>
                 </button>
-                @if (impersonationBlockedMessage) {
-                  <span class="hidden max-w-[11rem] truncate rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive md:inline-block"
-                    [title]="impersonationBlockedMessage">
-                    {{ impersonationBlockedMessage }}
-                  </span>
-                }
               </div>
             }
             @if (isAdmin && anomalyAlert) {

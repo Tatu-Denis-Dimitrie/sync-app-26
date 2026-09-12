@@ -299,8 +299,8 @@
   <data name="workSites.addWorkSite" xml:space="preserve">
     <value>Adaugă punct de lucru</value>
   </data>
-  <data name="workSites.fullyCovered" xml:space="preserve">
-    <value>Acoperit integral</value>
+  <data name="workSites.coverage" xml:space="preserve">
+    <value>Acoperire</value>
   </data>
   <data name="workSites.searchPlaceholder" xml:space="preserve">
     <value>Căutați puncte de lucru</value>

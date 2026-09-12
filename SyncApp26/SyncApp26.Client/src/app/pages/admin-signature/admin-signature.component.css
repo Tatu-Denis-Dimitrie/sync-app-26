@@ -1,0 +1,21 @@
+/* The writing surface: a sheet lifted off the page, not another bordered card. */
+.paper {
+  background: #fff;
+  border: 1px solid hsl(var(--border));
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.03),
+    0 12px 32px -16px rgba(0, 0, 0, 0.18);
+}
+
+.card-enter {
+  animation: card-enter 320ms ease-out both;
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-enter { animation: none; }
+}

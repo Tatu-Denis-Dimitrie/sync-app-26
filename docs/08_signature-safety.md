@@ -98,6 +98,7 @@ Beyond the flat per-document/per-training signature fields described above, ever
 Frozen at signing time and never re-derived from live data on verification:
 - SignerFullNameSnapshot, SignerPositionSnapshot, SignerBadgeNumberSnapshot, SignerWorkSiteNameSnapshot: the signer's identity as of that moment, so a later name, badge, or work-site reassignment never retroactively invalidates a past signature. The badge number arrived with schema V2 (null on V1 records); the work-site name arrived with schema V3 (null on V1/V2 records).
 - MaterialTaughtSnapshot, DurationHoursSnapshot, TrainingDateSnapshot: the training content, when the record is linked to a PeriodicTraining row.
+- DocumentContentHashSnapshot (schema V4, null on V1–V3 records): a SHA-256 fingerprint of the document's attestation content, computed by `DocumentContentFingerprint` over a canonical, length-prefixed serialization of: the initial-training entries (dates, hours, workplace location, content — for both the introductory and the workplace item) and the admission-to-work date. Excluded on purpose: every person's name and function (the employee's bio data, the instructor on each training item, the admitting manager) — people get renamed and reassigned through normal HR flows; and signature fields, status, hashes and generation timestamps, which change on every legitimate signing step. The layout is part of schema V4 and frozen with it.
 
 ### HMAC chaining
 Each record stores:
@@ -114,10 +115,19 @@ The version number itself is bound into the hashed bytes as the first field (dom
 Schema versions to date:
 - **V1** — signer identity (id, full name, position), training content (material, duration, date), SignedAt as ISO-8601, previous hash. Frozen; records signed before the V2 bump still verify against it unchanged.
 - **V2** — V1 plus the signer's badge number, inserted after the position field. Frozen; records signed before the V3 bump still verify against it unchanged, never reading the work-site name.
-- **V3** (current) — V2 plus the signer's work-site name, inserted after the badge number. New signatures are made under this schema; V1/V2 records keep verifying under their own schema.
+- **V3** — V2 plus the signer's work-site name, inserted after the badge number. Frozen; records signed before the V4 bump still verify against it unchanged, never reading the document fingerprint.
+- **V4** (current) — V3 plus the document content fingerprint, inserted after the training-content group and before SignedAt. New signatures are made under this schema; V1–V3 records keep verifying under their own. The fingerprint's field layout is part of the schema: changing what it hashes means a V5, not an edit.
 
 ### Verification service
-SignatureVerificationService recomputes each record's status on demand (never cached), returning one of: Valid, Invalid (recomputed hash no longer matches, e.g. training content changed since signing), ChainBroken (PreviousSignatureHash does not match the signer's actual prior record), Legacy (IsLegacyUnverified), or NotFound. Exposed via `GET /api/signatures/{id}/verification-status`, `POST /api/signatures/verification-status/batch`, and `GET /api/signatures/training/{periodicTrainingId}/history` (full signing history for a training, grouped by role), access-controlled the same way as document signatures (self, any admin, or the relevant line manager).
+SignatureVerificationService recomputes each record's status on demand (never cached), returning one of: Valid, Invalid (recomputed hash no longer matches, e.g. training content changed since signing), ChainBroken (PreviousSignatureHash does not match the signer's actual prior record), ContentModified, FileModified, Legacy (IsLegacyUnverified), or NotFound. Exposed via `GET /api/signatures/{id}/verification-status`, `POST /api/signatures/verification-status/batch`, and `GET /api/signatures/training/{periodicTrainingId}/history` (full signing history for a training, grouped by role), access-controlled the same way as document signatures (self, any admin, or the relevant line manager).
+
+Two further document-level checks run:
+- **ContentModified** — evaluated for the **most recent signature of each role** on the document. The record's DocumentContentHashSnapshot no longer matches a fingerprint recomputed from live data: an attestation field (initial training, admission date) was edited after this signature. A superseded signature in the same role stays on its frozen snapshot, exactly as with training content. Because the check is per role, an edit made between the employee's signature and the manager's countersignature flags the employee's record only — they signed a different version than the one the manager approved. The HMAC is recomputed over the *stored* fingerprint, so the record itself still proves authentic; the stored-vs-live comparison is a separate fact and gets its own status. Not applicable (null) for V1–V3 records, which never fingerprinted the document.
+- **FileModified** — evaluated for **every signature on the document**. The stored PDF's bytes (UserDocument.PdfFilePath) no longer hash to UserDocument.DocumentHash, the value the application recorded when it last wrote the file: the file was altered or removed outside the application. The file is one artifact, so a tampered file taints every signature on it. Not applicable when the document has no stored file.
+
+Precedence is Invalid → ChainBroken → ContentModified → FileModified → Valid: a record that does not verify cannot vouch for anything, so only an authentic record gets to say the document changed. The response carries `IsContentIntact` and `IsFileIntact` (both nullable) alongside the existing flags. The background sweep counts all four failure statuses as anomalies.
+
+What this does and does not cover: an attestation edit is caught regardless of whether anyone has regenerated the PDF, and a regeneration from unchanged data (a template fix, say) is *not* flagged — the fingerprint hashes data, not bytes. Periodic-training rows are covered by their own per-row snapshot mechanism above, not by the document fingerprint, so adding a new training session does not flag the document. Bio edits, CSV re-imports, Function/WorkSite renames and instructor renames never flag anything.
 
 ## Audit trail
 The system records a durable audit trail for user signatures:
@@ -158,7 +168,7 @@ Recommended hardening:
 ## Limitations and current behavior
 The signature system provides strong auditability but is not a full legal e-signature solution. Notable limitations:
 - Signature data is not tied to external identity providers; it is tied to the authenticated account at time of signing.
-- The server signs a canonical string based on the document hash at the time of signing. The PDF is then regenerated to embed the signature, which updates DocumentHash. This means the cryptographic signature reflects the pre-regeneration hash, not the final PDF hash.
+- The RSA proof signs a canonical string based on the document hash at the time of signing. The PDF is then regenerated to embed the signature, which updates DocumentHash, so that proof reflects the pre-regeneration hash, not the final PDF hash. Post-signing changes are instead caught by the HMAC layer: the document content fingerprint (data edits, per role) and the stored-file hash check (file edits, every signature).
 - Tokens are stored in the database in clear text (required for validation).
 
 ## Recommendations for higher assurance
@@ -177,4 +187,8 @@ If higher legal or compliance guarantees are required, consider:
 - Confirm signature metadata is captured on UserDocument and PeriodicTraining.
 - Confirm an older, superseded signature in a slot still verifies as Valid after the slot is re-signed and the training content is edited again (it must check against its own frozen snapshot, not live content).
 - Confirm only the most recent signature in a slot is compared against live training content.
-- Confirm GET /api/signatures/{id}/verification-status, the batch endpoint, and the training history endpoint return the expected status for Valid/Invalid/ChainBroken/Legacy cases.
+- Confirm that editing an initial-training field or the admission date after signing turns the latest signature of each role ContentModified, while a signature superseded by a re-sign in the same role stays Valid.
+- Confirm that editing bio data, an instructor's name or the admitting manager's name after signing leaves the signature Valid.
+- Confirm that an edit made between the employee's signature and the manager's countersignature flags the employee's record only.
+- Confirm that altering the stored PDF on disk turns every signature on that document FileModified, and that a regeneration from unchanged data does not.
+- Confirm GET /api/signatures/{id}/verification-status, the batch endpoint, and the training history endpoint return the expected status for Valid/Invalid/ChainBroken/ContentModified/FileModified/Legacy cases.

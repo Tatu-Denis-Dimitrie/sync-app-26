@@ -457,12 +457,18 @@ textarea.edit-input {
   text-transform: uppercase;
 }
 
+/* The cell stays a real table cell (a display:flex td stops stretching to the row height and
+   ignores vertical-align, leaving the buttons alone at the top of tall rows); the stack is inside. */
 .actions-cell {
+  padding: 4px;
+  vertical-align: middle;
+}
+
+.actions-stack {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 4px;
-  padding: 4px;
 }
 
 /* Buttons fill the (narrow) actions column and wrap rather than overflow it. */
