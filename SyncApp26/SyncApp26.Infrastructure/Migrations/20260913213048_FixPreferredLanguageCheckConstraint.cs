@@ -29,6 +29,9 @@ namespace SyncApp26.Infrastructure.Migrations
                 name: "CK_Users_PreferredLanguage",
                 table: "Users");
 
+             migrationBuilder.Sql(
+                "UPDATE \"Users\" SET \"PreferredLanguage\" = NULL WHERE \"PreferredLanguage\" = 1;");
+
             migrationBuilder.AddCheckConstraint(
                 name: "CK_Users_PreferredLanguage",
                 table: "Users",
