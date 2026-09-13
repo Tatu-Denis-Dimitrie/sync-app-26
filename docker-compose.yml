@@ -10,6 +10,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__DefaultConnection: "Data Source=/app/data/SyncApp26.db;Mode=ReadWriteCreate"
+      # Reuses the DB volume so keys survive container recreation.
+      DataProtection__KeysDirectory: "/app/data/DataProtection-Keys"
       # No TLS by default; set AUTH_COOKIE_SECURE=true in .env once TLS is added.
       Auth__Cookie__Secure: ${AUTH_COOKIE_SECURE:-false}
     volumes:
