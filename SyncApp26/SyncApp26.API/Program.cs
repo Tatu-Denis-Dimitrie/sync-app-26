@@ -126,7 +126,8 @@ try
     sqliteBuilder.Pooling = true;
     sqliteBuilder.DefaultTimeout = 60;
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60)));
+        options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60))
+            .AddInterceptors(new SqliteSynchronousInterceptor()));
 
     // Repositories
     builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
@@ -282,8 +283,8 @@ try
             await context.Database.MigrateAsync();
 
             // WAL persists in the db file header, so this only needs to run once, ever.
+            // (synchronous=NORMAL is applied per-connection via SqliteSynchronousInterceptor.)
             await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
-            await context.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL;");
 
             // Only seed a genuinely empty database - avoids re-inserting default data on every run.
             if (!await context.Departments.AnyAsync() && !await context.Users.AnyAsync())
