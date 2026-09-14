@@ -81,7 +81,7 @@
     <value>INSTRUCTAJUL PERIODIC</value>
   </data>
   <data name="cover.unit" xml:space="preserve">
-    <value>Unitatea:</value>
+    <value>Punct de lucru:</value>
   </data>
   <data name="cover.fullName" xml:space="preserve">
     <value>Numele și prenumele:</value>
@@ -192,7 +192,7 @@
     <value>Semnătura:</value>
   </data>
   <data name="signature.trainee.ssm" xml:space="preserve">
-    <value>Semnătura persoanei instruite:</value>
+    <value>Semnătura participantului la instruire:</value>
   </data>
   <data name="signature.trainee.su" xml:space="preserve">
     <value>Semnătura persoanei instruite:</value>

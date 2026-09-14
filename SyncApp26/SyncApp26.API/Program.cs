@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using SyncApp26.Application.IServices;
 using SyncApp26.Application.Services;
 using SyncApp26.Domain.Enums;
@@ -127,7 +128,10 @@ try
     sqliteBuilder.DefaultTimeout = 60;
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60))
-            .AddInterceptors(new SqliteSynchronousInterceptor()));
+            .AddInterceptors(new SqliteSynchronousInterceptor())
+            // SQLite table rebuilds emit "PRAGMA foreign_keys = 0" outside a transaction; EF 9 logs
+            // that as Error by default though it's expected here — keep it visible, but as a Warning.
+            .ConfigureWarnings(w => w.Log((RelationalEventId.NonTransactionalMigrationOperationWarning, LogLevel.Warning))));
 
     // Repositories
     builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();

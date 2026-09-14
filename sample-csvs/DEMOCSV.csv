@@ -1,0 +1,2 @@
+PersonalId,FirstName,LastName,Email,DepartmentName,AssignedToPersonalId,Function,Worksite
+01f8e411-a057-4988-86f5-5b3e543050c0,Jean Paul,Gaultier,user@syncapp.com,Engineering,cd37ff7e-f0bd-4c21-9909-da8b14444148,Software Engineer,Bucuresti

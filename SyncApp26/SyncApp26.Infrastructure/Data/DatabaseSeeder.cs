@@ -480,6 +480,36 @@ namespace SyncApp26.Infrastructure.Data
                     IsEmailVerified = true,
                     FunctionId = functions[2].Id, // Basic User
                     CreatedAt = DateTime.UtcNow
+                },
+
+                // Personal test accounts (Basic User, real mailboxes for email flows)
+                new User
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = "Denis",
+                    LastName = "Tatu",
+                    Email = "tatu_denis@yahoo.com",
+                    DepartmentId = departments[0].Id, // Engineering
+                    AssignedToId = null,
+                    PersonalId = Guid.NewGuid().ToString(),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("user123"),
+                    IsEmailVerified = true,
+                    FunctionId = functions[2].Id, // Developer
+                    CreatedAt = DateTime.UtcNow
+                },
+                new User
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = "Denis",
+                    LastName = "Raspalu",
+                    Email = "raspalu1@gmail.com",
+                    DepartmentId = departments[0].Id, // Engineering
+                    AssignedToId = null,
+                    PersonalId = Guid.NewGuid().ToString(),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("user123"),
+                    IsEmailVerified = true,
+                    FunctionId = functions[2].Id, // Developer
+                    CreatedAt = DateTime.UtcNow
                 }
             };
 
@@ -511,6 +541,8 @@ namespace SyncApp26.Infrastructure.Data
 
             // Test users: Basic User is coordinated by Manager User
             users[22].AssignedToId = users[21].Id; // Basic User reports to Manager User
+            users[23].AssignedToId = users[21].Id; // Denis Tatu reports to Manager User
+            users[24].AssignedToId = users[21].Id; // Denis Raspalu reports to Manager User
 
             // Every seeded account starts with exactly the role its old flat Role column held -
             // this array mirrors the users list above 1:1, index for index.
@@ -521,7 +553,8 @@ namespace SyncApp26.Infrastructure.Data
                 Roles.Admin, Roles.BasicUser, Roles.BasicUser, Roles.BasicUser, // Sales: Christopher, Nicole, Matthew, Jennifer
                 Roles.Admin, Roles.BasicUser, Roles.BasicUser, // Marketing: Ryan, Lauren, Kevin
                 Roles.Admin, Roles.BasicUser, // Finance: Michelle, Brian
-                Roles.Admin, Roles.LineManager, Roles.BasicUser // Test users: Admin, Manager, Basic
+                Roles.Admin, Roles.LineManager, Roles.BasicUser, // Test users: Admin, Manager, Basic
+                Roles.BasicUser, Roles.BasicUser // Personal test accounts: Denis Tatu, Denis Raspalu
             };
 
             var roleIdsByName = await context.Roles.ToDictionaryAsync(r => r.Name, r => r.Id);
@@ -530,6 +563,15 @@ namespace SyncApp26.Infrastructure.Data
                 if (roleIdsByName.TryGetValue(userRoleNames[i], out var roleId))
                 {
                     users[i].RoleAssignments.Add(new UserRoleAssignment { UserId = users[i].Id, RoleId = roleId });
+                }
+            }
+
+            // Manager User also countersigns as SSM/SU officer, so one test account covers the full chain.
+            foreach (var officerRole in new[] { Roles.SsmOfficer, Roles.SuOfficer })
+            {
+                if (roleIdsByName.TryGetValue(officerRole, out var officerRoleId))
+                {
+                    users[21].RoleAssignments.Add(new UserRoleAssignment { UserId = users[21].Id, RoleId = officerRoleId });
                 }
             }
 

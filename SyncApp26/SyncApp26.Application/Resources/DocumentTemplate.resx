@@ -81,7 +81,7 @@
     <value>PERIODIC BRIEFING</value>
   </data>
   <data name="cover.unit" xml:space="preserve">
-    <value>Company:</value>
+    <value>Work site:</value>
   </data>
   <data name="cover.fullName" xml:space="preserve">
     <value>Full name:</value>
@@ -192,7 +192,7 @@
     <value>Signature:</value>
   </data>
   <data name="signature.trainee.ssm" xml:space="preserve">
-    <value>Signature of the person trained:</value>
+    <value>Signature of the participant who attended the training:</value>
   </data>
   <data name="signature.trainee.su" xml:space="preserve">
     <value>Signature of the person briefed:</value>

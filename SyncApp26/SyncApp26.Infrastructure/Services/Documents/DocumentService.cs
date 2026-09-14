@@ -671,6 +671,7 @@ namespace SyncApp26.Infrastructure.Services
             string CoverBg,
             string ManagerName,
             string ManagerFunction,
+            string EmployeeFullName,
             Dictionary<(Guid TrainingId, string Role), SignatureRecord> PeriodicSignatures,
             Dictionary<string, SignatureRecord> InitialTrainingSignatures,
             IStringLocalizer T);
@@ -678,23 +679,24 @@ namespace SyncApp26.Infrastructure.Services
         private QuestPDF.Infrastructure.IDocument BuildDocument(User user, UserDocument document,
             Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures,
             Dictionary<string, SignatureRecord> initialTrainingSignatures,
+            string? employeeNameSnapshot,
             bool viewerIsAdmin = false)
         {
             QuestPDF.Settings.License = LicenseType.Community;
 
-            var ctx = CreateRenderContext(user, document, periodicSignatures, initialTrainingSignatures, _template);
+            var ctx = CreateRenderContext(user, document, periodicSignatures, initialTrainingSignatures, employeeNameSnapshot, _template);
 
             return QuestPDF.Fluent.Document.Create(container =>
             {
                 BuildCoverPage(container, user, document, ctx);
-                BuildGeneralInfoPage(container, user, document, ctx);
-                BuildPeriodicTrainingPage(container, user, document, ctx, viewerIsAdmin);
+                BuildMainPage(container, user, document, ctx, viewerIsAdmin);
             });
         }
 
         private static DocumentRenderContext CreateRenderContext(User user, UserDocument document,
             Dictionary<(Guid TrainingId, string Role), SignatureRecord> periodicSignatures,
             Dictionary<string, SignatureRecord> initialTrainingSignatures,
+            string? employeeNameSnapshot,
             IStringLocalizer template)
         {
             bool isSsm = DocumentTypes.IsSsm(document.DocumentType);
@@ -710,8 +712,28 @@ namespace SyncApp26.Infrastructure.Services
                 : F(user.AdmittedByName);
             string managerFunction = user.AssignedTo?.Function?.Name ?? F(user.AdmittedByFunction);
 
+            // Frozen at the employee's signing of this document; live only while still unsigned.
+            string employeeFullName = employeeNameSnapshot ?? $"{user.FirstName} {user.LastName}";
+
             return new DocumentRenderContext(isSsm, formTitle, accentColor, headerColor, coverBg, managerName, managerFunction,
-                periodicSignatures, initialTrainingSignatures, template);
+                employeeFullName, periodicSignatures, initialTrainingSignatures, template);
+        }
+
+        // The employee's name as captured on their SignatureRecord for THIS document (earliest, in
+        // case of a re-sign), so a later rename never rewrites an already-signed document.
+        private async Task<string?> LoadEmployeeNameSnapshotAsync(Guid documentId)
+        {
+            var records = await _context.SignatureRecords
+                .AsNoTracking()
+                .Where(r => r.UserDocumentId == documentId && r.SignerRole == "User")
+                .Select(r => new { r.SignerFullNameSnapshot, r.SignedAt, r.CreatedAt })
+                .ToListAsync();
+
+            // SQLite can't order DateTimeOffset server-side — sorted client-side.
+            return records
+                .OrderBy(r => r.SignedAt)
+                .ThenBy(r => r.CreatedAt)
+                .FirstOrDefault()?.SignerFullNameSnapshot;
         }
 
         // One SignatureRecord per (training, role) — keyed by the same PeriodicTrainingId/SignerRole
@@ -816,7 +838,7 @@ namespace SyncApp26.Infrastructure.Services
                         }
 
                         Row(ctx.T["cover.unit"], F(user.WorkSite?.Name));
-                        Row(ctx.T["cover.fullName"], $"{user.FirstName} {user.LastName}");
+                        Row(ctx.T["cover.fullName"], ctx.EmployeeFullName);
 
                         if (ctx.IsSsm)
                         {
@@ -843,9 +865,11 @@ namespace SyncApp26.Infrastructure.Services
         }
 
         // ══════════════════════════════════════════════════════
-        // PAGE 2 — DATE GENERALE + INSTRUIRE LA ANGAJARE
+        // PAGE 2+ — DATE GENERALE + INSTRUIRE LA ANGAJARE + INSTRUIRE PERIODICĂ
+        // One flowing page set: periodic training follows "Admis la lucru" directly
+        // instead of starting a new page and leaving the rest of page 2 blank.
         // ══════════════════════════════════════════════════════
-        private static void BuildGeneralInfoPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, UserDocument document, DocumentRenderContext ctx)
+        private static void BuildMainPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, UserDocument document, DocumentRenderContext ctx, bool viewerIsAdmin)
         {
             container.Page(page =>
             {
@@ -859,6 +883,8 @@ namespace SyncApp26.Infrastructure.Services
                     BuildGeneralDataSection(col, user, ctx);
                     col.Item().Height(8);
                     BuildInitialTrainingSection(col, user, document, ctx);
+                    col.Item().Height(10);
+                    BuildPeriodicTrainingSection(col, user, document, ctx, viewerIsAdmin);
                 });
 
                 PageFooter(page, ctx);
@@ -881,7 +907,7 @@ namespace SyncApp26.Infrastructure.Services
                     data.Item().Height(5);
                 }
 
-                DataRow(ctx.T["general.nameSurname"], $"{user.FirstName} {user.LastName}");
+                DataRow(ctx.T["general.nameSurname"], ctx.EmployeeFullName);
                 DataRow(ctx.T["general.birthDatePlace"], $"{FDate(user.DateOfBirth)}, {F(user.PlaceOfBirth)}");
 
                 if (ctx.IsSsm)
@@ -1018,14 +1044,17 @@ namespace SyncApp26.Infrastructure.Services
                 r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admitted.Block.Position));
             });
             col.Item().Height(4);
+            // Signature on the left, date on the right — side by side, not stacked.
             col.Item().Row(r =>
             {
-                r.ConstantItem(160).Text(ctx.T["admitted.date"]).Bold();
-                r.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admitted.AdmittedOn?.ToString("dd.MM.yyyy")));
+                r.ConstantItem(220).Column(c => RenderSignatureBlock(c, ctx.T["signature.label"], admitted.Block, ctx.T));
+                r.ConstantItem(20);
+                r.RelativeItem().AlignTop().Row(d =>
+                {
+                    d.ConstantItem(40).Text(ctx.T["admitted.date"]).Bold();
+                    d.RelativeItem().BorderBottom(0.5f).Text(FUnderline(admitted.AdmittedOn?.ToString("dd.MM.yyyy")));
+                });
             });
-            col.Item().Height(6);
-
-            col.Item().Width(220).Column(c => RenderSignatureBlock(c, ctx.T["signature.label"], admitted.Block, ctx.T));
         }
 
         // One-time approval, so this uses the manager's FIRST signature, never a later revision's capture. Shared with the web form.
@@ -1112,27 +1141,17 @@ namespace SyncApp26.Infrastructure.Services
             SignedAtUtc = data.SignedAtUtc
         };
 
-        // ══════════════════════════════════════════════════════
-        // PAGE 3 — INSTRUIRE PERIODICĂ
-        // ══════════════════════════════════════════════════════
-        private static void BuildPeriodicTrainingPage(QuestPDF.Infrastructure.IDocumentContainer container, User user, UserDocument document, DocumentRenderContext ctx, bool viewerIsAdmin)
+        // ─── INSTRUIRE PERIODICĂ — rendered right after "Admis la lucru"; the table paginates on its own
+        private static void BuildPeriodicTrainingSection(ColumnDescriptor col, User user, UserDocument document, DocumentRenderContext ctx, bool viewerIsAdmin)
         {
-            container.Page(page =>
+            string periodicTitle = ctx.IsSsm ? ctx.T["section.periodicTraining.ssm"] : ctx.T["section.periodicTraining.su"];
+
+            // EnsureSpace: header + table start move to the next page together, never an orphaned header.
+            col.Item().EnsureSpace(120).Column(section =>
             {
-                page.Size(PageSizes.A4);
-                page.Margin(1.5f, Unit.Centimetre);
-                page.PageColor(Colors.White);
-                page.DefaultTextStyle(x => x.FontSize(9));
-
-                page.Content().Column(col =>
-                {
-                    string periodicTitle = ctx.IsSsm ? ctx.T["section.periodicTraining.ssm"] : ctx.T["section.periodicTraining.su"];
-                    SectionHeader(col, periodicTitle, ctx.AccentColor);
-
-                    col.Item().Table(table => BuildPeriodicTrainingTable(table, user, document, ctx, viewerIsAdmin));
-                });
-
-                PageFooter(page, ctx);
+                SectionHeader(section, periodicTitle, ctx.AccentColor);
+                section.Item().DefaultTextStyle(x => x.FontSize(9))
+                    .Table(table => BuildPeriodicTrainingTable(table, user, document, ctx, viewerIsAdmin));
             });
         }
 
@@ -1183,7 +1202,7 @@ namespace SyncApp26.Infrastructure.Services
                 .OrderBy(pt => pt.CreatedAt)
                 .ToList()) ?? new List<PeriodicTraining>();
             string occupation = user.Function?.Name ?? "";
-            string employeeFullName = $"{user.FirstName} {user.LastName}";
+            string employeeFullName = ctx.EmployeeFullName;
 
             // Resolved before the print-exclusion filter: excluding the current row must not
             // promote an older row to "current" and repaint its highlight.
@@ -1357,6 +1376,7 @@ namespace SyncApp26.Infrastructure.Services
 
             var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.UserId, document.DocumentType);
             var initialTrainingSignatures = await LoadInitialTrainingSignatureLookupAsync(document.UserId, document.DocumentType);
+            var employeeNameSnapshot = await LoadEmployeeNameSnapshotAsync(document.Id);
 
             // The archived snapshot's content MUST NOT depend on the acting user's UI language:
             // DocumentHash (SHA-256 of these bytes) is bound into every signer's RSA proof
@@ -1367,7 +1387,7 @@ namespace SyncApp26.Infrastructure.Services
             // viewer's language.
             // Generate to memory first — if layout throws, the existing file on disk is NOT corrupted.
             var pdfBytes = RenderInInvariantCulture(() =>
-                BuildDocument(user, document, periodicSignatures, initialTrainingSignatures).GeneratePdf());
+                BuildDocument(user, document, periodicSignatures, initialTrainingSignatures, employeeNameSnapshot).GeneratePdf());
             File.WriteAllBytes(filePath, pdfBytes);
 
             using var sha256 = SHA256.Create();
@@ -1389,8 +1409,9 @@ namespace SyncApp26.Infrastructure.Services
         {
             var periodicSignatures = await LoadPeriodicSignatureLookupAsync(document.UserId, document.DocumentType);
             var initialTrainingSignatures = await LoadInitialTrainingSignatureLookupAsync(document.UserId, document.DocumentType);
+            var employeeNameSnapshot = await LoadEmployeeNameSnapshotAsync(document.Id);
 
-            return BuildDocument(user, document, periodicSignatures, initialTrainingSignatures, viewerIsAdmin).GeneratePdf();
+            return BuildDocument(user, document, periodicSignatures, initialTrainingSignatures, employeeNameSnapshot, viewerIsAdmin).GeneratePdf();
         }
 
 
