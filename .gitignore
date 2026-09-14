@@ -19,6 +19,9 @@
 **/appsettings.json
 **/appsettings.Development.json
 
+# ASP.NET Core Data Protection keys (Program.cs default when DataProtection:KeysDirectory is unset)
+**/DataProtection-Keys/
+
 # Angular CLI and build artefacts
 /.angular-cli.json
 /.ng/

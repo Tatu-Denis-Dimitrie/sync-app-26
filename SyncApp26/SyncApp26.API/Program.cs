@@ -25,6 +25,7 @@ using System.Threading.RateLimiting;
 using Serilog;
 using Serilog.Events;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.DataProtection;
 
 
 Log.Logger = new LoggerConfiguration()
@@ -120,11 +121,13 @@ try
         sqliteBuilder.DataSource = Path.GetFullPath(Path.Combine(basePath, sqliteBuilder.DataSource));
     }
     sqliteBuilder.Mode = SqliteOpenMode.ReadWriteCreate;
-    sqliteBuilder.Cache = SqliteCacheMode.Shared;
+    // Private, not Shared: shared-cache + pooling was causing spurious SQLITE_LOCKED errors.
+    sqliteBuilder.Cache = SqliteCacheMode.Private;
     sqliteBuilder.Pooling = true;
     sqliteBuilder.DefaultTimeout = 60;
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60)));
+        options.UseSqlite(sqliteBuilder.ToString(), sqliteOptions => sqliteOptions.CommandTimeout(60))
+            .AddInterceptors(new SqliteSynchronousInterceptor()));
 
     // Repositories
     builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
@@ -199,6 +202,17 @@ try
     };
     builder.Services.AddSingleton(authCookieOptions);
 
+    // Persist keys, or a container restart regenerates them and invalidates every issued
+    // antiforgery/auth cookie ("key {guid} was not found in the key ring").
+    var keysDirectory = builder.Configuration["DataProtection:KeysDirectory"] ?? "DataProtection-Keys";
+    if (!Path.IsPathRooted(keysDirectory))
+    {
+        keysDirectory = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, keysDirectory));
+    }
+    builder.Services.AddDataProtection()
+        .SetApplicationName("SyncApp26")
+        .PersistKeysToFileSystem(new DirectoryInfo(keysDirectory));
+
     // Names Angular's HttpXsrfInterceptor already knows, so no client code is needed.
     builder.Services.AddAntiforgery(options =>
     {
@@ -267,6 +281,10 @@ try
         {
             var context = services.GetRequiredService<ApplicationDbContext>();
             await context.Database.MigrateAsync();
+
+            // WAL persists in the db file header, so this only needs to run once, ever.
+            // (synchronous=NORMAL is applied per-connection via SqliteSynchronousInterceptor.)
+            await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
 
             // Only seed a genuinely empty database - avoids re-inserting default data on every run.
             if (!await context.Departments.AnyAsync() && !await context.Users.AnyAsync())
